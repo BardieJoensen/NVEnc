@@ -3392,9 +3392,11 @@ RGY_ERR NVEncCore::InitFilters(const InEncodeVideoParam *inputParam) {
         param->frameOut = inputFrame;
         param->baseFps = m_encFps;
         param->bOutOverwrite = false;
+        param->compute_capability = m_dev->cc();
         param->filmGrain.enable = true;
         param->filmGrain.denoiseLevel = inputParam->av1.filmGrainDenoise;
         param->filmGrain.analyzeChroma = inputParam->av1.filmGrainChroma;
+        param->filmGrain.denoiser = inputParam->av1.filmGrainDenoiser;
         auto filmGrainVui = inputParam->common.out_vui;
         filmGrainVui.apply_auto(VuiFiltered, inputFrame.height);
         param->filmGrain.clipToRestrictedRange = filmGrainVui.colorrange != RGY_COLORRANGE_FULL;

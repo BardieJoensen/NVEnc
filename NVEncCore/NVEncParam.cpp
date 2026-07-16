@@ -107,6 +107,7 @@ NVEncVideoParamAV1::NVEncVideoParamAV1() :
     filmGrainAuto(false),
     filmGrainDenoise(0.0f),
     filmGrainChroma(true),
+    filmGrainDenoiser(0),
     filmGrainTable() {
 }
 tstring NVEncRCParam::print() const {

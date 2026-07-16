@@ -40,6 +40,11 @@
 #include "NVEncFilmGrainModel.h"
 #include "nvEncodeAPI.h"
 
+enum FGSDenoiseEngine : int {
+    FGS_DENOISE_FFT3D = 0,     // frequency-domain Wiener denoise on luma (NVEncFilterDenoiseFFT3D)
+    FGS_DENOISE_BILATERAL = 1, // 5x5 edge-aware bilateral (weaker; kept for A/B and fallback)
+};
+
 // Quality-first defaults for the CUDA AV1 grain analyzer.  A denoiseLevel of
 // zero selects the noise level measured from flat 32x32 luma blocks.  Positive
 // values are expressed in 8-bit code-value units and are scaled for 10-bit
@@ -49,6 +54,8 @@ struct NVEncFilmGrainAnalyzerConfig {
     bool enable;
     bool analyzeChroma;
     bool clipToRestrictedRange;
+    int denoiser;              // FGSDenoiseEngine
+    int fft3dTemporal;         // FFT3D temporal radius bt: 1 (spatial) or 2 (prev+cur, delay-free)
     float denoiseLevel;
     int denoisePasses;
     int modelWindow;
@@ -100,11 +107,15 @@ void nvenc_film_grain_erase_frame_data(std::vector<std::shared_ptr<RGYFrameData>
 class NVEncFilterParamFilmGrain : public NVEncFilterParam {
 public:
     NVEncFilmGrainAnalyzerConfig filmGrain;
+    std::pair<int, int> compute_capability;
 
     NVEncFilterParamFilmGrain();
     virtual ~NVEncFilterParamFilmGrain();
     virtual tstring print() const override;
 };
+
+class NVEncFilterDenoiseFFT3D;
+class NVEncFilterParamDenoiseFFT3D;
 
 class NVEncFilterFilmGrain : public NVEncFilter {
 public:
@@ -123,6 +134,9 @@ private:
     struct AnalyzerState;
 
     std::unique_ptr<CUFrameBuf> m_denoiseWork;
+    std::unique_ptr<NVEncFilterDenoiseFFT3D> m_fft3d;
+    std::shared_ptr<NVEncFilterParamDenoiseFFT3D> m_fft3dParam;
+    float m_fft3dSigma;
     std::unique_ptr<CUMemBufPair> m_blockMetrics;
     std::unique_ptr<CUMemBufPair> m_blockMask;
     std::unique_ptr<CUMemBufPair> m_sigmaMap;

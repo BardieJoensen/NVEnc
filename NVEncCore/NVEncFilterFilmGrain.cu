@@ -43,6 +43,7 @@
 
 #include "NVEncFilterFilmGrain.h"
 #include "NVEncFilmGrainModel.h"
+#include "NVEncFilterDenoiseFFT3D.h"
 
 #pragma warning(push)
 #pragma warning(disable: 4819)
@@ -425,7 +426,8 @@ struct NVEncFilterFilmGrain::AnalyzerState {
 };
 
 NVEncFilmGrainAnalyzerConfig::NVEncFilmGrainAnalyzerConfig() :
-    enable(true), analyzeChroma(true), clipToRestrictedRange(true), denoiseLevel(0.0f),
+    enable(true), analyzeChroma(true), clipToRestrictedRange(true),
+    denoiser(FGS_DENOISE_FFT3D), fft3dTemporal(1), denoiseLevel(0.0f),
     denoisePasses(2), modelWindow(8), minModelFrames(1), minFlatBlocks(8),
     minFlatFraction(0.02f), minNoiseLevel(0.5f), maxNoiseLevel(50.0f) {
 }
@@ -434,6 +436,8 @@ bool NVEncFilmGrainAnalyzerConfig::operator==(const NVEncFilmGrainAnalyzerConfig
     return enable == other.enable
         && analyzeChroma == other.analyzeChroma
         && clipToRestrictedRange == other.clipToRestrictedRange
+        && denoiser == other.denoiser
+        && fft3dTemporal == other.fft3dTemporal
         && denoiseLevel == other.denoiseLevel
         && denoisePasses == other.denoisePasses
         && modelWindow == other.modelWindow
@@ -445,10 +449,12 @@ bool NVEncFilmGrainAnalyzerConfig::operator==(const NVEncFilmGrainAnalyzerConfig
 }
 
 tstring NVEncFilmGrainAnalyzerConfig::print() const {
-    return strsprintf(_T("film-grain: denoise=%s%s, chroma=%s, passes=%d, window=%d"),
+    return strsprintf(_T("film-grain: denoise=%s%s, denoiser=%s, chroma=%s, window=%d"),
         denoiseLevel <= 0.0f ? _T("auto") : _T(""),
         denoiseLevel <= 0.0f ? _T("") : strsprintf(_T("%.2f"), denoiseLevel).c_str(),
-        analyzeChroma ? _T("on") : _T("off"), denoisePasses, modelWindow);
+        denoiser == FGS_DENOISE_FFT3D
+            ? (fft3dTemporal >= 2 ? _T("fft3d(bt2)") : _T("fft3d")) : _T("bilateral"),
+        analyzeChroma ? _T("on") : _T("off"), modelWindow);
 }
 
 RGYFrameDataFilmGrain::RGYFrameDataFilmGrain() :
@@ -491,7 +497,8 @@ tstring NVEncFilterParamFilmGrain::print() const {
 }
 
 NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
-    m_denoiseWork(), m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_modelStats(),
+    m_denoiseWork(), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
+    m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_modelStats(),
     m_state(std::make_unique<AnalyzerState>()), m_blocksX(0), m_blocksY(0) {
     m_name = _T("film-grain");
     m_pathThrough = FILTER_PATHTHROUGH_NONE;
@@ -503,35 +510,41 @@ NVEncFilterFilmGrain::~NVEncFilterFilmGrain() {
 
 void NVEncFilterFilmGrain::resetTemporalState() {
     if (m_state) m_state->clear();
+    if (m_fft3d) m_fft3d->resetTemporalState();
 }
 
 namespace {
 
+// includeLuma selects between the original all-plane bilateral (used when
+// denoiser=bilateral) and a chroma-only pass (used to cover chroma when
+// denoiser=fft3d has already denoised luma into dst).
 template<typename Type, int shift>
 static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFrameInfo *src,
-    const bool chroma, const int passes, const int bitDepth, const float sigma,
+    const bool chroma, const bool includeLuma, const int passes, const int bitDepth, const float sigma,
     const float *sigmaMap, const int blocksX, const int blocksY, cudaStream_t stream) {
     for (int pass = 0; pass < passes; ++pass) {
         const RGYFrameInfo *passSrc = pass == 0 ? src : work;
         RGYFrameInfo *passDst = pass + 1 == passes ? dst : work;
-        auto srcY = getPlane(passSrc, RGY_PLANE_Y);
-        auto dstY = getPlane(passDst, RGY_PLANE_Y);
-        auto sts = launch_bilateral<Type, shift, 1>(dstY, srcY, srcY.width, srcY.height, bitDepth, sigma,
-            sigmaMap, blocksX, blocksY, FGS_BLOCK_SIZE, stream);
-        if (sts != RGY_ERR_NONE) return sts;
+        if (includeLuma) {
+            auto srcY = getPlane(passSrc, RGY_PLANE_Y);
+            auto dstY = getPlane(passDst, RGY_PLANE_Y);
+            auto sts = launch_bilateral<Type, shift, 1>(dstY, srcY, srcY.width, srcY.height, bitDepth, sigma,
+                sigmaMap, blocksX, blocksY, FGS_BLOCK_SIZE, stream);
+            if (sts != RGY_ERR_NONE) return sts;
+        }
         if (!chroma) continue;
         const bool semiPlanar = src->csp == RGY_CSP_NV12 || src->csp == RGY_CSP_P010;
         if (semiPlanar) {
             auto srcUV = getPlane(passSrc, RGY_PLANE_U);
             auto dstUV = getPlane(passDst, RGY_PLANE_U);
-            sts = launch_bilateral<Type, shift, 2>(dstUV, srcUV, src->width / 2, src->height / 2, bitDepth, sigma,
+            auto sts = launch_bilateral<Type, shift, 2>(dstUV, srcUV, src->width / 2, src->height / 2, bitDepth, sigma,
                 sigmaMap, blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream);
             if (sts != RGY_ERR_NONE) return sts;
         } else {
             for (int plane = RGY_PLANE_U; plane <= RGY_PLANE_V; ++plane) {
                 auto srcC = getPlane(passSrc, static_cast<RGY_PLANE>(plane));
                 auto dstC = getPlane(passDst, static_cast<RGY_PLANE>(plane));
-                sts = launch_bilateral<Type, shift, 1>(dstC, srcC, srcC.width, srcC.height, bitDepth, sigma,
+                auto sts = launch_bilateral<Type, shift, 1>(dstC, srcC, srcC.width, srcC.height, bitDepth, sigma,
                     sigmaMap, blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream);
                 if (sts != RGY_ERR_NONE) return sts;
             }
@@ -541,16 +554,16 @@ static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const 
 }
 
 static RGY_ERR denoise_frame(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFrameInfo *src,
-    const bool chroma, const int passes, const int bitDepth, const float sigma,
+    const bool chroma, const bool includeLuma, const int passes, const int bitDepth, const float sigma,
     const float *sigmaMap, const int blocksX, const int blocksY, cudaStream_t stream) {
     switch (src->csp) {
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
-        return denoise_frame_typed<uint8_t, 0>(dst, work, src, chroma, passes, bitDepth, sigma, sigmaMap, blocksX, blocksY, stream);
+        return denoise_frame_typed<uint8_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, blocksX, blocksY, stream);
     case RGY_CSP_YV12_10:
-        return denoise_frame_typed<uint16_t, 0>(dst, work, src, chroma, passes, bitDepth, sigma, sigmaMap, blocksX, blocksY, stream);
+        return denoise_frame_typed<uint16_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, blocksX, blocksY, stream);
     case RGY_CSP_P010:
-        return denoise_frame_typed<uint16_t, 6>(dst, work, src, chroma, passes, bitDepth, sigma, sigmaMap, blocksX, blocksY, stream);
+        return denoise_frame_typed<uint16_t, 6>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, blocksX, blocksY, stream);
     default:
         return RGY_ERR_UNSUPPORTED;
     }
@@ -658,6 +671,38 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         || (sts = m_modelStats->alloc()) != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("Failed to allocate film-grain analysis buffers: %s.\n"), get_err_mes(sts));
         return sts;
+    }
+    config.fft3dTemporal = clamp(config.fft3dTemporal, 1, 2);
+    if (config.denoiser == FGS_DENOISE_FFT3D) {
+        m_fft3dParam = std::make_shared<NVEncFilterParamDenoiseFFT3D>();
+        m_fft3dParam->frameIn = prm->frameIn;
+        m_fft3dParam->frameOut = prm->frameOut;
+        m_fft3dParam->baseFps = prm->baseFps;
+        m_fft3dParam->bOutOverwrite = false;
+        m_fft3dParam->compute_capability = prm->compute_capability;
+        // This filter runs with the encoder csp (NV12/P010); the FFT3D chroma
+        // path needs planar U/V, so the child denoises luma only and chroma is
+        // handled by the bilateral pass.
+        m_fft3dParam->processChroma = false;
+        auto& fft3d = m_fft3dParam->fft3d;
+        fft3d.enable = true;
+        fft3d.sigma = std::max(1.0f, config.denoiseLevel); // reprogrammed from the measured noise per frame
+        fft3d.amount = 1.0f;
+        fft3d.method = 0;
+        fft3d.temporal = 0;
+        fft3d.bt = config.fft3dTemporal;
+        fft3d.degrid = 0.0f;
+        fft3d.signorm = true; // sigma in real 8-bit noise-std units
+        m_fft3d = std::make_unique<NVEncFilterDenoiseFFT3D>();
+        if ((sts = m_fft3d->init(m_fft3dParam, pPrintMes)) != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("Failed to init FFT3D denoiser for film-grain: %s.\n"), get_err_mes(sts));
+            return sts;
+        }
+        m_fft3dSigma = fft3d.sigma;
+    } else {
+        m_fft3d.reset();
+        m_fft3dParam.reset();
+        m_fft3dSigma = -1.0f;
     }
     if (!m_state) m_state = std::make_unique<AnalyzerState>();
     m_state->clear();
@@ -792,11 +837,54 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if ((sts = m_sigmaMap->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
     }
     if ((sts = m_blockMask->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
-    sts = denoise_frame(output, &m_denoiseWork->frame, pInputFrame, prm->filmGrain.analyzeChroma,
-        prm->filmGrain.denoisePasses, bitDepth, denoiseSigma,
-        adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
-        m_blocksX, m_blocksY, stream);
-    if (sts != RGY_ERR_NONE) return sts;
+    if (prm->filmGrain.denoiser == FGS_DENOISE_FFT3D && m_fft3d) {
+        const float sigma8 = denoiseSigma / depthScale;
+        if (m_fft3dSigma < 0.0f || std::abs(sigma8 - m_fft3dSigma) > std::max(0.3f, m_fft3dSigma * 0.10f)) {
+            // A single-frame block Wiener filter with sigma matched 1:1 to the
+            // actual noise std only removes ~65-70% of a flat region's noise
+            // power (per-bin power is a high-variance estimate of a matched
+            // threshold, so gain rarely reaches zero); measured directly by
+            // probing denoise-fft3d on synthetic flat noise at multiple sigma.
+            // FGS wants the base layer clean, so the programmed sigma is
+            // calibrated above the measured noise level to drive removal
+            // toward complete.
+            constexpr float FFT3D_SIGMA_CALIBRATION = 2.0f;
+            m_fft3dParam->fft3d.sigma = clamp(sigma8 * FFT3D_SIGMA_CALIBRATION, 1.0f, 100.0f);
+            if ((sts = m_fft3d->init(m_fft3dParam, m_pLog)) != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("Failed to update FFT3D sigma for film-grain: %s.\n"), get_err_mes(sts));
+                return sts;
+            }
+            m_fft3dSigma = sigma8;
+        }
+        RGYFrameInfo *fft3dOut[1] = { output };
+        int fft3dOutNum = 0;
+        sts = m_fft3d->filter(const_cast<RGYFrameInfo *>(pInputFrame), fft3dOut, &fft3dOutNum, stream);
+        if (sts != RGY_ERR_NONE) return sts;
+        if (fft3dOutNum != 1 || fft3dOut[0] != output) {
+            AddMessage(RGY_LOG_ERROR, _T("FFT3D denoiser did not produce the expected 1-in-1-out frame.\n"));
+            return RGY_ERR_UNKNOWN;
+        }
+        // FFT3D applies one global sigma for the whole frame, so it can only
+        // correct toward the frame's median noise level; grain strength that
+        // varies with brightness needs a local touch-up on top.  Snapshot the
+        // FFT3D result (denoised luma + still-raw chroma) into scratch, then
+        // run a single per-block-adaptive bilateral pass using it as the
+        // source: chroma gets its normal bilateral denoise, and luma gets a
+        // local correction toward each block's own measured sigma.
+        sts = copyFrameAsync(&m_denoiseWork->frame, output, stream);
+        if (sts != RGY_ERR_NONE) return sts;
+        sts = denoise_frame(output, &m_denoiseWork->frame, &m_denoiseWork->frame, prm->filmGrain.analyzeChroma, true,
+            1, bitDepth, denoiseSigma,
+            adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
+            m_blocksX, m_blocksY, stream);
+        if (sts != RGY_ERR_NONE) return sts;
+    } else {
+        sts = denoise_frame(output, &m_denoiseWork->frame, pInputFrame, prm->filmGrain.analyzeChroma, true,
+            prm->filmGrain.denoisePasses, bitDepth, denoiseSigma,
+            adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
+            m_blocksX, m_blocksY, stream);
+        if (sts != RGY_ERR_NONE) return sts;
+    }
 
     cudaerr = cudaMemsetAsync(m_modelStats->ptrDevice, 0, m_modelStats->nSize, stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
