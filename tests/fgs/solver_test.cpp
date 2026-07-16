@@ -182,6 +182,24 @@ void testEvalScalingCurve() {
     expectNear(eval_scaling_curve(values, scalings, 0, 128.0), 0.0, 1e-9, "empty curve is zero");
 }
 
+void testStrengthLut() {
+    FilmGrainGpuStats stats = {};
+    fillWhitePlane(stats.plane[0], 6.0, false);
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 params;
+    NVEncFilmGrainDiagnostics diag;
+    expect(build_film_grain_params(stats, 8, false, true, params, diag), "lut base solves");
+    float lut[FGS_STRENGTH_LUT_SIZE];
+    build_strength_lut(params, 8, lut);
+    expectNear(lut[32], 6.0, 0.4, "lut recovers flat sigma (mid)");
+    expectNear(lut[200], 6.0, 0.4, "lut recovers flat sigma (high)");
+    // 10-bit: the same 8-bit-domain curve scales to native code values
+    build_strength_lut(params, 10, lut);
+    expectNear(lut[128], 24.0, 1.6, "lut scales to 10-bit code values");
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 off = {};
+    build_strength_lut(off, 10, lut);
+    expect(lut[64] == 0.0f, "lut is zero with grain disabled");
+}
+
 } // namespace
 
 int main() {
@@ -191,6 +209,7 @@ int main() {
     testSingularChromaFallsBackToLumaOnly();
     testParamsClose();
     testEvalScalingCurve();
+    testStrengthLut();
     if (failures) {
         std::cerr << failures << " solver test(s) failed\n";
         return 1;
