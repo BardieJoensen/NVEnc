@@ -312,8 +312,9 @@ tstring encoder_help() {
         _T("   --refs-backward <int>        [AV1] max number of L1 list reference frame.\n")
         _T("                                  0 (auto,default), 1, 2, 3\n")
         _T("   --av1-film-grain [<params>] [AV1] analyze film grain on the GPU and signal AV1 synthesis.\n")
-        _T("                                  denoise=auto|1-50 (default: auto)\n")
-        _T("                                  chroma=auto|off   (default: auto)\n")
+        _T("                                  denoise=auto|1-50       (default: auto)\n")
+        _T("                                  chroma=auto|off         (default: auto)\n")
+        _T("                                  denoiser=fft3d|bilateral (default: fft3d)\n")
         _T("   --film-grain-table <path>    [AV1] read film grain parameters from an AOM filmgrn1 table.\n")
         _T("   --bitstream-padding          [AV1] enable bitstream padding.\n"));
 
@@ -1189,6 +1190,17 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                 }
                 continue;
             }
+            if (param_arg == _T("denoiser")) {
+                if (param_val == _T("fft3d")) {
+                    pParams->av1.filmGrainDenoiser = 0;
+                } else if (param_val == _T("bilateral")) {
+                    pParams->av1.filmGrainDenoiser = 1;
+                } else {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" denoiser="), param_val);
+                    return 1;
+                }
+                continue;
+            }
             print_cmd_error_invalid_value(option_name, param);
             return 1;
         }
@@ -1786,14 +1798,21 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
         OPT_OPTBOOL(_T("--disable-seq-hdr"), av1.disableSeqHdr);
         if (pParams->av1.filmGrainAuto) {
             cmd << _T(" --av1-film-grain");
-            if (pParams->av1.filmGrainDenoise > 0.0f || !pParams->av1.filmGrainChroma) {
+            if (pParams->av1.filmGrainDenoise > 0.0f || !pParams->av1.filmGrainChroma || pParams->av1.filmGrainDenoiser != 0) {
                 cmd << _T(" ");
+                bool needComma = false;
                 if (pParams->av1.filmGrainDenoise > 0.0f) {
                     cmd << _T("denoise=") << pParams->av1.filmGrainDenoise;
+                    needComma = true;
                 }
                 if (!pParams->av1.filmGrainChroma) {
-                    if (pParams->av1.filmGrainDenoise > 0.0f) cmd << _T(",");
+                    if (needComma) cmd << _T(",");
                     cmd << _T("chroma=off");
+                    needComma = true;
+                }
+                if (pParams->av1.filmGrainDenoiser != 0) {
+                    if (needComma) cmd << _T(",");
+                    cmd << _T("denoiser=bilateral");
                 }
             }
         }
