@@ -473,7 +473,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
 
 NVEncFilmGrainAnalyzerConfig::NVEncFilmGrainAnalyzerConfig() :
     enable(true), analyzeChroma(true), clipToRestrictedRange(true),
-    denoiser(FGS_DENOISE_FFT3D), fft3dTemporal(1), motionRefs(1), denoiseLevel(0.0f),
+    denoiser(FGS_DENOISE_FFT3D), fft3dTemporal(1), motionRefs(2), denoiseLevel(0.0f),
     denoisePasses(2), modelWindow(8), minModelFrames(1), minFlatBlocks(8),
     minFlatFraction(0.02f), minNoiseLevel(0.5f), maxNoiseLevel(50.0f) {
 }

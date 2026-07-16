@@ -57,7 +57,7 @@ struct NVEncFilmGrainAnalyzerConfig {
     bool clipToRestrictedRange;
     int denoiser;              // FGSDenoiseEngine
     int fft3dTemporal;         // FFT3D temporal radius bt: 1 (spatial) or 2 (prev+cur, delay-free)
-    int motionRefs;            // number of causal motion references: 1 (default) or 2 (quality)
+    int motionRefs;            // causal motion references: 2 (default) or 1 (reduced cost)
     float denoiseLevel;
     int denoisePasses;
     int modelWindow;
