@@ -43,6 +43,7 @@
 
 #include "NVEncFilterFilmGrain.h"
 #include "NVEncFilmGrainModel.h"
+#include "NVEncFilterDegrain.h"
 #include "NVEncFilterDenoiseFFT3D.h"
 
 #pragma warning(push)
@@ -453,7 +454,8 @@ tstring NVEncFilmGrainAnalyzerConfig::print() const {
         denoiseLevel <= 0.0f ? _T("auto") : _T(""),
         denoiseLevel <= 0.0f ? _T("") : strsprintf(_T("%.2f"), denoiseLevel).c_str(),
         denoiser == FGS_DENOISE_FFT3D
-            ? (fft3dTemporal >= 2 ? _T("fft3d(bt2)") : _T("fft3d")) : _T("bilateral"),
+            ? (fft3dTemporal >= 2 ? _T("fft3d(bt2)") : _T("fft3d"))
+            : (denoiser == FGS_DENOISE_MOTION ? _T("motion") : _T("bilateral")),
         analyzeChroma ? _T("on") : _T("off"), modelWindow);
 }
 
@@ -498,6 +500,7 @@ tstring NVEncFilterParamFilmGrain::print() const {
 
 NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_denoiseWork(), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
+    m_motionDegrain(), m_motionDegrainParam(),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_modelStats(),
     m_state(std::make_unique<AnalyzerState>()), m_blocksX(0), m_blocksY(0) {
     m_name = _T("film-grain");
@@ -511,6 +514,7 @@ NVEncFilterFilmGrain::~NVEncFilterFilmGrain() {
 void NVEncFilterFilmGrain::resetTemporalState() {
     if (m_state) m_state->clear();
     if (m_fft3d) m_fft3d->resetTemporalState();
+    if (m_motionDegrain) m_motionDegrain->resetTemporalState();
 }
 
 namespace {
@@ -674,6 +678,8 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     }
     config.fft3dTemporal = clamp(config.fft3dTemporal, 1, 2);
     if (config.denoiser == FGS_DENOISE_FFT3D) {
+        m_motionDegrain.reset();
+        m_motionDegrainParam.reset();
         m_fft3dParam = std::make_shared<NVEncFilterParamDenoiseFFT3D>();
         m_fft3dParam->frameIn = prm->frameIn;
         m_fft3dParam->frameOut = prm->frameOut;
@@ -699,10 +705,50 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
             return sts;
         }
         m_fft3dSigma = fft3d.sigma;
+    } else if (config.denoiser == FGS_DENOISE_MOTION) {
+        m_fft3d.reset();
+        m_fft3dParam.reset();
+        m_fft3dSigma = -1.0f;
+        m_motionDegrainParam = std::make_shared<NVEncFilterParamDegrain>();
+        m_motionDegrainParam->frameIn = prm->frameIn;
+        m_motionDegrainParam->frameOut = prm->frameOut;
+        m_motionDegrainParam->baseFps = prm->baseFps;
+        m_motionDegrainParam->bOutOverwrite = false;
+        m_motionDegrainParam->attachAnalysisData = false;
+        m_motionDegrainParam->causal = true;
+        auto& degrain = m_motionDegrainParam->degrain;
+        degrain.enable = true;
+        degrain.mode = VppDegrainMode::Degrain;
+        degrain.stage = VppDegrainStage::TR1;
+        degrain.delta = 2;
+        degrain.levels = 2;
+        degrain.blksize = 16;
+        degrain.overlap = 8;
+        // General-purpose degrain defaults are intentionally conservative
+        // (thsad=640).  Grain extraction needs the temporally random component
+        // to participate in the blend; 4000 accepts the measured 16x16 film-
+        // grain SAD while scene-change gating still rejects unrelated frames.
+        degrain.thsad = 4000;
+        degrain.thscd1 = 4000;
+        // Keep the final encoder-surface filter one-in/one-out.  Direction 2
+        // retains only already available reference frames; a later pipeline
+        // stage can enable bidirectional lookahead without changing O/B/R.
+        degrain.useFlag = 2;
+        // Encoder surfaces are semi-planar.  The motion filter handles luma;
+        // chroma remains in the retained source and receives the existing
+        // edge-aware local denoise below before residual modelling.
+        degrain.chroma = false;
+        m_motionDegrain = std::make_unique<NVEncFilterDegrain>();
+        if ((sts = m_motionDegrain->init(m_motionDegrainParam, pPrintMes)) != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("Failed to init motion degrain for film-grain: %s.\n"), get_err_mes(sts));
+            return sts;
+        }
     } else {
         m_fft3d.reset();
         m_fft3dParam.reset();
         m_fft3dSigma = -1.0f;
+        m_motionDegrain.reset();
+        m_motionDegrainParam.reset();
     }
     if (!m_state) m_state = std::make_unique<AnalyzerState>();
     m_state->clear();
@@ -714,26 +760,47 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
 RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames,
     int *pOutputFrameNum, cudaStream_t stream) {
     if (!pOutputFrameNum || !ppOutputFrames) return RGY_ERR_INVALID_PARAM;
-    if (!pInputFrame) {
-        *pOutputFrameNum = 0;
-        ppOutputFrames[0] = nullptr;
-        return RGY_ERR_NONE;
-    }
-    if (!pInputFrame->ptr[0]) {
-        *pOutputFrameNum = 0;
-        return RGY_ERR_NONE;
-    }
     auto prm = std::dynamic_pointer_cast<NVEncFilterParamFilmGrain>(m_param);
     if (!prm) return RGY_ERR_INVALID_PARAM;
+
+    auto *requestedOutput = ppOutputFrames[0];
+    *pOutputFrameNum = 0;
+    ppOutputFrames[0] = nullptr;
+    const RGYFrameInfo *source = pInputFrame;
+    const RGYFrameInfo *cleanBase = pInputFrame;
+    RGYFrameInfo *motionOutput[1] = { nullptr };
+    int motionOutputCount = 0;
+    auto sts = RGY_ERR_NONE;
+    if (prm->filmGrain.denoiser == FGS_DENOISE_MOTION) {
+        if (!m_motionDegrain) return RGY_ERR_INVALID_CALL;
+        sts = m_motionDegrain->filter(const_cast<RGYFrameInfo *>(pInputFrame), motionOutput, &motionOutputCount, stream);
+        if (sts != RGY_ERR_NONE) return sts;
+        if (motionOutputCount == 0) return RGY_ERR_NONE;
+        if (motionOutputCount != 1 || !motionOutput[0] || !motionOutput[0]->ptr[0]) {
+            AddMessage(RGY_LOG_ERROR, _T("Motion degrain returned an invalid film-grain base frame.\n"));
+            return RGY_ERR_INVALID_CALL;
+        }
+        cleanBase = motionOutput[0];
+        source = m_motionDegrain->cachedSourceFrame(cleanBase->inputFrameId, cleanBase->timestamp);
+        if (!source) {
+            AddMessage(RGY_LOG_ERROR, _T("Could not pair motion-degrained frame id=%d pts=%lld with its retained source.\n"),
+                cleanBase->inputFrameId, static_cast<long long>(cleanBase->timestamp));
+            return RGY_ERR_INVALID_CALL;
+        }
+    } else if (!pInputFrame || !pInputFrame->ptr[0]) {
+        return RGY_ERR_NONE;
+    }
+
     *pOutputFrameNum = 1;
+    ppOutputFrames[0] = requestedOutput;
     if (!ppOutputFrames[0]) {
         ppOutputFrames[0] = &m_frameBuf[m_nFrameIdx]->frame;
         m_nFrameIdx = (m_nFrameIdx + 1) % m_frameBuf.size();
     }
     auto *output = ppOutputFrames[0];
-    auto sts = copyFrameAsync(output, pInputFrame, stream);
+    sts = copyFrameAsync(output, cleanBase, stream);
     if (sts != RGY_ERR_NONE) return sts;
-    copyFramePropWithoutRes(output, pInputFrame);
+    copyFramePropWithoutRes(output, source);
     nvenc_film_grain_erase_frame_data(output->dataList);
 
     NVEncFilmGrainDiagnostics diagnostics;
@@ -741,18 +808,19 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
     auto attachResult = [&]() {
         output->dataList.push_back(std::make_shared<RGYFrameDataFilmGrain>(
-            params, diagnostics, pInputFrame->timestamp, pInputFrame->inputFrameId));
+            params, diagnostics, source->timestamp, source->inputFrameId));
     };
-    if (!prm->filmGrain.enable || interlaced(*pInputFrame)
-        || getCudaMemcpyKind(pInputFrame->mem_type, output->mem_type) != cudaMemcpyDeviceToDevice) {
+    if (!prm->filmGrain.enable || interlaced(*source)
+        || getCudaMemcpyKind(source->mem_type, output->mem_type) != cudaMemcpyDeviceToDevice) {
+        if (cleanBase != source && (sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
         attachResult();
         return RGY_ERR_NONE;
     }
 
-    const int bitDepth = (pInputFrame->csp == RGY_CSP_NV12 || pInputFrame->csp == RGY_CSP_YV12) ? 8 : 10;
+    const int bitDepth = (source->csp == RGY_CSP_NV12 || source->csp == RGY_CSP_YV12) ? 8 : 10;
     const int depthScale = 1 << (bitDepth - 8);
-    const auto luma = getPlane(pInputFrame, RGY_PLANE_Y);
-    switch (pInputFrame->csp) {
+    const auto luma = getPlane(source, RGY_PLANE_Y);
+    switch (source->csp) {
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
         sts = launch_flat_metrics<uint8_t, 0>(luma,
@@ -812,8 +880,9 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         diagnostics.sceneReset = !m_state->history.empty();
         m_state->clear();
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=0 reset=%d flat=%d/%d window=0\n"),
-            pInputFrame->inputFrameId, static_cast<long long>(pInputFrame->timestamp),
+            source->inputFrameId, static_cast<long long>(source->timestamp),
             diagnostics.sceneReset ? 1 : 0, diagnostics.flatBlocks, diagnostics.totalBlocks);
+        if (cleanBase != source && (sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
         attachResult();
         return RGY_ERR_NONE;
     }
@@ -858,7 +927,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         }
         RGYFrameInfo *fft3dOut[1] = { output };
         int fft3dOutNum = 0;
-        sts = m_fft3d->filter(const_cast<RGYFrameInfo *>(pInputFrame), fft3dOut, &fft3dOutNum, stream);
+        sts = m_fft3d->filter(const_cast<RGYFrameInfo *>(source), fft3dOut, &fft3dOutNum, stream);
         if (sts != RGY_ERR_NONE) return sts;
         if (fft3dOutNum != 1 || fft3dOut[0] != output) {
             AddMessage(RGY_LOG_ERROR, _T("FFT3D denoiser did not produce the expected 1-in-1-out frame.\n"));
@@ -878,8 +947,21 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
             m_blocksX, m_blocksY, stream);
         if (sts != RGY_ERR_NONE) return sts;
+    } else if (prm->filmGrain.denoiser == FGS_DENOISE_MOTION) {
+        // Temporal averaging deliberately leaves some grain in a causal
+        // three-frame window.  Finish the base with one local edge-aware pass:
+        // it operates on the motion-cleaned luma instead of the original, and
+        // also handles semi-planar chroma which the motion child leaves raw.
+        sts = copyFrameAsync(&m_denoiseWork->frame, output, stream);
+        if (sts != RGY_ERR_NONE) return sts;
+        sts = denoise_frame(output, &m_denoiseWork->frame, &m_denoiseWork->frame,
+            prm->filmGrain.analyzeChroma, true,
+            1, bitDepth, denoiseSigma,
+            adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
+            m_blocksX, m_blocksY, stream);
+        if (sts != RGY_ERR_NONE) return sts;
     } else {
-        sts = denoise_frame(output, &m_denoiseWork->frame, pInputFrame, prm->filmGrain.analyzeChroma, true,
+        sts = denoise_frame(output, &m_denoiseWork->frame, source, prm->filmGrain.analyzeChroma, true,
             prm->filmGrain.denoisePasses, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
             m_blocksX, m_blocksY, stream);
@@ -888,7 +970,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
 
     cudaerr = cudaMemsetAsync(m_modelStats->ptrDevice, 0, m_modelStats->nSize, stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
-    sts = collect_model_stats(pInputFrame, output, prm->filmGrain.analyzeChroma, m_blocksX, m_blocksY,
+    sts = collect_model_stats(source, output, prm->filmGrain.analyzeChroma, m_blocksX, m_blocksY,
         bitDepth, static_cast<const uint8_t *>(m_blockMask->ptrDevice),
         static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
         static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice), stream);
@@ -899,7 +981,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     bool sceneReset = false;
     if (!m_state->history.empty()) {
         const float ratio = measuredNoise / std::max(0.01f, m_state->stableNoise);
-        if (ratio < 0.55f || ratio > 1.80f || pInputFrame->timestamp <= m_state->lastTimestamp) {
+        if (ratio < 0.55f || ratio > 1.80f || source->timestamp <= m_state->lastTimestamp) {
             m_state->clear();
             sceneReset = true;
         }
@@ -912,7 +994,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     m_state->stableNoise = 0.0f;
     for (const auto& frame : m_state->history) m_state->stableNoise += frame.measuredNoise;
     m_state->stableNoise /= m_state->history.size();
-    m_state->lastTimestamp = pInputFrame->timestamp;
+    m_state->lastTimestamp = source->timestamp;
     diagnostics.modelFrames = static_cast<int>(m_state->history.size());
     diagnostics.sceneReset = sceneReset;
 
@@ -945,7 +1027,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         ++m_state->heldStreak;
     } else {
         std::memset(&params, 0, sizeof(params));
-        sts = copyFrameAsync(output, pInputFrame, stream);
+        sts = copyFrameAsync(output, source, stream);
         if (sts != RGY_ERR_NONE) return sts;
     }
     diagnostics.reliable = modelValid;
@@ -962,7 +1044,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
             _T("noise=%.2f/%.2f/%.2f scaleShift=%d arShift=%d corrCb=%d corrCr=%d y=[%s] cb=[%s] cr=[%s]\n"),
-            pInputFrame->inputFrameId, static_cast<long long>(pInputFrame->timestamp),
+            source->inputFrameId, static_cast<long long>(source->timestamp),
             modelValid ? 1 : 0, diagnostics.sceneReset ? 1 : 0, diagnostics.modelHeld ? 1 : 0,
             diagnostics.flatBlocks, diagnostics.totalBlocks, diagnostics.modelFrames,
             diagnostics.noiseStdDev[0], diagnostics.noiseStdDev[1], diagnostics.noiseStdDev[2],
@@ -976,6 +1058,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
 }
 
 void NVEncFilterFilmGrain::close() {
+    m_motionDegrain.reset();
+    m_motionDegrainParam.reset();
+    m_fft3d.reset();
+    m_fft3dParam.reset();
+    m_fft3dSigma = -1.0f;
     m_frameBuf.clear();
     m_denoiseWork.reset();
     m_blockMetrics.reset();

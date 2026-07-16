@@ -1062,6 +1062,9 @@ int NVEncFilterDegrain::outputDelay() const {
     if (!prm) {
         return FILTER_DEFAULT_DEGRAIN_DELTA;
     }
+    if (prm->causal) {
+        return prm->degrain.tr0;
+    }
     return prm->degrain.delta + (modeRequiresAnalysis(prm->degrain.mode) ? prm->degrain.tr0 : 0);
 }
 
@@ -3207,7 +3210,7 @@ RGY_ERR NVEncFilterDegrain::runDegrainMode(const RGYFilterDegrainProcessFrameSet
     const auto currentFrameAnalysisData = m_frameAnalysisData;
     const auto currentBoundAnalyzeResult = m_boundAnalyzeResult;
     const auto currentFrameAnalysisLayout = m_frameAnalysisLayout;
-    const bool canDeferSceneChange = !m_boundAnalyzeResult.valid() || m_frameAnalysisData;
+    const bool canDeferSceneChange = !prm->causal && (!m_boundAnalyzeResult.valid() || m_frameAnalysisData);
     if (canDeferSceneChange && !pendingOutputEmitted && m_pendingSceneChange.size() >= SCENE_CHANGE_PIPELINE_DEPTH) {
         auto err = resolvePendingSceneChangeFrame(ppOutputFrames, pOutputFrameNum, stream, event);
         if (err != RGY_ERR_NONE) {
@@ -4225,4 +4228,26 @@ bool NVEncFilterDegrain::setDirectAnalyzeResultSet(const RGYDegrainAnalyzeResult
 
 void NVEncFilterDegrain::clearDirectAnalyzeResult() {
     m_directAnalyzeResultSet = RGYDegrainAnalyzeResultSet();
+}
+
+const RGYFrameInfo *NVEncFilterDegrain::cachedSourceFrame(const int inputFrameId, const int64_t timestamp) const {
+    const RGYFrameInfo *timestampMatch = nullptr;
+    for (int i = 0; i < DEGRAIN_CACHE_SIZE; ++i) {
+        const auto *frame = (m_cacheFrameOwners[i] && m_cacheFrameRefs[i].ptr[0])
+            ? &m_cacheFrameRefs[i]
+            : (m_cacheFrames[i] ? &m_cacheFrames[i]->frame : nullptr);
+        if (!frame || !frame->ptr[0]) {
+            continue;
+        }
+        if (frame->inputFrameId < 0) {
+            continue;
+        }
+        if (inputFrameId >= 0 && frame->inputFrameId == inputFrameId) {
+            return frame;
+        }
+        if (frame->timestamp == timestamp) {
+            timestampMatch = frame;
+        }
+    }
+    return timestampMatch;
 }

@@ -43,6 +43,7 @@
 enum FGSDenoiseEngine : int {
     FGS_DENOISE_FFT3D = 0,     // frequency-domain Wiener denoise on luma (NVEncFilterDenoiseFFT3D)
     FGS_DENOISE_BILATERAL = 1, // 5x5 edge-aware bilateral (weaker; kept for A/B and fallback)
+    FGS_DENOISE_MOTION = 2,    // motion-compensated dual-surface degrain (original is retained for modelling)
 };
 
 // Quality-first defaults for the CUDA AV1 grain analyzer.  A denoiseLevel of
@@ -116,6 +117,8 @@ public:
 
 class NVEncFilterDenoiseFFT3D;
 class NVEncFilterParamDenoiseFFT3D;
+class NVEncFilterDegrain;
+class NVEncFilterParamDegrain;
 
 class NVEncFilterFilmGrain : public NVEncFilter {
 public:
@@ -137,6 +140,8 @@ private:
     std::unique_ptr<NVEncFilterDenoiseFFT3D> m_fft3d;
     std::shared_ptr<NVEncFilterParamDenoiseFFT3D> m_fft3dParam;
     float m_fft3dSigma;
+    std::unique_ptr<NVEncFilterDegrain> m_motionDegrain;
+    std::shared_ptr<NVEncFilterParamDegrain> m_motionDegrainParam;
     std::unique_ptr<CUMemBufPair> m_blockMetrics;
     std::unique_ptr<CUMemBufPair> m_blockMask;
     std::unique_ptr<CUMemBufPair> m_sigmaMap;
