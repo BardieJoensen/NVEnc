@@ -317,6 +317,9 @@ tstring encoder_help() {
         _T("                                  denoiser=fft3d|bilateral|motion (default: fft3d)\n")
         _T("                                  motion-refs=1|2         (default: 2)\n")
         _T("   --film-grain-table <path>    [AV1] read film grain parameters from an AOM filmgrn1 table.\n")
+        _T("   --film-grain-table-out <path> write the measured film grain as an AOM filmgrn1 table\n")
+        _T("                                  (with --av1-film-grain; also usable with --codec raw to\n")
+        _T("                                   produce a denoised base + grain table for another encoder).\n")
         _T("   --bitstream-padding          [AV1] enable bitstream padding.\n"));
 
     str += strsprintf(_T("")
@@ -1233,6 +1236,16 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (IS_OPTION("film-grain-table-out")) {
+        if (i + 1 < nArgNum && strInput[i + 1][0] != 0 && strInput[i + 1][0] != _T('-')) {
+            pParams->av1.filmGrainTableOut = strInput[++i];
+        } else {
+            print_cmd_error_invalid_value(option_name,
+                (i + 1 < nArgNum && strInput[i + 1][0] != 0) ? strInput[i + 1] : _T("--"));
+            return 1;
+        }
+        return 0;
+    }
     if (IS_OPTION("bitstream-padding")) {
         pParams->bitstreamPadding = true;
         return 0;
@@ -1839,6 +1852,7 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
             }
         }
         OPT_STR_PATH(_T("--film-grain-table"), av1.filmGrainTable);
+        OPT_STR_PATH(_T("--film-grain-table-out"), av1.filmGrainTableOut);
         OPT_LST_CX(_T("--tile-columns"),  av1, tilesCols,      list_av1_tiles);
         OPT_LST_CX(_T("--tile-rows"),     av1, tilesRows,      list_av1_tiles);
         OPT_LST_CX(_T("--part-size-min"), av1, partMin,        list_part_size_av1);

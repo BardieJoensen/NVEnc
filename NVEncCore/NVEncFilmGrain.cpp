@@ -542,3 +542,64 @@ bool NVEncFilmGrainTable::empty() const noexcept {
 bool NVEncFilmGrainTable::clipToRestrictedRange() const noexcept {
     return m_clipToRestrictedRange;
 }
+
+bool nvenc_film_grain_table_write(const tstring& path,
+    const std::vector<NVEncFilmGrainTableEntry>& entries, tstring& error) {
+    std::ostringstream out;
+    out << "filmgrn1\n";
+    int64_t previousEnd = -1;
+    for (const auto& entry : entries) {
+        if (!entry.params.applyGrain) {
+            error = _T("table writer only accepts apply_grain=1 entries; represent grain-off periods as gaps");
+            return false;
+        }
+        if (entry.endTime <= entry.startTime || entry.startTime < previousEnd) {
+            error = _T("table entries must have increasing, non-overlapping [start,end) intervals");
+            return false;
+        }
+        previousEnd = entry.endTime;
+        const auto& p = entry.params;
+        out << "E " << entry.startTime << " " << entry.endTime << " 1 "
+            << entry.randomSeed << " 1\n";
+        out << "p " << p.arCoeffLag << " " << (p.arCoeffShiftMinus6 + 6) << " "
+            << p.grainScaleShift << " " << (p.grainScalingMinus8 + 8) << " "
+            << p.chromaScalingFromLuma << " " << p.overlapFlag << " "
+            << static_cast<int>(p.cbMult) << " " << static_cast<int>(p.cbLumaMult) << " "
+            << static_cast<int>(p.cbOffset) << " " << static_cast<int>(p.crMult) << " "
+            << static_cast<int>(p.crLumaMult) << " " << static_cast<int>(p.crOffset) << "\n";
+        auto writePoints = [&out](const char *marker, const uint32_t count,
+            const uint8_t *values, const uint8_t *scalings) {
+            out << marker << " " << count;
+            for (uint32_t i = 0; i < count; ++i) {
+                out << " " << static_cast<int>(values[i]) << " " << static_cast<int>(scalings[i]);
+            }
+            out << "\n";
+        };
+        writePoints("sY", p.numYPoints, p.pointYValue, p.pointYScaling);
+        writePoints("sCb", p.numCbPoints, p.pointCbValue, p.pointCbScaling);
+        writePoints("sCr", p.numCrPoints, p.pointCrValue, p.pointCrScaling);
+        const uint32_t lumaCoefficients = 2u * p.arCoeffLag * (p.arCoeffLag + 1u);
+        auto writeCoefficients = [&out](const char *marker, const uint32_t count, const uint8_t *plus128) {
+            out << marker;
+            for (uint32_t i = 0; i < count; ++i) {
+                out << " " << (static_cast<int>(plus128[i]) - 128);
+            }
+            out << "\n";
+        };
+        writeCoefficients("cY", lumaCoefficients, p.arCoeffsYPlus128);
+        writeCoefficients("cCb", lumaCoefficients + 1, p.arCoeffsCbPlus128);
+        writeCoefficients("cCr", lumaCoefficients + 1, p.arCoeffsCrPlus128);
+    }
+    FILE *file = _tfopen(path.c_str(), _T("wb"));
+    if (!file) {
+        error = _T("failed to open film grain table for writing: ") + path;
+        return false;
+    }
+    const auto text = out.str();
+    const bool ok = fwrite(text.data(), 1, text.size(), file) == text.size();
+    fclose(file);
+    if (!ok) {
+        error = _T("failed to write film grain table: ") + path;
+    }
+    return ok;
+}

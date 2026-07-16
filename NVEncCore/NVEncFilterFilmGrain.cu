@@ -45,6 +45,7 @@
 #include "NVEncFilmGrainModel.h"
 #include "NVEncFilterDegrain.h"
 #include "NVEncFilterDenoiseFFT3D.h"
+#include "NVEncUtil.h"
 
 #pragma warning(push)
 #pragma warning(disable: 4819)
@@ -593,6 +594,7 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_denoiseWork(), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_modelStats(),
+    m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWritten(false),
     m_state(std::make_unique<AnalyzerState>()), m_blocksX(0), m_blocksY(0) {
     m_name = _T("film-grain");
     m_pathThrough = FILTER_PATHTHROUGH_NONE;
@@ -844,11 +846,60 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         m_motionDegrain.reset();
         m_motionDegrainParam.reset();
     }
+    m_tableOutPath = prm->tableOutPath;
+    m_tableTimebase = prm->timebase.is_valid() ? prm->timebase
+        : rgy_rational<int>(prm->baseFps.d(), prm->baseFps.n());
+    m_tableFrameDuration10MHz = std::max<int64_t>(1,
+        rational_rescale(1, rgy_rational<int>(prm->baseFps.d(), prm->baseFps.n()), rgy_rational<int>(1, 10000000)));
+    m_tableEntries.clear();
+    m_tableWritten = false;
     if (!m_state) m_state = std::make_unique<AnalyzerState>();
     m_state->clear();
     setFilterInfo(prm->print());
     m_param = prm;
     return RGY_ERR_NONE;
+}
+
+void NVEncFilterFilmGrain::recordTableEntry(const int64_t timestamp, const int64_t duration,
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params) {
+    const auto to10MHz = rgy_rational<int>(1, 10000000);
+    const int64_t start = rational_rescale(timestamp, m_tableTimebase, to10MHz);
+    int64_t end = (duration > 0)
+        ? rational_rescale(timestamp + duration, m_tableTimebase, to10MHz)
+        : start + m_tableFrameDuration10MHz;
+    if (end <= start) end = start + 1;
+    if (!m_tableEntries.empty()) {
+        auto& last = m_tableEntries.back();
+        if (start <= last.startTime) return; // out-of-order timestamp; keep the table monotonic
+        if (start <= last.endTime && std::memcmp(&last.params, &params, sizeof(params)) == 0) {
+            last.endTime = std::max(last.endTime, end);
+            return;
+        }
+        last.endTime = std::min(last.endTime, start); // guard rounding overlap between entries
+    }
+    NVEncFilmGrainTableEntry entry = {};
+    entry.startTime = start;
+    entry.endTime = end;
+    entry.randomSeed = static_cast<uint16_t>((m_tableEntries.size() * 7919u + 12345u) & 0xffffu);
+    entry.sourceUpdateParameters = true;
+    entry.params = params;
+    m_tableEntries.push_back(entry);
+}
+
+void NVEncFilterFilmGrain::writeTableFile() {
+    if (m_tableOutPath.empty() || m_tableWritten) return;
+    m_tableWritten = true;
+    if (m_tableEntries.empty()) {
+        AddMessage(RGY_LOG_WARN, _T("film-grain: no grain was detected, table not written: %s\n"), m_tableOutPath.c_str());
+        return;
+    }
+    tstring error;
+    if (nvenc_film_grain_table_write(m_tableOutPath, m_tableEntries, error)) {
+        AddMessage(RGY_LOG_INFO, _T("film-grain: wrote grain table (%d entries): %s\n"),
+            static_cast<int>(m_tableEntries.size()), m_tableOutPath.c_str());
+    } else {
+        AddMessage(RGY_LOG_ERROR, _T("film-grain: %s\n"), error.c_str());
+    }
 }
 
 RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames,
@@ -1146,6 +1197,9 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if (sts != RGY_ERR_NONE) return sts;
     }
     diagnostics.reliable = modelValid;
+    if (modelValid && params.applyGrain && !m_tableOutPath.empty()) {
+        recordTableEntry(source->timestamp, source->duration, params);
+    }
     if (modelValid && params.applyGrain) {
         build_strength_lut(params, bitDepth, static_cast<float *>(m_strengthLut->ptrHost));
         if ((sts = m_strengthLut->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
@@ -1200,6 +1254,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
 }
 
 void NVEncFilterFilmGrain::close() {
+    writeTableFile();
     m_motionDegrain.reset();
     m_motionDegrainParam.reset();
     m_fft3d.reset();
