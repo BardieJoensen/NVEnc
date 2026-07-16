@@ -20,7 +20,8 @@ Sigma values in specs and reports are in 8-bit code values; 10-bit variants
 scale internally.
 
 Usage:  python3 fgs_kat.py [--tests const_luma,clean] [--keep]
-Environment: NVENCC (encoder binary), FGS_KAT_DIR (work dir).
+Environment: NVENCC (encoder binary), FGS_KAT_DIR (work dir),
+FGS_KAT_DENOISER (fft3d, bilateral, or motion; default fft3d).
 """
 import argparse
 import json
@@ -46,6 +47,9 @@ LEVELS = np.linspace(32, 224, BANDS)  # keeps +-3 sigma of grain inside range
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 NVENCC = os.environ.get("NVENCC", os.path.join(REPO, "build-fgs-cuda", "nvencc"))
 WORKDIR = os.environ.get("FGS_KAT_DIR", "/tmp/nvenc-fgs-tests/kat")
+FGS_DENOISER = os.environ.get("FGS_KAT_DENOISER", "fft3d").lower()
+if FGS_DENOISER not in ("fft3d", "bilateral", "motion"):
+    sys.exit(f"invalid FGS_KAT_DENOISER: {FGS_DENOISER}")
 
 
 def apply_spec(spec):
@@ -167,7 +171,7 @@ COLOR_EXPECT = {
 
 def encode(src, out, spec):
     cmd = [NVENCC, "--codec", "av1", "--cqp", "20",
-           "--av1-film-grain", "denoise=auto,chroma=auto",
+           "--av1-film-grain", f"denoise=auto,chroma=auto,denoiser={FGS_DENOISER}",
            "--log-level", "debug"]
     if BITS == 10:
         cmd += ["--output-depth", "10"]

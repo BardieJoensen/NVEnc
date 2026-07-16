@@ -122,7 +122,8 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,
     bool analyzeChroma, bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
     NVEncFilmGrainDiagnostics& diagnostics);
 double eval_scaling_curve(const uint8_t *values, const uint8_t *scalings, uint32_t count, double x);
-bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC_FILM_GRAIN_PARAMS_AV1& b);
+bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC_FILM_GRAIN_PARAMS_AV1& b,
+    double relativeSigmaTolerance = 0.05, double coefficientTolerance = 0.05);
 
 } // namespace fgsmodel
 

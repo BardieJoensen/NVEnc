@@ -355,7 +355,8 @@ double eval_scaling_curve(const uint8_t *values, const uint8_t *scalings, const 
 // per-frame requantization.  Distances are measured on the real-valued
 // scaling curves (sigma in 8-bit code values) and AR coefficients, which is
 // robust against the point fitter picking different knot positions.
-bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC_FILM_GRAIN_PARAMS_AV1& b) {
+bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC_FILM_GRAIN_PARAMS_AV1& b,
+    const double relativeSigmaTolerance, const double coefficientTolerance) {
     if (a.applyGrain != b.applyGrain) return false;
     const double sigmaScaleA = 1.0 / (1 << (a.grainScalingMinus8 + 8 - 5));
     const double sigmaScaleB = 1.0 / (1 << (b.grainScalingMinus8 + 8 - 5));
@@ -374,7 +375,7 @@ bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC
             maxSigmaDiff = std::max(maxSigmaDiff, std::abs(sigmaA - sigmaB));
         }
     }
-    if (maxSigmaDiff > std::max(0.10, 0.05 * maxSigma)) return false;
+    if (maxSigmaDiff > std::max(0.10, relativeSigmaTolerance * maxSigma)) return false;
     const double coeffScaleA = 1.0 / (1 << (a.arCoeffShiftMinus6 + 6));
     const double coeffScaleB = 1.0 / (1 << (b.arCoeffShiftMinus6 + 6));
     double maxCoeffDiff = 0.0;
@@ -391,7 +392,7 @@ bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC
             (static_cast<int>(a.arCoeffsCrPlus128[i]) - 128) * coeffScaleA
             - (static_cast<int>(b.arCoeffsCrPlus128[i]) - 128) * coeffScaleB));
     }
-    return maxCoeffDiff <= 0.05;
+    return maxCoeffDiff <= coefficientTolerance;
 }
 
 } // namespace fgsmodel

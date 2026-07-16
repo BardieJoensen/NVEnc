@@ -184,6 +184,39 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     metrics[blockIndex] = out;
 }
 
+__global__ void kernel_fgs_motion_confidence(uint8_t *__restrict__ flatMask,
+    const int fgsBlocksX, const int fgsBlocksY,
+    const RGYDegrainSAD *__restrict__ sad,
+    const int mvBlocksX, const int mvBlocksY, const int mvStep, const int temporalDirections,
+    const uint32_t enabledReferenceMask, const uint32_t sadThreshold) {
+    const int blockIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    if (blockIndex >= fgsBlocksX * fgsBlocksY || !flatMask[blockIndex]) return;
+
+    const int bx = blockIndex % fgsBlocksX;
+    const int by = blockIndex / fgsBlocksX;
+    const int centerX = bx * FGS_BLOCK_SIZE + FGS_BLOCK_SIZE / 2;
+    const int centerY = by * FGS_BLOCK_SIZE + FGS_BLOCK_SIZE / 2;
+    const int mvX = min(mvBlocksX - 1, max(0, centerX / max(1, mvStep)));
+    const int mvY = min(mvBlocksY - 1, max(0, centerY / max(1, mvStep)));
+    const size_t mvBlockIndex = static_cast<size_t>(mvY) * mvBlocksX + mvX;
+
+    uint32_t bestSad = 0xffffffffu;
+    bool hasReference = false;
+    // Odd slots are the already-seen reference frames in the causal motion
+    // layout (d1f, d2f, ...).  Ignore unavailable scene-boundary slots.
+    for (int direction = 1; direction < temporalDirections; direction += 2) {
+        if ((enabledReferenceMask & (1u << direction)) == 0) continue;
+        bestSad = min(bestSad, sad[mvBlockIndex * temporalDirections + direction].sad);
+        hasReference = true;
+    }
+    // With no temporal reference (first frame or a cut), retain the spatial
+    // flat-block decision as the safe fallback.  Reject only a reference that
+    // exists but does not match the current block.
+    if (hasReference && bestSad > sadThreshold) {
+        flatMask[blockIndex] = 0;
+    }
+}
+
 template<typename Type, int shift, int components>
 __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPitch,
     const uint8_t *__restrict__ src, const int srcPitch, const int width, const int height,
@@ -377,6 +410,18 @@ static RGY_ERR launch_flat_metrics(const RGYFrameInfo& luma, FilmGrainBlockMetri
     return err_to_rgy(cudaGetLastError());
 }
 
+static RGY_ERR launch_motion_confidence(uint8_t *flatMask, const int fgsBlocksX, const int fgsBlocksY,
+    const RGYDegrainAnalyzeResult& analysis, const uint32_t enabledReferenceMask,
+    const uint32_t sadThreshold, cudaStream_t stream) {
+    constexpr int threads = 128;
+    kernel_fgs_motion_confidence<<<divCeil(fgsBlocksX * fgsBlocksY, threads), threads, 0, stream>>>(
+        flatMask, fgsBlocksX, fgsBlocksY,
+        reinterpret_cast<const RGYDegrainSAD *>(analysis.sad->ptr),
+        analysis.layout.blocksX, analysis.layout.blocksY, analysis.layout.step,
+        analysis.layout.temporalDirections, enabledReferenceMask, sadThreshold);
+    return err_to_rgy(cudaGetLastError());
+}
+
 template<typename Type, int shift, int components>
 static RGY_ERR launch_bilateral(const RGYFrameInfo& dst, const RGYFrameInfo& src,
     const int width, const int height, const int bitDepth, const float sigma,
@@ -428,7 +473,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
 
 NVEncFilmGrainAnalyzerConfig::NVEncFilmGrainAnalyzerConfig() :
     enable(true), analyzeChroma(true), clipToRestrictedRange(true),
-    denoiser(FGS_DENOISE_FFT3D), fft3dTemporal(1), denoiseLevel(0.0f),
+    denoiser(FGS_DENOISE_FFT3D), fft3dTemporal(1), motionRefs(1), denoiseLevel(0.0f),
     denoisePasses(2), modelWindow(8), minModelFrames(1), minFlatBlocks(8),
     minFlatFraction(0.02f), minNoiseLevel(0.5f), maxNoiseLevel(50.0f) {
 }
@@ -439,6 +484,7 @@ bool NVEncFilmGrainAnalyzerConfig::operator==(const NVEncFilmGrainAnalyzerConfig
         && clipToRestrictedRange == other.clipToRestrictedRange
         && denoiser == other.denoiser
         && fft3dTemporal == other.fft3dTemporal
+        && motionRefs == other.motionRefs
         && denoiseLevel == other.denoiseLevel
         && denoisePasses == other.denoisePasses
         && modelWindow == other.modelWindow
@@ -450,13 +496,14 @@ bool NVEncFilmGrainAnalyzerConfig::operator==(const NVEncFilmGrainAnalyzerConfig
 }
 
 tstring NVEncFilmGrainAnalyzerConfig::print() const {
-    return strsprintf(_T("film-grain: denoise=%s%s, denoiser=%s, chroma=%s, window=%d"),
+    return strsprintf(_T("film-grain: denoise=%s%s, denoiser=%s, chroma=%s, window=%d%s"),
         denoiseLevel <= 0.0f ? _T("auto") : _T(""),
         denoiseLevel <= 0.0f ? _T("") : strsprintf(_T("%.2f"), denoiseLevel).c_str(),
         denoiser == FGS_DENOISE_FFT3D
             ? (fft3dTemporal >= 2 ? _T("fft3d(bt2)") : _T("fft3d"))
             : (denoiser == FGS_DENOISE_MOTION ? _T("motion") : _T("bilateral")),
-        analyzeChroma ? _T("on") : _T("off"), modelWindow);
+        analyzeChroma ? _T("on") : _T("off"), modelWindow,
+        denoiser == FGS_DENOISE_MOTION ? strsprintf(_T(", motion-refs=%d"), motionRefs).c_str() : _T(""));
 }
 
 RGYFrameDataFilmGrain::RGYFrameDataFilmGrain() :
@@ -652,6 +699,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     config.minNoiseLevel = std::max(0.05f, config.minNoiseLevel);
     config.maxNoiseLevel = std::max(config.minNoiseLevel, config.maxNoiseLevel);
     config.denoiseLevel = clamp(config.denoiseLevel, 0.0f, 50.0f);
+    config.motionRefs = clamp(config.motionRefs, 1, 2);
 
     auto sts = AllocFrameBuf(prm->frameOut, 2);
     if (sts != RGY_ERR_NONE) return sts;
@@ -720,13 +768,13 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         degrain.enable = true;
         degrain.mode = VppDegrainMode::Degrain;
         degrain.stage = VppDegrainStage::TR1;
-        degrain.delta = 2;
+        degrain.delta = config.motionRefs;
         degrain.levels = 2;
-        degrain.blksize = 16;
-        degrain.overlap = 8;
+        degrain.blksize = 32;
+        degrain.overlap = 16;
         // General-purpose degrain defaults are intentionally conservative
         // (thsad=640).  Grain extraction needs the temporally random component
-        // to participate in the blend; 4000 accepts the measured 16x16 film-
+        // to participate in the blend; 4000 accepts the measured 32x32 film-
         // grain SAD while scene-change gating still rejects unrelated frames.
         degrain.thsad = 4000;
         degrain.thscd1 = 4000;
@@ -906,6 +954,25 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if ((sts = m_sigmaMap->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
     }
     if ((sts = m_blockMask->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
+    if (prm->filmGrain.denoiser == FGS_DENOISE_MOTION) {
+        const auto analysis = m_motionDegrain->analyzeResult();
+        if (analysis.valid() && analysis.inputFrameId == source->inputFrameId) {
+            uint32_t enabledReferenceMask = 0;
+            for (int direction = 1; direction < analysis.layout.temporalDirections; direction += 2) {
+                if (!analysis.availabilityDisableRefs[direction]) {
+                    enabledReferenceMask |= 1u << direction;
+                }
+            }
+            // This is a modelling confidence threshold, not the much looser
+            // render threshold.  Exclude residuals from mismatched motion or
+            // occlusions so they cannot be learned as synthetic grain.
+            const uint32_t confidenceSad = rgy_degrain_scale_sad_threshold(
+                m_motionDegrainParam->degrain, *source, 1600, false);
+            sts = launch_motion_confidence(static_cast<uint8_t *>(m_blockMask->ptrDevice),
+                m_blocksX, m_blocksY, analysis, enabledReferenceMask, confidenceSad, stream);
+            if (sts != RGY_ERR_NONE) return sts;
+        }
+    }
     if (prm->filmGrain.denoiser == FGS_DENOISE_FFT3D && m_fft3d) {
         const float sigma8 = denoiseSigma / depthScale;
         if (m_fft3dSigma < 0.0f || std::abs(sigma8 - m_fft3dSigma) > std::max(0.3f, m_fft3dSigma * 0.10f)) {
@@ -1006,7 +1073,9 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         && build_film_grain_params(combined, bitDepth, prm->filmGrain.analyzeChroma,
             prm->filmGrain.clipToRestrictedRange, params, diagnostics);
     if (modelValid) {
-        if (m_state->lastParamsValid && film_grain_params_close(params, m_state->lastParams)) {
+        const double modelTolerance = prm->filmGrain.denoiser == FGS_DENOISE_MOTION ? 0.10 : 0.05;
+        if (m_state->lastParamsValid && film_grain_params_close(
+            params, m_state->lastParams, modelTolerance, modelTolerance)) {
             // Hold the previously signalled model while the fresh fit only
             // jitters around it; requantizing every frame makes the grain
             // character twinkle.  NVENC still varies the grain seed per frame.
