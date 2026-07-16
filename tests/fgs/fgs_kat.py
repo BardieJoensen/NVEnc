@@ -68,7 +68,7 @@ def base_luma(shift=0):
 
 
 def sigma_map_for(spec, base):
-    if spec["sigma_y_mode"] == "const":
+    if spec["sigma_y_mode"] in ("const", "coarse"):
         return np.full_like(base, spec["sigma_y"] * DS)
     # linear in intensity: sigma(32) = 2 .. sigma(224) = 10 (8-bit units)
     return (2.0 + (base - LEVELS[0]) / (LEVELS[-1] - LEVELS[0]) * 8.0) * DS
@@ -76,6 +76,25 @@ def sigma_map_for(spec, base):
 
 def avg2x2(arr):
     return arr.reshape(arr.shape[0] // 2, 2, arr.shape[1] // 2, 2).mean(axis=(1, 3))
+
+
+def correlated_unit_noise(rng, shape, blur_sigma_px=1.2, radius=3):
+    """Unit-variance Gaussian noise with short-range spatial correlation, as a
+    synthetic proxy for real (non-white) film grain: energy concentrated at
+    low/mid spatial frequencies instead of spread flat across the spectrum,
+    which is what makes it hard for a frequency-domain denoiser to separate
+    from genuine picture detail."""
+    raw = rng.normal(0.0, 1.0, shape)
+    ax = np.arange(-radius, radius + 1)
+    k1 = np.exp(-(ax ** 2) / (2.0 * blur_sigma_px ** 2))
+    k1 /= k1.sum()
+    kernel2d = np.outer(k1, k1)
+    kpad = np.zeros(shape)
+    kh, kw = kernel2d.shape
+    kpad[:kh, :kw] = kernel2d
+    kpad = np.roll(kpad, (-radius, -radius), axis=(0, 1))
+    blurred = np.fft.irfft2(np.fft.rfft2(raw) * np.fft.rfft2(kpad), s=shape)
+    return blurred / blurred.std()
 
 
 def band_slices(margin, band_w, height):
@@ -97,7 +116,9 @@ def generate(test, spec, path):
             grainy = not (grain_free or (test == "cut" and n >= CUT_FRAME))
             base = base_luma(6 if test == "cut" and n >= CUT_FRAME else 0)
             if grainy:
-                noise_y = rng.normal(0.0, 1.0, (H, W)) * sigma_map_for(spec, base)
+                unit = correlated_unit_noise(rng, (H, W)) if spec["sigma_y_mode"] == "coarse" \
+                    else rng.normal(0.0, 1.0, (H, W))
+                noise_y = unit * sigma_map_for(spec, base)
             else:
                 noise_y = np.zeros((H, W))
             y = np.clip(np.rint(base + noise_y), 0, MAXVAL).astype(DTYPE)
@@ -251,7 +272,16 @@ TESTS = {
     "const_hlg":     {"sigma_y_mode": "const", "sigma_y": 6.0, "bits": 10, "color": "hlg"},
     "const_4k10_pq": {"sigma_y_mode": "const", "sigma_y": 6.0, "bits": 10, "color": "pq",
                       "width": 3840, "height": 2160, "frames": 24},
+    "coarse_luma":   {"sigma_y_mode": "coarse", "sigma_y": 6.0},
 }
+
+# Regression guard for coarse_luma, not a quality target: real 35mm grain is
+# spatially correlated like this fixture, and as of 2026-07-16 the FFT3D+
+# bilateral denoiser only captures a fraction of it (confirmed on real 4K
+# remuxes: NVEncFilterFilmGrain output landed at ~95-107% of source remux
+# size on heavy-grain content instead of the 30-40% target). This threshold
+# only catches a regression below that already-limited baseline.
+COARSE_LUMA_MIN_CAPTURE_RATIO = 0.30
 
 
 def run_test(test, keep):
@@ -291,6 +321,16 @@ def run_test(test, keep):
                     f"late reliable {late[:8]}, max sigma after cut {second.max():.3f}")
         ok &= check("scene reset at cut", any(CUT_FRAME <= f <= CUT_FRAME + 1 for f in resets),
                     f"resets at {resets[:8]}")
+    elif test == "coarse_luma":
+        sigma, _ = measure(on, off, range(SKIP, nframes))
+        ratio = float(sigma[0].mean() / max(expected[0].mean(), 1e-9))
+        ok &= check("spatially-correlated grain capture ratio (informational, see comment above TESTS)",
+                    ratio >= COARSE_LUMA_MIN_CAPTURE_RATIO,
+                    f"captured {ratio * 100:.0f}% of injected coarse-grain sigma "
+                    f"(synth {sigma[0].mean() / DS:.2f} vs injected {expected[0].mean() / DS:.2f}, 8-bit units)")
+        n_reliable = len([f for f in reliable if f >= SKIP])
+        ok &= check("model reliable after warm-up", n_reliable >= nframes - SKIP - 1,
+                    f"{n_reliable}/{nframes - SKIP} frames")
     else:
         sigma, corr = measure(on, off, range(SKIP, nframes))
         ratio = sigma[0] / np.maximum(expected[0], 1e-9)
