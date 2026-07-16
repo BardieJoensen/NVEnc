@@ -43,6 +43,12 @@ TITLES = [
     ("deerhunter", "/media/merged-storage/media/movies/The Deer Hunter (1978) [tmdbid-11778]/The Deer Hunter (1978) [tmdbid-11778] - [Hybrid][Remux-2160p][DTS-HD MA 5.1][DV HDR10][HEVC]-FraMeSToR.mkv", "00:45:00", "heavy 35mm grain, 4K PQ remux"),
     ("interstellar", "/media/merged-storage/media/movies/Interstellar (2014) [tmdbid-157336]/Interstellar (2014) [tmdbid-157336] - [Hybrid][Remux-2160p][DTS-HD MA 5.1][DV HDR10][HEVC]-FraMeSToR.mkv", "00:50:00", "mixed IMAX/35mm grain, 4K PQ remux"),
     ("dune",    "/media/merged-storage/media/movies/Dune (2021) [tmdbid-438631]/Dune (2021) [tmdbid-438631] - [Hybrid][Remux-2160p][TrueHD Atmos 7.1][DV HDR10Plus][HEVC]-WiLDCAT.mkv", "00:20:00", "fine digital grain, 4K PQ (library AV1)"),
+    # normal 1080p content classes
+    ("1883",    "/media/merged-storage/media/tv-shows/1883 (2021)/Season 01/1883 (2021) - S01E01 - 1883 [AMZN][WEBDL-1080p][EAC3 5.1][h264]-NTb.mkv", "00:15:00", "1080p prestige TV, film-look WEB-DL (HEVC)"),
+    ("adventure", "/media/merged-storage/media/tv-shows/Adventure Time/Season 8/Adventure Time - S08E02 - Don't Look WEBRip-1080p.mkv", "00:03:00", "1080p 2D animation (library AV1)"),
+    ("ballerina", "/media/merged-storage/media/movies/Ballerina (2025)/Ballerina (2025) [tmdbid-541671] - [Remux-1080p][TrueHD Atmos 7.1][AVC]-CiNEPHiLES.mkv", "00:25:00", "1080p modern clean digital (library AV1)"),
+    ("minecraft", "/media/merged-storage/media/movies/A Minecraft Movie (2025)/A Minecraft Movie (2025) [tmdbid-950387] - [Remux-1080p Proper][TrueHD Atmos 7.1][AVC]-TRiToN.mkv", "00:20:00", "1080p CGI (HEVC library file)"),
+    ("28days",  "/media/merged-storage/media/movies/28 Days Later (2002) [tmdbid-170]/28 Days Later 2002 REPACK BluRay 1080p DTS-HD MA 5 1 AVC HYBRID REMUX-FraMeSToR.mkv", "00:20:00", "1080p gritty DV-era source (library AV1)"),
 ]
 
 # variant name -> command builder(src_clip, out_path, table_path) -> list[list[str]] of commands to run in order
@@ -59,15 +65,15 @@ VARIANTS = {"fgs": v_fgs, "plain": v_plain}
 PIPELINE_VARIANTS = ("svt", "hybrid")
 
 
-def run(cmd, **kw):
-    r = subprocess.run(cmd, capture_output=True, text=True, **kw)
+def run(cmd, timeout=1800, **kw):
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, **kw)
     if r.returncode != 0:
         raise RuntimeError(f"cmd failed ({r.returncode}): {cmd if isinstance(cmd,str) else ' '.join(cmd)}\n{r.stderr[-1500:]}")
     return r
 
 
-def shell(cmd):
-    r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+def shell(cmd, timeout=1800):
+    r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
     if r.returncode != 0:
         raise RuntimeError(f"pipeline failed ({r.returncode}): {cmd}\n{r.stderr[-1500:]}")
     return r
@@ -109,13 +115,26 @@ def score(ref, enc, tag, d, height):
     s = sorted(x[0] for x in json.load(open(ssimu_json)))
     out["ssimu2"], out["ssimu2_p5"] = round(statistics.mean(s), 2), round(s[int(len(s) * 0.05)], 2)
 
-    # user's CUDA extractors over y4m fifos
+    # user's CUDA extractors over y4m fifos.  Writers run with stdio detached
+    # from the capture pipes (a crashed vmaf must not deadlock the runner on
+    # orphaned writers) and are cleaned up by captured PID -- never by pattern
+    # matching, which twice managed to SIGTERM its own shell because the
+    # writer command text appears inside the shell's own command line.
     feat_json = os.path.join(d, f"feat-{tag}.json")
-    shell(f"cd {d} && rm -f rp dp && mkfifo rp dp && "
-          f"ffmpeg -v error -i {os.path.basename(ref)} -frames:v {REF_FRAMES} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y rp & "
-          f"ffmpeg -v error -c:v libdav1d -i {os.path.basename(enc)} -frames:v {REF_FRAMES} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y dp & "
-          f"{VMAF} --reference rp --distorted dp --no_prediction "
-          f"--feature psnr_cuda --feature ssim_cuda --feature ciede_cuda --json --output {feat_json} && rm -f rp dp")
+    rp, dp = os.path.join(d, f"rp-{tag}"), os.path.join(d, f"dp-{tag}")
+    fifo_cmd = (
+        # plain ';' sequencing: an '&&' chain ending in 'cmd &' would background
+        # the whole chain, racing vmaf ahead of mkfifo
+        f"rm -f {rp} {dp}; mkfifo {rp} {dp} || exit 1; "
+        f"ffmpeg -v error -i {ref} -frames:v {REF_FRAMES} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y {rp} >/dev/null 2>&1 & w1=$!; "
+        f"ffmpeg -v error -c:v libdav1d -i {enc} -frames:v {REF_FRAMES} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y {dp} >/dev/null 2>&1 & w2=$!; "
+        f"{VMAF} --reference {rp} --distorted {dp} --no_prediction "
+        f"--feature psnr_cuda --feature ssim_cuda --feature ciede_cuda --json --output {feat_json}; st=$?; "
+        f"kill $w1 $w2 2>/dev/null; wait 2>/dev/null; rm -f {rp} {dp}; exit $st")
+    try:
+        shell(fifo_cmd, timeout=900)
+    except Exception:
+        shell(fifo_cmd, timeout=900)  # one retry; transient CUDA-init failures observed
     fm = json.load(open(feat_json))["pooled_metrics"]
     out["psnr_y"] = round(fm["psnr_y"]["mean"], 2)
     out["ssim"] = round(fm["float_ssim"]["mean"], 4)
@@ -162,6 +181,7 @@ def main():
         os.makedirs(d, exist_ok=True)
         clip = os.path.join(d, "clip.mkv")
         ref = os.path.join(d, "ref.mkv")
+        title_ok = True
         print(f"== {name}: {note}")
         extract_clip(src, start, clip)
         make_ref(clip, ref)
@@ -188,8 +208,9 @@ def main():
             except Exception as e:
                 print(f"   {var}: FAILED - {e}")
                 rows.append({"title": name, "variant": var, "note": f"FAILED {e}"})
-        if not args.keep and os.path.exists(ref):
-            os.remove(ref)  # 3.7GB each; regenerable
+                title_ok = False
+        if title_ok and not args.keep and os.path.exists(ref):
+            os.remove(ref)  # 3.7GB each; regenerable (kept on failure for cheap retries)
     out_csv = os.path.join(WORK, "results.csv")
     fields = ["title", "variant", "mb", "vmaf", "vmaf_min", "ssimu2", "ssimu2_p5",
               "psnr_y", "ssim", "ciede2000", "hf_sigma", "note"]
