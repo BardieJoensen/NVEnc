@@ -897,6 +897,7 @@ nvenccore_sources = files(
   'NVEncCore/NVEncCmd.cpp',
   'NVEncCore/NVEncCore.cpp',
   'NVEncCore/NVEncFilmGrain.cpp',
+  'NVEncCore/NVEncFilmGrainModel.cpp',
   'NVEncCore/NVEncDevice.cpp',
   'NVEncCore/NVEncFilter.cpp',
   'NVEncCore/NVEncFilterAfs.cpp',
