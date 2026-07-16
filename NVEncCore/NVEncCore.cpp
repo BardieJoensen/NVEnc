@@ -127,6 +127,7 @@
 #include "NVEncFilterSelectEvery.h"
 #include "NVEncFilterOverlay.h"
 #include "NVEncFilterNVOFFRUC.h"
+#include "NVEncFilterFilmGrain.h"
 #include "helper_cuda.h"
 #include "helper_nvenc.h"
 
@@ -367,6 +368,8 @@ NVEncCore::NVEncCore() :
     m_pPerfMonitor(),
     m_stPicStruct(),
     m_stEncConfig(),
+    m_filmGrainTable(),
+    m_filmGrainOffParams(),
     m_keyOnChapter(false),
     m_keyFile(),
     m_Chapters(),
@@ -1403,6 +1406,7 @@ RGY_ERR NVEncCore::Deinitialize() {
     if (m_dev) {
         m_dev->close_device();
     }
+    m_filmGrainTable.reset();
 
     m_timecode.reset();
     m_keyFile.clear();
@@ -1823,6 +1827,16 @@ RGY_ERR NVEncCore::SetInputParam(InEncodeVideoParam *inputParam) {
         m_stPicStruct = NV_ENC_PIC_STRUCT_FRAME;
     }
 
+    if (inputParam->av1.filmGrainAuto && !inputParam->av1.filmGrainTable.empty()) {
+        PrintMes(RGY_LOG_ERROR, _T("--av1-film-grain and --film-grain-table cannot be used together.\n"));
+        return RGY_ERR_INVALID_PARAM;
+    }
+    if ((inputParam->av1.filmGrainAuto || !inputParam->av1.filmGrainTable.empty())
+        && inputParam->codec_rgy != RGY_CODEC_AV1) {
+        PrintMes(RGY_LOG_ERROR, _T("AV1 film-grain synthesis options are only supported with AV1 encoding.\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
+
     if (inputParam->codec_rgy == RGY_CODEC_RAW || inputParam->codec_rgy == RGY_CODEC_AVCODEC) {
         PrintMes(RGY_LOG_DEBUG, _T("raw or avcodec output selected, skip initializing encoder.\n"));
         return RGY_ERR_NONE;
@@ -1840,6 +1854,39 @@ RGY_ERR NVEncCore::SetInputParam(InEncodeVideoParam *inputParam) {
     if (inputParam->codec_rgy == RGY_CODEC_AV1 && !m_dev->encoder()->checkAPIver(12, 0)) {
         PrintMes(RGY_LOG_ERROR, _T("Selected codec %s requires NVENC API v12.0 or later.\n"), CodecToStr(inputParam->codec_rgy).c_str());
         return RGY_ERR_UNSUPPORTED;
+    }
+    if (inputParam->av1.filmGrainAuto) {
+        if (inputParam->ctrl.parallelEnc.isEnabled()) {
+            PrintMes(RGY_LOG_ERROR, _T("--av1-film-grain is not supported with parallel encoding.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        if (!m_dev->encoder()->checkAPIver(12, 0)) {
+            PrintMes(RGY_LOG_ERROR, _T("--av1-film-grain requires NVENC API v12.0 or later.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+    }
+    m_filmGrainTable.reset();
+    if (!inputParam->av1.filmGrainTable.empty()) {
+        if (inputParam->ctrl.parallelEnc.isEnabled()) {
+            PrintMes(RGY_LOG_ERROR, _T("--film-grain-table is not supported with parallel encoding.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        if (!m_dev->encoder()->checkAPIver(12, 0)) {
+            PrintMes(RGY_LOG_ERROR, _T("--film-grain-table requires NVENC API v12.0 or later.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        tstring filmGrainError;
+        auto filmGrainTable = NVEncFilmGrainTable::load(inputParam->av1.filmGrainTable,
+            m_encVUI.colorrange != RGY_COLORRANGE_FULL, filmGrainError);
+        if (!filmGrainTable) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to load film grain table: %s\n"), filmGrainError.c_str());
+            return RGY_ERR_INVALID_PARAM;
+        }
+        if (filmGrainTable->empty()) {
+            PrintMes(RGY_LOG_ERROR, _T("Film grain table contains no entries: %s\n"), inputParam->av1.filmGrainTable.c_str());
+            return RGY_ERR_INVALID_PARAM;
+        }
+        m_filmGrainTable = std::move(filmGrainTable);
     }
 
     m_stCodecGUID = codec_guid_rgy_to_enc(inputParam->codec_rgy);
@@ -2706,6 +2753,17 @@ RGY_ERR NVEncCore::SetInputParam(InEncodeVideoParam *inputParam) {
         }
         m_stCreateEncodeParams.encodeConfig->encodeCodecConfig.av1Config.chromaFormatIDC = 1; // YUV420
         m_stCreateEncodeParams.encodeConfig->encodeCodecConfig.av1Config.enableBitstreamPadding = inputParam->bitstreamPadding ? 1 : 0;
+        if (inputParam->av1.filmGrainAuto) {
+            auto& av1Config = m_stCreateEncodeParams.encodeConfig->encodeCodecConfig.av1Config;
+            m_filmGrainOffParams = {};
+            m_filmGrainOffParams.clipToRestrictedRange = m_encVUI.colorrange != RGY_COLORRANGE_FULL;
+            av1Config.enableFilmGrainParams = 1;
+            av1Config.filmGrainParams = &m_filmGrainOffParams;
+        } else if (m_filmGrainTable) {
+            auto& av1Config = m_stCreateEncodeParams.encodeConfig->encodeCodecConfig.av1Config;
+            av1Config.enableFilmGrainParams = 1;
+            av1Config.filmGrainParams = const_cast<NV_ENC_FILM_GRAIN_PARAMS_AV1 *>(&m_filmGrainTable->off().params);
+        }
     } else if (inputParam->codec_rgy == RGY_CODEC_HEVC) {
         // HEVC 固有設定の反映
         if (inputParam->hevc.cuMin != NV_ENC_HEVC_CUSIZE_AUTOSELECT) {
@@ -3323,6 +3381,30 @@ RGY_ERR NVEncCore::InitFilters(const InEncodeVideoParam *inputParam) {
         vppCUDAFilters.push_back(std::move(filterCrop));
         m_pLastFilterParam = std::dynamic_pointer_cast<NVEncFilterParam>(param);
         //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+    }
+
+    if (inputParam->av1.filmGrainAuto) {
+        unique_ptr<NVEncFilter> filterFilmGrain(new NVEncFilterFilmGrain());
+        shared_ptr<NVEncFilterParamFilmGrain> param(new NVEncFilterParamFilmGrain());
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        param->filmGrain.enable = true;
+        param->filmGrain.denoiseLevel = inputParam->av1.filmGrainDenoise;
+        param->filmGrain.analyzeChroma = inputParam->av1.filmGrainChroma;
+        auto filmGrainVui = inputParam->common.out_vui;
+        filmGrainVui.apply_auto(VuiFiltered, inputFrame.height);
+        param->filmGrain.clipToRestrictedRange = filmGrainVui.colorrange != RGY_COLORRANGE_FULL;
+        NVEncCtxAutoLock(cxtlock(m_dev->vidCtxLock()));
+        auto sts = filterFilmGrain->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        vppCUDAFilters.push_back(std::move(filterFilmGrain));
+        m_pLastFilterParam = std::dynamic_pointer_cast<NVEncFilterParam>(param);
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
     }
@@ -5864,7 +5946,7 @@ RGY_ERR NVEncCore::initPipeline(const InEncodeVideoParam *prm) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskNVEncode>(m_dev.get(), m_encRunCtx.get(),
             codec_guid_enc_to_rgy(m_stCodecGUID), m_uEncWidth, m_uEncHeight, GetEncoderCSP(prm), GetEncoderBitDepth(prm), picstruct_enc_to_rgy(m_stPicStruct),
             m_stEncConfig, m_stCreateEncodeParams, m_timecode.get(), m_encTimestamp.get(), m_outputTimebase, m_hdr10plus.get(), m_dovirpu.get(),
-            m_dynamicRC, m_keyFile, m_keyOnChapter, m_Chapters, 1, prm->ctrl.threadParams.get(RGYThreadType::ENC), m_pLog));
+            m_filmGrainTable.get(), m_dynamicRC, m_keyFile, m_keyOnChapter, m_Chapters, 1, prm->ctrl.threadParams.get(RGYThreadType::ENC), m_pLog));
         auto taskEnc = dynamic_cast<PipelineTaskNVEncode *>(m_pipelineTasks.back().get());
         if (taskLastCudaVpp) {
             taskLastCudaVpp->setEncodeTask(taskEnc);
@@ -6939,8 +7021,9 @@ NVENCSTATUS NVEncCore::Encode() {
             {
                 NVEncCtxAutoLock(ctxlock(m_dev->vidCtxLock()));
                 auto& lastFilter = m_vpFilters[m_vpFilters.size()-1];
-                //最後のフィルタはNVEncFilterCspCropでなければならない
-                if (typeid(*lastFilter.get()) != typeid(NVEncFilterCspCrop)) {
+                // The last filter must be able to write directly to the encoder surface.
+                if (typeid(*lastFilter.get()) != typeid(NVEncFilterCspCrop)
+                    && typeid(*lastFilter.get()) != typeid(NVEncFilterFilmGrain)) {
                     PrintMes(RGY_LOG_ERROR, _T("Last filter setting invalid.\n"));
                     return NV_ENC_ERR_GENERIC;
                 }

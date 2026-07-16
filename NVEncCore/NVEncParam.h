@@ -836,6 +836,10 @@ struct NVEncVideoParamAV1 {
     NV_ENC_NUM_REF_FRAMES bwdRefs;                 // default: NV_ENC_NUM_REF_FRAMES_AUTOSELECT
     std::optional<bool> annexB;                    // outputAnnexBFormat
     std::optional<bool> disableSeqHdr;             // disableSeqHdr
+    bool filmGrainAuto;                            // analyze AV1 film grain on the GPU
+    float filmGrainDenoise;                        // 0: auto, otherwise 1-50
+    bool filmGrainChroma;                          // true: auto, false: off
+    tstring filmGrainTable;                        // AOM filmgrn1 parameter table
 
     NVEncVideoParamAV1();
 };

@@ -311,6 +311,10 @@ tstring encoder_help() {
         _T("                                  0 (auto,default), 1, 2, 3, 4\n")
         _T("   --refs-backward <int>        [AV1] max number of L1 list reference frame.\n")
         _T("                                  0 (auto,default), 1, 2, 3\n")
+        _T("   --av1-film-grain [<params>] [AV1] analyze film grain on the GPU and signal AV1 synthesis.\n")
+        _T("                                  denoise=auto|1-50 (default: auto)\n")
+        _T("                                  chroma=auto|off   (default: auto)\n")
+        _T("   --film-grain-table <path>    [AV1] read film grain parameters from an AOM filmgrn1 table.\n")
         _T("   --bitstream-padding          [AV1] enable bitstream padding.\n"));
 
     str += strsprintf(_T("")
@@ -1138,6 +1142,68 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
     }
     if (IS_OPTION("av1-out-annexb")) { pParams->av1.annexB = true; return 0; }
     if (IS_OPTION("disable-seq-hdr")) { pParams->av1.disableSeqHdr = true; return 0; }
+    if (IS_OPTION("av1-film-grain")) {
+        pParams->av1.filmGrainAuto = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-') || _tcschr(strInput[i + 1], _T('=')) == nullptr) {
+            return 0;
+        }
+        i++;
+        for (const auto& param : split(strInput[i], _T(","))) {
+            if (param.empty()) {
+                print_cmd_error_invalid_value(option_name, strInput[i]);
+                return 1;
+            }
+            const auto pos = param.find_first_of(_T("="));
+            if (pos == tstring::npos) {
+                print_cmd_error_invalid_value(option_name, param);
+                return 1;
+            }
+            const auto param_arg = tolowercase(param.substr(0, pos));
+            const auto param_val = tolowercase(param.substr(pos + 1));
+            if (param_arg == _T("denoise")) {
+                if (param_val == _T("auto")) {
+                    pParams->av1.filmGrainDenoise = 0.0f;
+                    continue;
+                }
+                try {
+                    size_t parsedChars = 0;
+                    const auto value = std::stof(param_val, &parsedChars);
+                    if (parsedChars != param_val.length() || !(value >= 1.0f && value <= 50.0f)) {
+                        throw std::invalid_argument("range");
+                    }
+                    pParams->av1.filmGrainDenoise = value;
+                } catch (...) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" denoise="), param_val);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("chroma")) {
+                if (param_val == _T("auto")) {
+                    pParams->av1.filmGrainChroma = true;
+                } else if (param_val == _T("off")) {
+                    pParams->av1.filmGrainChroma = false;
+                } else {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" chroma="), param_val);
+                    return 1;
+                }
+                continue;
+            }
+            print_cmd_error_invalid_value(option_name, param);
+            return 1;
+        }
+        return 0;
+    }
+    if (IS_OPTION("film-grain-table")) {
+        if (i + 1 < nArgNum && strInput[i + 1][0] != 0 && strInput[i + 1][0] != _T('-')) {
+            pParams->av1.filmGrainTable = strInput[++i];
+        } else {
+            print_cmd_error_invalid_value(option_name,
+                (i + 1 < nArgNum && strInput[i + 1][0] != 0) ? strInput[i + 1] : _T("--"));
+            return 1;
+        }
+        return 0;
+    }
     if (IS_OPTION("bitstream-padding")) {
         pParams->bitstreamPadding = true;
         return 0;
@@ -1718,6 +1784,20 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
         OPT_LST_CX(_T("--tier:av1"), av1, tier, av1_tier_names);
         OPT_OPTBOOL(_T("--av1-out-annexb"), av1.annexB);
         OPT_OPTBOOL(_T("--disable-seq-hdr"), av1.disableSeqHdr);
+        if (pParams->av1.filmGrainAuto) {
+            cmd << _T(" --av1-film-grain");
+            if (pParams->av1.filmGrainDenoise > 0.0f || !pParams->av1.filmGrainChroma) {
+                cmd << _T(" ");
+                if (pParams->av1.filmGrainDenoise > 0.0f) {
+                    cmd << _T("denoise=") << pParams->av1.filmGrainDenoise;
+                }
+                if (!pParams->av1.filmGrainChroma) {
+                    if (pParams->av1.filmGrainDenoise > 0.0f) cmd << _T(",");
+                    cmd << _T("chroma=off");
+                }
+            }
+        }
+        OPT_STR_PATH(_T("--film-grain-table"), av1.filmGrainTable);
         OPT_LST_CX(_T("--tile-columns"),  av1, tilesCols,      list_av1_tiles);
         OPT_LST_CX(_T("--tile-rows"),     av1, tilesRows,      list_av1_tiles);
         OPT_LST_CX(_T("--part-size-min"), av1, partMin,        list_part_size_av1);

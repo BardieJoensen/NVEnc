@@ -34,6 +34,7 @@
 #include <future>
 #include <chrono>
 #include <atomic>
+#include <cstring>
 #include <deque>
 #include <numeric>
 #include <optional>
@@ -61,6 +62,8 @@
 #include "NVEncUtil.h"
 #include "NVEncFilter.h"
 #include "NVEncFilterSsim.h"
+#include "NVEncFilmGrain.h"
+#include "NVEncFilterFilmGrain.h"
 #include "NvHWEncoder.h"
 #include "dynlink_nvcuvid.h"
 
@@ -2829,6 +2832,10 @@ protected:
     RGYListRef<RGYBitstream> m_bitStreamOut;
     const RGYHDR10Plus *m_hdr10plus;
     const DOVIRpu *m_doviRpu;
+    const NVEncFilmGrainTable *m_filmGrainTable;
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 m_filmGrainParamsCache;
+    bool m_filmGrainParamsCacheValid;
+    bool m_forceFilmGrainParamsUpdate;
     std::vector<NVEncRCParam>& m_dynamicRC;
     int m_appliedDynamicRC;
     std::vector<int>& m_keyFile;
@@ -2849,14 +2856,21 @@ public:
         NVGPUInfo *dev, NVEncRunCtx *runCtx, RGY_CODEC encCodec, int encWidth, int encHeight, RGY_CSP encCsp, int encBitdepth, RGY_PICSTRUCT encPicStruct,
         const NV_ENC_CONFIG& stEncConfig, const NV_ENC_INITIALIZE_PARAMS& stCreateEncodeParams,
         RGYTimecode *timecode, RGYTimestamp *encTimestamp, rgy_rational<int> outputTimebase, const RGYHDR10Plus *hdr10plus, const DOVIRpu *doviRpu,
-        std::vector<NVEncRCParam>& dynamicRC, std::vector<int>& keyFile, bool keyOnChapter, std::vector<std::unique_ptr<AVChapter>>& chapters,
+        const NVEncFilmGrainTable *filmGrainTable, std::vector<NVEncRCParam>& dynamicRC, std::vector<int>& keyFile, bool keyOnChapter, std::vector<std::unique_ptr<AVChapter>>& chapters,
          int outMaxQueueSize, RGYParamThread threadParam, std::shared_ptr<RGYLog> log)
         : PipelineTask(PipelineTaskType::NVENC, dev, outMaxQueueSize, m_bEnableOutputThread, threadParam, log),
         m_runCtx(runCtx), m_encCodec(encCodec), m_encWidth(encWidth), m_encHeight(encHeight), m_encCsp(encCsp), m_encBitdepth(encBitdepth), m_encPicStruct(encPicStruct),
         m_stEncConfig(stEncConfig), m_stCreateEncodeParams(stCreateEncodeParams),
         m_timecode(timecode), m_encTimestamp(encTimestamp), m_outputTimebase(outputTimebase),
-        m_bitStreamOut(), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu), m_dynamicRC(dynamicRC), m_appliedDynamicRC(-1), m_keyFile(keyFile), m_keyOnChapter(keyOnChapter), m_Chapters(chapters),
+        m_bitStreamOut(), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu), m_filmGrainTable(filmGrainTable), m_filmGrainParamsCache(), m_filmGrainParamsCacheValid(false), m_forceFilmGrainParamsUpdate(false),
+        m_dynamicRC(dynamicRC), m_appliedDynamicRC(-1), m_keyFile(keyFile), m_keyOnChapter(keyOnChapter), m_Chapters(chapters),
         m_threadOutput(), m_threadOutputPromise(), m_threadOutputFuture(), m_threadOutputResult(), m_threadOutputAbort(false) {
+        if (m_encCodec == RGY_CODEC_AV1
+            && m_stEncConfig.encodeCodecConfig.av1Config.enableFilmGrainParams
+            && m_stEncConfig.encodeCodecConfig.av1Config.filmGrainParams) {
+            m_filmGrainParamsCache = *m_stEncConfig.encodeCodecConfig.av1Config.filmGrainParams;
+            m_filmGrainParamsCacheValid = true;
+        }
         runThreadOutput();
     };
     virtual ~PipelineTaskNVEncode() {
@@ -3113,6 +3127,8 @@ protected:
                     PrintMes(RGY_LOG_ERROR, _T("Failed to reconfigure the encoder.\n"));
                     return err_to_rgy(nvStatus);
                 }
+                m_forceFilmGrainParamsUpdate = m_encCodec == RGY_CODEC_AV1
+                    && m_stEncConfig.encodeCodecConfig.av1Config.enableFilmGrainParams;
                 m_appliedDynamicRC = selectedIdx;
                 PrintMes(RGY_LOG_DEBUG, _T("Reconfigured encoder (%d).\n"), selectedIdx);
             }
@@ -3149,9 +3165,20 @@ protected:
             encPicParams.encodePicFlags |= NV_ENC_PIC_FLAG_FORCEIDR;
         }
 
+        std::shared_ptr<RGYFrameDataFilmGrain> filmGrainFrameData;
+        if (m_encCodec == RGY_CODEC_AV1 && !m_filmGrainTable) {
+            const auto found = std::find_if(frameDataList.begin(), frameDataList.end(),
+                [](const std::shared_ptr<RGYFrameData>& data) {
+                    return std::dynamic_pointer_cast<RGYFrameDataFilmGrain>(data) != nullptr;
+                });
+            if (found != frameDataList.end()) {
+                filmGrainFrameData = std::dynamic_pointer_cast<RGYFrameDataFilmGrain>(*found);
+            }
+        }
         std::vector<std::shared_ptr<RGYFrameData>> metadatalist;
         if (m_encCodec == RGY_CODEC_HEVC || m_encCodec == RGY_CODEC_AV1) {
             metadatalist = frameDataList;
+            nvenc_film_grain_erase_frame_data(metadatalist);
             if (m_hdr10plus) {
                 // 外部からHDR10+を読み込む場合、metadatalist 内のHDR10+の削除
                 for (auto it = metadatalist.begin(); it != metadatalist.end(); ) {
@@ -3189,6 +3216,25 @@ protected:
         encPicParams.inputDuration = duration;
         encPicParams.pictureStruct = picstruct_rgy_to_enc(m_encPicStruct);
         encPicParams.alphaBuffer = pEncodeBuffer->stInputBfrAlpha.hInputSurface;
+        NV_ENC_FILM_GRAIN_PARAMS_AV1 filmGrainParamsPicture = {};
+        const NV_ENC_FILM_GRAIN_PARAMS_AV1 *filmGrainParamsUpdate = nullptr;
+        if (filmGrainFrameData && filmGrainFrameData->hasUpdate()) {
+            filmGrainParamsPicture = filmGrainFrameData->params();
+            filmGrainParamsUpdate = &filmGrainParamsPicture;
+            encPicParams.codecPicParams.av1PicParams.filmGrainParamsUpdate = 1;
+            encPicParams.codecPicParams.av1PicParams.filmGrainParams =
+                const_cast<NV_ENC_FILM_GRAIN_PARAMS_AV1 *>(filmGrainParamsUpdate);
+        } else if (m_filmGrainTable) {
+            const auto timestamp10Mhz = rational_rescale(timestamp, m_outputTimebase, rgy_rational<int>(1, 10000000));
+            const auto& filmGrainEntry = m_filmGrainTable->lookup(timestamp10Mhz);
+            // Submit the resolved model for every input picture. Sparse updates
+            // are inherited in coding order and can cross display-order table
+            // boundaries when B-frames are enabled.
+            filmGrainParamsUpdate = &filmGrainEntry.params;
+            encPicParams.codecPicParams.av1PicParams.filmGrainParamsUpdate = 1;
+            encPicParams.codecPicParams.av1PicParams.filmGrainParams =
+                const_cast<NV_ENC_FILM_GRAIN_PARAMS_AV1 *>(filmGrainParamsUpdate);
+        }
         //encPicParams.qpDeltaMap = qpDeltaMapArray;
         //encPicParams.qpDeltaMapSize = qpDeltaMapArraySize;
 
@@ -3222,6 +3268,11 @@ protected:
         if (nvStatus != NV_ENC_SUCCESS && nvStatus != NV_ENC_ERR_NEED_MORE_INPUT) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to add frame into the encoder.\n"));
             return err_to_rgy(nvStatus);
+        }
+        if (filmGrainParamsUpdate) {
+            m_filmGrainParamsCache = *filmGrainParamsUpdate;
+            m_filmGrainParamsCacheValid = true;
+            m_forceFilmGrainParamsUpdate = false;
         }
         PrintMes(RGY_LOG_TRACE, _T("  Sent frame %d to encoder\n"), inputFrameId);
 
@@ -3615,8 +3666,9 @@ public:
 
             //エンコードバッファにコピー
             auto &lastFilter = m_vpFilters[m_vpFilters.size() - 1];
-            //最後のフィルタはNVEncFilterCspCropでなければならない
-            if (typeid(*lastFilter.get()) != typeid(NVEncFilterCspCrop)) {
+            // The last filter must be able to write directly to the encoder surface.
+            if (typeid(*lastFilter.get()) != typeid(NVEncFilterCspCrop)
+                && typeid(*lastFilter.get()) != typeid(NVEncFilterFilmGrain)) {
                 PrintMes(RGY_LOG_ERROR, _T("Last filter setting invalid.\n"));
                 return RGY_ERR_INVALID_PARAM;
             }

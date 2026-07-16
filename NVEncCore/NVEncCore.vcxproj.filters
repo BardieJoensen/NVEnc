@@ -24,6 +24,9 @@
     <ClCompile Include="NVEncCore.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="NVEncFilmGrain.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="FrameQueue.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -384,6 +387,9 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="NVEncCore.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="NVEncFilmGrain.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="NVEncParam.h">
@@ -1138,5 +1144,13 @@
     <CudaCompile Include="NVEncFilterKfm.cu">
       <Filter>ソース ファイル</Filter>
     </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="NVEncFilterFilmGrain.cu">
+      <Filter>ソース ファイル</Filter>
+    </CudaCompile>
+    <ClInclude Include="NVEncFilterFilmGrain.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

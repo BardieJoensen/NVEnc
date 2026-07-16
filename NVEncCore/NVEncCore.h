@@ -201,6 +201,8 @@ protected:
     std::shared_ptr<CPerfMonitor>      m_pPerfMonitor;
     NV_ENC_PIC_STRUCT             m_stPicStruct;           //エンコードフレーム情報(プログレッシブ/インタレ)
     NV_ENC_CONFIG                 m_stEncConfig;           //エンコード設定
+    std::unique_ptr<const NVEncFilmGrainTable> m_filmGrainTable;
+    NV_ENC_FILM_GRAIN_PARAMS_AV1  m_filmGrainOffParams;
     bool                          m_keyOnChapter;        //チャプター上にキーフレームを配置する
     std::vector<int>                   m_keyFile;             //キーフレームの指定
     std::vector<unique_ptr<AVChapter>> m_Chapters;            //ファイルから読み込んだチャプター

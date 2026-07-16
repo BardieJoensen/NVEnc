@@ -103,7 +103,11 @@ NVEncVideoParamAV1::NVEncVideoParamAV1() :
     fwdRefs(NV_ENC_NUM_REF_FRAMES_AUTOSELECT),
     bwdRefs(NV_ENC_NUM_REF_FRAMES_AUTOSELECT),
     annexB(),
-    disableSeqHdr() {
+    disableSeqHdr(),
+    filmGrainAuto(false),
+    filmGrainDenoise(0.0f),
+    filmGrainChroma(true),
+    filmGrainTable() {
 }
 tstring NVEncRCParam::print() const {
     TStringStream t;
