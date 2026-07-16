@@ -27,6 +27,9 @@
     <ClCompile Include="NVEncFilmGrain.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="NVEncFilmGrainModel.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="FrameQueue.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -390,6 +393,9 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="NVEncFilmGrain.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="NVEncFilmGrainModel.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="NVEncParam.h">

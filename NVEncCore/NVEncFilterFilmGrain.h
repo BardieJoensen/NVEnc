@@ -37,6 +37,7 @@
 #include <memory>
 
 #include "NVEncFilter.h"
+#include "NVEncFilmGrainModel.h"
 #include "nvEncodeAPI.h"
 
 // Quality-first defaults for the CUDA AV1 grain analyzer.  A denoiseLevel of
@@ -61,19 +62,6 @@ struct NVEncFilmGrainAnalyzerConfig {
     bool operator==(const NVEncFilmGrainAnalyzerConfig& other) const;
     bool operator!=(const NVEncFilmGrainAnalyzerConfig& other) const { return !(*this == other); }
     tstring print() const;
-};
-
-struct NVEncFilmGrainDiagnostics {
-    int flatBlocks;
-    int totalBlocks;
-    int modelFrames;
-    std::array<float, 3> noiseStdDev;
-    std::array<uint64_t, 3> observations;
-    bool reliable;
-    bool sceneReset;
-    bool modelHeld;
-
-    NVEncFilmGrainDiagnostics();
 };
 
 // Per-picture result attached to RGYFrameInfo::dataList.  It deliberately uses

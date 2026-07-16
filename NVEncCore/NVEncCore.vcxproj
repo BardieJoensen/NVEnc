@@ -1917,6 +1917,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="NVEncFilmGrain.cpp" />
+    <ClCompile Include="NVEncFilmGrainModel.cpp" />
     <ClCompile Include="NVEncParam.cpp" />
     <CudaCompile Include="NVEncFilterWarpsharp.cu">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -2046,6 +2047,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
     <ClInclude Include="NvEncoderPerf.h" />
     <ClInclude Include="NVEncCore.h" />
     <ClInclude Include="NVEncFilmGrain.h" />
+    <ClInclude Include="NVEncFilmGrainModel.h" />
     <ClInclude Include="NVEncParam.h" />
     <ClInclude Include="NVEncCmd.h" />
     <ClInclude Include="NVEncUtil.h" />
