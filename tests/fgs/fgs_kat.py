@@ -15,6 +15,8 @@ synthesized grain against the injected grain:
   const_10bit    const_luma at 1080p 10-bit
   const_hlg      const_luma at 1080p 10-bit with HLG/BT.2020 signalling
   const_4k10_pq  const_luma at 4K 10-bit with PQ/BT.2020 signalling
+  coarse_luma    spatially-correlated grain (35mm proxy), capture-ratio guard
+  dark_luma      grain clipped at legal black; shadow strength + black level
 
 Sigma values in specs and reports are in 8-bit code values; 10-bit variants
 scale internally.
@@ -53,7 +55,7 @@ if FGS_DENOISER not in ("fft3d", "bilateral", "motion"):
 
 
 def apply_spec(spec):
-    global W, H, BAND_W, BITS, DS, DTYPE, MAXVAL, LEVELS
+    global W, H, BAND_W, BITS, DS, DTYPE, MAXVAL, LEVELS, CLIP_LO, CLIP_HI
     W = spec.get("width", 1920)
     H = spec.get("height", 1080)
     BITS = spec.get("bits", 8)
@@ -61,7 +63,12 @@ def apply_spec(spec):
     DTYPE = np.uint8 if BITS == 8 else np.uint16
     MAXVAL = (1 << BITS) - 1
     BAND_W = W // BANDS
-    LEVELS = np.linspace(32, 224, BANDS) * DS
+    # "levels" are native code values at the spec's bit depth; the default
+    # ladder is expressed in 8-bit units and scaled.
+    LEVELS = np.array(spec["levels"], dtype=np.float64) if "levels" in spec \
+        else np.linspace(32, 224, BANDS) * DS
+    # legal-range masters clip their grain at the range floor/ceiling
+    CLIP_LO, CLIP_HI = spec.get("clip", (0, MAXVAL))
 
 
 def base_luma(shift=0):
@@ -107,9 +114,12 @@ def band_slices(margin, band_w, height):
 
 
 def generate(test, spec, path):
-    """Write the y4m fixture; return per-band expected noise sigma per plane."""
+    """Write the y4m fixture; return (per-band noise sigma per plane,
+    per-band luma mean).  Both are post-clip observations — the ground truth a
+    legal-range master actually exposes."""
     rng = np.random.default_rng(20260715)
     var_sum = np.zeros((3, BANDS))
+    mean_sum = np.zeros(BANDS)
     var_frames = 0
     grain_free = test == "clean"
     colorspace = "C420mpeg2" if BITS == 8 else "C420p10"
@@ -125,7 +135,7 @@ def generate(test, spec, path):
                 noise_y = unit * sigma_map_for(spec, base)
             else:
                 noise_y = np.zeros((H, W))
-            y = np.clip(np.rint(base + noise_y), 0, MAXVAL).astype(DTYPE)
+            y = np.clip(np.rint(base + noise_y), CLIP_LO, CLIP_HI).astype(DTYPE)
             planes = [y]
             actual_y = y.astype(np.float64) - base
             actual_c = []
@@ -144,12 +154,14 @@ def generate(test, spec, path):
             if grainy and n >= SKIP // 2:
                 for b, sl in enumerate(band_slices(24, BAND_W, H)):
                     var_sum[0, b] += actual_y[sl].var()
+                    mean_sum[b] += y[sl].mean()
                 for b, sl in enumerate(band_slices(12, BAND_W // 2, H // 2)):
                     var_sum[1, b] += actual_c[0][sl].var()
                     var_sum[2, b] += actual_c[1][sl].var()
                 var_frames += 1
     expected = np.sqrt(var_sum / max(var_frames, 1))
-    return expected
+    expected_mean = mean_sum / max(var_frames, 1)
+    return expected, expected_mean
 
 
 def run(cmd, **kw):
@@ -176,6 +188,8 @@ def encode(src, out, spec):
     if BITS == 10:
         cmd += ["--output-depth", "10"]
     cmd += COLOR_ARGS.get(spec.get("color"), [])
+    if spec.get("limited") and not spec.get("color"):
+        cmd += ["--colorrange", "limited"]
     cmd += ["-i", src, "-o", out]
     r = run(cmd)
     return r.stdout + r.stderr
@@ -241,6 +255,17 @@ def measure(on_path, off_path, frames):
     return sigma, (float(np.mean(corr_uv)) if corr_uv else 0.0)
 
 
+def band_means(path, frames):
+    """Per-band luma mean of a decoded stream, same band interior as measure()."""
+    v = YUV(path)
+    acc = np.zeros(BANDS)
+    for n in frames:
+        y = v.planes(n)[0]
+        for b, sl in enumerate(band_slices(24, BAND_W, H)):
+            acc[b] += float(y[sl].mean())
+    return acc / max(len(frames), 1)
+
+
 def grain_frame_corr(on_path, off_path, frames):
     """Mean |correlation| between consecutive frames' synthesized luma grain.
     Near zero when the decoder reseeds per frame; near one for frozen grain."""
@@ -277,6 +302,13 @@ TESTS = {
     "const_4k10_pq": {"sigma_y_mode": "const", "sigma_y": 6.0, "bits": 10, "color": "pq",
                       "width": 3840, "height": 2160, "frames": 24},
     "coarse_luma":   {"sigma_y_mode": "coarse", "sigma_y": 6.0},
+    # Grain near legal black, clipped at the range floor like a legal-range
+    # master: reproduces the waxy-shadow / black-level artifacts seen on real
+    # heavy-grain film (Taxi Driver f388 class).  Band 0 sits 0.25 sigma above
+    # the floor, band 4 about 3 sigma (correction fades out beyond that).
+    "dark_luma":     {"sigma_y_mode": "const", "sigma_y": 6.0, "bits": 10, "limited": True,
+                      "levels": [70, 82, 96, 115, 140, 175, 220, 280, 360, 460, 580, 720],
+                      "clip": (64, 940)},
 }
 
 # Regression guard for coarse_luma, not a quality target: real 35mm grain is
@@ -296,7 +328,7 @@ def run_test(test, keep):
     src = os.path.join(d, "src.y4m")
     mkv = os.path.join(d, "out.mkv")
     print(f"== {test} ==")
-    expected = generate(test, spec, src)
+    expected, expected_mean = generate(test, spec, src)
     log = encode(src, mkv, spec)
     with open(os.path.join(d, "encode.log"), "w") as f:
         f.write(log)
@@ -325,6 +357,22 @@ def run_test(test, keep):
                     f"late reliable {late[:8]}, max sigma after cut {second.max():.3f}")
         ok &= check("scene reset at cut", any(CUT_FRAME <= f <= CUT_FRAME + 1 for f in resets),
                     f"resets at {resets[:8]}")
+    elif test == "dark_luma":
+        sigma, _ = measure(on, off, range(SKIP, nframes))
+        means = band_means(on, range(SKIP, nframes))
+        delta = means - expected_mean
+        ratio = sigma[0] / np.maximum(expected[0], 1e-9)
+        print(f"  [info] per-band mean delta (10-bit code values): {fmt(delta)}")
+        print(f"  [info] per-band synth/observed sigma ratio: {fmt(ratio)}")
+        ok &= check("shadow grain strength tracks observed source grain",
+                    bool((ratio > 0.6).all() and (ratio < 1.3).all()),
+                    f"synth {fmt(sigma[0] / DS)} vs observed {fmt(expected[0] / DS)} (8-bit units)")
+        ok &= check("black level preserved under synthesis",
+                    bool(np.abs(delta).max() <= 1.5),
+                    f"max |mean delta| {np.abs(delta).max():.2f} (10-bit code values, limit 1.5)")
+        n_reliable = len([f for f in reliable if f >= SKIP])
+        ok &= check("model reliable after warm-up", n_reliable >= nframes - SKIP - 1,
+                    f"{n_reliable}/{nframes - SKIP} frames")
     elif test == "coarse_luma":
         sigma, _ = measure(on, off, range(SKIP, nframes))
         ratio = float(sigma[0].mean() / max(expected[0].mean(), 1e-9))
