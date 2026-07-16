@@ -109,6 +109,7 @@
   - [--refs-backward \<int\> \[AV1\]](#--refs-backward-int-av1)
   - [--av1-film-grain [\<params\>] \[AV1\]](#--av1-film-grain-params-av1)
   - [--film-grain-table \<path\> \[AV1\]](#--film-grain-table-path-av1)
+  - [--film-grain-table-out \<path\>](#--film-grain-table-out-path)
   - [--bitstream-padding \[AV1\]](#--bitstream-padding-av1)
   - [--level \<string\>](#--level-string)
   - [--profile \<string\>](#--profile-string)
@@ -933,6 +934,11 @@ GPUでフィルムグレインを解析し、解析したグレインをエン�
 標準AOM `filmgrn1` テーブルからAV1フィルムグレイン合成パラメータを読み込む。各エンコードフレームのタイムスタンプを、テーブル内の10 MHzの`[start,end)`区間と照合してパラメータを選択する。
 
 AV1専用で、並列エンコードとの併用はできない。有意な合成結果を得るには、入力ソースからあらかじめグレインを除去しておく必要がある。公開されているNVIDIA APIではテーブルのグレインシードを指定できないため、ビットストリームのグレインシードはNVIDIAエンコーダが選択する。
+
+### --film-grain-table-out &lt;path&gt;
+`--av1-film-grain`で測定したフィルムグレインを標準AOM `filmgrn1` テーブルとして書き出す。同じモデルを保持する連続フレームは、10 MHzタイムベースの1つの`[start,end)`区間にまとめられ、グレインが検出されない期間はギャップとして表現される。
+
+`--codec raw`と組み合わせると、同じ実行でノイズ除去済みのベース映像を出力しながらテーブルを書き出せるため、外部のAV1エンコーダで両方を利用できる。
 
 ### --bitstream-padding [AV1]
 AV1 CBRエンコード用のビットストリームパディングを有効にする。 (デフォルト: off)

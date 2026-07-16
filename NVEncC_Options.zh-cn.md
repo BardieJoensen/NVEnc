@@ -109,6 +109,7 @@
     - [--refs-backward \<int\> \[AV1\]](#--refs-backward-int-av1)
     - [--av1-film-grain [\<params\>] \[AV1\]](#--av1-film-grain-params-av1)
     - [--film-grain-table \<path\> \[AV1\]](#--film-grain-table-path-av1)
+    - [--film-grain-table-out \<path\>](#--film-grain-table-out-path)
     - [--level \<string\>](#--level-string)
     - [--profile \<string\>](#--profile-string)
     - [--tier \<string\>  \[仅在 HEVC 下有效\]](#--tier-string--仅在-hevc-下有效)
@@ -849,6 +850,11 @@ Bluray 的输出 (默认: 关)
 从标准AOM `filmgrn1` 表加载AV1胶片颗粒合成参数。通过将每个编码帧的时间戳与表中的10 MHz `[start,end)` 区间进行匹配来选择参数。
 
 此选项仅适用于AV1，并且与并行编码不兼容。为了获得有意义的合成效果，输入源应已去除颗粒。公开的NVIDIA API不接受表中的颗粒种子，因此比特流中的颗粒种子由NVIDIA编码器选择。
+
+### --film-grain-table-out &lt;path&gt;
+将`--av1-film-grain`测量的胶片颗粒写出为标准AOM `filmgrn1` 表。保持相同模型的连续帧会合并为10 MHz时间基下的一个`[start,end)`区间；未检测到颗粒的时段表示为间隙。
+
+与`--codec raw`组合时，同一次运行可在写出表的同时输出去噪后的基础视频，供外部AV1编码器使用。
 
 ### --level &lt;string&gt;
 

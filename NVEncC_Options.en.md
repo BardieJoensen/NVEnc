@@ -113,6 +113,7 @@
   - [--refs-backward \<int\> \[AV1\]](#--refs-backward-int-av1)
   - [--av1-film-grain [\<params\>] \[AV1\]](#--av1-film-grain-params-av1)
   - [--film-grain-table \<path\> \[AV1\]](#--film-grain-table-path-av1)
+  - [--film-grain-table-out \<path\>](#--film-grain-table-out-path)
   - [--bitstream-padding \[AV1\]](#--bitstream-padding-av1)
   - [--level \<string\>](#--level-string)
   - [--profile \<string\>](#--profile-string)
@@ -926,6 +927,16 @@ The analyzer is conservative: until a stable model can be estimated, it leaves t
 Load AV1 film-grain synthesis parameters from a standard AOM `filmgrn1` table. Parameters are selected by matching each encoded frame timestamp to the table's 10 MHz `[start,end)` intervals.
 
 This option is AV1-only and incompatible with parallel encoding. For meaningful synthesis, the source should already have its grain removed. The public NVIDIA API does not accept table grain seeds, so the NVIDIA encoder chooses the bitstream grain seeds.
+
+### --film-grain-table-out &lt;path&gt;
+Write the film grain measured by `--av1-film-grain` as a standard AOM `filmgrn1` table. Consecutive frames holding the same model are merged into one `[start,end)` interval in the table's 10 MHz timebase; periods without detected grain become gaps.
+
+Combined with `--codec raw`, the same run outputs the denoised base video while writing the table, so an external AV1 encoder can consume both:
+
+```
+NVEncC --codec raw --output-depth 10 --av1-film-grain denoiser=motion --film-grain-table-out grain.tbl -i input.mkv -o /dev/null
+NVEncC --codec raw --output-depth 10 --av1-film-grain denoiser=motion -i input.mkv -o - | SvtAv1EncApp -i - --fgs-table grain.tbl -b output.ivf ...
+```
 
 ### --bitstream-padding [AV1]
 Enable bitstream padding for AV1 CBR encoding. (default: off)
