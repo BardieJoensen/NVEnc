@@ -107,6 +107,8 @@
     - [--max-temporal-layers \<int\> \[AV1\]](#--max-temporal-layers-int-av1)
     - [--refs-forward \<int\> \[AV1\]](#--refs-forward-int-av1)
     - [--refs-backward \<int\> \[AV1\]](#--refs-backward-int-av1)
+    - [--av1-film-grain [\<params\>] \[AV1\]](#--av1-film-grain-params-av1)
+    - [--film-grain-table \<path\> \[AV1\]](#--film-grain-table-path-av1)
     - [--level \<string\>](#--level-string)
     - [--profile \<string\>](#--profile-string)
     - [--tier \<string\>  \[仅在 HEVC 下有效\]](#--tier-string--仅在-hevc-下有效)
@@ -833,6 +835,18 @@ Bluray 的输出 (默认: 关)
 
 可在1-3之间指定(Backward, Altref2, Altref)。注意，并非总是遵循此值。
 
+### --av1-film-grain [&lt;params&gt;] [AV1]
+在GPU上分析胶片颗粒，从编码画面中移除已分析的颗粒，并将逐帧AV1颗粒合成参数提交给NVENC。可选参数使用逗号分隔：
+
+- `denoise=auto|1-50`：使用测得的颗粒强度（默认），或指定以8位码值为单位的降噪强度。
+- `chroma=auto|off`：同时分析色度颗粒（默认），或仅对亮度颗粒建模。
+
+分析器采用保守策略：在无法估算稳定模型时保持画面不变，并明确禁用该帧的颗粒合成。此选项仅适用于AV1，与并行编码不兼容，并且不能与`--film-grain-table`同时使用。
+
+### --film-grain-table &lt;path&gt; [AV1]
+从标准AOM `filmgrn1` 表加载AV1胶片颗粒合成参数。通过将每个编码帧的时间戳与表中的10 MHz `[start,end)` 区间进行匹配来选择参数。
+
+此选项仅适用于AV1，并且与并行编码不兼容。为了获得有意义的合成效果，输入源应已去除颗粒。公开的NVIDIA API不接受表中的颗粒种子，因此比特流中的颗粒种子由NVIDIA编码器选择。
 
 ### --level &lt;string&gt;
 

@@ -111,6 +111,8 @@
   - [--tile-rows \<int\> \[AV1\]](#--tile-rows-int-av1)
   - [--refs-forward \<int\> \[AV1\]](#--refs-forward-int-av1)
   - [--refs-backward \<int\> \[AV1\]](#--refs-backward-int-av1)
+  - [--av1-film-grain [\<params\>] \[AV1\]](#--av1-film-grain-params-av1)
+  - [--film-grain-table \<path\> \[AV1\]](#--film-grain-table-path-av1)
   - [--bitstream-padding \[AV1\]](#--bitstream-padding-av1)
   - [--level \<string\>](#--level-string)
   - [--profile \<string\>](#--profile-string)
@@ -909,6 +911,19 @@ It must be in range 1-4 (Last, Last2, last3 and Golden). It's a suggestive value
 pecifies max number of L1 list reference frame used for prediction of a frame. (default: 0 = auto)
 
 It must be in range 1-3 (Backward, Altref2, Altref). It's a suggestive value not necessarily be honored always.
+
+### --av1-film-grain [&lt;params&gt;] [AV1]
+Analyze film grain on the GPU, remove the analyzed grain from the encoded picture, and submit per-picture AV1 film-grain synthesis parameters to NVENC. The optional comma-separated parameters are:
+
+- `denoise=auto|1-50`: use the measured grain level (default), or an explicit denoise strength in 8-bit code-value units.
+- `chroma=auto|off`: analyze chroma grain (default), or model luma grain only.
+
+The analyzer is conservative: until a stable model can be estimated, it leaves the picture unchanged and explicitly disables synthesis for that frame. This option is AV1-only, incompatible with parallel encoding, and mutually exclusive with `--film-grain-table`.
+
+### --film-grain-table &lt;path&gt; [AV1]
+Load AV1 film-grain synthesis parameters from a standard AOM `filmgrn1` table. Parameters are selected by matching each encoded frame timestamp to the table's 10 MHz `[start,end)` intervals.
+
+This option is AV1-only and incompatible with parallel encoding. For meaningful synthesis, the source should already have its grain removed. The public NVIDIA API does not accept table grain seeds, so the NVIDIA encoder chooses the bitstream grain seeds.
 
 ### --bitstream-padding [AV1]
 Enable bitstream padding for AV1 CBR encoding. (default: off)

@@ -107,6 +107,8 @@
   - [--tile-rows \<int\> \[AV1\]](#--tile-rows-int-av1)
   - [--refs-forward \<int\> \[AV1\]](#--refs-forward-int-av1)
   - [--refs-backward \<int\> \[AV1\]](#--refs-backward-int-av1)
+  - [--av1-film-grain [\<params\>] \[AV1\]](#--av1-film-grain-params-av1)
+  - [--film-grain-table \<path\> \[AV1\]](#--film-grain-table-path-av1)
   - [--bitstream-padding \[AV1\]](#--bitstream-padding-av1)
   - [--level \<string\>](#--level-string)
   - [--profile \<string\>](#--profile-string)
@@ -916,6 +918,19 @@ temporal filterの指定。Bフレーム数が4以上である必要がある。
 フレーム予測に使用するL1 list参照フレームの最大数を指定する。 (デフォルト: 0 = auto)
 
 1 - 3 の間で指定可能。常にこの値に従うわけではない点に注意。
+
+### --av1-film-grain [&lt;params&gt;] [AV1]
+GPUでフィルムグレインを解析し、解析したグレインをエンコード画像から除去して、フレームごとのAV1フィルムグレイン合成パラメータをNVENCへ渡す。省略可能なパラメータはカンマ区切りで指定する。
+
+- `denoise=auto|1-50`: 測定したグレイン量を使用する (デフォルト) か、8bit換算のデノイズ強度を指定する。
+- `chroma=auto|off`: クロマのグレインも解析する (デフォルト) か、輝度のみをモデル化する。
+
+解析は保守的に動作し、安定したモデルを推定できるまでは画像を変更せず、そのフレームの合成を明示的に無効化する。AV1専用で、並列エンコードとの併用はできず、`--film-grain-table`とは同時に指定できない。
+
+### --film-grain-table &lt;path&gt; [AV1]
+標準AOM `filmgrn1` テーブルからAV1フィルムグレイン合成パラメータを読み込む。各エンコードフレームのタイムスタンプを、テーブル内の10 MHzの`[start,end)`区間と照合してパラメータを選択する。
+
+AV1専用で、並列エンコードとの併用はできない。有意な合成結果を得るには、入力ソースからあらかじめグレインを除去しておく必要がある。公開されているNVIDIA APIではテーブルのグレインシードを指定できないため、ビットストリームのグレインシードはNVIDIAエンコーダが選択する。
 
 ### --bitstream-padding [AV1]
 AV1 CBRエンコード用のビットストリームパディングを有効にする。 (デフォルト: off)
