@@ -45,8 +45,9 @@ public:
     VppDegrain degrain;
     bool attachAnalysisData;
     bool zeroCopyCache;
+    bool causal;
 
-    NVEncFilterParamDegrain() : degrain(), attachAnalysisData(true), zeroCopyCache(false) {};
+    NVEncFilterParamDegrain() : degrain(), attachAnalysisData(true), zeroCopyCache(false), causal(false) {};
     virtual ~NVEncFilterParamDegrain() {};
     virtual tstring print() const override {
         auto str = degrain.print();
@@ -55,6 +56,9 @@ public:
         }
         if (zeroCopyCache) {
             str += _T(", zero-copy-cache");
+        }
+        if (causal) {
+            str += _T(", causal");
         }
         return str;
     };
@@ -74,6 +78,7 @@ public:
     bool setDirectAnalyzeResult(const RGYDegrainAnalyzeResult &result);
     bool setDirectAnalyzeResultSet(const RGYDegrainAnalyzeResultSet &resultSet);
     void clearDirectAnalyzeResult();
+    const RGYFrameInfo *cachedSourceFrame(int inputFrameId, int64_t timestamp) const;
 
     RGY_ERR feedFrameOnly(const RGYFrameInfo *pInputFrame, cudaStream_t stream, const std::vector<RGYCudaEvent> &wait_events, RGYCudaEvent *event = nullptr);
     bool outputReady() const;

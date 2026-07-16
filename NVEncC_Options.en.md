@@ -917,6 +917,7 @@ Analyze film grain on the GPU, remove the analyzed grain from the encoded pictur
 
 - `denoise=auto|1-50`: use the measured grain level (default), or an explicit denoise strength in 8-bit code-value units.
 - `chroma=auto|off`: analyze chroma grain (default), or model luma grain only.
+- `denoiser=fft3d|bilateral|motion`: select the clean-base generator. `fft3d` is the default. `motion` retains the original frame, builds a motion-compensated clean luma base, and estimates grain from the original-minus-base residual; chroma uses the local edge-aware denoiser.
 
 The analyzer is conservative: until a stable model can be estimated, it leaves the picture unchanged and explicitly disables synthesis for that frame. This option is AV1-only, incompatible with parallel encoding, and mutually exclusive with `--film-grain-table`.
 

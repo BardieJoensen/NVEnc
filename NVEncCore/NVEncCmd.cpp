@@ -314,7 +314,7 @@ tstring encoder_help() {
         _T("   --av1-film-grain [<params>] [AV1] analyze film grain on the GPU and signal AV1 synthesis.\n")
         _T("                                  denoise=auto|1-50       (default: auto)\n")
         _T("                                  chroma=auto|off         (default: auto)\n")
-        _T("                                  denoiser=fft3d|bilateral (default: fft3d)\n")
+        _T("                                  denoiser=fft3d|bilateral|motion (default: fft3d)\n")
         _T("   --film-grain-table <path>    [AV1] read film grain parameters from an AOM filmgrn1 table.\n")
         _T("   --bitstream-padding          [AV1] enable bitstream padding.\n"));
 
@@ -1195,6 +1195,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     pParams->av1.filmGrainDenoiser = 0;
                 } else if (param_val == _T("bilateral")) {
                     pParams->av1.filmGrainDenoiser = 1;
+                } else if (param_val == _T("motion")) {
+                    pParams->av1.filmGrainDenoiser = 2;
                 } else {
                     print_cmd_error_invalid_value(tstring(option_name) + _T(" denoiser="), param_val);
                     return 1;
@@ -1812,7 +1814,7 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
                 }
                 if (pParams->av1.filmGrainDenoiser != 0) {
                     if (needComma) cmd << _T(",");
-                    cmd << _T("denoiser=bilateral");
+                    cmd << _T("denoiser=") << (pParams->av1.filmGrainDenoiser == 2 ? _T("motion") : _T("bilateral"));
                 }
             }
         }
