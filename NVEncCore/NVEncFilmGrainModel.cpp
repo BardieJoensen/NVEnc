@@ -395,4 +395,21 @@ bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC
     return maxCoeffDiff <= coefficientTolerance;
 }
 
+void build_strength_lut(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bitDepth, float lut[FGS_STRENGTH_LUT_SIZE]) {
+    if (!params.applyGrain || params.numYPoints == 0) {
+        std::fill(lut, lut + FGS_STRENGTH_LUT_SIZE, 0.0f);
+        return;
+    }
+    // The scaling curve stores sigma * 2^(scalingShift - 5) in 8-bit units
+    // (see fit_strength_points / the scalingShift derivation); convert back to
+    // a real std in the frame's native code values.
+    const double sigmaScale = 1.0 / (1 << (params.grainScalingMinus8 + 8 - 5));
+    const double depthScale = static_cast<double>(1 << (bitDepth - 8));
+    for (int x = 0; x < FGS_STRENGTH_LUT_SIZE; ++x) {
+        lut[x] = static_cast<float>(
+            eval_scaling_curve(params.pointYValue, params.pointYScaling, params.numYPoints, x)
+            * sigmaScale * depthScale);
+    }
+}
+
 } // namespace fgsmodel

@@ -125,6 +125,13 @@ double eval_scaling_curve(const uint8_t *values, const uint8_t *scalings, uint32
 bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC_FILM_GRAIN_PARAMS_AV1& b,
     double relativeSigmaTolerance = 0.05, double coefficientTolerance = 0.05);
 
+// Luma grain std in native code values, indexed by 8-bit intensity, decoded
+// from the quantized scaling curve.  Used to pre-compensate the mean lift the
+// decoder's grain-plus-clip synthesis introduces near the legal range floor
+// and ceiling.
+constexpr int FGS_STRENGTH_LUT_SIZE = 256;
+void build_strength_lut(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int bitDepth, float lut[FGS_STRENGTH_LUT_SIZE]);
+
 } // namespace fgsmodel
 
 #endif // __NVENC_FILM_GRAIN_MODEL_H__

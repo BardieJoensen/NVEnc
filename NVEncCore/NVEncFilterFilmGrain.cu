@@ -422,6 +422,50 @@ static RGY_ERR launch_motion_confidence(uint8_t *flatMask, const int fgsBlocksX,
     return err_to_rgy(cudaGetLastError());
 }
 
+// The decoder adds synthesized grain to the base and clips to the legal
+// range; near the floor/ceiling that clip shifts the mean (censored-normal
+// lift), brightening deep shadows that the grainy source only reached through
+// its own, already-present clip lift.  Darken the base by the lift the decoder
+// will add back so the played-out mean matches the source (measured on the
+// dark_luma fixture: +4.0/+2.2/+0.8 code values in the three darkest bands
+// before compensation).  Solved as v' = v - lift(v') by two fixed-point steps.
+template<typename Type, int shift>
+__global__ void kernel_fgs_level_compensate(uint8_t *__restrict__ ptr, const int pitch,
+    const int width, const int height, const int rangeMin, const int rangeMax,
+    const int bitDepth, const float *__restrict__ strengthLut) {
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+    if (x >= width || y >= height) return;
+    const int value = load_code<Type, shift>(ptr, pitch, x, y);
+    if (value <= rangeMin || value >= rangeMax) return; // leave out-of-range/boundary pixels alone
+    const int lutIndex = min(FGS_STRENGTH_LUT_SIZE - 1, max(0, value >> (bitDepth - 8)));
+    const float sigma = strengthLut[lutIndex];
+    if (sigma <= 0.01f) return;
+    auto clipLift = [](const float d) {
+        // E[clip(N(0,1), -d, inf)] = phi(d) - d * PHI(-d)
+        return (d > 3.5f) ? 0.0f : 0.39894228f * __expf(-0.5f * d * d) - d * 0.5f * erfcf(d * 0.70710678f);
+    };
+    float compensated = static_cast<float>(value);
+    for (int iter = 0; iter < 2; ++iter) {
+        const float dLo = (compensated - rangeMin) / sigma;
+        const float dHi = (rangeMax - compensated) / sigma;
+        if (dLo > 3.5f && dHi > 3.5f) return;
+        compensated = static_cast<float>(value) - sigma * (clipLift(dLo) - clipLift(dHi));
+    }
+    const int out = min(rangeMax, max(rangeMin, __float2int_rn(compensated)));
+    store_code<Type, shift>(ptr, pitch, x, y, out);
+}
+
+template<typename Type, int shift>
+static RGY_ERR launch_level_compensate(const RGYFrameInfo& luma, const int rangeMin, const int rangeMax,
+    const int bitDepth, const float *strengthLut, cudaStream_t stream) {
+    const dim3 block(32, 8);
+    const dim3 grid(divCeil(luma.width, static_cast<int>(block.x)), divCeil(luma.height, static_cast<int>(block.y)));
+    kernel_fgs_level_compensate<Type, shift><<<grid, block, 0, stream>>>(
+        luma.ptr[0], luma.pitch[0], luma.width, luma.height, rangeMin, rangeMax, bitDepth, strengthLut);
+    return err_to_rgy(cudaGetLastError());
+}
+
 template<typename Type, int shift, int components>
 static RGY_ERR launch_bilateral(const RGYFrameInfo& dst, const RGYFrameInfo& src,
     const int width, const int height, const int bitDepth, const float sigma,
@@ -548,7 +592,7 @@ tstring NVEncFilterParamFilmGrain::print() const {
 NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_denoiseWork(), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(),
-    m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_modelStats(),
+    m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_modelStats(),
     m_state(std::make_unique<AnalyzerState>()), m_blocksX(0), m_blocksY(0) {
     m_name = _T("film-grain");
     m_pathThrough = FILTER_PATHTHROUGH_NONE;
@@ -716,10 +760,12 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(FilmGrainBlockMetric));
     m_blockMask = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY);
     m_sigmaMap = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(float));
+    m_strengthLut = std::make_unique<CUMemBufPair>(FGS_STRENGTH_LUT_SIZE * sizeof(float));
     m_modelStats = std::make_unique<CUMemBufPair>(sizeof(FilmGrainGpuStats));
     if ((sts = m_blockMetrics->alloc()) != RGY_ERR_NONE
         || (sts = m_blockMask->alloc()) != RGY_ERR_NONE
         || (sts = m_sigmaMap->alloc()) != RGY_ERR_NONE
+        || (sts = m_strengthLut->alloc()) != RGY_ERR_NONE
         || (sts = m_modelStats->alloc()) != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("Failed to allocate film-grain analysis buffers: %s.\n"), get_err_mes(sts));
         return sts;
@@ -1100,6 +1146,33 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if (sts != RGY_ERR_NONE) return sts;
     }
     diagnostics.reliable = modelValid;
+    if (modelValid && params.applyGrain) {
+        build_strength_lut(params, bitDepth, static_cast<float *>(m_strengthLut->ptrHost));
+        if ((sts = m_strengthLut->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
+        const int rangeMin = prm->filmGrain.clipToRestrictedRange ? (16 << (bitDepth - 8)) : 0;
+        const int rangeMax = prm->filmGrain.clipToRestrictedRange ? (235 << (bitDepth - 8)) : ((1 << bitDepth) - 1);
+        const auto lumaOut = getPlane(output, RGY_PLANE_Y);
+        const auto lut = static_cast<const float *>(m_strengthLut->ptrDevice);
+        switch (output->csp) {
+        case RGY_CSP_NV12:
+        case RGY_CSP_YV12:
+            sts = launch_level_compensate<uint8_t, 0>(lumaOut, rangeMin, rangeMax, bitDepth, lut, stream);
+            break;
+        case RGY_CSP_YV12_10:
+            sts = launch_level_compensate<uint16_t, 0>(lumaOut, rangeMin, rangeMax, bitDepth, lut, stream);
+            break;
+        case RGY_CSP_P010:
+            sts = launch_level_compensate<uint16_t, 6>(lumaOut, rangeMin, rangeMax, bitDepth, lut, stream);
+            break;
+        default:
+            sts = RGY_ERR_UNSUPPORTED;
+            break;
+        }
+        if (sts != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("Failed to apply film-grain level compensation: %s.\n"), get_err_mes(sts));
+            return sts;
+        }
+    }
     if (m_pLog != nullptr && m_pLog->getLogLevel(RGY_LOGT_VPP) <= RGY_LOG_DEBUG) {
         tstring pointsY, pointsCb, pointsCr;
         for (uint32_t i = 0; i < params.numYPoints; ++i) {
@@ -1137,6 +1210,7 @@ void NVEncFilterFilmGrain::close() {
     m_blockMetrics.reset();
     m_blockMask.reset();
     m_sigmaMap.reset();
+    m_strengthLut.reset();
     m_modelStats.reset();
     if (m_state) m_state->clear();
     m_blocksX = 0;
