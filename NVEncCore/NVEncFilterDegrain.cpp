@@ -4179,6 +4179,9 @@ RGYDegrainRefDisableArray NVEncFilterDegrain::analysisAvailabilityDisableRefs(co
 }
 
 RGYDegrainAnalyzeResult NVEncFilterDegrain::analyzeResult() const {
+    if (m_boundAnalyzeResult.valid()) {
+        return m_boundAnalyzeResult;
+    }
     auto prm = std::dynamic_pointer_cast<NVEncFilterParamDegrain>(m_param);
     RGYDegrainAnalyzeResult result;
     if (!prm || !modeRequiresAnalysis(prm->degrain.mode) || !m_analysis.mv || !m_analysis.sad || m_analysis.event() == nullptr) {

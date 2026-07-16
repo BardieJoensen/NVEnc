@@ -840,6 +840,7 @@ struct NVEncVideoParamAV1 {
     float filmGrainDenoise;                        // 0: auto, otherwise 1-50
     bool filmGrainChroma;                          // true: auto, false: off
     int filmGrainDenoiser;                         // FGSDenoiseEngine: 0 = fft3d (default), 1 = bilateral, 2 = motion
+    int filmGrainMotionRefs;                       // causal motion references: 1 (default) or 2 (quality)
     tstring filmGrainTable;                        // AOM filmgrn1 parameter table
 
     NVEncVideoParamAV1();

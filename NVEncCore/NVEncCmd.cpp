@@ -315,6 +315,7 @@ tstring encoder_help() {
         _T("                                  denoise=auto|1-50       (default: auto)\n")
         _T("                                  chroma=auto|off         (default: auto)\n")
         _T("                                  denoiser=fft3d|bilateral|motion (default: fft3d)\n")
+        _T("                                  motion-refs=1|2         (default: 1)\n")
         _T("   --film-grain-table <path>    [AV1] read film grain parameters from an AOM filmgrn1 table.\n")
         _T("   --bitstream-padding          [AV1] enable bitstream padding.\n"));
 
@@ -1203,6 +1204,20 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                 }
                 continue;
             }
+            if (param_arg == _T("motion-refs")) {
+                try {
+                    size_t parsedChars = 0;
+                    const auto value = std::stoi(param_val, &parsedChars);
+                    if (parsedChars != param_val.length() || value < 1 || value > 2) {
+                        throw std::invalid_argument("range");
+                    }
+                    pParams->av1.filmGrainMotionRefs = value;
+                } catch (...) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" motion-refs="), param_val);
+                    return 1;
+                }
+                continue;
+            }
             print_cmd_error_invalid_value(option_name, param);
             return 1;
         }
@@ -1800,7 +1815,7 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
         OPT_OPTBOOL(_T("--disable-seq-hdr"), av1.disableSeqHdr);
         if (pParams->av1.filmGrainAuto) {
             cmd << _T(" --av1-film-grain");
-            if (pParams->av1.filmGrainDenoise > 0.0f || !pParams->av1.filmGrainChroma || pParams->av1.filmGrainDenoiser != 0) {
+            if (pParams->av1.filmGrainDenoise > 0.0f || !pParams->av1.filmGrainChroma || pParams->av1.filmGrainDenoiser != 0 || pParams->av1.filmGrainMotionRefs != 1) {
                 cmd << _T(" ");
                 bool needComma = false;
                 if (pParams->av1.filmGrainDenoise > 0.0f) {
@@ -1815,6 +1830,11 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
                 if (pParams->av1.filmGrainDenoiser != 0) {
                     if (needComma) cmd << _T(",");
                     cmd << _T("denoiser=") << (pParams->av1.filmGrainDenoiser == 2 ? _T("motion") : _T("bilateral"));
+                    needComma = true;
+                }
+                if (pParams->av1.filmGrainMotionRefs != 1) {
+                    if (needComma) cmd << _T(",");
+                    cmd << _T("motion-refs=") << pParams->av1.filmGrainMotionRefs;
                 }
             }
         }
