@@ -74,4 +74,11 @@ private:
     bool m_clipToRestrictedRange;
 };
 
+// Writes entries as an AOM filmgrn1 table readable by NVEncFilmGrainTable::load
+// (and by other consumers of the format, e.g. SvtAv1EncApp --fgs-table).
+// Entries must be apply_grain=1 with increasing, non-overlapping [start,end)
+// in the 10 MHz timebase; grain-off periods are represented by gaps.
+bool nvenc_film_grain_table_write(const tstring& path,
+    const std::vector<NVEncFilmGrainTableEntry>& entries, tstring& error);
+
 #endif // __NVENC_FILM_GRAIN_H__

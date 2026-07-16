@@ -37,6 +37,7 @@
 #include <memory>
 
 #include "NVEncFilter.h"
+#include "NVEncFilmGrain.h"
 #include "NVEncFilmGrainModel.h"
 #include "nvEncodeAPI.h"
 
@@ -110,6 +111,8 @@ class NVEncFilterParamFilmGrain : public NVEncFilterParam {
 public:
     NVEncFilmGrainAnalyzerConfig filmGrain;
     std::pair<int, int> compute_capability;
+    tstring tableOutPath;          // write measured grain as an AOM filmgrn1 table (empty = off)
+    rgy_rational<int> timebase;    // timebase of the frame timestamps (for the table's 10 MHz intervals)
 
     NVEncFilterParamFilmGrain();
     virtual ~NVEncFilterParamFilmGrain();
@@ -137,6 +140,9 @@ protected:
 private:
     struct AnalyzerState;
 
+    void recordTableEntry(int64_t timestamp, int64_t duration, const NV_ENC_FILM_GRAIN_PARAMS_AV1& params);
+    void writeTableFile();
+
     std::unique_ptr<CUFrameBuf> m_denoiseWork;
     std::unique_ptr<NVEncFilterDenoiseFFT3D> m_fft3d;
     std::shared_ptr<NVEncFilterParamDenoiseFFT3D> m_fft3dParam;
@@ -149,6 +155,11 @@ private:
     std::unique_ptr<CUMemBufPair> m_strengthLut;
     std::unique_ptr<CUMemBufPair> m_modelStats;
     std::unique_ptr<AnalyzerState> m_state;
+    tstring m_tableOutPath;
+    rgy_rational<int> m_tableTimebase;
+    int64_t m_tableFrameDuration10MHz;
+    std::vector<NVEncFilmGrainTableEntry> m_tableEntries;
+    bool m_tableWritten;
     int m_blocksX;
     int m_blocksY;
 };

@@ -1831,10 +1831,19 @@ RGY_ERR NVEncCore::SetInputParam(InEncodeVideoParam *inputParam) {
         PrintMes(RGY_LOG_ERROR, _T("--av1-film-grain and --film-grain-table cannot be used together.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
+    // --av1-film-grain with raw output + a table target produces a denoised
+    // base and a measured filmgrn1 table for an external AV1 encoder
+    // (e.g. SvtAv1EncApp --fgs-table).
+    const bool filmGrainRawAnalysis = inputParam->av1.filmGrainAuto
+        && (inputParam->codec_rgy == RGY_CODEC_RAW || inputParam->codec_rgy == RGY_CODEC_AVCODEC);
     if ((inputParam->av1.filmGrainAuto || !inputParam->av1.filmGrainTable.empty())
-        && inputParam->codec_rgy != RGY_CODEC_AV1) {
+        && inputParam->codec_rgy != RGY_CODEC_AV1 && !filmGrainRawAnalysis) {
         PrintMes(RGY_LOG_ERROR, _T("AV1 film-grain synthesis options are only supported with AV1 encoding.\n"));
         return RGY_ERR_UNSUPPORTED;
+    }
+    if (!inputParam->av1.filmGrainTableOut.empty() && !inputParam->av1.filmGrainAuto) {
+        PrintMes(RGY_LOG_ERROR, _T("--film-grain-table-out requires --av1-film-grain.\n"));
+        return RGY_ERR_INVALID_PARAM;
     }
 
     if (inputParam->codec_rgy == RGY_CODEC_RAW || inputParam->codec_rgy == RGY_CODEC_AVCODEC) {
@@ -3335,9 +3344,16 @@ RGY_ERR NVEncCore::InitFilters(const InEncodeVideoParam *inputParam) {
     }
     //最後のフィルタ (かならず一つはコピーが必要)
     {
-        const auto cropOutCsp = (inputParam->codec_rgy == RGY_CODEC_RAW || inputParam->codec_rgy == RGY_CODEC_AVCODEC) ? GetRawOutCSP(inputParam) : GetEncoderCSP(inputParam);
+        // In raw film-grain analysis mode the film grain filter appended below
+        // runs at the semi-planar analysis csp and its trailing copy performs
+        // the single conversion to the raw output csp; converting here first
+        // would force an unsupported round trip.
+        const bool filmGrainRawMode = inputParam->av1.filmGrainAuto && !m_dev->encoder();
+        const auto cropOutCsp = filmGrainRawMode
+            ? ((inputParam->outputDepth > 8) ? RGY_CSP_P010 : RGY_CSP_NV12)
+            : ((inputParam->codec_rgy == RGY_CODEC_RAW || inputParam->codec_rgy == RGY_CODEC_AVCODEC) ? GetRawOutCSP(inputParam) : GetEncoderCSP(inputParam));
         //インタレ保持の場合、またエンコーダを行わない場合は、CPU側に戻す必要がある
-        const auto outMemType = ((!ENABLE_INTERLACE_FROM_HWMEM && m_stPicStruct != NV_ENC_PIC_STRUCT_FRAME) || !m_dev->encoder()) ? RGY_MEM_TYPE_CPU : RGY_MEM_TYPE_GPU;
+        const auto outMemType = ((!ENABLE_INTERLACE_FROM_HWMEM && m_stPicStruct != NV_ENC_PIC_STRUCT_FRAME) || (!m_dev->encoder() && !filmGrainRawMode)) ? RGY_MEM_TYPE_CPU : RGY_MEM_TYPE_GPU;
         // cspとmemtypeが両方一致しなかったら、まずはcspを変換
         if (inputFrame.csp != cropOutCsp && inputFrame.mem_type != outMemType) {
             unique_ptr<NVEncFilter> filterCrop(new NVEncFilterCspCrop());
@@ -3386,6 +3402,29 @@ RGY_ERR NVEncCore::InitFilters(const InEncodeVideoParam *inputParam) {
     }
 
     if (inputParam->av1.filmGrainAuto) {
+        if (!m_dev->encoder()) {
+            // Raw analysis mode: the film grain filter (and its motion degrain
+            // child) work on the encoder-style semi-planar csp, not the raw
+            // output csp; convert in, and the trailing copy below converts out.
+            const auto analysisCsp = (inputParam->outputDepth > 8) ? RGY_CSP_P010 : RGY_CSP_NV12;
+            if (inputFrame.csp != analysisCsp) {
+                unique_ptr<NVEncFilter> filterCrop(new NVEncFilterCspCrop());
+                shared_ptr<NVEncFilterParamCrop> paramCrop(new NVEncFilterParamCrop());
+                paramCrop->frameIn = inputFrame;
+                paramCrop->frameOut = inputFrame;
+                paramCrop->frameOut.csp = analysisCsp;
+                paramCrop->baseFps = m_encFps;
+                paramCrop->matrix = VuiFiltered.matrix;
+                paramCrop->bOutOverwrite = false;
+                NVEncCtxAutoLock(cxtlock(m_dev->vidCtxLock()));
+                auto stsCrop = filterCrop->init(paramCrop, m_pLog);
+                if (stsCrop != RGY_ERR_NONE) {
+                    return stsCrop;
+                }
+                vppCUDAFilters.push_back(std::move(filterCrop));
+                inputFrame = paramCrop->frameOut;
+            }
+        }
         unique_ptr<NVEncFilter> filterFilmGrain(new NVEncFilterFilmGrain());
         shared_ptr<NVEncFilterParamFilmGrain> param(new NVEncFilterParamFilmGrain());
         param->frameIn = inputFrame;
@@ -3397,6 +3436,8 @@ RGY_ERR NVEncCore::InitFilters(const InEncodeVideoParam *inputParam) {
         param->filmGrain.denoiseLevel = inputParam->av1.filmGrainDenoise;
         param->filmGrain.analyzeChroma = inputParam->av1.filmGrainChroma;
         param->filmGrain.denoiser = inputParam->av1.filmGrainDenoiser;
+        param->tableOutPath = inputParam->av1.filmGrainTableOut;
+        param->timebase = m_outputTimebase;
         param->filmGrain.motionRefs = inputParam->av1.filmGrainMotionRefs;
         auto filmGrainVui = inputParam->common.out_vui;
         filmGrainVui.apply_auto(VuiFiltered, inputFrame.height);
@@ -3410,6 +3451,35 @@ RGY_ERR NVEncCore::InitFilters(const InEncodeVideoParam *inputParam) {
         m_pLastFilterParam = std::dynamic_pointer_cast<NVEncFilterParam>(param);
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
+        if (!m_dev->encoder()) {
+            // Raw output (--film-grain-table-out analysis mode) targets a host
+            // frame, but the film grain filter requires a device-to-device
+            // copy; convert back to the raw output csp on the GPU, then let a
+            // final copy filter write to the host frame (one CspCrop cannot do
+            // a conversion and a device-to-host write in the same step).
+            const auto rawCsp = GetRawOutCSP(inputParam);
+            for (int step = 0; step < 2; step++) {
+                if (step == 0 && inputFrame.csp == rawCsp) continue;
+                unique_ptr<NVEncFilter> filterCrop(new NVEncFilterCspCrop());
+                shared_ptr<NVEncFilterParamCrop> paramCrop(new NVEncFilterParamCrop());
+                paramCrop->frameIn = inputFrame;
+                paramCrop->frameOut = inputFrame;
+                paramCrop->frameOut.csp = rawCsp;
+                paramCrop->frameOut.mem_type = (step == 1) ? RGY_MEM_TYPE_CPU : RGY_MEM_TYPE_GPU;
+                paramCrop->baseFps = m_encFps;
+                paramCrop->matrix = VuiFiltered.matrix;
+                paramCrop->bOutOverwrite = false;
+                NVEncCtxAutoLock(cxtlock(m_dev->vidCtxLock()));
+                auto stsCrop = filterCrop->init(paramCrop, m_pLog);
+                if (stsCrop != RGY_ERR_NONE) {
+                    return stsCrop;
+                }
+                vppCUDAFilters.push_back(std::move(filterCrop));
+                m_pLastFilterParam = std::dynamic_pointer_cast<NVEncFilterParam>(paramCrop);
+                inputFrame = paramCrop->frameOut;
+                m_encFps = paramCrop->baseFps;
+            }
+        }
     }
 
     m_vpFilters.push_back(VppVilterBlock(vppCUDAFilters));
