@@ -599,6 +599,14 @@ RGY_ERR NVEncFilterDenoiseFFT3D::run_filter(const RGYFrameInfo *pInputFrame, RGY
     return sts;
 }
 
+void NVEncFilterDenoiseFFT3D::resetTemporalState() {
+    // Restart the temporal frame window as if at stream start; the boundary
+    // clamp in run_filter then repeats the first frame after the reset instead
+    // of blending across it (used by callers that detect scene changes).
+    m_bufIdx = 0;
+    m_nFrameIdx = 0;
+}
+
 void NVEncFilterDenoiseFFT3D::close() {
     m_frameBuf.clear();
     m_bufFFT.clear();
