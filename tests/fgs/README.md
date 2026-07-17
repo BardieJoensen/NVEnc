@@ -30,7 +30,24 @@ python3 tests/fgs/retain_sweep.py --bits both
 ```
 
 This reports base-layer retention, source-position correlation, synthesized
-grain, total played-out grain, and encoded bytes for each retain value.
+grain, total played-out grain, and encoded bytes for each retain value.  It
+verifies the retention mechanism on synthetic grain; it does not say whether
+synthesis is worth the bits on real material.
+
+## Matched-bitrate routing comparison
+
+```sh
+python3 tests/fgs/matched_rate_sweep.py --clip <clip.mkv> --ref <ffv1-ref.mkv> \
+    [--svt <same-size-svt.mkv>] [--rate 31700]
+```
+
+This encodes plain, fixed-retention, and `retain=auto` variants at one VBR
+target and scores them against a reference, reporting grain energy (HF sigma)
+and grain size (residual autocorrelation) next to the full-reference metrics.
+Read those two together: full-reference metrics reward pixel-aligned grain and
+are therefore biased against synthesis, while HF sigma alone cannot tell
+correct grain from correctly-sized grain.  Requires copyrighted media, so it is
+not part of the automated suite.
 
 ## Reproducible before/after benchmark
 
