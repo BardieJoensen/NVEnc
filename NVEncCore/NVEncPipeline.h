@@ -1282,7 +1282,7 @@ public:
             return err;
         }
         if (err == RGY_ERR_NONE) {
-            auto cudaEvent = m_frameUseFinEvent.get([](cudaEvent_t *event) { return cudaEventCreateWithFlags(event, cudaEventDefault) != cudaSuccess ? 1 : 0; });
+            auto cudaEvent = m_frameUseFinEvent.get([](cudaEvent_t *event) { return cudaEventCreateWithFlags(event, cudaEventDisableTiming) != cudaSuccess ? 1 : 0; });
             if (!cudaEvent) {
                 PrintMes(RGY_LOG_ERROR, _T("Failed to get cuda event.\n"));
                 return RGY_ERR_UNKNOWN;
@@ -2553,7 +2553,7 @@ public:
                 PrintMes(RGY_LOG_ERROR, _T("Failed to send frame for video metric calcualtion: %s.\n"), get_err_mes(err));
                 return err;
             }
-            auto cudaEvent = m_frameUseFinEvent.get([](cudaEvent_t *event) { return cudaEventCreateWithFlags(event, cudaEventDefault) != cudaSuccess ? 1 : 0; });
+            auto cudaEvent = m_frameUseFinEvent.get([](cudaEvent_t *event) { return cudaEventCreateWithFlags(event, cudaEventDisableTiming) != cudaSuccess ? 1 : 0; });
             if (!cudaEvent) {
                 PrintMes(RGY_LOG_ERROR, _T("Failed to get cuda event.\n"));
                 return RGY_ERR_UNKNOWN;
@@ -3399,7 +3399,7 @@ public:
         if (ret != cudaSuccess) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to create download stream: %s.\n"), char_to_tstring(cudaGetErrorString(ret)).c_str());
         }
-        ret = cudaEventCreateWithFlags(&m_eventDefaultToFilter, cudaEventDefault);
+        ret = cudaEventCreateWithFlags(&m_eventDefaultToFilter, cudaEventDisableTiming);
         if (ret != cudaSuccess) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to create event for default to filter: %s.\n"), char_to_tstring(cudaGetErrorString(ret)).c_str());
         }
@@ -3560,7 +3560,7 @@ public:
                     std::shared_ptr<cudaEvent_t> cudaEvent;
                     {
                         NVEncCtxAutoLock(ctxlock(m_dev->vidCtxLock()));
-                        cudaEvent = m_inFrameUseFinEvent.get([](cudaEvent_t *event) { return cudaEventCreateWithFlags(event, cudaEventDefault) != cudaSuccess ? 1 : 0; });
+                        cudaEvent = m_inFrameUseFinEvent.get([](cudaEvent_t *event) { return cudaEventCreateWithFlags(event, cudaEventDisableTiming) != cudaSuccess ? 1 : 0; });
                         if (!cudaEvent) {
                             PrintMes(RGY_LOG_ERROR, _T("Failed to get cuda event.\n"));
                             return RGY_ERR_UNKNOWN;
@@ -3698,7 +3698,7 @@ public:
                     // 最後のフィルタではm_streamFilterではなくm_streamDownloadを使用するため、
                     // メモリをダウンロードするためのイベントを作成する
                     NVEncCtxAutoLock(ctxlock(m_dev->vidCtxLock()));
-                    cudaEventFilterToDownload = m_inFrameUseFinEvent.get([](cudaEvent_t *event) { return cudaEventCreateWithFlags(event, cudaEventDefault) != cudaSuccess ? 1 : 0; });
+                    cudaEventFilterToDownload = m_inFrameUseFinEvent.get([](cudaEvent_t *event) { return cudaEventCreateWithFlags(event, cudaEventDisableTiming) != cudaSuccess ? 1 : 0; });
                     if (!cudaEventFilterToDownload) {
                         PrintMes(RGY_LOG_ERROR, _T("Failed to get cuda event .\n"));
                         return RGY_ERR_UNKNOWN;
@@ -3735,7 +3735,7 @@ public:
                     }
                 }
                 // 処理の終了を示すイベント
-                cudaEvent = m_inFrameUseFinEvent.get([](cudaEvent_t *event) { return cudaEventCreateWithFlags(event, cudaEventDefault) != cudaSuccess ? 1 : 0; });
+                cudaEvent = m_inFrameUseFinEvent.get([](cudaEvent_t *event) { return cudaEventCreateWithFlags(event, cudaEventDisableTiming) != cudaSuccess ? 1 : 0; });
                 if (!cudaEvent) {
                     PrintMes(RGY_LOG_ERROR, _T("Failed to get filter finish cuda event.\n"));
                     return RGY_ERR_UNKNOWN;

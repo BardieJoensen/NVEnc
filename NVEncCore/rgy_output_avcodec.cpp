@@ -4827,6 +4827,9 @@ RGY_ERR RGYOutputAvcodec::WriteThreadFuncRawVideo(RGYParamThread threadParam) {
         while (m_Mux.thread.thRawVideo->qPackets.front_copy_and_pop_no_lock(&pktData, (m_Mux.thread.queueInfo) ? &m_Mux.thread.queueInfo->usage_vid_out : nullptr)) {
             VideoEncodeRawFrame(pktData.frame);
         }
+        if (!m_Mux.thread.thRawVideo->thAbort) {
+            m_Mux.thread.thRawVideo->qPackets.wait_for_push();
+        }
     }
     SetEvent(m_Mux.thread.thRawVideo->heEventClosing);
     return (m_Mux.format.streamError) ? RGY_ERR_UNKNOWN : RGY_ERR_NONE;
