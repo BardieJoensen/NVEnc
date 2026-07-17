@@ -45,5 +45,9 @@ tool versions, complete suite output, durations, KAT summary metrics, and the
 retention sweep. Keep the `before` file unchanged while developing; it remains
 valid even after rebuilding `NVEncC` because the binary hash is embedded.
 
+The checked-in `baselines/2026-07-17-fft3d.json` snapshot is the quality and
+bitrate baseline for this branch before reference-driven analyzer changes. Add
+new result files rather than overwriting it.
+
 Real-title testing is handled separately by `campaign.py`; source paths in that
 script are local configuration and media is never committed.

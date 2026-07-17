@@ -1,0 +1,202 @@
+{
+  "created_utc": "2026-07-17T11:33:07.948344+00:00",
+  "denoiser": "fft3d",
+  "duration_seconds": 86.818,
+  "encoder": {
+    "path": "/home/bardie/git-repos/NVEnc/build-fgs-cuda/nvencc",
+    "sha256": "1b56e81493084f9005fb53808367e95f472e09997f6d82ac09bb54d849253e08",
+    "version": "NVEnc (x64) 9.24 (r3942) by rigaya, Jul 17 2026 09:30:51 (gcc 13.3.0/Linux)"
+  },
+  "ffmpeg": "ffmpeg version git-2026-03-26-5dfe661f03 Copyright (c) 2000-2026 the FFmpeg developers",
+  "host": {
+    "gpu": [
+      "NVIDIA GeForce RTX 5060 Ti, 595.71.05, 16311 MiB"
+    ],
+    "platform": "Linux-6.8.0-134-generic-x86_64-with-glibc2.39",
+    "python": "3.12.3"
+  },
+  "kat": {
+    "metrics": {
+      "coarse_capture_percent": 35.0,
+      "dark_max_mean_delta": 0.8,
+      "ramp_strength_correlation": 0.986
+    },
+    "tests": {
+      "chroma_corr": true,
+      "chroma_ind": true,
+      "clean": true,
+      "coarse_luma": true,
+      "const_10bit": true,
+      "const_4k10_pq": true,
+      "const_hlg": true,
+      "const_luma": true,
+      "cut": true,
+      "cut_grainy": true,
+      "dark_luma": true,
+      "ramp_luma": true,
+      "retain_10bit": true,
+      "retain_luma": true
+    }
+  },
+  "label": "baseline-fft3d",
+  "passed": true,
+  "repository": {
+    "branch": "feature/av1-film-grain-cuda",
+    "commit": "65749ce6e60680e1ef51010837ecf3823804bf4c",
+    "dirty": false,
+    "status": []
+  },
+  "retain_sweep": [
+    {
+      "bits": 8,
+      "bytes": 450029,
+      "pass": true,
+      "position_corr": 0.07526215601843139,
+      "retain": 0.0,
+      "retained_ratio": 0.08343188615253,
+      "synth_ratio": 0.9847177699956324,
+      "synth_target": 1.0,
+      "total_ratio": 0.9882458399163636
+    },
+    {
+      "bits": 8,
+      "bytes": 4376398,
+      "pass": true,
+      "position_corr": 0.44469000571773026,
+      "retain": 0.25,
+      "retained_ratio": 0.16901368961157334,
+      "synth_ratio": 0.9541302431960607,
+      "synth_target": 0.9682458365518543,
+      "total_ratio": 0.9689078441473263
+    },
+    {
+      "bits": 8,
+      "bytes": 15198482,
+      "pass": true,
+      "position_corr": 0.8980238073464406,
+      "retain": 0.5,
+      "retained_ratio": 0.44881522151073555,
+      "synth_ratio": 0.8533237961145121,
+      "synth_target": 0.8660254037844386,
+      "total_ratio": 0.9634786813308405
+    },
+    {
+      "bits": 8,
+      "bytes": 20493426,
+      "pass": true,
+      "position_corr": 0.9632772617389692,
+      "retain": 0.75,
+      "retained_ratio": 0.7108812533035898,
+      "synth_ratio": 0.6523186509361426,
+      "synth_target": 0.6614378277661477,
+      "total_ratio": 0.9628448737066599
+    },
+    {
+      "bits": 8,
+      "bytes": 22840168,
+      "pass": true,
+      "position_corr": 0.9770999839993514,
+      "retain": 0.9,
+      "retained_ratio": 0.8645232836320255,
+      "synth_ratio": 0.43248602266832376,
+      "synth_target": 0.4358898943540673,
+      "total_ratio": 0.9642917888975956
+    },
+    {
+      "bits": 10,
+      "bytes": 528239,
+      "pass": true,
+      "position_corr": 0.09260890292274462,
+      "retain": 0.0,
+      "retained_ratio": 0.06731914997956544,
+      "synth_ratio": 0.9845714639852773,
+      "synth_target": 1.0,
+      "total_ratio": 0.9868437275509511
+    },
+    {
+      "bits": 10,
+      "bytes": 11919792,
+      "pass": true,
+      "position_corr": 0.8159556695110264,
+      "retain": 0.25,
+      "retained_ratio": 0.22900317302121487,
+      "synth_ratio": 0.953299021444825,
+      "synth_target": 0.9682458365518543,
+      "total_ratio": 0.9802925951005016
+    },
+    {
+      "bits": 10,
+      "bytes": 20976383,
+      "pass": true,
+      "position_corr": 0.9618057973988514,
+      "retain": 0.5,
+      "retained_ratio": 0.4820412671125236,
+      "synth_ratio": 0.8530543999813895,
+      "synth_target": 0.8660254037844386,
+      "total_ratio": 0.9790649114393316
+    },
+    {
+      "bits": 10,
+      "bytes": 25989576,
+      "pass": true,
+      "position_corr": 0.9878188871878264,
+      "retain": 0.75,
+      "retained_ratio": 0.740906314601582,
+      "synth_ratio": 0.6513862336853468,
+      "synth_target": 0.6614378277661477,
+      "total_ratio": 0.9846446136001289
+    },
+    {
+      "bits": 10,
+      "bytes": 28182164,
+      "pass": true,
+      "position_corr": 0.9922576160133736,
+      "retain": 0.9,
+      "retained_ratio": 0.8907576721210254,
+      "synth_ratio": 0.43052259943942306,
+      "synth_target": 0.4358898943540673,
+      "total_ratio": 0.9867981363742921
+    }
+  ],
+  "schema": 1,
+  "suites": [
+    {
+      "argv": [
+        "bash",
+        "tests/fgs/run_cpu_tests.sh"
+      ],
+      "duration_seconds": 1.502,
+      "name": "cpu",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "In file included from tests/fgs/solver_test.cpp:17:\nNVEncCore/NVEncFilmGrainModel.h:47: warning: ignoring \u2018#pragma warning \u2019 [-Wunknown-pragmas]\n   47 | #pragma warning (push)\n      | \nNVEncCore/NVEncFilmGrainModel.h:48: warning: ignoring \u2018#pragma warning \u2019 [-Wunknown-pragmas]\n   48 | #pragma warning (disable: 4819)\n      | \nNVEncCore/NVEncFilmGrainModel.h:50: warning: ignoring \u2018#pragma warning \u2019 [-Wunknown-pragmas]\n   50 | #pragma warning (pop)\n      | \nIn file included from NVEncCore/NVEncFilmGrainModel.cpp:39:\nNVEncCore/NVEncFilmGrainModel.h:47: warning: ignoring \u2018#pragma warning \u2019 [-Wunknown-pragmas]\n   47 | #pragma warning (push)\n      | \nNVEncCore/NVEncFilmGrainModel.h:48: warning: ignoring \u2018#pragma warning \u2019 [-Wunknown-pragmas]\n   48 | #pragma warning (disable: 4819)\n      | \nNVEncCore/NVEncFilmGrainModel.h:50: warning: ignoring \u2018#pragma warning \u2019 [-Wunknown-pragmas]\n   50 | #pragma warning (pop)\n      | \nIn file included from tests/fgs/parser_test.cpp:16:\nNVEncCore/NVEncFilmGrain.h:39: warning: ignoring \u2018#pragma warning \u2019 [-Wunknown-pragmas]\n   39 | #pragma warning (push)\n      | \nNVEncCore/NVEncFilmGrain.h:40: warning: ignoring \u2018#pragma warning \u2019 [-Wunknown-pragmas]\n   40 | #pragma warning (disable: 4819)\n      | \nNVEncCore/NVEncFilmGrain.h:42: warning: ignoring \u2018#pragma warning \u2019 [-Wunknown-pragmas]\n   42 | #pragma warning (pop)\n      | \nIn file included from NVEncCore/NVEncFilmGrain.h:36:\nNVEncCore/rgy_osdep.h:481:13: warning: \u2018bool stdInAbort()\u2019 defined but not used [-Wunused-function]\n  481 | static bool stdInAbort() {\n      |             ^~~~~~~~~~\nNVEncCore/rgy_osdep.h:390:13: warning: \u2018void SetPriorityClass(pid_t, int)\u2019 defined but not used [-Wunused-function]\n  390 | static void SetPriorityClass(pid_t pid, int priority) {\n      |             ^~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:386:13: warning: \u2018void SetThreadPriority(pthread_t, int)\u2019 defined but not used [-Wunused-function]\n  386 | static void SetThreadPriority(pthread_t thread, int priority) {\n      |             ^~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:368:13: warning: \u2018bool RGYProcessExists(uint32_t)\u2019 defined but not used [-Wunused-function]\n  368 | static bool RGYProcessExists(uint32_t pid) {\n      |             ^~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:364:13: warning: \u2018bool RGYThreadStillActive(pthread_t)\u2019 defined but not used [-Wunused-function]\n  364 | static bool RGYThreadStillActive(pthread_t thread) {\n      |             ^~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:343:15: warning: \u2018size_t SetThreadAffinityMask(pthread_t, size_t)\u2019 defined but not used [-Wunused-function]\n  343 | static size_t SetThreadAffinityMask(pthread_t thread, size_t mask) {\n      |               ^~~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:322:15: warning: \u2018size_t SetProcessAffinityMask(pid_t, size_t)\u2019 defined but not used [-Wunused-function]\n  322 | static size_t SetProcessAffinityMask(pid_t process, size_t mask) {\n      |               ^~~~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:318:18: warning: \u2018pthread_t GetCurrentThread()\u2019 defined but not used [-Wunused-function]\n  318 | static pthread_t GetCurrentThread() {\n      |                  ^~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:314:14: warning: \u2018pid_t GetCurrentProcess()\u2019 defined but not used [-Wunused-function]\n  314 | static pid_t GetCurrentProcess() {\n      |              ^~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:310:17: warning: \u2018uint32_t GetCurrentThreadId()\u2019 defined but not used [-Wunused-function]\n  310 | static uint32_t GetCurrentThreadId() {\n      |                 ^~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:305:17: warning: \u2018uint32_t GetCurrentProcessId()\u2019 defined but not used [-Wunused-function]\n  305 | static uint32_t GetCurrentProcessId() {\n      |                 ^~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:228:16: warning: \u2018int32_t _InterlockedDecrement(volatile int32_t*)\u2019 defined but not used [-Wunused-function]\n  228 | static int32_t _InterlockedDecrement(volatile int32_t *pVariable) {\n      |                ^~~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:224:16: warning: \u2018int32_t _InterlockedIncrement(volatile int32_t*)\u2019 defined but not used [-Wunused-function]\n  224 | static int32_t _InterlockedIncrement(volatile int32_t *pVariable) {\n      |                ^~~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:220:14: warning: \u2018short int _InterlockedDecrement16(volatile short int*)\u2019 defined but not used [-Wunused-function]\n  220 | static short _InterlockedDecrement16(volatile short *pVariable) {\n      |              ^~~~~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:216:14: warning: \u2018short int _InterlockedIncrement16(volatile short int*)\u2019 defined but not used [-Wunused-function]\n  216 | static short _InterlockedIncrement16(volatile short *pVariable) {\n      |              ^~~~~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:145:17: warning: \u2018CP_UTF8\u2019 defined but not used [-Wunused-variable]\n  145 | static uint32_t CP_UTF8 = 65001;\n      |                 ^~~~~~~\nNVEncCore/rgy_osdep.h:144:17: warning: \u2018CP_THREAD_ACP\u2019 defined but not used [-Wunused-variable]\n  144 | static uint32_t CP_THREAD_ACP = 0;\n      |                 ^~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:143:17: warning: \u2018CP_ACP\u2019 defined but not used [-Wunused-variable]\n  143 | static uint32_t CP_ACP = 0;\n      |                 ^~~~~~\nIn file included from NVEncCore/NVEncFilmGrain.cpp:28:\nNVEncCore/NVEncFilmGrain.h:39: warning: ignoring \u2018#pragma warning \u2019 [-Wunknown-pragmas]\n   39 | #pragma warning (push)\n      | \nNVEncCore/NVEncFilmGrain.h:40: warning: ignoring \u2018#pragma warning \u2019 [-Wunknown-pragmas]\n   40 | #pragma warning (disable: 4819)\n      | \nNVEncCore/NVEncFilmGrain.h:42: warning: ignoring \u2018#pragma warning \u2019 [-Wunknown-pragmas]\n   42 | #pragma warning (pop)\n      | \nIn file included from NVEncCore/NVEncFilmGrain.h:36:\nNVEncCore/rgy_osdep.h:481:13: warning: \u2018bool stdInAbort()\u2019 defined but not used [-Wunused-function]\n  481 | static bool stdInAbort() {\n      |             ^~~~~~~~~~\nNVEncCore/rgy_osdep.h:390:13: warning: \u2018void SetPriorityClass(pid_t, int)\u2019 defined but not used [-Wunused-function]\n  390 | static void SetPriorityClass(pid_t pid, int priority) {\n      |             ^~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:386:13: warning: \u2018void SetThreadPriority(pthread_t, int)\u2019 defined but not used [-Wunused-function]\n  386 | static void SetThreadPriority(pthread_t thread, int priority) {\n      |             ^~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:368:13: warning: \u2018bool RGYProcessExists(uint32_t)\u2019 defined but not used [-Wunused-function]\n  368 | static bool RGYProcessExists(uint32_t pid) {\n      |             ^~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:364:13: warning: \u2018bool RGYThreadStillActive(pthread_t)\u2019 defined but not used [-Wunused-function]\n  364 | static bool RGYThreadStillActive(pthread_t thread) {\n      |             ^~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:343:15: warning: \u2018size_t SetThreadAffinityMask(pthread_t, size_t)\u2019 defined but not used [-Wunused-function]\n  343 | static size_t SetThreadAffinityMask(pthread_t thread, size_t mask) {\n      |               ^~~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:322:15: warning: \u2018size_t SetProcessAffinityMask(pid_t, size_t)\u2019 defined but not used [-Wunused-function]\n  322 | static size_t SetProcessAffinityMask(pid_t process, size_t mask) {\n      |               ^~~~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:318:18: warning: \u2018pthread_t GetCurrentThread()\u2019 defined but not used [-Wunused-function]\n  318 | static pthread_t GetCurrentThread() {\n      |                  ^~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:314:14: warning: \u2018pid_t GetCurrentProcess()\u2019 defined but not used [-Wunused-function]\n  314 | static pid_t GetCurrentProcess() {\n      |              ^~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:310:17: warning: \u2018uint32_t GetCurrentThreadId()\u2019 defined but not used [-Wunused-function]\n  310 | static uint32_t GetCurrentThreadId() {\n      |                 ^~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:305:17: warning: \u2018uint32_t GetCurrentProcessId()\u2019 defined but not used [-Wunused-function]\n  305 | static uint32_t GetCurrentProcessId() {\n      |                 ^~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:228:16: warning: \u2018int32_t _InterlockedDecrement(volatile int32_t*)\u2019 defined but not used [-Wunused-function]\n  228 | static int32_t _InterlockedDecrement(volatile int32_t *pVariable) {\n      |                ^~~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:224:16: warning: \u2018int32_t _InterlockedIncrement(volatile int32_t*)\u2019 defined but not used [-Wunused-function]\n  224 | static int32_t _InterlockedIncrement(volatile int32_t *pVariable) {\n      |                ^~~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:220:14: warning: \u2018short int _InterlockedDecrement16(volatile short int*)\u2019 defined but not used [-Wunused-function]\n  220 | static short _InterlockedDecrement16(volatile short *pVariable) {\n      |              ^~~~~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:216:14: warning: \u2018short int _InterlockedIncrement16(volatile short int*)\u2019 defined but not used [-Wunused-function]\n  216 | static short _InterlockedIncrement16(volatile short *pVariable) {\n      |              ^~~~~~~~~~~~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:145:17: warning: \u2018CP_UTF8\u2019 defined but not used [-Wunused-variable]\n  145 | static uint32_t CP_UTF8 = 65001;\n      |                 ^~~~~~~\nNVEncCore/rgy_osdep.h:144:17: warning: \u2018CP_THREAD_ACP\u2019 defined but not used [-Wunused-variable]\n  144 | static uint32_t CP_THREAD_ACP = 0;\n      |                 ^~~~~~~~~~~~~\nNVEncCore/rgy_osdep.h:143:17: warning: \u2018CP_ACP\u2019 defined but not used [-Wunused-variable]\n  143 | static uint32_t CP_ACP = 0;\n      |                 ^~~~~~\n",
+      "stdout": "all film grain solver tests passed\nall filmgrn1 parser behavior tests passed\n"
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tests/fgs/fgs_kat.py"
+      ],
+      "duration_seconds": 57.479,
+      "name": "kat",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "== const_luma ==\n  [PASS] luma strength tracks injected grain: synth [5.90 6.07 6.11 6.02 5.92 5.84 5.83 5.83 5.92 5.84 5.92 5.79] vs injected [6.01 6.00 6.01 6.01 6.00 6.01 6.01 6.00 6.01 6.01 6.01 6.00] (8-bit units)\n  [PASS] strength curve is flat: max/min 1.06\n  [PASS] U stays clean: sigma 0.00\n  [PASS] V stays clean: sigma 0.00\n  [PASS] model reliable after warm-up: 24/24 frames\n  [PASS] grain present from first frame: frame0 reliable=1, sigma 6.03\n  [PASS] model stable (no twinkle): model refreshed at frames []\n  [PASS] grain decorrelates frame-to-frame: mean |corr| between consecutive grain fields 0.001\n== ramp_luma ==\n  [PASS] luma strength tracks injected grain: synth [2.43 3.04 3.64 4.31 4.79 4.98 5.45 5.83 6.28 6.70 7.10 6.87] vs injected [2.02 2.74 3.47 4.19 4.92 5.64 6.37 7.09 7.83 8.55 9.28 9.99] (8-bit units)\n  [PASS] strength curve follows intensity ramp: corr 0.986\n  [PASS] U stays clean: sigma 0.00\n  [PASS] V stays clean: sigma 0.00\n  [PASS] model reliable after warm-up: 24/24 frames\n  [PASS] grain present from first frame: frame0 reliable=1, sigma 5.22\n  [PASS] model stable (no twinkle): model refreshed at frames []\n  [PASS] grain decorrelates frame-to-frame: mean |corr| between consecutive grain fields 0.002\n== chroma_corr ==\n  [PASS] luma strength tracks injected grain: synth [5.90 6.07 6.10 6.02 5.92 5.85 5.83 5.83 5.92 5.84 5.92 5.79] vs injected [6.01 6.00 6.01 6.01 6.00 6.01 6.01 6.00 6.01 6.01 6.01 6.01] (8-bit units)\n  [PASS] strength curve is flat: max/min 1.05\n  [PASS] U strength matches injected grain: synth 2.18 vs injected 2.62 (8-bit units)\n  [PASS] V strength matches injected grain: synth 2.18 vs injected 2.62 (8-bit units)\n  [PASS] chroma grain is luma-correlated: corr 0.67\n  [PASS] model reliable after warm-up: 24/24 frames\n  [PASS] grain present from first frame: frame0 reliable=1, sigma 6.03\n  [PASS] model stable (no twinkle): model refreshed at frames []\n  [PASS] grain decorrelates frame-to-frame: mean |corr| between consecutive grain fields 0.001\n== chroma_ind ==\n  [PASS] luma strength tracks injected grain: synth [5.90 6.07 6.11 6.02 5.92 5.85 5.83 5.83 5.92 5.84 5.92 5.79] vs injected [6.01 6.00 6.01 6.01 6.00 6.01 6.01 6.00 6.01 6.01 6.01 6.01] (8-bit units)\n  [PASS] strength curve is flat: max/min 1.06\n  [PASS] U strength matches injected grain: synth 2.48 vs injected 3.01 (8-bit units)\n  [PASS] V strength matches injected grain: synth 2.46 vs injected 3.01 (8-bit units)\n  [PASS] chroma grain is independent of luma: corr -0.00\n  [PASS] model reliable after warm-up: 24/24 frames\n  [PASS] grain present from first frame: frame0 reliable=1, sigma 6.03\n  [PASS] model stable (no twinkle): model refreshed at frames []\n  [PASS] grain decorrelates frame-to-frame: mean |corr| between consecutive grain fields 0.001\n== clean ==\n  [PASS] no grain signalled: reliable frames: []\n  [PASS] no grain synthesized: max sigma 0.000\n== cut ==\n  [PASS] grain present before cut: sigmaY 5.91 vs injected 6.01\n  [PASS] no grain after cut: late reliable [], max sigma after cut 0.000\n  [PASS] scene reset at cut: resets at [32]\n== const_10bit ==\n  [PASS] luma strength tracks injected grain: synth [5.87 6.05 6.08 6.01 5.89 5.86 5.83 5.83 5.92 5.86 5.92 5.77] vs injected [6.00 6.00 6.00 6.00 6.00 6.00 6.00 5.99 6.00 6.00 6.00 6.00] (8-bit units)\n  [PASS] strength curve is flat: max/min 1.05\n  [PASS] U stays clean: sigma 0.00\n  [PASS] V stays clean: sigma 0.00\n  [PASS] model reliable after warm-up: 24/24 frames\n  [PASS] grain present from first frame: frame0 reliable=1, sigma 6.04\n  [PASS] model stable (no twinkle): model refreshed at frames []\n  [PASS] grain decorrelates frame-to-frame: mean |corr| between consecutive grain fields 0.001\n== const_hlg ==\n  [PASS] luma strength tracks injected grain: synth [5.87 6.05 6.08 6.01 5.89 5.86 5.83 5.83 5.92 5.86 5.92 5.77] vs injected [6.00 6.00 6.00 6.00 6.00 6.00 6.00 5.99 6.00 6.00 6.00 6.00] (8-bit units)\n  [PASS] strength curve is flat: max/min 1.05\n  [PASS] U stays clean: sigma 0.00\n  [PASS] V stays clean: sigma 0.00\n  [PASS] model reliable after warm-up: 24/24 frames\n  [PASS] grain present from first frame: frame0 reliable=1, sigma 6.04\n  [PASS] model stable (no twinkle): model refreshed at frames []\n  [PASS] grain decorrelates frame-to-frame: mean |corr| between consecutive grain fields 0.001\n  [PASS] HDR colorimetry signalled: got {'pix_fmt': 'yuv420p10le', 'color_space': 'bt2020nc', 'color_transfer': 'arib-std-b67', 'color_primaries': 'bt2020'}\n== const_4k10_pq ==\n  [PASS] luma strength tracks injected grain: synth [5.89 5.91 5.88 5.93 6.00 5.96 5.94 5.88 5.82 5.73 5.83 5.70] vs injected [6.00 6.00 6.00 6.00 6.00 6.00 6.00 6.00 6.00 6.00 6.00 6.00] (8-bit units)\n  [PASS] strength curve is flat: max/min 1.05\n  [PASS] U stays clean: sigma 0.00\n  [PASS] V stays clean: sigma 0.00\n  [PASS] model reliable after warm-up: 16/16 frames\n  [PASS] grain present from first frame: frame0 reliable=1, sigma 5.99\n  [PASS] model stable (no twinkle): model refreshed at frames [23]\n  [PASS] grain decorrelates frame-to-frame: mean |corr| between consecutive grain fields 0.001\n  [PASS] HDR colorimetry signalled: got {'pix_fmt': 'yuv420p10le', 'color_space': 'bt2020nc', 'color_transfer': 'smpte2084', 'color_primaries': 'bt2020'}\n== coarse_luma ==\n  [PASS] spatially-correlated grain capture ratio (informational, see comment above TESTS): captured 35% of injected coarse-grain sigma (synth 2.07 vs injected 6.01, 8-bit units)\n  [PASS] model reliable after warm-up: 24/24 frames\n== dark_luma ==\n  [info] per-band mean delta (10-bit code values): [-0.24 -0.62 -0.80 -0.49 -0.57 -0.54 -0.50 -0.55 -0.45 -0.45 -0.39 -0.46]\n  [info] per-band synth/observed sigma ratio: [0.94 0.93 0.94 0.96 0.97 0.98 0.98 1.01 1.02 1.00 1.00 1.00]\n  [PASS] shadow grain strength tracks observed source grain: synth [3.76 4.54 5.22 5.66 5.81 5.91 5.91 6.06 6.12 6.03 5.97 5.97] vs observed [4.00 4.87 5.54 5.91 5.99 6.00 6.00 5.99 6.00 6.00 6.00 6.00] (8-bit units)\n  [PASS] black level preserved under synthesis: max |mean delta| 0.80 (10-bit code values, limit 1.5)\n  [PASS] model reliable after warm-up: 24/24 frames\n== retain_luma ==\n  [PASS] retained grain amplitude: ratio [0.55 0.55 0.55 0.55 0.55 0.55 0.55 0.55 0.55 0.55 0.55 0.56], target 0.60\n  [PASS] retained grain keeps source position: mean per-band correlation 0.936\n  [PASS] synthesized grain is variance-compensated: ratio [0.79 0.81 0.81 0.80 0.79 0.78 0.77 0.78 0.79 0.78 0.79 0.77], target 0.80\n  [PASS] played-out total grain stays matched: ratio [0.96 0.98 0.98 0.97 0.96 0.95 0.95 0.95 0.96 0.96 0.96 0.94], target 1.00\n== retain_10bit ==\n  [PASS] retained grain amplitude: ratio [0.59 0.59 0.59 0.59 0.59 0.59 0.59 0.59 0.59 0.59 0.59 0.61], target 0.60\n  [PASS] retained grain keeps source position: mean per-band correlation 0.977\n  [PASS] synthesized grain is variance-compensated: ratio [0.78 0.81 0.81 0.80 0.79 0.78 0.78 0.78 0.79 0.78 0.79 0.77], target 0.80\n  [PASS] played-out total grain stays matched: ratio [0.98 1.00 1.00 0.99 0.98 0.98 0.97 0.97 0.98 0.98 0.98 0.96], target 1.00\n== cut_grainy ==\n  [info] base band deviation on first post-cut frame: [0.54 0.45 0.52 0.47 0.51 0.44 0.40 0.44 0.48 0.39 0.48 0.46]\n  [PASS] no cross-cut ghost in base layer: max band deviation 0.5 (10-bit codes; ghosting blends the previous shot's bands)\n  [PASS] grain present in both scenes: pre 2.97, post 2.78 vs injected 3.00 (8-bit units)\n\n== summary ==\n  const_luma: PASS\n  ramp_luma: PASS\n  chroma_corr: PASS\n  chroma_ind: PASS\n  clean: PASS\n  cut: PASS\n  const_10bit: PASS\n  const_hlg: PASS\n  const_4k10_pq: PASS\n  coarse_luma: PASS\n  dark_luma: PASS\n  retain_luma: PASS\n  retain_10bit: PASS\n  cut_grainy: PASS\n"
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tests/fgs/retain_sweep.py",
+        "--bits",
+        "both"
+      ],
+      "duration_seconds": 27.831,
+      "name": "retain",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": " 8-bit retain=0.00 bytes=   450029 base=0.083 corr=0.075 synth=0.985/1.000 total=0.988 PASS\n 8-bit retain=0.25 bytes=  4376398 base=0.169 corr=0.445 synth=0.954/0.968 total=0.969 PASS\n 8-bit retain=0.50 bytes= 15198482 base=0.449 corr=0.898 synth=0.853/0.866 total=0.963 PASS\n 8-bit retain=0.75 bytes= 20493426 base=0.711 corr=0.963 synth=0.652/0.661 total=0.963 PASS\n 8-bit retain=0.90 bytes= 22840168 base=0.865 corr=0.977 synth=0.432/0.436 total=0.964 PASS\n10-bit retain=0.00 bytes=   528239 base=0.067 corr=0.093 synth=0.985/1.000 total=0.987 PASS\n10-bit retain=0.25 bytes= 11919792 base=0.229 corr=0.816 synth=0.953/0.968 total=0.980 PASS\n10-bit retain=0.50 bytes= 20976383 base=0.482 corr=0.962 synth=0.853/0.866 total=0.979 PASS\n10-bit retain=0.75 bytes= 25989576 base=0.741 corr=0.988 synth=0.651/0.661 total=0.985 PASS\n10-bit retain=0.90 bytes= 28182164 base=0.891 corr=0.992 synth=0.431/0.436 total=0.987 PASS\nresults: /tmp/nvenc-fgs-benchmark-nwwsjaek/retain/results.csv\n"
+    }
+  ]
+}
