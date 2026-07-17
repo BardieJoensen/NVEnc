@@ -119,21 +119,26 @@ def valid_video(path):
         ["ffprobe", "-v", "error", "-select_streams", "v:0",
          "-show_entries", "stream=width,height", "-of", "csv=p=0", path],
         capture_output=True, text=True)
-    return r.returncode == 0 and bool(re.fullmatch(r"\d+,\d+\s*", r.stdout))
+    # ffprobe appends a CSV separator when stream side-data is present.
+    return r.returncode == 0 and bool(re.fullmatch(r"\d+,\d+,?\s*", r.stdout))
 
 
-def extract_clip(src, start, dst, seconds):
+def extract_clip(src, start, dst, seconds, frames):
     if valid_video(dst):
         return
     if os.path.exists(dst):
         os.unlink(dst)
-    # Accurate post-input seeking avoids retaining a long GOP of preroll;
-    # pre-input stream-copy seeking made nominal 3 s clips almost 12 s.
+    # Prefer indexed input seeking.  Some long-GOP sources retain too much
+    # keyframe preroll or make an invalid Matroska fragment; both cases fall
+    # back to a frame-accurate lossless transcode below.
     try:
-        run(["ffmpeg", "-v", "error", "-y", "-i", src, "-ss", start, "-t", str(seconds),
+        run(["ffmpeg", "-v", "error", "-y", "-ss", start, "-i", src, "-t", str(seconds),
              "-map", "0:v:0", "-an", "-c:v", "copy", dst])
         if valid_video(dst):
-            return
+            duration = float(run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                                  "-of", "default=nw=1:nk=1", dst]).stdout.strip())
+            if duration <= seconds + 1.0:
+                return
     except RuntimeError:
         pass
     # A few Matroska inputs cannot be cut into a valid packet-copy fragment at
@@ -142,6 +147,7 @@ def extract_clip(src, start, dst, seconds):
     if os.path.exists(dst):
         os.unlink(dst)
     run(["ffmpeg", "-v", "error", "-y", "-ss", start, "-i", src, "-t", str(seconds),
+         "-frames:v", str(frames),
          "-map", "0:v:0", "-an", "-c:v", "ffv1", "-level", "3",
          "-pix_fmt", "yuv420p10le", dst])
     if not valid_video(dst):
@@ -277,7 +283,7 @@ def main():
         title_ok = True
         print(f"== {name}: {note}")
         try:
-            extract_clip(src, start, clip, args.seconds)
+            extract_clip(src, start, clip, args.seconds, args.frames)
             ref = make_ref(clip, ref, args.frames)
             width, height = probe_res(clip)
             src_hf = hf_sigma(clip, width, height)
