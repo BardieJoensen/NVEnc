@@ -17,6 +17,8 @@ synthesized grain against the injected grain:
   const_4k10_pq  const_luma at 4K 10-bit with PQ/BT.2020 signalling
   coarse_luma    spatially-correlated grain (35mm proxy), capture-ratio guard
   dark_luma      grain clipped at legal black; shadow strength + black level
+  retain_luma    retain 60% of original luma grain in the encoded base layer
+  retain_10bit   retain_luma at 1080p 10-bit
 
 Sigma values in specs and reports are in 8-bit code values; 10-bit variants
 scale internally.
@@ -183,8 +185,11 @@ COLOR_EXPECT = {
 
 
 def encode(src, out, spec):
+    fgs_opts = f"denoise=auto,chroma=auto,denoiser={FGS_DENOISER}"
+    if "retain" in spec:
+        fgs_opts += f",retain={spec['retain']}"
     cmd = [NVENCC, "--codec", "av1", "--cqp", "20",
-           "--av1-film-grain", f"denoise=auto,chroma=auto,denoiser={FGS_DENOISER}",
+           "--av1-film-grain", fgs_opts,
            "--log-level", "debug"]
     if BITS == 10:
         cmd += ["--output-depth", "10"]
@@ -282,6 +287,33 @@ def grain_frame_corr(on_path, off_path, frames):
     return float(np.mean(corrs)) if corrs else 1.0
 
 
+def luma_band_sigmas(path, frames):
+    """Per-band luma standard deviation of a decoded stream."""
+    video = YUV(path)
+    var_sum = np.zeros(BANDS)
+    for n in frames:
+        y = video.planes(n)[0]
+        for b, sl in enumerate(band_slices(24, BAND_W, H)):
+            var_sum[b] += y[sl].astype(np.float64).var()
+    return np.sqrt(var_sum / max(len(frames), 1))
+
+
+def retained_grain_corr(src_path, off_path, frames):
+    """Correlation between source grain and the grain retained in the base."""
+    src, off = YUV(src_path), YUV(off_path)
+    corrs = []
+    for n in frames:
+        src_y, off_y = src.planes(n)[0], off.planes(n)[0]
+        for sl in band_slices(24, BAND_W, H):
+            a = src_y[sl].astype(np.float64).ravel()
+            b = off_y[sl].astype(np.float64).ravel()
+            a -= a.mean()
+            b -= b.mean()
+            if a.std() > 0.1 * DS and b.std() > 0.1 * DS:
+                corrs.append(float(np.corrcoef(a, b)[0, 1]))
+    return float(np.mean(corrs)) if corrs else 0.0
+
+
 def check(name, ok, detail):
     print(f"  [{'PASS' if ok else 'FAIL'}] {name}: {detail}")
     return ok
@@ -310,6 +342,8 @@ TESTS = {
     "dark_luma":     {"sigma_y_mode": "const", "sigma_y": 6.0, "bits": 10, "limited": True,
                       "levels": [70, 82, 96, 115, 140, 175, 220, 280, 360, 460, 580, 720],
                       "clip": (64, 940)},
+    "retain_luma":   {"sigma_y_mode": "const", "sigma_y": 6.0, "retain": 0.6},
+    "retain_10bit":  {"sigma_y_mode": "const", "sigma_y": 6.0, "bits": 10, "retain": 0.6},
     # SUBTLE hard cut between two grainy scenes: the post-cut shot differs only
     # moderately (bands rolled 3 + offset), so the cross-cut SAD sits between
     # grain SAD and an obvious scene change -- the regime where a temporal
@@ -402,6 +436,35 @@ def run_test(test, keep):
         ok &= check("grain present in both scenes",
                     pre[0].mean() > 0.6 * exp and post[0].mean() > 0.6 * exp,
                     f"pre {pre[0].mean() / DS:.2f}, post {post[0].mean() / DS:.2f} vs injected {exp / DS:.2f} (8-bit units)")
+    elif "retain" in spec:
+        frames = range(SKIP, nframes)
+        retain = float(spec["retain"])
+        synth_target = (1.0 - retain * retain) ** 0.5
+        synth_sigma, _ = measure(on, off, frames)
+        retained_sigma = luma_band_sigmas(off, frames)
+        total_sigma = luma_band_sigmas(on, frames)
+        expected_y = np.maximum(expected[0], 1e-9)
+        retained_ratio = retained_sigma / expected_y
+        synth_ratio = synth_sigma[0] / expected_y
+        total_ratio = total_sigma / expected_y
+        src_raw = os.path.join(d, "src.yuv")
+        pix = "yuv420p" if BITS == 8 else "yuv420p10le"
+        run(["ffmpeg", "-v", "error", "-y", "-i", src,
+             "-pix_fmt", pix, "-f", "rawvideo", src_raw])
+        position_corr = retained_grain_corr(src_raw, off, frames)
+        ok &= check("retained grain amplitude",
+                    bool((retained_ratio > retain * 0.65).all() and (retained_ratio < retain * 1.35).all()),
+                    f"ratio {fmt(retained_ratio)}, target {retain:.2f}")
+        ok &= check("retained grain keeps source position", position_corr > 0.70,
+                    f"mean per-band correlation {position_corr:.3f}")
+        ok &= check("synthesized grain is variance-compensated",
+                    bool((synth_ratio > synth_target * 0.60).all() and (synth_ratio < synth_target * 1.35).all()),
+                    f"ratio {fmt(synth_ratio)}, target {synth_target:.2f}")
+        ok &= check("played-out total grain stays matched",
+                    bool((total_ratio > 0.70).all() and (total_ratio < 1.35).all()),
+                    f"ratio {fmt(total_ratio)}, target 1.00")
+        if not keep and os.path.exists(src_raw):
+            os.remove(src_raw)
     elif test == "coarse_luma":
         sigma, _ = measure(on, off, range(SKIP, nframes))
         ratio = float(sigma[0].mean() / max(expected[0].mean(), 1e-9))
