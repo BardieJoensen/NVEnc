@@ -9,3 +9,4 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
     tests/fgs/parser_test.cpp NVEncCore/NVEncFilmGrain.cpp -o "$OUT/fgs_parser_test"
 "$OUT/fgs_solver_test"
 "$OUT/fgs_parser_test"
+python3 tests/fgs/test_filmgrn.py

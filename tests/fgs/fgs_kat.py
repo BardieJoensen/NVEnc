@@ -28,6 +28,7 @@ Environment: NVENCC (encoder binary), FGS_KAT_DIR (work dir),
 FGS_KAT_DENOISER (fft3d, bilateral, or motion; default fft3d).
 """
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -115,17 +116,23 @@ def band_slices(margin, band_w, height):
         yield np.s_[margin:height - margin, i * band_w + margin:(i + 1) * band_w - margin]
 
 
-def generate(test, spec, path):
+def generate(test, spec, path, clean_path=None):
     """Write the y4m fixture; return (per-band noise sigma per plane,
     per-band luma mean).  Both are post-clip observations — the ground truth a
-    legal-range master actually exposes."""
+    legal-range master actually exposes.
+
+    If clean_path is provided, also write the corresponding ideal clean source
+    as headerless planar YUV.  The optional output is used by the libaom
+    reference harness and does not change the generated grainy fixture.
+    """
     rng = np.random.default_rng(20260715)
     var_sum = np.zeros((3, BANDS))
     mean_sum = np.zeros(BANDS)
     var_frames = 0
     grain_free = test == "clean"
     colorspace = "C420mpeg2" if BITS == 8 else "C420p10"
-    with open(path, "wb") as f:
+    clean_context = open(clean_path, "wb") if clean_path else contextlib.nullcontext()
+    with open(path, "wb") as f, clean_context as clean_file:
         f.write(f"YUV4MPEG2 W{W} H{H} F{FPS}:1 Ip A1:1 {colorspace}\n".encode())
         nframes = spec.get("frames", FRAMES)
         for n in range(nframes):
@@ -152,8 +159,14 @@ def generate(test, spec, path):
                 planes.append(cq)
                 actual_c.append(cq.astype(np.float64) - 128.0 * DS)
             f.write(b"FRAME\n")
-            for p in planes:
-                f.write(p.tobytes())
+            for plane in planes:
+                f.write(plane.tobytes())
+            if clean_file:
+                clean_y = np.clip(np.rint(base), CLIP_LO, CLIP_HI).astype(DTYPE)
+                clean_c = np.full((H // 2, W // 2), 128 * DS, dtype=DTYPE)
+                clean_file.write(clean_y.tobytes())
+                clean_file.write(clean_c.tobytes())
+                clean_file.write(clean_c.tobytes())
             if grainy and n >= SKIP // 2:
                 for b, sl in enumerate(band_slices(24, BAND_W, H)):
                     var_sum[0, b] += actual_y[sl].var()

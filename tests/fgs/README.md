@@ -51,3 +51,22 @@ new result files rather than overwriting it.
 
 Real-title testing is handled separately by `campaign.py`; source paths in that
 script are local configuration and media is never committed.
+
+## libaom reference comparison
+
+Build the pinned official libaom `noise_model` example outside this repository,
+then compare NVEnc's complete analyzer with libaom on generated fixtures:
+
+```sh
+ref_dir=$(mktemp -d /tmp/aom-reference.XXXXXX)
+rmdir "$ref_dir"
+tests/fgs/build_aom_reference.sh "$ref_dir"
+AOM_NOISE_MODEL="$ref_dir/build/noise_model" \
+AOM_NOISE_MODEL_REVISION=18c52422b835ba6cdde1b2342d760c6037a7fd86 \
+python3 tests/fgs/reference_compare.py --output /tmp/fgs-reference.json
+```
+
+The comparison uses libaom twice: once with NVEnc's emitted clean base to
+isolate model-fitting differences, and once with the fixture's exact clean base
+to expose separator loss. libaom remains an optional test tool and is not a
+build or runtime dependency of NVEncC.
