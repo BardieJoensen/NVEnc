@@ -49,6 +49,11 @@ The checked-in `baselines/2026-07-17-fft3d.json` snapshot is the quality and
 bitrate baseline for this branch before reference-driven analyzer changes. Add
 new result files rather than overwriting it.
 
+The corresponding optimized snapshot is
+`baselines/2026-07-17-optimized.json`.  See
+`FINDINGS-2026-07-17.md` for the synthetic and CUDA-scored real-title
+before/after results, interpretation, and remaining limits.
+
 Real-title testing is handled separately by `campaign.py`; source paths in that
 script are local configuration and media is never committed.
 
