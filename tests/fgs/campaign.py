@@ -11,7 +11,8 @@ Titles and variants are configured in the TITLES/VARIANTS tables below.
 Work dir: /tmp/nvenc-fgs-tests/campaign (heavy intermediates are deleted per
 title unless --keep).
 
-Usage: python3 tests/fgs/campaign.py [--titles taxi,dune] [--variants fgs,plain] [--keep]
+Usage: python3 tests/fgs/campaign.py [--titles taxi,dune] [--variants fgs,plain]
+       [--seconds 60] [--frames 600] [--work /tmp/nvenc-fgs-tests/campaign] [--keep]
 """
 import argparse
 import csv
@@ -21,13 +22,16 @@ import re
 import statistics
 import subprocess
 import sys
+import time
+
+import filmgrn
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 NVENCC = os.environ.get("NVENCC", os.path.join(REPO, "build-fgs-cuda", "nvencc"))
 SVT = os.environ.get("SVTAV1", "")   # SvtAv1EncApp path; svt/hybrid variants skipped if empty
 VMAF = os.environ.get("VMAF_BIN", os.path.expanduser("~/git-repos/vmaf/libvmaf/build/tools/vmaf"))
 FFVSHIP_IMG = "docker-apps/video-metrics:cuda13.3.0"
-WORK = "/tmp/nvenc-fgs-tests/campaign"
+WORK = os.environ.get("FGS_CAMPAIGN_DIR", "/tmp/nvenc-fgs-tests/campaign")
 CLIP_SECONDS = 60
 REF_FRAMES = 600
 
@@ -52,19 +56,19 @@ TITLES = [
 ]
 
 # variant name -> command builder(src_clip, out_path, table_path) -> list[list[str]] of commands to run in order
-def v_fgs_retain(retain):
+def v_fgs_retain(retain, denoiser="motion"):
     def build(src, out, tbl):
-        fgs = "denoise=auto,chroma=auto,denoiser=motion"
+        fgs = f"denoise=auto,chroma=auto,denoiser={denoiser}"
         if retain > 0.0:
             fgs += f",retain={retain:g}"
         return [[NVENCC, "--avhw", "--codec", "av1", "--output-depth", "10", "--qvbr", "26", *TUNED, *COLOR,
-                 "--av1-film-grain", fgs, "-i", src, "-o", out]]
+                 "--av1-film-grain", fgs, "--film-grain-table-out", tbl,
+                 "-i", src, "-o", out]]
     return build
 
 
 def v_fgs(src, out, tbl):
-    return [[NVENCC, "--avhw", "--codec", "av1", "--output-depth", "10", "--qvbr", "26", *TUNED, *COLOR,
-             "--av1-film-grain", "denoise=auto,chroma=auto,denoiser=motion", "-i", src, "-o", out]]
+    return v_fgs_retain(0.0, "motion")(src, out, tbl)
 
 def v_plain(src, out, tbl):
     return [[NVENCC, "--avhw", "--codec", "av1", "--output-depth", "10", "--qvbr", "26", *TUNED, *COLOR,
@@ -76,6 +80,8 @@ VARIANTS = {
     "fgs_r50": v_fgs_retain(0.50),
     "fgs_r75": v_fgs_retain(0.75),
     "fgs_r90": v_fgs_retain(0.90),
+    "fgs_fft3d": v_fgs_retain(0.0, "fft3d"),
+    "fgs_bilateral": v_fgs_retain(0.0, "bilateral"),
     "plain": v_plain,
 }
 # svt / hybrid variants are shell pipelines, handled specially
@@ -83,7 +89,9 @@ PIPELINE_VARIANTS = ("svt", "hybrid")
 
 
 def run(cmd, timeout=1800, **kw):
+    started = time.monotonic()
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, **kw)
+    r.elapsed_seconds = time.monotonic() - started
     if r.returncode != 0:
         raise RuntimeError(f"cmd failed ({r.returncode}): {cmd if isinstance(cmd,str) else ' '.join(cmd)}\n{r.stderr[-1500:]}")
     return r
@@ -103,24 +111,26 @@ def probe_res(path):
     return int(w), int(h)
 
 
-def extract_clip(src, start, dst):
+def extract_clip(src, start, dst, seconds):
     if not os.path.exists(dst):
-        run(["ffmpeg", "-v", "error", "-y", "-ss", start, "-i", src, "-t", str(CLIP_SECONDS),
-             "-map", "0:v:0", "-c", "copy", dst])
+        # Accurate post-input seeking avoids retaining a long GOP of preroll;
+        # pre-input stream-copy seeking made nominal 3 s clips almost 12 s.
+        run(["ffmpeg", "-v", "error", "-y", "-i", src, "-ss", start, "-t", str(seconds),
+             "-map", "0:v:0", "-an", "-c:v", "copy", dst])
 
 
-def make_ref(clip, ref):
+def make_ref(clip, ref, frames):
     if not os.path.exists(ref):
-        run(["ffmpeg", "-v", "error", "-y", "-i", clip, "-vframes", str(REF_FRAMES), "-an",
+        run(["ffmpeg", "-v", "error", "-y", "-i", clip, "-vframes", str(frames), "-an",
              "-c:v", "ffv1", "-pix_fmt", "yuv420p10le", ref])
 
 
-def score(ref, enc, tag, d, height):
+def score(ref, enc, tag, d, height, frames):
     out = {}
     model = "version=vmaf_4k_v0.6.1" if height > 1200 else "version=vmaf_v0.6.1"
     vmaf_json = os.path.join(d, f"vmaf-{tag}.json")
     run(["ffmpeg", "-v", "error", "-c:v", "libdav1d", "-i", enc, "-i", ref, "-lavfi",
-         f"[0:v]trim=end_frame={REF_FRAMES},setpts=PTS-STARTPTS[d];[1:v]setpts=PTS-STARTPTS[r];"
+         f"[0:v]trim=end_frame={frames},setpts=PTS-STARTPTS[d];[1:v]setpts=PTS-STARTPTS[r];"
          f"[d][r]libvmaf=log_fmt=json:log_path={vmaf_json}:n_threads=20:model={model}", "-f", "null", "-"])
     p = json.load(open(vmaf_json))["pooled_metrics"]["vmaf"]
     out["vmaf"], out["vmaf_min"] = round(p["mean"], 2), round(p["min"], 2)
@@ -128,7 +138,7 @@ def score(ref, enc, tag, d, height):
     ssimu_json = os.path.join(d, f"ssimu2-{tag}.json")
     run(["docker", "run", "--rm", "--gpus", "all", "-v", f"{d}:/data", "--entrypoint", "FFVship", FFVSHIP_IMG,
          "-s", f"/data/{os.path.basename(ref)}", "-e", f"/data/{os.path.basename(enc)}",
-         "--end", str(REF_FRAMES), "-m", "SSIMULACRA2", "--json", f"/data/ssimu2-{tag}.json"])
+         "--end", str(frames), "-m", "SSIMULACRA2", "--json", f"/data/ssimu2-{tag}.json"])
     s = sorted(x[0] for x in json.load(open(ssimu_json)))
     out["ssimu2"], out["ssimu2_p5"] = round(statistics.mean(s), 2), round(s[int(len(s) * 0.05)], 2)
 
@@ -143,8 +153,8 @@ def score(ref, enc, tag, d, height):
         # plain ';' sequencing: an '&&' chain ending in 'cmd &' would background
         # the whole chain, racing vmaf ahead of mkfifo
         f"rm -f {rp} {dp}; mkfifo {rp} {dp} || exit 1; "
-        f"ffmpeg -v error -i {ref} -frames:v {REF_FRAMES} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y {rp} >/dev/null 2>&1 & w1=$!; "
-        f"ffmpeg -v error -c:v libdav1d -i {enc} -frames:v {REF_FRAMES} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y {dp} >/dev/null 2>&1 & w2=$!; "
+        f"ffmpeg -v error -i {ref} -frames:v {frames} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y {rp} >/dev/null 2>&1 & w1=$!; "
+        f"ffmpeg -v error -c:v libdav1d -i {enc} -frames:v {frames} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y {dp} >/dev/null 2>&1 & w2=$!; "
         f"{VMAF} --reference {rp} --distorted {dp} --no_prediction "
         f"--feature psnr_cuda --feature ssim_cuda --feature ciede_cuda --json --output {feat_json}; st=$?; "
         f"kill $w1 $w2 2>/dev/null; wait 2>/dev/null; rm -f {rp} {dp}; exit $st")
@@ -159,7 +169,7 @@ def score(ref, enc, tag, d, height):
     return out
 
 
-def hf_sigma(path, height, frames=(6, 10, 14), decoder=None):
+def hf_sigma(path, height, frames=(6, 10, 14), decoder=None, filmgrain=None):
     import numpy as np
     W = 3840 if height > 1200 else 1920
     H = 2160 if height > 1200 else 1080
@@ -168,6 +178,8 @@ def hf_sigma(path, height, frames=(6, 10, 14), decoder=None):
     cmd = ["ffmpeg", "-v", "error", "-y"]
     if decoder:
         cmd += ["-c:v", decoder]
+    if filmgrain is not None:
+        cmd += ["-filmgrain", str(filmgrain)]
     cmd += ["-i", path, "-vframes", str(max(frames) + 2), "-pix_fmt", "yuv420p10le",
             "-vf", f"scale={W}:{H}", "-f", "rawvideo", tmp]
     run(cmd)
@@ -185,23 +197,29 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--titles", default=",".join(t[0] for t in TITLES))
     ap.add_argument("--variants", default="fgs,plain")
+    ap.add_argument("--seconds", type=float, default=CLIP_SECONDS)
+    ap.add_argument("--frames", type=int, default=REF_FRAMES)
+    ap.add_argument("--work", default=WORK)
     ap.add_argument("--keep", action="store_true")
     args = ap.parse_args()
-    os.makedirs(WORK, exist_ok=True)
+    if args.seconds <= 0 or args.frames <= 0:
+        ap.error("--seconds and --frames must be positive")
+    work = os.path.abspath(args.work)
+    os.makedirs(work, exist_ok=True)
     wanted = args.titles.split(",")
     variants = args.variants.split(",")
     rows = []
     for name, src, start, note in TITLES:
         if name not in wanted:
             continue
-        d = os.path.join(WORK, name)
+        d = os.path.join(work, name)
         os.makedirs(d, exist_ok=True)
         clip = os.path.join(d, "clip.mkv")
         ref = os.path.join(d, "ref.mkv")
         title_ok = True
         print(f"== {name}: {note}")
-        extract_clip(src, start, clip)
-        make_ref(clip, ref)
+        extract_clip(src, start, clip, args.seconds)
+        make_ref(clip, ref, args.frames)
         _, height = probe_res(clip)
         src_hf = hf_sigma(clip, height)
         rows.append({"title": name, "variant": "source", "mb": round(os.path.getsize(clip) / 1e6, 1),
@@ -214,12 +232,22 @@ def main():
             out = os.path.join(d, f"{var}.mkv")
             tbl = os.path.join(d, f"{var}.tbl")
             try:
+                encode_seconds = None
                 if not os.path.exists(out):
+                    encode_seconds = 0.0
                     for cmd in VARIANTS[var](clip, out, tbl):
-                        run(cmd)
-                row = {"title": name, "variant": var, "mb": round(os.path.getsize(out) / 1e6, 1)}
-                row.update(score(ref, out, var, d, height))
-                row["hf_sigma"] = hf_sigma(out, height, decoder="libdav1d")
+                        encode_seconds += run(cmd).elapsed_seconds
+                row = {"title": name, "variant": var,
+                       "mb": round(os.path.getsize(out) / 1e6, 1),
+                       "encode_seconds": round(encode_seconds, 2) if encode_seconds is not None else None}
+                row.update(score(ref, out, var, d, height, args.frames))
+                row["hf_sigma"] = hf_sigma(out, height, decoder="libdav1d", filmgrain=1)
+                row["base_hf_sigma"] = hf_sigma(out, height, decoder="libdav1d", filmgrain=0)
+                if os.path.isfile(tbl):
+                    entries = filmgrn.load(tbl)
+                    row["grain_entries"] = len(entries)
+                    row["grain_coverage_seconds"] = round(sum(
+                        entry["end"] - entry["start"] for entry in entries) / 10_000_000.0, 3)
                 rows.append(row)
                 print(f"   {var}: {row}")
             except Exception as e:
@@ -228,14 +256,22 @@ def main():
                 title_ok = False
         if title_ok and not args.keep and os.path.exists(ref):
             os.remove(ref)  # 3.7GB each; regenerable (kept on failure for cheap retries)
-    out_csv = os.path.join(WORK, "results.csv")
+    out_csv = os.path.join(work, "results.csv")
     fields = ["title", "variant", "mb", "vmaf", "vmaf_min", "ssimu2", "ssimu2_p5",
-              "psnr_y", "ssim", "ciede2000", "hf_sigma", "note"]
+              "psnr_y", "ssim", "ciede2000", "hf_sigma", "base_hf_sigma",
+              "encode_seconds", "grain_entries", "grain_coverage_seconds", "note"]
     with open(out_csv, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
         w.writeheader()
         w.writerows(rows)
+    out_json = os.path.join(work, "results.json")
+    with open(out_json, "w") as output:
+        json.dump({"seconds": args.seconds, "frames": args.frames,
+                   "titles": wanted, "variants": variants, "rows": rows},
+                  output, indent=2)
+        output.write("\n")
     print(f"\nresults: {out_csv}")
+    print(f"results: {out_json}")
 
 
 if __name__ == "__main__":
