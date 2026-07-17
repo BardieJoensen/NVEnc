@@ -465,13 +465,9 @@ def run_test(test, keep):
         ok &= check("no cross-cut ghost in base layer",
                     bool(ghost.max() <= 12.0 * DS / 4),
                     f"max band deviation {ghost.max():.1f} (10-bit codes; ghosting blends the previous shot's bands)")
-        if FGS_DENOISER == "motion":
-            # only motion mode has SAD-based cut detection; the spatial
-            # denoisers rely on the noise-ratio reset, which by design does
-            # not fire when both scenes carry the same grain level
-            resets = [m["frame"] for m in models if m["reset"]]
-            ok &= check("scene reset at grainy cut", any(CUT_FRAME <= f <= CUT_FRAME + 1 for f in resets),
-                        f"resets at {resets[:8]}")
+        resets = [m["frame"] for m in models if m["reset"]]
+        ok &= check("scene reset at grainy cut", any(CUT_FRAME <= f <= CUT_FRAME + 1 for f in resets),
+                    f"resets at {resets[:8]}")
         pre, _ = measure(on, off, range(SKIP, CUT_FRAME))
         post, _ = measure(on, off, range(CUT_FRAME + 4, nframes))
         exp = expected[0].mean()
