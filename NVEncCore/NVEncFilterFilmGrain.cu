@@ -61,6 +61,7 @@ struct FilmGrainBlockMetric {
     float mean;
     float sigma;
     float score;
+    float coherence;
     uint32_t flat;
 };
 
@@ -181,6 +182,11 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     out.mean = static_cast<float>(mean);
     out.sigma = static_cast<float>(sqrt(fmax(variance, 0.0)));
     out.score = varNorm > varThreshold ? static_cast<float>(1.0 / (1.0 + exp(-scoreArg))) : 0.0f;
+    // Random grain has similar gradient energy in every direction, while
+    // edges and line-like texture concentrate it along one eigenvector.  Keep
+    // this continuous confidence so the refinement mask can be interpolated
+    // without introducing visible 32x32 block boundaries.
+    out.coherence = static_cast<float>((e1 - e2) / fmax(trace, 1e-12));
     out.flat = isFlat ? 1u : 0u;
     metrics[blockIndex] = out;
 }
@@ -222,31 +228,52 @@ template<typename Type, int shift, int components>
 __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPitch,
     const uint8_t *__restrict__ src, const int srcPitch, const int width, const int height,
     const int maxValue, const float sigma, const float *__restrict__ sigmaMap,
+    const FilmGrainBlockMetric *__restrict__ detailMetrics,
     const int blocksX, const int blocksY, const int planeBlockSize) {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= width || y >= height) return;
 
     constexpr float spatial[5] = { 1.0f, 4.0f, 6.0f, 4.0f, 1.0f };
+    int ix = 0;
+    int iy = 0;
+    int ix1 = 0;
+    int iy1 = 0;
+    float wx = 0.0f;
+    float wy = 0.0f;
+    if (sigmaMap != nullptr || detailMetrics != nullptr) {
+        const float fx = (x + 0.5f) / planeBlockSize - 0.5f;
+        const float fy = (y + 0.5f) / planeBlockSize - 0.5f;
+        ix = max(0, min(blocksX - 1, static_cast<int>(floorf(fx))));
+        iy = max(0, min(blocksY - 1, static_cast<int>(floorf(fy))));
+        ix1 = min(blocksX - 1, ix + 1);
+        iy1 = min(blocksY - 1, iy + 1);
+        wx = fminf(1.0f, fmaxf(0.0f, fx - ix));
+        wy = fminf(1.0f, fmaxf(0.0f, fy - iy));
+    }
     float blockSigma = sigma;
     if (sigmaMap != nullptr) {
         // Grain strength varies across the frame (typically with intensity);
         // a range sigma from the global median under-removes strong grain.
         // Interpolate the per-block noise estimate between block centers.
-        const float fx = (x + 0.5f) / planeBlockSize - 0.5f;
-        const float fy = (y + 0.5f) / planeBlockSize - 0.5f;
-        const int ix = max(0, min(blocksX - 1, static_cast<int>(floorf(fx))));
-        const int iy = max(0, min(blocksY - 1, static_cast<int>(floorf(fy))));
-        const int ix1 = min(blocksX - 1, ix + 1);
-        const int iy1 = min(blocksY - 1, iy + 1);
-        const float wx = fminf(1.0f, fmaxf(0.0f, fx - ix));
-        const float wy = fminf(1.0f, fmaxf(0.0f, fy - iy));
         const float top = sigmaMap[iy * blocksX + ix] * (1.0f - wx) + sigmaMap[iy * blocksX + ix1] * wx;
         const float bottom = sigmaMap[iy1 * blocksX + ix] * (1.0f - wx) + sigmaMap[iy1 * blocksX + ix1] * wx;
         blockSigma = top * (1.0f - wy) + bottom * wy;
     }
     const float rangeSigma = fmaxf(1.0f, blockSigma * 2.35f);
     const float invRange2 = 1.0f / (rangeSigma * rangeSigma);
+    float refinementWeight = 1.0f;
+    if (detailMetrics != nullptr) {
+        const float top = detailMetrics[iy * blocksX + ix].coherence * (1.0f - wx)
+            + detailMetrics[iy * blocksX + ix1].coherence * wx;
+        const float bottom = detailMetrics[iy1 * blocksX + ix].coherence * (1.0f - wx)
+            + detailMetrics[iy1 * blocksX + ix1].coherence * wx;
+        const float coherence = top * (1.0f - wy) + bottom * wy;
+        // Below 0.12 is normally isotropic grain; above 0.18 is strongly
+        // directional picture detail.  Fade the local correction between the
+        // two instead of making the block classifier a hard render boundary.
+        refinementWeight = 1.0f - fminf(1.0f, fmaxf(0.0f, (coherence - 0.12f) / 0.06f));
+    }
     for (int component = 0; component < components; ++component) {
         const int center = load_code<Type, shift>(src, srcPitch, x, y, component, components);
         float weighted = 0.0f;
@@ -263,7 +290,9 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
                 weightSum += weight;
             }
         }
-        const int filtered = min(maxValue, max(0, static_cast<int>(weighted / fmaxf(weightSum, 1e-6f) + 0.5f)));
+        const float filteredValue = weighted / fmaxf(weightSum, 1e-6f);
+        const int filtered = min(maxValue, max(0, __float2int_rn(
+            center + refinementWeight * (filteredValue - center))));
         store_code<Type, shift>(dst, dstPitch, x, y, filtered, component, components);
     }
 }
@@ -527,12 +556,13 @@ static RGY_ERR launch_residual_retain(const RGYFrameInfo& lumaDst, const RGYFram
 template<typename Type, int shift, int components>
 static RGY_ERR launch_bilateral(const RGYFrameInfo& dst, const RGYFrameInfo& src,
     const int width, const int height, const int bitDepth, const float sigma,
-    const float *sigmaMap, const int blocksX, const int blocksY, const int planeBlockSize, cudaStream_t stream) {
+    const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
+    const int blocksX, const int blocksY, const int planeBlockSize, cudaStream_t stream) {
     const dim3 block(32, 8);
     const dim3 grid(divCeil(width, static_cast<int>(block.x)), divCeil(height, static_cast<int>(block.y)));
     kernel_fgs_bilateral<Type, shift, components><<<grid, block, 0, stream>>>(
         dst.ptr[0], dst.pitch[0], src.ptr[0], src.pitch[0], width, height, (1 << bitDepth) - 1, sigma,
-        sigmaMap, blocksX, blocksY, planeBlockSize);
+        sigmaMap, detailMetrics, blocksX, blocksY, planeBlockSize);
     return err_to_rgy(cudaGetLastError());
 }
 
@@ -671,13 +701,14 @@ void NVEncFilterFilmGrain::resetTemporalState() {
 
 namespace {
 
-// includeLuma selects between the original all-plane bilateral (used when
-// denoiser=bilateral) and a chroma-only pass (used to cover chroma when
-// denoiser=fft3d has already denoised luma into dst).
+// includeLuma selects between an all-plane pass and a chroma-only pass.
+// detailMetrics optionally fades luma refinement around structured detail;
+// chroma is always filtered because the metrics describe luma blocks.
 template<typename Type, int shift>
 static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFrameInfo *src,
     const bool chroma, const bool includeLuma, const int passes, const int bitDepth, const float sigma,
-    const float *sigmaMap, const int blocksX, const int blocksY, cudaStream_t stream) {
+    const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
+    const int blocksX, const int blocksY, cudaStream_t stream) {
     for (int pass = 0; pass < passes; ++pass) {
         const RGYFrameInfo *passSrc = pass == 0 ? src : work;
         RGYFrameInfo *passDst = pass + 1 == passes ? dst : work;
@@ -685,7 +716,7 @@ static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const 
             auto srcY = getPlane(passSrc, RGY_PLANE_Y);
             auto dstY = getPlane(passDst, RGY_PLANE_Y);
             auto sts = launch_bilateral<Type, shift, 1>(dstY, srcY, srcY.width, srcY.height, bitDepth, sigma,
-                sigmaMap, blocksX, blocksY, FGS_BLOCK_SIZE, stream);
+                sigmaMap, detailMetrics, blocksX, blocksY, FGS_BLOCK_SIZE, stream);
             if (sts != RGY_ERR_NONE) return sts;
         }
         if (!chroma) continue;
@@ -694,14 +725,14 @@ static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const 
             auto srcUV = getPlane(passSrc, RGY_PLANE_U);
             auto dstUV = getPlane(passDst, RGY_PLANE_U);
             auto sts = launch_bilateral<Type, shift, 2>(dstUV, srcUV, src->width / 2, src->height / 2, bitDepth, sigma,
-                sigmaMap, blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream);
+                sigmaMap, nullptr, blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream);
             if (sts != RGY_ERR_NONE) return sts;
         } else {
             for (int plane = RGY_PLANE_U; plane <= RGY_PLANE_V; ++plane) {
                 auto srcC = getPlane(passSrc, static_cast<RGY_PLANE>(plane));
                 auto dstC = getPlane(passDst, static_cast<RGY_PLANE>(plane));
                 auto sts = launch_bilateral<Type, shift, 1>(dstC, srcC, srcC.width, srcC.height, bitDepth, sigma,
-                    sigmaMap, blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream);
+                    sigmaMap, nullptr, blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream);
                 if (sts != RGY_ERR_NONE) return sts;
             }
         }
@@ -711,15 +742,16 @@ static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const 
 
 static RGY_ERR denoise_frame(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFrameInfo *src,
     const bool chroma, const bool includeLuma, const int passes, const int bitDepth, const float sigma,
-    const float *sigmaMap, const int blocksX, const int blocksY, cudaStream_t stream) {
+    const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
+    const int blocksX, const int blocksY, cudaStream_t stream) {
     switch (src->csp) {
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
-        return denoise_frame_typed<uint8_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, blocksX, blocksY, stream);
+        return denoise_frame_typed<uint8_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream);
     case RGY_CSP_YV12_10:
-        return denoise_frame_typed<uint16_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, blocksX, blocksY, stream);
+        return denoise_frame_typed<uint16_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream);
     case RGY_CSP_P010:
-        return denoise_frame_typed<uint16_t, 6>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, blocksX, blocksY, stream);
+        return denoise_frame_typed<uint16_t, 6>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream);
     default:
         return RGY_ERR_UNSUPPORTED;
     }
@@ -1197,18 +1229,17 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             AddMessage(RGY_LOG_ERROR, _T("FFT3D denoiser did not produce the expected 1-in-1-out frame.\n"));
             return RGY_ERR_UNKNOWN;
         }
-        // FFT3D applies one global sigma for the whole frame, so it can only
-        // correct toward the frame's median noise level; grain strength that
-        // varies with brightness needs a local touch-up on top.  Snapshot the
-        // FFT3D result (denoised luma + still-raw chroma) into scratch, then
-        // run a single per-block-adaptive bilateral pass using it as the
-        // source: chroma gets its normal bilateral denoise, and luma gets a
-        // local correction toward each block's own measured sigma.
+        // FFT3D supplies the global luma clean base; the local pass corrects
+        // brightness-dependent grain strength and handles the semi-planar
+        // chroma that FFT3D cannot process here.  Its luma correction is faded
+        // out in directionally coherent blocks so it does not erase structured
+        // texture which the Wiener filter preserved.
         sts = copyFrameAsync(&m_denoiseWork->frame, output, stream);
         if (sts != RGY_ERR_NONE) return sts;
         sts = denoise_frame(output, &m_denoiseWork->frame, &m_denoiseWork->frame, prm->filmGrain.analyzeChroma, true,
             1, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
+            static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
             m_blocksX, m_blocksY, stream);
         if (sts != RGY_ERR_NONE) return sts;
     } else if (prm->filmGrain.denoiser == FGS_DENOISE_MOTION) {
@@ -1222,12 +1253,14 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             prm->filmGrain.analyzeChroma, true,
             1, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
+            nullptr,
             m_blocksX, m_blocksY, stream);
         if (sts != RGY_ERR_NONE) return sts;
     } else {
         sts = denoise_frame(output, &m_denoiseWork->frame, source, prm->filmGrain.analyzeChroma, true,
             prm->filmGrain.denoisePasses, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
+            nullptr,
             m_blocksX, m_blocksY, stream);
         if (sts != RGY_ERR_NONE) return sts;
     }
