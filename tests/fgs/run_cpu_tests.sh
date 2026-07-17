@@ -10,3 +10,4 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
 "$OUT/fgs_solver_test"
 "$OUT/fgs_parser_test"
 python3 tests/fgs/test_filmgrn.py
+python3 tests/fgs/test_quality_metrics.py

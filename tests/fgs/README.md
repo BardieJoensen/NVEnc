@@ -19,9 +19,9 @@ python3 tests/fgs/fgs_kat.py
 ```
 
 The generated fixtures cover white and correlated grain, intensity-dependent
-strength, luma/chroma correlation, clean material, HDR, scene cuts, and fixed
-residual retention. The tests require FFmpeg with a dav1d decoder exposing the
-`filmgrain` switch.
+strength, luma/chroma correlation, fine-detail preservation, clean material,
+HDR, scene cuts, and fixed residual retention. The tests require FFmpeg with a
+dav1d decoder exposing the `filmgrain` switch.
 
 ## Retention sweep
 
@@ -70,6 +70,12 @@ The comparison uses libaom twice: once with NVEnc's emitted clean base to
 isolate model-fitting differences, and once with the fixture's exact clean base
 to expose separator loss. libaom remains an optional test tool and is not a
 build or runtime dependency of NVEncC.
+
+The JSON also records same-position grain extraction, edge and flat-region
+clean-base error, systematic detail loss, radial spatial-spectrum similarity,
+high-frequency energy, temporal correlation, luma/chroma correlation, and
+decoded synthesized-grain strength. These are diagnostics rather than a single
+combined quality score.
 
 The checked-in `baselines/2026-07-17-libaom-reference.json` report records the
 pinned libaom comparison before analyzer changes. Its actual synthesis results,

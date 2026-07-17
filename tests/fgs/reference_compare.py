@@ -25,10 +25,11 @@ import time
 
 import filmgrn
 import fgs_kat as kat
+import quality_metrics
 
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DEFAULT_TESTS = "const_luma,ramp_luma,coarse_luma,chroma_corr"
+DEFAULT_TESTS = "const_luma,ramp_luma,coarse_luma,detail_luma,chroma_corr"
 
 
 def sha256(path):
@@ -139,11 +140,14 @@ def synthesize_table(binary, clean, table, prefix, bits, frames):
     sigma, chroma_luma_correlation = kat.measure(
         grain_on, grain_off, range(first, frames))
     sigma_8bit = sigma / kat.DS
+    spatial = quality_metrics.grain_metrics(
+        grain_on, grain_off, kat.W, kat.H, kat.BITS, first_frame=first)
     return {
         "sigma_8bit": sigma_8bit.tolist(),
         "mean_sigma_y_8bit": float(sigma_8bit[0].mean()),
         "chroma_luma_correlation": chroma_luma_correlation,
         "encoded_bytes": os.path.getsize(encoded),
+        "spatial": spatial,
         "commands": commands,
     }
 
@@ -179,6 +183,9 @@ def compare_fixture(name, spec, work, nvencc, aom, denoiser):
         nvencc, source_y4m, nvenc_clean_y4m, nvenc_table, kat.BITS, denoiser)
     commands["nvenc_clean_to_raw"] = convert_y4m_to_raw(
         nvenc_clean_y4m, nvenc_clean_raw, kat.BITS)
+    separation = quality_metrics.separation_metrics(
+        source_raw, ideal_clean, nvenc_clean_raw, kat.W, kat.H, kat.BITS,
+        first_frame=min(kat.SKIP, max(frames - 1, 0)))
     commands["aom_nvenc_clean"], aom_nvenc_entries = run_aom(
         aom, source_raw, nvenc_clean_raw, aom_nvenc_table,
         kat.W, kat.H, kat.BITS)
@@ -200,6 +207,10 @@ def compare_fixture(name, spec, work, nvencc, aom, denoiser):
     nvenc_sigma = synthesis["nvenc"]["mean_sigma_y_8bit"]
     aom_nvenc_sigma = synthesis["aom_nvenc_clean"]["mean_sigma_y_8bit"]
     aom_ideal_sigma = synthesis["aom_ideal_clean"]["mean_sigma_y_8bit"]
+    for synthesized in synthesis.values():
+        synthesized["spatial"]["spectrum_similarity_to_source"] = (
+            quality_metrics.spectrum_similarity(
+                synthesized["spatial"]["spectrum"], separation["true_spectrum"]))
 
     result = {
         "name": name,
@@ -214,6 +225,7 @@ def compare_fixture(name, spec, work, nvencc, aom, denoiser):
             "aom_nvenc_clean": aom_nvenc_entries,
             "aom_ideal_clean": aom_ideal_entries,
         },
+        "separation": separation,
         "synthesis": synthesis,
         "synthesis_ratios": {
             "model_fit": safe_ratio(nvenc_sigma, aom_nvenc_sigma),

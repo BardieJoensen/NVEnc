@@ -89,6 +89,8 @@ def parse_kat(output):
         "coarse_capture_percent": r"captured ([0-9.]+)% of injected coarse-grain sigma",
         "ramp_strength_correlation": r"strength curve follows intensity ramp: corr ([0-9.]+)",
         "dark_max_mean_delta": r"black level preserved under synthesis: max \|mean delta\| ([0-9.]+)",
+        "detail_transfer_gain": r"fine detail survives the cleaned base: high-pass transfer ([0-9.]+)",
+        "detail_edge_rmse_8bit": r"edge/detail distortion remains bounded: edge RMSE ([0-9.]+)",
     }
     for key, pattern in patterns.items():
         found = re.search(pattern, output)

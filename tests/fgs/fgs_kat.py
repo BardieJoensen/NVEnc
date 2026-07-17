@@ -16,6 +16,7 @@ synthesized grain against the injected grain:
   const_hlg      const_luma at 1080p 10-bit with HLG/BT.2020 signalling
   const_4k10_pq  const_luma at 4K 10-bit with PQ/BT.2020 signalling
   coarse_luma    spatially-correlated grain (35mm proxy), capture-ratio guard
+  detail_luma    static fine detail plus grain; separation/detail-loss probe
   dark_luma      grain clipped at legal black; shadow strength + black level
   retain_luma    retain 60% of original luma grain in the encoded base layer
   retain_10bit   retain_luma at 1080p 10-bit
@@ -36,6 +37,8 @@ import subprocess
 import sys
 
 import numpy as np
+
+import quality_metrics
 
 FPS = 24
 BANDS = 12
@@ -74,10 +77,22 @@ def apply_spec(spec):
     CLIP_LO, CLIP_HI = spec.get("clip", (0, MAXVAL))
 
 
-def base_luma(shift=0):
+def base_luma(shift=0, detail=False):
     y = np.empty((H, W), np.float64)
     for i, level in enumerate(np.roll(LEVELS, shift)):
         y[:, i * BAND_W:(i + 1) * BAND_W] = level
+    if detail:
+        # Static high-frequency picture content occupies the top half while
+        # the bottom remains flat enough for a trustworthy noise estimate.
+        # Multiple incommensurate periods prevent one favorable FFT bin from
+        # making this an unrealistically easy preservation test.
+        top = H // 2
+        left, right = BAND_W, W - BAND_W
+        yy, xx = np.mgrid[32:top - 32, left:right]
+        texture = (6.0 * np.sin(2.0 * np.pi * xx / 8.0)
+                   + 4.0 * np.sin(2.0 * np.pi * (xx + yy) / 17.0)
+                   + 2.0 * np.sin(2.0 * np.pi * yy / 29.0))
+        y[32:top - 32, left:right] += texture
     return y
 
 
@@ -137,8 +152,10 @@ def generate(test, spec, path, clean_path=None):
         nframes = spec.get("frames", FRAMES)
         for n in range(nframes):
             grainy = not (grain_free or (test == "cut" and n >= CUT_FRAME))
-            base = base_luma(spec.get("cut_roll", 6)) + spec.get("cut_offset", 0) \
-                if test in ("cut", "cut_grainy") and n >= CUT_FRAME else base_luma(0)
+            base = base_luma(spec.get("cut_roll", 6), spec.get("detail", False)) \
+                + spec.get("cut_offset", 0) \
+                if test in ("cut", "cut_grainy") and n >= CUT_FRAME \
+                else base_luma(0, spec.get("detail", False))
             if grainy:
                 unit = correlated_unit_noise(rng, (H, W)) if spec["sigma_y_mode"] == "coarse" \
                     else rng.normal(0.0, 1.0, (H, W))
@@ -348,6 +365,7 @@ TESTS = {
     "const_4k10_pq": {"sigma_y_mode": "const", "sigma_y": 6.0, "bits": 10, "color": "pq",
                       "width": 3840, "height": 2160, "frames": 24},
     "coarse_luma":   {"sigma_y_mode": "coarse", "sigma_y": 6.0},
+    "detail_luma":   {"sigma_y_mode": "const", "sigma_y": 6.0, "detail": True},
     # Grain near legal black, clipped at the range floor like a legal-range
     # master: reproduces the waxy-shadow / black-level artifacts seen on real
     # heavy-grain film (Taxi Driver f388 class).  Band 0 sits 0.25 sigma above
@@ -382,8 +400,9 @@ def run_test(test, keep):
     os.makedirs(d, exist_ok=True)
     src = os.path.join(d, "src.y4m")
     mkv = os.path.join(d, "out.mkv")
+    ideal_clean = os.path.join(d, "ideal-clean.yuv") if spec.get("detail") else None
     print(f"== {test} ==")
-    expected, expected_mean = generate(test, spec, src)
+    expected, expected_mean = generate(test, spec, src, ideal_clean)
     log = encode(src, mkv, spec)
     with open(os.path.join(d, "encode.log"), "w") as f:
         f.write(log)
@@ -534,6 +553,23 @@ def run_test(test, keep):
             match = all(info.get(k) == v for k, v in want.items())
             ok &= check("HDR colorimetry signalled", match and info.get("pix_fmt") == "yuv420p10le",
                         f"got {info}")
+    if ideal_clean:
+        src_raw = os.path.join(d, "src.yuv")
+        pix = "yuv420p" if BITS == 8 else "yuv420p10le"
+        run(["ffmpeg", "-v", "error", "-y", "-i", src,
+             "-pix_fmt", pix, "-f", "rawvideo", src_raw])
+        separation = quality_metrics.separation_metrics(
+            src_raw, ideal_clean, off, W, H, BITS, first_frame=SKIP)
+        ok &= check("fine detail survives the cleaned base",
+                    separation["detail_transfer_gain"] >= 0.25,
+                    f"high-pass transfer {separation['detail_transfer_gain']:.3f} (baseline floor 0.25)")
+        ok &= check("edge/detail distortion remains bounded",
+                    separation["edge_clean_rmse_8bit"] <= 3.0,
+                    f"edge RMSE {separation['edge_clean_rmse_8bit']:.2f} (8-bit units, limit 3.0)")
+        if not keep:
+            for path in (src_raw, ideal_clean):
+                if os.path.exists(path):
+                    os.remove(path)
     if not keep:
         for p in (src, on, off):
             if os.path.exists(p):
