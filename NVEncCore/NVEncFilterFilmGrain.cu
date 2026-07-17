@@ -62,6 +62,11 @@ constexpr float FGS_DETAIL_COHERENCE_HIGH = 0.18f;
 constexpr float FGS_AUTO_RETAIN_SCALE = 1.5f;
 constexpr float FGS_AUTO_RETAIN_MAX = 0.5f;
 constexpr float FGS_AUTO_RETAIN_STEP = 0.05f;
+constexpr int FGS_MODEL_CANDIDATE_FRAMES = 3;
+constexpr int FGS_MODEL_MIN_UPDATE_FRAMES = 24;
+constexpr float FGS_SCENE_MEAN_DELTA_8BIT = 12.0f;
+constexpr float FGS_SCENE_BLOCK_DELTA_8BIT = 20.0f;
+constexpr float FGS_SCENE_CHANGED_BLOCK_FRACTION = 0.65f;
 
 struct FilmGrainBlockMetric {
     float mean;
@@ -600,22 +605,36 @@ static RGY_ERR launch_model_stats(const RGYFrameInfo& src, const RGYFrameInfo& d
 
 struct NVEncFilterFilmGrain::AnalyzerState {
     std::deque<FilmGrainHostStats> history;
+    std::vector<float> previousBlockMeans;
     float stableNoise;
     float autoRetain;
     int64_t lastTimestamp;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 lastParams;
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 pendingParams;
     bool lastParamsValid;
+    bool pendingParamsValid;
+    int pendingStreak;
+    int framesSinceModelUpdate;
     int heldStreak;
 
-    AnalyzerState() : history(), stableNoise(0.0f), autoRetain(0.0f), lastTimestamp(std::numeric_limits<int64_t>::min()),
-        lastParams(), lastParamsValid(false), heldStreak(0) {}
+    AnalyzerState() : history(), previousBlockMeans(), stableNoise(0.0f), autoRetain(0.0f),
+        lastTimestamp(std::numeric_limits<int64_t>::min()), lastParams(), pendingParams(),
+        lastParamsValid(false), pendingParamsValid(false), pendingStreak(0), framesSinceModelUpdate(0), heldStreak(0) {}
+    void advanceModelAge() {
+        if (framesSinceModelUpdate < std::numeric_limits<int>::max()) ++framesSinceModelUpdate;
+    }
     void clear() {
         history.clear();
+        previousBlockMeans.clear();
         stableNoise = 0.0f;
         autoRetain = 0.0f;
         lastTimestamp = std::numeric_limits<int64_t>::min();
         std::memset(&lastParams, 0, sizeof(lastParams));
+        std::memset(&pendingParams, 0, sizeof(pendingParams));
         lastParamsValid = false;
+        pendingParamsValid = false;
+        pendingStreak = 0;
+        framesSinceModelUpdate = 0;
         heldStreak = 0;
     }
 };
@@ -1300,12 +1319,30 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         const auto counts = static_cast<const uint32_t *>(m_sceneCounts->ptrHost);
         motionSceneCut = counts[1] > sceneCutBlockThreshold;
     }
+    bool spatialSceneCut = false;
+    if (m_state->previousBlockMeans.size() == static_cast<size_t>(blockCount)) {
+        double meanDelta8 = 0.0;
+        int changedBlocks = 0;
+        for (int i = 0; i < blockCount; ++i) {
+            const float delta8 = std::abs(metrics[i].mean - m_state->previousBlockMeans[i]) / depthScale;
+            meanDelta8 += delta8;
+            changedBlocks += delta8 >= FGS_SCENE_BLOCK_DELTA_8BIT;
+        }
+        meanDelta8 /= std::max(1, blockCount);
+        spatialSceneCut = meanDelta8 >= FGS_SCENE_MEAN_DELTA_8BIT
+            && changedBlocks >= static_cast<int>(std::ceil(blockCount * FGS_SCENE_CHANGED_BLOCK_FRACTION));
+    }
     if (!m_state->history.empty()) {
         const float ratio = measuredNoise / std::max(0.01f, m_state->stableNoise);
-        if (motionSceneCut || ratio < 0.55f || ratio > 1.80f || source->timestamp <= m_state->lastTimestamp) {
+        if (motionSceneCut || spatialSceneCut || ratio < 0.55f || ratio > 1.80f
+            || source->timestamp <= m_state->lastTimestamp) {
             m_state->clear();
             sceneReset = true;
         }
+    }
+    m_state->previousBlockMeans.resize(blockCount);
+    for (int i = 0; i < blockCount; ++i) {
+        m_state->previousBlockMeans[i] = metrics[i].mean;
     }
     FilmGrainHostStats current = {};
     std::memcpy(&current.gpu, m_modelStats->ptrHost, sizeof(current.gpu));
@@ -1355,16 +1392,50 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             prm->filmGrain.clipToRestrictedRange, params, diagnostics);
     if (modelValid) {
         const double modelTolerance = prm->filmGrain.denoiser == FGS_DENOISE_MOTION ? 0.10 : 0.05;
-        if (m_state->lastParamsValid && film_grain_params_close(
+        if (!m_state->lastParamsValid) {
+            m_state->lastParams = params;
+            m_state->lastParamsValid = true;
+            m_state->pendingParamsValid = false;
+            m_state->pendingStreak = 0;
+            m_state->framesSinceModelUpdate = 0;
+        } else if (film_grain_params_close(
             params, m_state->lastParams, modelTolerance, modelTolerance)) {
             // Hold the previously signalled model while the fresh fit only
             // jitters around it; requantizing every frame makes the grain
             // character twinkle.  NVENC still varies the grain seed per frame.
             params = m_state->lastParams;
             diagnostics.modelHeld = true;
+            m_state->pendingParamsValid = false;
+            m_state->pendingStreak = 0;
+            m_state->advanceModelAge();
         } else {
-            m_state->lastParams = params;
-            m_state->lastParamsValid = true;
+            // A genuinely different fit must remain coherent for several
+            // frames and respect a minimum update cadence.  This prevents a
+            // noisy rolling fit from generating dozens of table intervals per
+            // scene, while resetTemporalState()/scene cuts still accept the
+            // first new model immediately.
+            constexpr double candidateTolerance = 0.10;
+            if (m_state->pendingParamsValid && film_grain_params_close(
+                params, m_state->pendingParams, candidateTolerance, candidateTolerance)) {
+                m_state->pendingParams = params;
+                ++m_state->pendingStreak;
+            } else {
+                m_state->pendingParams = params;
+                m_state->pendingParamsValid = true;
+                m_state->pendingStreak = 1;
+            }
+            if (m_state->pendingStreak >= FGS_MODEL_CANDIDATE_FRAMES
+                && m_state->framesSinceModelUpdate >= FGS_MODEL_MIN_UPDATE_FRAMES) {
+                params = m_state->pendingParams;
+                m_state->lastParams = params;
+                m_state->pendingParamsValid = false;
+                m_state->pendingStreak = 0;
+                m_state->framesSinceModelUpdate = 0;
+            } else {
+                params = m_state->lastParams;
+                diagnostics.modelHeld = true;
+                m_state->advanceModelAge();
+            }
         }
         m_state->heldStreak = 0;
     } else if (m_state->lastParamsValid && m_state->heldStreak < prm->filmGrain.modelWindow) {
@@ -1374,6 +1445,9 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         params = m_state->lastParams;
         diagnostics.modelHeld = true;
         modelValid = true;
+        m_state->pendingParamsValid = false;
+        m_state->pendingStreak = 0;
+        m_state->advanceModelAge();
         ++m_state->heldStreak;
     } else {
         std::memset(&params, 0, sizeof(params));
