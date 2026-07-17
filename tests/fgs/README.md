@@ -70,3 +70,8 @@ The comparison uses libaom twice: once with NVEnc's emitted clean base to
 isolate model-fitting differences, and once with the fixture's exact clean base
 to expose separator loss. libaom remains an optional test tool and is not a
 build or runtime dependency of NVEncC.
+
+The checked-in `baselines/2026-07-17-libaom-reference.json` report records the
+pinned libaom comparison before analyzer changes. Its actual synthesis results,
+not scaling-point values alone, are the reference because AR coefficients also
+change the final grain variance.
