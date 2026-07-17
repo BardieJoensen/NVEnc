@@ -109,6 +109,7 @@ NVEncVideoParamAV1::NVEncVideoParamAV1() :
     filmGrainChroma(true),
     filmGrainDenoiser(0),
     filmGrainMotionRefs(2),
+    filmGrainRetain(0.0f),
     filmGrainTable(),
     filmGrainTableOut() {
 }

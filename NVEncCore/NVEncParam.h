@@ -841,6 +841,7 @@ struct NVEncVideoParamAV1 {
     bool filmGrainChroma;                          // true: auto, false: off
     int filmGrainDenoiser;                         // FGSDenoiseEngine: 0 = fft3d (default), 1 = bilateral, 2 = motion
     int filmGrainMotionRefs;                       // causal motion references: 2 (default) or 1 (reduced cost)
+    float filmGrainRetain;                         // fraction of the measured residual kept in the base layer (0.0 - 0.9)
     tstring filmGrainTable;                        // AOM filmgrn1 parameter table
     tstring filmGrainTableOut;                     // write measured grain as an AOM filmgrn1 table
 
