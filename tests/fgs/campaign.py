@@ -3,9 +3,9 @@
 
 For each title: extracts a clip, encodes the configured pipeline variants,
 builds a clean FFV1 reference from the decoded base layer (DV-safe), and
-scores VMAF (4K/HD model by resolution), SSIMULACRA2 (FFVship), CIEDE2000 +
-PSNR/SSIM (user's CUDA vmaf feature extractors), chroma drift (signalstats),
-and grain-retention HF sigma.  Results land in a CSV.
+scores VMAF + CIEDE2000 + PSNR/SSIM with the user's CUDA libvmaf feature
+extractors, SSIMULACRA2 with FFVship/CUDA, and grain-retention HF sigma.
+Results are checkpointed after every row in CSV and JSON form.
 
 Titles and variants are configured in the TITLES/VARIANTS tables below.
 Work dir: /tmp/nvenc-fgs-tests/campaign (heavy intermediates are deleted per
@@ -19,6 +19,7 @@ import csv
 import json
 import os
 import re
+import shlex
 import statistics
 import subprocess
 import sys
@@ -111,68 +112,102 @@ def probe_res(path):
     return int(w), int(h)
 
 
+def valid_video(path):
+    if not os.path.isfile(path) or os.path.getsize(path) < 4096:
+        return False
+    r = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=width,height", "-of", "csv=p=0", path],
+        capture_output=True, text=True)
+    return r.returncode == 0 and bool(re.fullmatch(r"\d+,\d+\s*", r.stdout))
+
+
 def extract_clip(src, start, dst, seconds):
-    if not os.path.exists(dst):
-        # Accurate post-input seeking avoids retaining a long GOP of preroll;
-        # pre-input stream-copy seeking made nominal 3 s clips almost 12 s.
+    if valid_video(dst):
+        return
+    if os.path.exists(dst):
+        os.unlink(dst)
+    # Accurate post-input seeking avoids retaining a long GOP of preroll;
+    # pre-input stream-copy seeking made nominal 3 s clips almost 12 s.
+    try:
         run(["ffmpeg", "-v", "error", "-y", "-i", src, "-ss", start, "-t", str(seconds),
              "-map", "0:v:0", "-an", "-c:v", "copy", dst])
+        if valid_video(dst):
+            return
+    except RuntimeError:
+        pass
+    # A few Matroska inputs cannot be cut into a valid packet-copy fragment at
+    # the selected timestamp.  Re-encode those clips losslessly; pre-input
+    # seeking is frame-accurate when transcoding and avoids decoding from 0.
+    if os.path.exists(dst):
+        os.unlink(dst)
+    run(["ffmpeg", "-v", "error", "-y", "-ss", start, "-i", src, "-t", str(seconds),
+         "-map", "0:v:0", "-an", "-c:v", "ffv1", "-level", "3",
+         "-pix_fmt", "yuv420p10le", dst])
+    if not valid_video(dst):
+        raise RuntimeError(f"could not extract a valid clip from {src}")
 
 
 def make_ref(clip, ref, frames):
+    codec = run(["ffprobe", "-v", "error", "-select_streams", "v:0",
+                 "-show_entries", "stream=codec_name", "-of", "default=nw=1:nk=1",
+                 clip]).stdout.strip()
+    if codec == "ffv1":
+        return clip
     if not os.path.exists(ref):
         run(["ffmpeg", "-v", "error", "-y", "-i", clip, "-vframes", str(frames), "-an",
              "-c:v", "ffv1", "-pix_fmt", "yuv420p10le", ref])
+    return ref
 
 
 def score(ref, enc, tag, d, height, frames):
     out = {}
     model = "version=vmaf_4k_v0.6.1" if height > 1200 else "version=vmaf_v0.6.1"
-    vmaf_json = os.path.join(d, f"vmaf-{tag}.json")
-    run(["ffmpeg", "-v", "error", "-c:v", "libdav1d", "-i", enc, "-i", ref, "-lavfi",
-         f"[0:v]trim=end_frame={frames},setpts=PTS-STARTPTS[d];[1:v]setpts=PTS-STARTPTS[r];"
-         f"[d][r]libvmaf=log_fmt=json:log_path={vmaf_json}:n_threads=20:model={model}", "-f", "null", "-"])
-    p = json.load(open(vmaf_json))["pooled_metrics"]["vmaf"]
-    out["vmaf"], out["vmaf_min"] = round(p["mean"], 2), round(p["min"], 2)
-
     ssimu_json = os.path.join(d, f"ssimu2-{tag}.json")
-    run(["docker", "run", "--rm", "--gpus", "all", "-v", f"{d}:/data", "--entrypoint", "FFVship", FFVSHIP_IMG,
-         "-s", f"/data/{os.path.basename(ref)}", "-e", f"/data/{os.path.basename(enc)}",
-         "--end", str(frames), "-m", "SSIMULACRA2", "--json", f"/data/ssimu2-{tag}.json"])
+    if not os.path.isfile(ssimu_json):
+        run(["docker", "run", "--rm", "--gpus", "all", "-v", f"{d}:/data", "--entrypoint", "FFVship", FFVSHIP_IMG,
+             "-s", f"/data/{os.path.basename(ref)}", "-e", f"/data/{os.path.basename(enc)}",
+             "--end", str(frames), "-m", "SSIMULACRA2", "--json", f"/data/ssimu2-{tag}.json"])
     s = sorted(x[0] for x in json.load(open(ssimu_json)))
     out["ssimu2"], out["ssimu2_p5"] = round(statistics.mean(s), 2), round(s[int(len(s) * 0.05)], 2)
 
-    # user's CUDA extractors over y4m fifos.  Writers run with stdio detached
+    # The local libvmaf build supplies CUDA versions of the model's ADM, VIF,
+    # and motion extractors as well as PSNR, SSIM, and CIEDE2000.  gpumask=0
+    # explicitly selects them.  Model prediction itself is a tiny CPU step.
+    # Writers run with stdio detached
     # from the capture pipes (a crashed vmaf must not deadlock the runner on
     # orphaned writers) and are cleaned up by captured PID -- never by pattern
     # matching, which twice managed to SIGTERM its own shell because the
     # writer command text appears inside the shell's own command line.
-    feat_json = os.path.join(d, f"feat-{tag}.json")
+    feat_json = os.path.join(d, f"metrics-cuda-{tag}.json")
     rp, dp = os.path.join(d, f"rp-{tag}"), os.path.join(d, f"dp-{tag}")
+    q = shlex.quote
     fifo_cmd = (
         # plain ';' sequencing: an '&&' chain ending in 'cmd &' would background
         # the whole chain, racing vmaf ahead of mkfifo
-        f"rm -f {rp} {dp}; mkfifo {rp} {dp} || exit 1; "
-        f"ffmpeg -v error -i {ref} -frames:v {frames} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y {rp} >/dev/null 2>&1 & w1=$!; "
-        f"ffmpeg -v error -c:v libdav1d -i {enc} -frames:v {frames} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y {dp} >/dev/null 2>&1 & w2=$!; "
-        f"{VMAF} --reference {rp} --distorted {dp} --no_prediction "
-        f"--feature psnr_cuda --feature ssim_cuda --feature ciede_cuda --json --output {feat_json}; st=$?; "
-        f"kill $w1 $w2 2>/dev/null; wait 2>/dev/null; rm -f {rp} {dp}; exit $st")
-    try:
-        shell(fifo_cmd, timeout=900)
-    except Exception:
-        shell(fifo_cmd, timeout=900)  # one retry; transient CUDA-init failures observed
+        f"rm -f {q(rp)} {q(dp)}; mkfifo {q(rp)} {q(dp)} || exit 1; "
+        f"ffmpeg -v error -i {q(ref)} -frames:v {frames} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y {q(rp)} >/dev/null 2>&1 & w1=$!; "
+        f"ffmpeg -v error -c:v libdav1d -i {q(enc)} -frames:v {frames} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y {q(dp)} >/dev/null 2>&1 & w2=$!; "
+        f"{q(VMAF)} --reference {q(rp)} --distorted {q(dp)} --gpumask 0 --model {q(model)} "
+        f"--feature psnr_cuda --feature ssim_cuda --feature ciede_cuda --json --output {q(feat_json)}; st=$?; "
+        f"kill $w1 $w2 2>/dev/null; wait 2>/dev/null; rm -f {q(rp)} {q(dp)}; exit $st")
+    if not os.path.isfile(feat_json):
+        try:
+            shell(fifo_cmd, timeout=900)
+        except Exception:
+            shell(fifo_cmd, timeout=900)  # one retry; transient CUDA-init failures observed
     fm = json.load(open(feat_json))["pooled_metrics"]
+    out["vmaf"] = round(fm["vmaf"]["mean"], 2)
+    out["vmaf_min"] = round(fm["vmaf"]["min"], 2)
     out["psnr_y"] = round(fm["psnr_y"]["mean"], 2)
     out["ssim"] = round(fm["float_ssim"]["mean"], 4)
     out["ciede2000"] = round(fm["ciede2000"]["mean"], 2)
     return out
 
 
-def hf_sigma(path, height, frames=(6, 10, 14), decoder=None, filmgrain=None):
+def hf_sigma(path, width, height, frames=(6, 10, 14), decoder=None, filmgrain=None):
     import numpy as np
-    W = 3840 if height > 1200 else 1920
-    H = 2160 if height > 1200 else 1080
+    W, H = width, height
     fp = W * H * 3 // 2
     tmp = "/tmp/hfprobe.yuv"
     cmd = ["ffmpeg", "-v", "error", "-y"]
@@ -191,6 +226,29 @@ def hf_sigma(path, height, frames=(6, 10, 14), decoder=None, filmgrain=None):
         vals.append(float((a[1:-1, 1:-1] - b).std()) * (8 / 5.0) ** 0.5)
     os.remove(tmp)
     return round(sum(vals) / len(vals), 2)
+
+
+def write_results(work, args, wanted, variants, rows):
+    out_csv = os.path.join(work, "results.csv")
+    fields = ["title", "variant", "mb", "vmaf", "vmaf_min", "ssimu2", "ssimu2_p5",
+              "psnr_y", "ssim", "ciede2000", "hf_sigma", "base_hf_sigma",
+              "encode_seconds", "grain_entries", "grain_coverage_seconds", "note"]
+    with open(out_csv, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+    out_json = os.path.join(work, "results.json")
+    with open(out_json, "w") as output:
+        json.dump({"seconds": args.seconds, "frames": args.frames,
+                   "titles": wanted, "variants": variants,
+                   "metric_backends": {
+                       "vmaf": "libvmaf CUDA ADM/VIF/motion + CPU model prediction",
+                       "psnr_ssim_ciede2000": "libvmaf CUDA",
+                       "ssimulacra2": "FFVship CUDA",
+                   },
+                   "rows": rows}, output, indent=2)
+        output.write("\n")
+    return out_csv, out_json
 
 
 def main():
@@ -218,13 +276,20 @@ def main():
         ref = os.path.join(d, "ref.mkv")
         title_ok = True
         print(f"== {name}: {note}")
-        extract_clip(src, start, clip, args.seconds)
-        make_ref(clip, ref, args.frames)
-        _, height = probe_res(clip)
-        src_hf = hf_sigma(clip, height)
+        try:
+            extract_clip(src, start, clip, args.seconds)
+            ref = make_ref(clip, ref, args.frames)
+            width, height = probe_res(clip)
+            src_hf = hf_sigma(clip, width, height)
+        except Exception as e:
+            print(f"   source: FAILED - {e}")
+            rows.append({"title": name, "variant": "source", "note": f"FAILED {e}"})
+            write_results(work, args, wanted, variants, rows)
+            continue
         rows.append({"title": name, "variant": "source", "mb": round(os.path.getsize(clip) / 1e6, 1),
                      "hf_sigma": src_hf, "note": note})
         print(f"   source: {rows[-1]['mb']}MB HF={src_hf}")
+        write_results(work, args, wanted, variants, rows)
         for var in variants:
             if var in PIPELINE_VARIANTS:
                 print(f"   [skip] {var}: run separately (CPU-heavy)")
@@ -241,8 +306,8 @@ def main():
                        "mb": round(os.path.getsize(out) / 1e6, 1),
                        "encode_seconds": round(encode_seconds, 2) if encode_seconds is not None else None}
                 row.update(score(ref, out, var, d, height, args.frames))
-                row["hf_sigma"] = hf_sigma(out, height, decoder="libdav1d", filmgrain=1)
-                row["base_hf_sigma"] = hf_sigma(out, height, decoder="libdav1d", filmgrain=0)
+                row["hf_sigma"] = hf_sigma(out, width, height, decoder="libdav1d", filmgrain=1)
+                row["base_hf_sigma"] = hf_sigma(out, width, height, decoder="libdav1d", filmgrain=0)
                 if os.path.isfile(tbl):
                     entries = filmgrn.load(tbl)
                     row["grain_entries"] = len(entries)
@@ -250,26 +315,15 @@ def main():
                         entry["end"] - entry["start"] for entry in entries) / 10_000_000.0, 3)
                 rows.append(row)
                 print(f"   {var}: {row}")
+                write_results(work, args, wanted, variants, rows)
             except Exception as e:
                 print(f"   {var}: FAILED - {e}")
                 rows.append({"title": name, "variant": var, "note": f"FAILED {e}"})
                 title_ok = False
-        if title_ok and not args.keep and os.path.exists(ref):
+                write_results(work, args, wanted, variants, rows)
+        if title_ok and not args.keep and ref != clip and os.path.exists(ref):
             os.remove(ref)  # 3.7GB each; regenerable (kept on failure for cheap retries)
-    out_csv = os.path.join(work, "results.csv")
-    fields = ["title", "variant", "mb", "vmaf", "vmaf_min", "ssimu2", "ssimu2_p5",
-              "psnr_y", "ssim", "ciede2000", "hf_sigma", "base_hf_sigma",
-              "encode_seconds", "grain_entries", "grain_coverage_seconds", "note"]
-    with open(out_csv, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
-        w.writeheader()
-        w.writerows(rows)
-    out_json = os.path.join(work, "results.json")
-    with open(out_json, "w") as output:
-        json.dump({"seconds": args.seconds, "frames": args.frames,
-                   "titles": wanted, "variants": variants, "rows": rows},
-                  output, indent=2)
-        output.write("\n")
+    out_csv, out_json = write_results(work, args, wanted, variants, rows)
     print(f"\nresults: {out_csv}")
     print(f"results: {out_json}")
 
