@@ -93,6 +93,8 @@ VARIANTS = {
     "fgs_r75": v_fgs_retain(0.75),
     "fgs_r90": v_fgs_retain(0.90),
     "fgs_fft3d": v_fgs_retain(0.0, "fft3d"),
+    "fgs_fft3d_r25": v_fgs_retain(0.25, "fft3d"),
+    "fgs_fft3d_r50": v_fgs_retain(0.50, "fft3d"),
     "fgs_bilateral": v_fgs_retain(0.0, "bilateral"),
     "plain": v_plain,
 }
@@ -284,6 +286,25 @@ def main():
     wanted = args.titles.split(",")
     variants = args.variants.split(",")
     rows = []
+    result_path = os.path.join(work, "results.json")
+    recorded_titles = list(wanted)
+    recorded_variants = list(variants)
+    if os.path.isfile(result_path):
+        try:
+            with open(result_path) as previous_file:
+                previous = json.load(previous_file)
+            if previous.get("seconds") == args.seconds and previous.get("frames") == args.frames:
+                # A follow-up invocation can add variants without rescoring
+                # everything already in the campaign.  Requested pairs are
+                # replaced, so rerunning a failed/new implementation is safe.
+                rows = [row for row in previous.get("rows", [])
+                        if row.get("title") not in wanted
+                        or (row.get("variant") != "source"
+                            and row.get("variant") not in variants)]
+                recorded_titles = list(dict.fromkeys(previous.get("titles", []) + wanted))
+                recorded_variants = list(dict.fromkeys(previous.get("variants", []) + variants))
+        except (OSError, ValueError, TypeError):
+            pass
     for name, src, start, note in TITLES:
         if name not in wanted:
             continue
@@ -301,12 +322,12 @@ def main():
         except Exception as e:
             print(f"   source: FAILED - {e}")
             rows.append({"title": name, "variant": "source", "note": f"FAILED {e}"})
-            write_results(work, args, wanted, variants, rows)
+            write_results(work, args, recorded_titles, recorded_variants, rows)
             continue
         rows.append({"title": name, "variant": "source", "mb": round(os.path.getsize(clip) / 1e6, 1),
                      "hf_sigma": src_hf, "note": note})
         print(f"   source: {rows[-1]['mb']}MB HF={src_hf}")
-        write_results(work, args, wanted, variants, rows)
+        write_results(work, args, recorded_titles, recorded_variants, rows)
         for var in variants:
             if var in PIPELINE_VARIANTS:
                 print(f"   [skip] {var}: run separately (CPU-heavy)")
@@ -334,15 +355,15 @@ def main():
                         entry["end"] - entry["start"] for entry in entries) / 10_000_000.0, 3)
                 rows.append(row)
                 print(f"   {var}: {row}")
-                write_results(work, args, wanted, variants, rows)
+                write_results(work, args, recorded_titles, recorded_variants, rows)
             except Exception as e:
                 print(f"   {var}: FAILED - {e}")
                 rows.append({"title": name, "variant": var, "note": f"FAILED {e}"})
                 title_ok = False
-                write_results(work, args, wanted, variants, rows)
+                write_results(work, args, recorded_titles, recorded_variants, rows)
         if title_ok and not args.keep and ref != clip and os.path.exists(ref):
             os.remove(ref)  # 3.7GB each; regenerable (kept on failure for cheap retries)
-    out_csv, out_json = write_results(work, args, wanted, variants, rows)
+    out_csv, out_json = write_results(work, args, recorded_titles, recorded_variants, rows)
     print(f"\nresults: {out_csv}")
     print(f"results: {out_json}")
 
