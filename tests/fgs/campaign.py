@@ -56,13 +56,24 @@ TITLES = [
     ("28days",  "/media/merged-storage/media/movies/28 Days Later (2002) [tmdbid-170]/28 Days Later 2002 REPACK BluRay 1080p DTS-HD MA 5 1 AVC HYBRID REMUX-FraMeSToR.mkv", "00:20:00", "1080p gritty DV-era source (library AV1)"),
 ]
 
+
+def reader_args(src):
+    codec = subprocess.check_output(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=codec_name", "-of", "default=nw=1:nk=1", src],
+        text=True).strip()
+    # CUVID cannot open the lossless FFV1 clips used when packet-copy seeking
+    # is unsafe.  Decode those with libavcodec; encoding and FGS stay on GPU.
+    return ["--avsw"] if codec == "ffv1" else ["--avhw"]
+
+
 # variant name -> command builder(src_clip, out_path, table_path) -> list[list[str]] of commands to run in order
 def v_fgs_retain(retain, denoiser="motion"):
     def build(src, out, tbl):
         fgs = f"denoise=auto,chroma=auto,denoiser={denoiser}"
         if retain > 0.0:
             fgs += f",retain={retain:g}"
-        return [[NVENCC, "--avhw", "--codec", "av1", "--output-depth", "10", "--qvbr", "26", *TUNED, *COLOR,
+        return [[NVENCC, *reader_args(src), "--codec", "av1", "--output-depth", "10", "--qvbr", "26", *TUNED, *COLOR,
                  "--av1-film-grain", fgs, "--film-grain-table-out", tbl,
                  "-i", src, "-o", out]]
     return build
@@ -72,7 +83,7 @@ def v_fgs(src, out, tbl):
     return v_fgs_retain(0.0, "motion")(src, out, tbl)
 
 def v_plain(src, out, tbl):
-    return [[NVENCC, "--avhw", "--codec", "av1", "--output-depth", "10", "--qvbr", "26", *TUNED, *COLOR,
+    return [[NVENCC, *reader_args(src), "--codec", "av1", "--output-depth", "10", "--qvbr", "26", *TUNED, *COLOR,
              "-i", src, "-o", out]]
 
 VARIANTS = {
@@ -304,7 +315,9 @@ def main():
             tbl = os.path.join(d, f"{var}.tbl")
             try:
                 encode_seconds = None
-                if not os.path.exists(out):
+                if not valid_video(out):
+                    if os.path.exists(out):
+                        os.unlink(out)
                     encode_seconds = 0.0
                     for cmd in VARIANTS[var](clip, out, tbl):
                         encode_seconds += run(cmd).elapsed_seconds
