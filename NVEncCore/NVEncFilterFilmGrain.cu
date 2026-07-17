@@ -423,6 +423,34 @@ static RGY_ERR launch_motion_confidence(uint8_t *flatMask, const int fgsBlocksX,
     return err_to_rgy(cudaGetLastError());
 }
 
+// Per-direction count of motion blocks whose SAD exceeds the scene-change
+// threshold, on the full mv grid.  The host compares against the thscd2 block
+// fraction to detect hard cuts synchronously with this frame, so the model
+// history can be cleared at the cut (the degrainer's own scene readback is
+// pipelined and not exposed).
+__global__ void kernel_fgs_scene_sad_count(uint32_t *__restrict__ counts,
+    const RGYDegrainSAD *__restrict__ sad, const int mvBlockCount, const int temporalDirections,
+    const uint32_t enabledReferenceMask, const uint32_t sceneSadThreshold) {
+    const int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= mvBlockCount) return;
+    for (int direction = 1; direction < temporalDirections; direction += 2) {
+        if ((enabledReferenceMask & (1u << direction)) == 0) continue;
+        if (sad[static_cast<size_t>(index) * temporalDirections + direction].sad > sceneSadThreshold) {
+            atomicAdd(counts + direction, 1u);
+        }
+    }
+}
+
+static RGY_ERR launch_scene_sad_count(uint32_t *counts, const RGYDegrainAnalyzeResult& analysis,
+    const uint32_t enabledReferenceMask, const uint32_t sceneSadThreshold, cudaStream_t stream) {
+    const int mvBlockCount = analysis.layout.blocksX * analysis.layout.blocksY;
+    constexpr int threads = 128;
+    kernel_fgs_scene_sad_count<<<divCeil(mvBlockCount, threads), threads, 0, stream>>>(
+        counts, reinterpret_cast<const RGYDegrainSAD *>(analysis.sad->ptr),
+        mvBlockCount, analysis.layout.temporalDirections, enabledReferenceMask, sceneSadThreshold);
+    return err_to_rgy(cudaGetLastError());
+}
+
 // The decoder adds synthesized grain to the base and clips to the legal
 // range; near the floor/ceiling that clip shifts the mean (censored-normal
 // lift), brightening deep shadows that the grainy source only reached through
@@ -593,7 +621,7 @@ tstring NVEncFilterParamFilmGrain::print() const {
 NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_denoiseWork(), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(),
-    m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_modelStats(),
+    m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWritten(false),
     m_state(std::make_unique<AnalyzerState>()), m_blocksX(0), m_blocksY(0) {
     m_name = _T("film-grain");
@@ -763,11 +791,13 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     m_blockMask = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY);
     m_sigmaMap = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(float));
     m_strengthLut = std::make_unique<CUMemBufPair>(FGS_STRENGTH_LUT_SIZE * sizeof(float));
+    m_sceneCounts = std::make_unique<CUMemBufPair>(8 * sizeof(uint32_t));
     m_modelStats = std::make_unique<CUMemBufPair>(sizeof(FilmGrainGpuStats));
     if ((sts = m_blockMetrics->alloc()) != RGY_ERR_NONE
         || (sts = m_blockMask->alloc()) != RGY_ERR_NONE
         || (sts = m_sigmaMap->alloc()) != RGY_ERR_NONE
         || (sts = m_strengthLut->alloc()) != RGY_ERR_NONE
+        || (sts = m_sceneCounts->alloc()) != RGY_ERR_NONE
         || (sts = m_modelStats->alloc()) != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("Failed to allocate film-grain analysis buffers: %s.\n"), get_err_mes(sts));
         return sts;
@@ -822,10 +852,16 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         degrain.overlap = 16;
         // General-purpose degrain defaults are intentionally conservative
         // (thsad=640).  Grain extraction needs the temporally random component
-        // to participate in the blend; 4000 accepts the measured 32x32 film-
-        // grain SAD while scene-change gating still rejects unrelated frames.
+        // to participate in the blend, so the render threshold is raised.
         degrain.thsad = 4000;
-        degrain.thscd1 = 4000;
+        // The scene-change threshold must stay SEPARATE and far lower: reusing
+        // the render value here disabled scene gating entirely and blended
+        // straight across hard cuts (the Taxi Driver f388 ghost).  It cannot
+        // be a constant either -- grain-only SAD is ~1.6*sigma*blockArea, so a
+        // fixed low value scene-disables every frame on heavy grain.  Start at
+        // the library default; run_filter retunes it each frame from the
+        // measured noise level (the degrainer re-reads the shared param).
+        degrain.thscd1 = FILTER_DEFAULT_DEGRAIN_THSCD1;
         // Keep the final encoder-surface filter one-in/one-out.  Direction 2
         // retains only already available reference frames; a later pipeline
         // stage can enable bidirectional lookahead without changing O/B/R.
@@ -918,6 +954,17 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     auto sts = RGY_ERR_NONE;
     if (prm->filmGrain.denoiser == FGS_DENOISE_MOTION) {
         if (!m_motionDegrain) return RGY_ERR_INVALID_CALL;
+        if (m_state->stableNoise > 0.0f) {
+            // Grain-only SAD is ~1.6*sigma*blockArea, so a useful scene-change
+            // threshold must scale with the measured noise: high enough that
+            // same-scene grain never trips it, low enough that a hard cut
+            // does.  ~2.2x the expected grain SAD -> thscd1 ~ 225*sigma8.
+            // The degrainer re-reads the shared param every frame.
+            const int bitDepthIn = (pInputFrame->csp == RGY_CSP_NV12 || pInputFrame->csp == RGY_CSP_YV12) ? 8 : 10;
+            const float sigma8 = m_state->stableNoise / static_cast<float>(1 << (bitDepthIn - 8));
+            m_motionDegrainParam->degrain.thscd1 = clamp(static_cast<int>(225.0f * sigma8),
+                FILTER_DEFAULT_DEGRAIN_THSCD1, 2000);
+        }
         sts = m_motionDegrain->filter(const_cast<RGYFrameInfo *>(pInputFrame), motionOutput, &motionOutputCount, stream);
         if (sts != RGY_ERR_NONE) return sts;
         if (motionOutputCount == 0) return RGY_ERR_NONE;
@@ -1051,6 +1098,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if ((sts = m_sigmaMap->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
     }
     if ((sts = m_blockMask->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
+    uint64_t sceneCutBlockThreshold = 0;
+    uint32_t sceneCutNearestDirection = 0;
     if (prm->filmGrain.denoiser == FGS_DENOISE_MOTION) {
         const auto analysis = m_motionDegrain->analyzeResult();
         if (analysis.valid() && analysis.inputFrameId == source->inputFrameId) {
@@ -1068,6 +1117,25 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             sts = launch_motion_confidence(static_cast<uint8_t *>(m_blockMask->ptrDevice),
                 m_blocksX, m_blocksY, analysis, enabledReferenceMask, confidenceSad, stream);
             if (sts != RGY_ERR_NONE) return sts;
+            // Synchronous scene-cut detection for the model: the nearest
+            // enabled reference's over-threshold block count is compared
+            // against the thscd2 fraction after the stats sync, and a cut
+            // clears the model history (the degrainer's own scene gating only
+            // protects the rendered base, not the rolling model window).
+            sceneCutNearestDirection = enabledReferenceMask & 2u; // direction 1 = t-1
+            if (sceneCutNearestDirection) {
+                const uint32_t sceneSad = rgy_degrain_scale_sad_threshold(
+                    m_motionDegrainParam->degrain, *source, m_motionDegrainParam->degrain.thscd1, false);
+                auto cudaerrScene = cudaMemsetAsync(m_sceneCounts->ptrDevice, 0, m_sceneCounts->nSize, stream);
+                if (cudaerrScene != cudaSuccess) return err_to_rgy(cudaerrScene);
+                sts = launch_scene_sad_count(static_cast<uint32_t *>(m_sceneCounts->ptrDevice),
+                    analysis, enabledReferenceMask, sceneSad, stream);
+                if (sts != RGY_ERR_NONE) return sts;
+                if ((sts = m_sceneCounts->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
+                sceneCutBlockThreshold = rgy_degrain_scale_scene_change_block_threshold(
+                    static_cast<size_t>(analysis.layout.blocksX) * analysis.layout.blocksY,
+                    m_motionDegrainParam->degrain.thscd2);
+            }
         }
     }
     if (prm->filmGrain.denoiser == FGS_DENOISE_FFT3D && m_fft3d) {
@@ -1143,9 +1211,14 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
 
     bool sceneReset = false;
+    bool motionSceneCut = false;
+    if (sceneCutNearestDirection && sceneCutBlockThreshold > 0) {
+        const auto counts = static_cast<const uint32_t *>(m_sceneCounts->ptrHost);
+        motionSceneCut = counts[1] > sceneCutBlockThreshold;
+    }
     if (!m_state->history.empty()) {
         const float ratio = measuredNoise / std::max(0.01f, m_state->stableNoise);
-        if (ratio < 0.55f || ratio > 1.80f || source->timestamp <= m_state->lastTimestamp) {
+        if (motionSceneCut || ratio < 0.55f || ratio > 1.80f || source->timestamp <= m_state->lastTimestamp) {
             m_state->clear();
             sceneReset = true;
         }
@@ -1266,6 +1339,7 @@ void NVEncFilterFilmGrain::close() {
     m_blockMask.reset();
     m_sigmaMap.reset();
     m_strengthLut.reset();
+    m_sceneCounts.reset();
     m_modelStats.reset();
     if (m_state) m_state->clear();
     m_blocksX = 0;
