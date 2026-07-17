@@ -182,3 +182,7 @@ $RECYCLE.BIN/
 
 # Mac desktop service store files
 .DS_Store
+
+# Python caches
+__pycache__/
+*.py[cod]
