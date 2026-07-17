@@ -71,6 +71,7 @@ protected:
     std::unique_ptr<NVEncFilterCspCrop> m_convToYuv;
     RGY_CSP m_cspRgb;
     std::unique_ptr<CUMemBuf> m_reducePartials;
+    std::unique_ptr<CUMemBufPair> m_reduceSummary;
     int m_numGroupsLastDispatch;
     bool m_analysisComplete;
     int m_analysedFrames;

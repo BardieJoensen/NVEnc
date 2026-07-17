@@ -81,6 +81,35 @@ __global__ void kernel_deflicker_reduce(const uint8_t *__restrict__ pSrc, const 
     }
 }
 
+__global__ void kernel_deflicker_reduce_final(const long long *__restrict__ pSum,
+    const long long *__restrict__ pSumSq, const size_t wgCount,
+    long long *__restrict__ pSummary) {
+    const int tid = threadIdx.x;
+    long long sum = 0;
+    long long sumSq = 0;
+    for (size_t i = tid; i < wgCount; i += blockDim.x) {
+        sum += pSum[i];
+        sumSq += pSumSq[i];
+    }
+
+    __shared__ long long sSum[DEFLICKER_REDUCE_THREADS];
+    __shared__ long long sSumSq[DEFLICKER_REDUCE_THREADS];
+    sSum[tid] = sum;
+    sSumSq[tid] = sumSq;
+    __syncthreads();
+    for (int stride = DEFLICKER_REDUCE_THREADS / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            sSum[tid] += sSum[tid + stride];
+            sSumSq[tid] += sSumSq[tid + stride];
+        }
+        __syncthreads();
+    }
+    if (tid == 0) {
+        pSummary[0] = sSum[0];
+        pSummary[1] = sSumSq[0];
+    }
+}
+
 template<typename Type>
 __global__ void kernel_deflicker_apply(const uint8_t *__restrict__ pSrc, const int srcPitch,
     uint8_t *__restrict__ pDst, const int dstPitch, const int width, const int height,
@@ -107,12 +136,11 @@ __global__ void kernel_deflicker_apply(const uint8_t *__restrict__ pSrc, const i
 
 template<typename Type>
 static RGY_ERR deflicker_reduce_plane(const RGYFrameInfo *pPlane,
-    long long *sumBuf, long long *sumSqBuf, int64_t *sumHost, int64_t *sumSqHost,
+    long long *sumBuf, long long *sumSqBuf, CUMemBufPair *statsSummary,
     double& meanOut, double& stddevOut, cudaStream_t stream) {
     const int wgX = divCeil(pPlane->width, DEFLICKER_REDUCE_X);
     const int wgY = divCeil(pPlane->height, DEFLICKER_REDUCE_Y);
     const size_t wgCount = (size_t)wgX * (size_t)wgY;
-    const size_t bytesUsed = wgCount * sizeof(int64_t);
 
     dim3 blockSize(DEFLICKER_REDUCE_X, DEFLICKER_REDUCE_Y);
     dim3 gridSize(wgX, wgY);
@@ -121,19 +149,18 @@ static RGY_ERR deflicker_reduce_plane(const RGYFrameInfo *pPlane,
     auto cudaerr = cudaGetLastError();
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
 
-    cudaerr = cudaMemcpyAsync(sumHost, sumBuf, bytesUsed, cudaMemcpyDeviceToHost, stream);
+    kernel_deflicker_reduce_final<<<1, DEFLICKER_REDUCE_THREADS, 0, stream>>>(
+        sumBuf, sumSqBuf, wgCount, (long long *)statsSummary->ptrDevice);
+    cudaerr = cudaGetLastError();
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
-    cudaerr = cudaMemcpyAsync(sumSqHost, sumSqBuf, bytesUsed, cudaMemcpyDeviceToHost, stream);
-    if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+    auto sts = statsSummary->copyDtoHAsync(stream);
+    if (sts != RGY_ERR_NONE) return sts;
     cudaerr = cudaStreamSynchronize(stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
 
-    int64_t sum = 0;
-    int64_t sumSq = 0;
-    for (size_t i = 0; i < wgCount; i++) {
-        sum += sumHost[i];
-        sumSq += sumSqHost[i];
-    }
+    const auto summary = static_cast<const int64_t *>(statsSummary->ptrHost);
+    const int64_t sum = summary[0];
+    const int64_t sumSq = summary[1];
     const double n = (double)((int64_t)pPlane->width * (int64_t)pPlane->height);
     const double mean = (double)sum / n;
     double variance = ((double)sumSq / n) - (mean * mean);
@@ -160,8 +187,7 @@ static RGY_ERR deflicker_apply_plane(RGYFrameInfo *pDstPlane, const RGYFrameInfo
 NVEncFilterDeflicker::NVEncFilterDeflicker() :
     m_sumBuf(),
     m_sumSqBuf(),
-    m_sumHost(),
-    m_sumSqHost(),
+    m_statsSummary(),
     m_statsBufWGCount(0),
     m_rollingMeans(),
     m_rollingSigmas(),
@@ -235,13 +261,13 @@ RGY_ERR NVEncFilterDeflicker::init(shared_ptr<NVEncFilterParam> pParam, shared_p
     if (!m_sumBuf || m_statsBufWGCount != wgCount) {
         m_sumBuf = std::make_unique<CUMemBuf>(wgCount * sizeof(int64_t));
         m_sumSqBuf = std::make_unique<CUMemBuf>(wgCount * sizeof(int64_t));
+        m_statsSummary = std::make_unique<CUMemBufPair>(2 * sizeof(int64_t));
         if (   RGY_ERR_NONE != (sts = m_sumBuf->alloc())
-            || RGY_ERR_NONE != (sts = m_sumSqBuf->alloc())) {
+            || RGY_ERR_NONE != (sts = m_sumSqBuf->alloc())
+            || RGY_ERR_NONE != (sts = m_statsSummary->alloc())) {
             AddMessage(RGY_LOG_ERROR, _T("failed to allocate deflicker stats buffers: %s.\n"), get_err_mes(sts));
             return sts;
         }
-        m_sumHost.assign(wgCount, 0);
-        m_sumSqHost.assign(wgCount, 0);
         m_statsBufWGCount = wgCount;
     }
 
@@ -265,7 +291,7 @@ RGY_ERR NVEncFilterDeflicker::computePlaneStats(const RGYFrameInfo *pPlane, doub
     }
     return reduceList.at(RGY_CSP_DATA_TYPE[pPlane->csp])(pPlane,
         (long long *)m_sumBuf->ptr, (long long *)m_sumSqBuf->ptr,
-        m_sumHost.data(), m_sumSqHost.data(), meanOut, stddevOut, stream);
+        m_statsSummary.get(), meanOut, stddevOut, stream);
 }
 
 RGY_ERR NVEncFilterDeflicker::runApply(RGYFrameInfo *pDstPlane, const RGYFrameInfo *pSrcPlane,
@@ -448,8 +474,7 @@ void NVEncFilterDeflicker::close() {
     }
     m_sumBuf.reset();
     m_sumSqBuf.reset();
-    m_sumHost.clear();
-    m_sumSqHost.clear();
+    m_statsSummary.reset();
     m_statsBufWGCount = 0;
     m_rollingMeans.clear();
     m_rollingSigmas.clear();

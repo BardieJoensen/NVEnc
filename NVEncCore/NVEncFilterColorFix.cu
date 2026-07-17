@@ -234,6 +234,33 @@ __global__ void kernel_colorfix_reduce_rgb(const uint8_t *__restrict__ pR, int p
     }
 }
 
+__global__ void kernel_colorfix_reduce_final(const long long *__restrict__ partials,
+    const int numGroups, const int numLongsPerGroup, long long *__restrict__ summary) {
+    const int tid = threadIdx.x;
+    __shared__ long long totals[5][COLORFIX_WG_SIZE];
+    for (int value = 0; value < numLongsPerGroup; value++) {
+        long long sum = 0;
+        for (int group = tid; group < numGroups; group += blockDim.x) {
+            sum += partials[group * numLongsPerGroup + value];
+        }
+        totals[value][tid] = sum;
+    }
+    __syncthreads();
+    for (int stride = COLORFIX_WG_SIZE >> 1; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            for (int value = 0; value < numLongsPerGroup; value++) {
+                totals[value][tid] += totals[value][tid + stride];
+            }
+        }
+        __syncthreads();
+    }
+    if (tid == 0) {
+        for (int value = 0; value < numLongsPerGroup; value++) {
+            summary[value] = totals[value][0];
+        }
+    }
+}
+
 NVEncFilterColorFix::NVEncFilterColorFix() :
     m_resolvedMatrix(VPP_COLORFIX_MATRIX_BT709),
     m_effectiveSpace(VPP_COLORFIX_SPACE_RGB),
@@ -241,6 +268,7 @@ NVEncFilterColorFix::NVEncFilterColorFix() :
     m_convToYuv(),
     m_cspRgb(RGY_CSP_RGB_16),
     m_reducePartials(),
+    m_reduceSummary(),
     m_numGroupsLastDispatch(0),
     m_analysisComplete(false),
     m_analysedFrames(0),
@@ -387,6 +415,14 @@ RGY_ERR NVEncFilterColorFix::allocReduceBuffer(const RGYFrameInfo& frameIn) {
         auto sts = m_reducePartials->alloc();
         if (sts != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("failed to allocate colorfix reduction buffer (%zu bytes): %s.\n"), bufBytes, get_err_mes(sts));
+            return RGY_ERR_MEMORY_ALLOC;
+        }
+    }
+    if (!m_reduceSummary) {
+        m_reduceSummary = std::make_unique<CUMemBufPair>(5 * sizeof(long long));
+        auto sts = m_reduceSummary->alloc();
+        if (sts != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("failed to allocate colorfix reduction summary: %s.\n"), get_err_mes(sts));
             return RGY_ERR_MEMORY_ALLOC;
         }
     }
@@ -575,18 +611,17 @@ RGY_ERR NVEncFilterColorFix::runApplyLuma(RGYFrameInfo *pTarget, float scaleY, f
 }
 
 RGY_ERR NVEncFilterColorFix::finaliseReduction(cudaStream_t stream, int numLongsPerGroup, std::vector<long long>& outTotals) {
-    const size_t count = (size_t)m_numGroupsLastDispatch * numLongsPerGroup;
-    std::vector<long long> host(count);
-    auto cudaerr = cudaMemcpyAsync(host.data(), m_reducePartials->ptr, count * sizeof(host[0]), cudaMemcpyDeviceToHost, stream);
+    kernel_colorfix_reduce_final<<<1, COLORFIX_WG_SIZE, 0, stream>>>(
+        (const long long *)m_reducePartials->ptr, m_numGroupsLastDispatch,
+        numLongsPerGroup, (long long *)m_reduceSummary->ptrDevice);
+    auto cudaerr = cudaGetLastError();
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+    auto sts = m_reduceSummary->copyDtoHAsync(stream);
+    if (sts != RGY_ERR_NONE) return sts;
     cudaerr = cudaStreamSynchronize(stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
-    outTotals.assign(numLongsPerGroup, 0LL);
-    for (int g = 0; g < m_numGroupsLastDispatch; g++) {
-        for (int i = 0; i < numLongsPerGroup; i++) {
-            outTotals[i] += host[g * numLongsPerGroup + i];
-        }
-    }
+    const auto summary = static_cast<const long long *>(m_reduceSummary->ptrHost);
+    outTotals.assign(summary, summary + numLongsPerGroup);
     return RGY_ERR_NONE;
 }
 
@@ -1070,6 +1105,7 @@ void NVEncFilterColorFix::close() {
     m_convToRgb.reset();
     m_convToYuv.reset();
     m_reducePartials.reset();
+    m_reduceSummary.reset();
     m_numGroupsLastDispatch = 0;
     m_analysisComplete = false;
     m_analysedFrames = 0;

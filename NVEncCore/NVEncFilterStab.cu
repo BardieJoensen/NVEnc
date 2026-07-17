@@ -17,6 +17,17 @@ static const int STAB_FFT_N = 256;
 static const int STAB_FFT_LOG2_N = 8;
 static const __device__  float STAB_PI_F = 3.14159265358979323846f;
 
+struct StabCorrelationSummary {
+    double sum;
+    float peak;
+    int peakIndex;
+    float left;
+    float center;
+    float right;
+    float up;
+    float down;
+};
+
 static float stab_parabolic_refine(float a, float b, float c) {
     const float denom = a - 2.0f * b + c;
     if (std::abs(denom) < 1e-9f) return 0.0f;
@@ -106,6 +117,60 @@ __global__ void kernel_stab_cross_spectrum(const float2 *cur, const float2 *prev
     out[gid] = (mag > 1e-12f) ? make_float2(g.x / mag, g.y / mag) : make_float2(0.0f, 0.0f);
 }
 
+__global__ void kernel_stab_correlation_summary(const float2 *__restrict__ corr, StabCorrelationSummary *__restrict__ result) {
+    constexpr int total = STAB_FFT_N * STAB_FFT_N;
+    __shared__ double sums[256];
+    __shared__ float peaks[256];
+    __shared__ int peakIndices[256];
+    const int tid = threadIdx.x;
+    double sum = 0.0;
+    float peak = -3.402823466e+38F;
+    int peakIndex = 0;
+    for (int i = tid; i < total; i += blockDim.x) {
+        const float value = corr[i].x;
+        sum += static_cast<double>(value);
+        if (value > peak || (value == peak && i < peakIndex)) {
+            peak = value;
+            peakIndex = i;
+        }
+    }
+    sums[tid] = sum;
+    peaks[tid] = peak;
+    peakIndices[tid] = peakIndex;
+    __syncthreads();
+
+    for (int offset = blockDim.x / 2; offset > 0; offset >>= 1) {
+        if (tid < offset) {
+            sums[tid] += sums[tid + offset];
+            const float otherPeak = peaks[tid + offset];
+            const int otherIndex = peakIndices[tid + offset];
+            if (otherPeak > peaks[tid] || (otherPeak == peaks[tid] && otherIndex < peakIndices[tid])) {
+                peaks[tid] = otherPeak;
+                peakIndices[tid] = otherIndex;
+            }
+        }
+        __syncthreads();
+    }
+
+    if (tid == 0) {
+        const int index = peakIndices[0];
+        const int x = index % STAB_FFT_N;
+        const int y = index / STAB_FFT_N;
+        const int leftX = (x + STAB_FFT_N - 1) % STAB_FFT_N;
+        const int rightX = (x + 1) % STAB_FFT_N;
+        const int upY = (y + STAB_FFT_N - 1) % STAB_FFT_N;
+        const int downY = (y + 1) % STAB_FFT_N;
+        result->sum = sums[0];
+        result->peak = peaks[0];
+        result->peakIndex = index;
+        result->left = corr[y * STAB_FFT_N + leftX].x;
+        result->center = corr[index].x;
+        result->right = corr[y * STAB_FFT_N + rightX].x;
+        result->up = corr[upY * STAB_FFT_N + x].x;
+        result->down = corr[downY * STAB_FFT_N + x].x;
+    }
+}
+
 template<typename Type>
 __device__ __forceinline__ float stab_sample(const uint8_t *src, const int srcPitch, const int width, const int height,
     int x, int y, const int borderMode, const int fillValue) {
@@ -190,6 +255,14 @@ static RGY_ERR stab_cross(CUMemBuf *cur, CUMemBuf *prev, CUMemBuf *out, cudaStre
     return (cudaerr == cudaSuccess) ? RGY_ERR_NONE : err_to_rgy(cudaerr);
 }
 
+static RGY_ERR stab_summarize_correlation(CUMemBuf *corr, CUMemBufPair *summary, cudaStream_t stream) {
+    kernel_stab_correlation_summary<<<1, 256, 0, stream>>>(
+        static_cast<const float2 *>(corr->ptr), static_cast<StabCorrelationSummary *>(summary->ptrDevice));
+    auto cudaerr = cudaGetLastError();
+    if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+    return summary->copyDtoHAsync(stream);
+}
+
 template<typename Type, int bit_depth>
 static RGY_ERR stab_warp_plane(RGYFrameInfo *pOut, const RGYFrameInfo *pInputFrame, RGY_PLANE plane,
     float shiftX, float shiftY, int border, int fillValue, cudaStream_t stream) {
@@ -236,7 +309,7 @@ NVEncFilterStab::NVEncFilterStab() :
     m_prevFreq(),
     m_corrFreq(),
     m_corrReal(),
-    m_corrHost(),
+    m_corrSummary(),
     m_havePrev(false),
     m_smoothShiftX(0.0f),
     m_smoothShiftY(0.0f),
@@ -306,7 +379,11 @@ RGY_ERR NVEncFilterStab::init(shared_ptr<NVEncFilterParam> pParam, shared_ptr<RG
     if ((sts = allocWorkBuf(m_prevFreq, fftBytes, _T("prevFreq"))) != RGY_ERR_NONE) return sts;
     if ((sts = allocWorkBuf(m_corrFreq, fftBytes, _T("corrFreq"))) != RGY_ERR_NONE) return sts;
     if ((sts = allocWorkBuf(m_corrReal, fftBytes, _T("corrReal"))) != RGY_ERR_NONE) return sts;
-    m_corrHost.assign((size_t)STAB_FFT_N * (size_t)STAB_FFT_N * 2, 0.0f);
+    m_corrSummary = std::make_unique<CUMemBufPair>(sizeof(StabCorrelationSummary));
+    if ((sts = m_corrSummary->alloc()) != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("stab: failed to allocate correlation summary buffer: %s.\n"), get_err_mes(sts));
+        return sts;
+    }
 
     m_havePrev = false;
     m_smoothShiftX = 0.0f;
@@ -349,34 +426,20 @@ RGY_ERR NVEncFilterStab::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInf
         if ((sts = stab_cross(m_curFreq.get(), m_prevFreq.get(), m_corrFreq.get(), stream)) != RGY_ERR_NONE) return sts;
         if ((sts = stab_fft_1d(m_corrFreq.get(), m_corrReal.get(), 1, -1.0f, stream)) != RGY_ERR_NONE) return sts;
         if ((sts = stab_fft_1d(m_corrReal.get(), m_corrReal.get(), STAB_FFT_N, -1.0f, stream)) != RGY_ERR_NONE) return sts;
-        auto cudaerr = cudaMemcpyAsync(m_corrHost.data(), m_corrReal->ptr, m_corrReal->nSize, cudaMemcpyDeviceToHost, stream);
-        if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
-        cudaerr = cudaStreamSynchronize(stream);
+        if ((sts = stab_summarize_correlation(m_corrReal.get(), m_corrSummary.get(), stream)) != RGY_ERR_NONE) return sts;
+        auto cudaerr = cudaStreamSynchronize(stream);
         if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
 
         const int N = STAB_FFT_N;
-        float pk = m_corrHost[0];
-        int pi = 0;
-        double sum = 0.0;
-        for (int i = 0; i < N * N; i++) {
-            const float v = m_corrHost[(size_t)i * 2];
-            sum += (double)v;
-            if (v > pk) {
-                pk = v;
-                pi = i;
-            }
-        }
+        const auto summary = static_cast<const StabCorrelationSummary *>(m_corrSummary->ptrHost);
+        const float pk = summary->peak;
+        const int pi = summary->peakIndex;
         peakX = pi % N;
         peakY = pi / N;
         peakValue = pk;
-        meanValue = (float)(sum / (double)(N * N));
-        auto getPx = [&](int x, int y) -> float {
-            if (x < 0) x += N; else if (x >= N) x -= N;
-            if (y < 0) y += N; else if (y >= N) y -= N;
-            return m_corrHost[((size_t)y * (size_t)N + (size_t)x) * 2];
-        };
-        refineX = stab_parabolic_refine(getPx(peakX - 1, peakY), getPx(peakX, peakY), getPx(peakX + 1, peakY));
-        refineY = stab_parabolic_refine(getPx(peakX, peakY - 1), getPx(peakX, peakY), getPx(peakX, peakY + 1));
+        meanValue = static_cast<float>(summary->sum / static_cast<double>(N * N));
+        refineX = stab_parabolic_refine(summary->left, summary->center, summary->right);
+        refineY = stab_parabolic_refine(summary->up, summary->center, summary->down);
         haveCorrelation = true;
     }
 
@@ -433,7 +496,7 @@ void NVEncFilterStab::close() {
     m_prevFreq.reset();
     m_corrFreq.reset();
     m_corrReal.reset();
-    m_corrHost.clear();
+    m_corrSummary.reset();
     m_havePrev = false;
     m_smoothShiftX = 0.0f;
     m_smoothShiftY = 0.0f;

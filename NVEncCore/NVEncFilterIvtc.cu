@@ -196,6 +196,67 @@ __global__ void kernel_ivtc_frame_diff(const IvtcFramePlane a, const IvtcFramePl
     }
 }
 
+__global__ void kernel_ivtc_score_reduce(const uint32_t *__restrict__ scores,
+    const size_t wgCount, const uint32_t clipThreshold,
+    IvtcScoreSummary *__restrict__ summary) {
+    const int tid = threadIdx.x;
+    IvtcScoreSummary local = {};
+    for (size_t group = tid; group < wgCount; group += blockDim.x) {
+        const uint32_t *entry = scores + group * 9;
+        #pragma unroll
+        for (int value = 0; value < 6; value++) {
+            if (entry[value] > clipThreshold) {
+                local.sum[value] += entry[value];
+                local.count[value]++;
+            }
+        }
+        #pragma unroll
+        for (int value = 0; value < 3; value++) {
+            local.max[value] = max(local.max[value], entry[value + 3]);
+            local.blocks[value] += entry[value + 6];
+        }
+    }
+
+    __shared__ IvtcScoreSummary reduced[IVTC_BLOCK_X * IVTC_BLOCK_Y];
+    reduced[tid] = local;
+    __syncthreads();
+    for (int stride = (IVTC_BLOCK_X * IVTC_BLOCK_Y) >> 1; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            #pragma unroll
+            for (int value = 0; value < 6; value++) {
+                reduced[tid].sum[value] += reduced[tid + stride].sum[value];
+                reduced[tid].count[value] += reduced[tid + stride].count[value];
+            }
+            #pragma unroll
+            for (int value = 0; value < 3; value++) {
+                reduced[tid].max[value] = max(reduced[tid].max[value], reduced[tid + stride].max[value]);
+                reduced[tid].blocks[value] += reduced[tid + stride].blocks[value];
+            }
+        }
+        __syncthreads();
+    }
+    if (tid == 0) {
+        summary[0] = reduced[0];
+    }
+}
+
+__global__ void kernel_ivtc_diff_reduce(const uint32_t *__restrict__ diff,
+    const size_t wgCount, uint64_t *__restrict__ summary) {
+    const int tid = threadIdx.x;
+    uint64_t sum = 0;
+    for (size_t group = tid; group < wgCount; group += blockDim.x) {
+        sum += diff[group];
+    }
+    __shared__ uint64_t reduced[IVTC_BLOCK_X * IVTC_BLOCK_Y];
+    reduced[tid] = sum;
+    __syncthreads();
+    for (int stride = (IVTC_BLOCK_X * IVTC_BLOCK_Y) >> 1; stride > 0; stride >>= 1) {
+        if (tid < stride) reduced[tid] += reduced[tid + stride];
+        __syncthreads();
+    }
+    if (tid == 0) summary[0] = reduced[0];
+}
+
 template<typename TypePixel, int bit_depth>
 __global__ void kernel_ivtc_synthesize(
     IvtcFramePlane dst, const IvtcFramePlane prev, const IvtcFramePlane cur, const IvtcFramePlane next,
@@ -453,6 +514,20 @@ RGY_ERR run_ivtc_score_candidates(const RGYFrameInfo *pPrev, const RGYFrameInfo 
         return run_ivtc_score_candidates_typed<uint16_t, 16>(pPrev, pCur, pNext, tff, nt, T, combPelThresh, y0, y1, scoreDev, stream);
     }
     return RGY_ERR_UNSUPPORTED;
+}
+
+RGY_ERR run_ivtc_score_reduce(const uint32_t *scoreDev, size_t wgCount,
+    uint32_t clipThreshold, IvtcScoreSummary *summaryDev, cudaStream_t stream) {
+    kernel_ivtc_score_reduce<<<1, IVTC_BLOCK_X * IVTC_BLOCK_Y, 0, stream>>>(
+        scoreDev, wgCount, clipThreshold, summaryDev);
+    return err_to_rgy(cudaGetLastError());
+}
+
+RGY_ERR run_ivtc_diff_reduce(const uint32_t *diffDev, size_t wgCount,
+    uint64_t *summaryDev, cudaStream_t stream) {
+    kernel_ivtc_diff_reduce<<<1, IVTC_BLOCK_X * IVTC_BLOCK_Y, 0, stream>>>(
+        diffDev, wgCount, summaryDev);
+    return err_to_rgy(cudaGetLastError());
 }
 
 RGY_ERR run_ivtc_synthesize_frame(RGYFrameInfo *pOutputFrame, const RGYFrameInfo *pPrev, const RGYFrameInfo *pCur, const RGYFrameInfo *pNext, int tff, int match, int applyBlend, int dthresh, cudaStream_t stream) {

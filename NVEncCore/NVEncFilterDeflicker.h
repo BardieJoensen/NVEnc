@@ -57,8 +57,7 @@ protected:
 
     std::unique_ptr<CUMemBuf> m_sumBuf;
     std::unique_ptr<CUMemBuf> m_sumSqBuf;
-    std::vector<int64_t>      m_sumHost;
-    std::vector<int64_t>      m_sumSqHost;
+    std::unique_ptr<CUMemBufPair> m_statsSummary;
     size_t                    m_statsBufWGCount;
     std::deque<double>        m_rollingMeans;
     std::deque<double>        m_rollingSigmas;
