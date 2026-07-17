@@ -59,9 +59,9 @@ struct NVEncFilmGrainAnalyzerConfig {
     int denoiser;              // FGSDenoiseEngine
     int fft3dTemporal;         // FFT3D temporal radius bt: 1 (spatial) or 2 (prev+cur, delay-free)
     int motionRefs;            // causal motion references: 2 (default) or 1 (reduced cost)
-    float residualRetain;      // fraction of the measured luma residual kept in the base layer (0.0 - 0.9);
-                               // signalled luma synthesis is scaled by sqrt(1 - retain^2) so total
-                               // grain variance is preserved (residual and synthesis are independent)
+    float residualRetain;      // fraction of the measured luma residual kept in the base layer (0.0 - 0.9),
+                               // or -1.0 for content-adaptive auto retention; signalled luma synthesis
+                               // is scaled by sqrt(1 - retain^2) so total grain variance is preserved
     float denoiseLevel;
     int denoisePasses;
     int modelWindow;

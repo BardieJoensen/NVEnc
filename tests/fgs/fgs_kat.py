@@ -17,6 +17,7 @@ synthesized grain against the injected grain:
   const_4k10_pq  const_luma at 4K 10-bit with PQ/BT.2020 signalling
   coarse_luma    spatially-correlated grain (35mm proxy), capture-ratio guard
   detail_luma    static fine detail plus grain; separation/detail-loss probe
+  auto_retain_*  content-aware residual retention on flat and detailed inputs
   dark_luma      grain clipped at legal black; shadow strength + black level
   retain_luma    retain 60% of original luma grain in the encoded base layer
   retain_10bit   retain_luma at 1080p 10-bit
@@ -248,9 +249,15 @@ def probe_color(mkv):
 def parse_log(log):
     """-> list of dicts with frame, reliable, reset, held per fgs-model line."""
     out = []
-    for m in re.finditer(r"fgs-model frame=(\d+) pts=\S+ reliable=(\d) reset=(\d)(?: held=(\d))?", log):
+    for line in log.splitlines():
+        m = re.search(r"fgs-model frame=(\d+) pts=\S+ reliable=(\d) reset=(\d)(?: held=(\d))?", line)
+        if not m:
+            continue
+        adaptive = re.search(r"risk=([0-9.]+) retain=([0-9.]+)", line)
         out.append({"frame": int(m.group(1)), "reliable": int(m.group(2)),
-                    "reset": int(m.group(3)), "held": int(m.group(4) or 0)})
+                    "reset": int(m.group(3)), "held": int(m.group(4) or 0),
+                    "risk": float(adaptive.group(1)) if adaptive else 0.0,
+                    "retain": float(adaptive.group(2)) if adaptive else 0.0})
     return out
 
 
@@ -366,6 +373,9 @@ TESTS = {
                       "width": 3840, "height": 2160, "frames": 24},
     "coarse_luma":   {"sigma_y_mode": "coarse", "sigma_y": 6.0},
     "detail_luma":   {"sigma_y_mode": "const", "sigma_y": 6.0, "detail": True},
+    "auto_retain_flat": {"sigma_y_mode": "const", "sigma_y": 6.0, "retain": "auto"},
+    "auto_retain_detail": {"sigma_y_mode": "const", "sigma_y": 6.0,
+                           "detail": True, "retain": "auto"},
     # Grain near legal black, clipped at the range floor like a legal-range
     # master: reproduces the waxy-shadow / black-level artifacts seen on real
     # heavy-grain film (Taxi Driver f388 class).  Band 0 sits 0.25 sigma above
@@ -468,6 +478,32 @@ def run_test(test, keep):
         ok &= check("grain present in both scenes",
                     pre[0].mean() > 0.6 * exp and post[0].mean() > 0.6 * exp,
                     f"pre {pre[0].mean() / DS:.2f}, post {post[0].mean() / DS:.2f} vs injected {exp / DS:.2f} (8-bit units)")
+    elif spec.get("retain") == "auto":
+        frames = range(SKIP, nframes)
+        adaptive = [m for m in models if m["frame"] >= SKIP and m["reliable"]]
+        retains = np.array([m["retain"] for m in adaptive])
+        risks = np.array([m["risk"] for m in adaptive])
+        retain = float(np.median(retains)) if len(retains) else 0.0
+        risk = float(np.median(risks)) if len(risks) else 0.0
+        synth_target = (1.0 - retain * retain) ** 0.5
+        synth_sigma, _ = measure(on, off, frames)
+        synth_ratio = synth_sigma[0] / np.maximum(expected[0], 1e-9)
+        if spec.get("detail"):
+            ok &= check("auto retention detects structured-detail risk",
+                        risk >= 0.20 and 0.40 <= retain <= 0.50,
+                        f"risk {risk:.3f}, retain {retain:.2f}")
+        else:
+            retained_sigma = luma_band_sigmas(off, frames)
+            retained_ratio = retained_sigma / np.maximum(expected[0], 1e-9)
+            ok &= check("auto retention leaves isotropic grain synthetic",
+                        risk < 0.03 and retain == 0.0 and retained_ratio.mean() < 0.25,
+                        f"risk {risk:.3f}, retain {retain:.2f}, base ratio {retained_ratio.mean():.3f}")
+        ok &= check("auto synthesis is variance-compensated",
+                    bool((synth_ratio > synth_target * 0.60).all()
+                         and (synth_ratio < synth_target * 1.35).all()),
+                    f"ratio {fmt(synth_ratio)}, target {synth_target:.2f}")
+        ok &= check("auto retention is temporally stable", len(set(retains)) <= 2,
+                    f"values {sorted(set(retains))}")
     elif "retain" in spec:
         frames = range(SKIP, nframes)
         retain = float(spec["retain"])
@@ -563,9 +599,20 @@ def run_test(test, keep):
         ok &= check("fine detail survives the cleaned base",
                     separation["detail_transfer_gain"] >= 0.25,
                     f"high-pass transfer {separation['detail_transfer_gain']:.3f} (baseline floor 0.25)")
-        ok &= check("edge/detail distortion remains bounded",
-                    separation["edge_clean_rmse_8bit"] <= 3.0,
-                    f"edge RMSE {separation['edge_clean_rmse_8bit']:.2f} (8-bit units, limit 3.0)")
+        if test == "auto_retain_detail":
+            # Ordinary edge RMSE includes the deliberately retained random
+            # grain.  Temporal mean bias isolates repeatable detail damage.
+            ok &= check("systematic edge/detail distortion remains bounded",
+                        separation["systematic_edge_bias_rms_8bit"] <= 1.5,
+                        f"systematic edge RMSE {separation['systematic_edge_bias_rms_8bit']:.2f} "
+                        "(8-bit units, limit 1.5)")
+            ok &= check("auto retention restores at-risk fine detail",
+                        separation["detail_transfer_gain"] >= 0.65,
+                        f"high-pass transfer {separation['detail_transfer_gain']:.3f} (target 0.65)")
+        else:
+            ok &= check("edge/detail distortion remains bounded",
+                        separation["edge_clean_rmse_8bit"] <= 3.0,
+                        f"edge RMSE {separation['edge_clean_rmse_8bit']:.2f} (8-bit units, limit 3.0)")
         if not keep:
             for path in (src_raw, ideal_clean):
                 if os.path.exists(path):

@@ -20,8 +20,8 @@ python3 tests/fgs/fgs_kat.py
 
 The generated fixtures cover white and correlated grain, intensity-dependent
 strength, luma/chroma correlation, fine-detail preservation, clean material,
-HDR, scene cuts, and fixed residual retention. The tests require FFmpeg with a
-dav1d decoder exposing the `filmgrain` switch.
+HDR, scene cuts, fixed residual retention, and content-adaptive `retain=auto`.
+The tests require FFmpeg with a dav1d decoder exposing the `filmgrain` switch.
 
 ## Retention sweep
 

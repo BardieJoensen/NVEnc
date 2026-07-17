@@ -316,9 +316,9 @@ tstring encoder_help() {
         _T("                                  chroma=auto|off         (default: auto)\n")
         _T("                                  denoiser=fft3d|bilateral|motion (default: fft3d)\n")
         _T("                                  motion-refs=1|2         (default: 2)\n")
-        _T("                                  retain=<float>          keep this fraction of the measured\n")
-        _T("                                   grain in the base layer, scaling synthesis to match\n")
-        _T("                                   (0.0 - 0.9, default: 0.0)\n")
+        _T("                                  retain=auto|<float>     retain source residual where detail\n")
+        _T("                                   is at risk, or use a fixed fraction; synthesis is scaled\n")
+        _T("                                   to match (0.0 - 0.9, default: 0.0)\n")
         _T("   --film-grain-table <path>    [AV1] read film grain parameters from an AOM filmgrn1 table.\n")
         _T("   --film-grain-table-out <path> write the measured film grain as an AOM filmgrn1 table\n")
         _T("                                  (with --av1-film-grain; also usable with --codec raw to\n")
@@ -1225,6 +1225,10 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                 continue;
             }
             if (param_arg == _T("retain")) {
+                if (param_val == _T("auto")) {
+                    pParams->av1.filmGrainRetain = -1.0f;
+                    continue;
+                }
                 try {
                     size_t parsedChars = 0;
                     const auto value = std::stof(param_val, &parsedChars);
@@ -1845,7 +1849,7 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
         OPT_OPTBOOL(_T("--disable-seq-hdr"), av1.disableSeqHdr);
         if (pParams->av1.filmGrainAuto) {
             cmd << _T(" --av1-film-grain");
-            if (pParams->av1.filmGrainDenoise > 0.0f || !pParams->av1.filmGrainChroma || pParams->av1.filmGrainDenoiser != 0 || pParams->av1.filmGrainMotionRefs != 2 || pParams->av1.filmGrainRetain > 0.0f) {
+            if (pParams->av1.filmGrainDenoise > 0.0f || !pParams->av1.filmGrainChroma || pParams->av1.filmGrainDenoiser != 0 || pParams->av1.filmGrainMotionRefs != 2 || pParams->av1.filmGrainRetain != 0.0f) {
                 cmd << _T(" ");
                 bool needComma = false;
                 if (pParams->av1.filmGrainDenoise > 0.0f) {
@@ -1867,9 +1871,13 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
                     cmd << _T("motion-refs=") << pParams->av1.filmGrainMotionRefs;
                     needComma = true;
                 }
-                if (pParams->av1.filmGrainRetain > 0.0f) {
+                if (pParams->av1.filmGrainRetain != 0.0f) {
                     if (needComma) cmd << _T(",");
-                    cmd << _T("retain=") << pParams->av1.filmGrainRetain;
+                    if (pParams->av1.filmGrainRetain < 0.0f) {
+                        cmd << _T("retain=auto");
+                    } else {
+                        cmd << _T("retain=") << pParams->av1.filmGrainRetain;
+                    }
                 }
             }
         }

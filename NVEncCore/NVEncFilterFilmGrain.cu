@@ -57,6 +57,12 @@ using namespace fgsmodel;
 
 namespace {
 
+constexpr float FGS_DETAIL_COHERENCE_LOW = 0.12f;
+constexpr float FGS_DETAIL_COHERENCE_HIGH = 0.18f;
+constexpr float FGS_AUTO_RETAIN_SCALE = 1.5f;
+constexpr float FGS_AUTO_RETAIN_MAX = 0.5f;
+constexpr float FGS_AUTO_RETAIN_STEP = 0.05f;
+
 struct FilmGrainBlockMetric {
     float mean;
     float sigma;
@@ -269,10 +275,13 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
         const float bottom = detailMetrics[iy1 * blocksX + ix].coherence * (1.0f - wx)
             + detailMetrics[iy1 * blocksX + ix1].coherence * wx;
         const float coherence = top * (1.0f - wy) + bottom * wy;
-        // Below 0.12 is normally isotropic grain; above 0.18 is strongly
-        // directional picture detail.  Fade the local correction between the
-        // two instead of making the block classifier a hard render boundary.
-        refinementWeight = 1.0f - fminf(1.0f, fmaxf(0.0f, (coherence - 0.12f) / 0.06f));
+        // Below the low threshold is normally isotropic grain; above the high
+        // threshold is strongly directional picture detail.  Fade the local
+        // correction between the two instead of making the block classifier
+        // a hard render boundary.
+        refinementWeight = 1.0f - fminf(1.0f, fmaxf(0.0f,
+            (coherence - FGS_DETAIL_COHERENCE_LOW)
+            / (FGS_DETAIL_COHERENCE_HIGH - FGS_DETAIL_COHERENCE_LOW)));
     }
     for (int component = 0; component < components; ++component) {
         const int center = load_code<Type, shift>(src, srcPitch, x, y, component, components);
@@ -429,7 +438,13 @@ namespace {
 struct FilmGrainHostStats {
     FilmGrainGpuStats gpu;
     float measuredNoise;
+    float detailRisk;
 };
+
+static float auto_retain_from_detail_risk(const float detailRisk) {
+    const float unquantized = clamp(detailRisk * FGS_AUTO_RETAIN_SCALE, 0.0f, FGS_AUTO_RETAIN_MAX);
+    return std::round(unquantized / FGS_AUTO_RETAIN_STEP) * FGS_AUTO_RETAIN_STEP;
+}
 
 template<typename Type, int shift>
 static RGY_ERR launch_flat_metrics(const RGYFrameInfo& luma, FilmGrainBlockMetric *metrics,
@@ -586,16 +601,18 @@ static RGY_ERR launch_model_stats(const RGYFrameInfo& src, const RGYFrameInfo& d
 struct NVEncFilterFilmGrain::AnalyzerState {
     std::deque<FilmGrainHostStats> history;
     float stableNoise;
+    float autoRetain;
     int64_t lastTimestamp;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 lastParams;
     bool lastParamsValid;
     int heldStreak;
 
-    AnalyzerState() : history(), stableNoise(0.0f), lastTimestamp(std::numeric_limits<int64_t>::min()),
+    AnalyzerState() : history(), stableNoise(0.0f), autoRetain(0.0f), lastTimestamp(std::numeric_limits<int64_t>::min()),
         lastParams(), lastParamsValid(false), heldStreak(0) {}
     void clear() {
         history.clear();
         stableNoise = 0.0f;
+        autoRetain = 0.0f;
         lastTimestamp = std::numeric_limits<int64_t>::min();
         std::memset(&lastParams, 0, sizeof(lastParams));
         lastParamsValid = false;
@@ -637,7 +654,8 @@ tstring NVEncFilmGrainAnalyzerConfig::print() const {
             : (denoiser == FGS_DENOISE_MOTION ? _T("motion") : _T("bilateral")),
         analyzeChroma ? _T("on") : _T("off"), modelWindow,
         denoiser == FGS_DENOISE_MOTION ? strsprintf(_T(", motion-refs=%d"), motionRefs).c_str() : _T(""),
-        residualRetain > 0.0f ? strsprintf(_T(", retain=%.2f"), residualRetain).c_str() : _T(""));
+        residualRetain < 0.0f ? _T(", retain=auto")
+            : (residualRetain > 0.0f ? strsprintf(_T(", retain=%.2f"), residualRetain).c_str() : _T("")));
 }
 
 RGYFrameDataFilmGrain::RGYFrameDataFilmGrain() :
@@ -837,7 +855,8 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     config.maxNoiseLevel = std::max(config.minNoiseLevel, config.maxNoiseLevel);
     config.denoiseLevel = clamp(config.denoiseLevel, 0.0f, 50.0f);
     config.motionRefs = clamp(config.motionRefs, 1, 2);
-    config.residualRetain = clamp(config.residualRetain, 0.0f, 0.9f);
+    config.residualRetain = config.residualRetain < 0.0f
+        ? -1.0f : clamp(config.residualRetain, 0.0f, 0.9f);
 
     auto sts = AllocFrameBuf(prm->frameOut, 2);
     if (sts != RGY_ERR_NONE) return sts;
@@ -1291,11 +1310,38 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     FilmGrainHostStats current = {};
     std::memcpy(&current.gpu, m_modelStats->ptrHost, sizeof(current.gpu));
     current.measuredNoise = measuredNoise;
+    double detailRiskSum = 0.0;
+    for (int i = 0; i < blockCount; ++i) {
+        detailRiskSum += clamp(
+            (metrics[i].coherence - FGS_DETAIL_COHERENCE_LOW)
+                / (FGS_DETAIL_COHERENCE_HIGH - FGS_DETAIL_COHERENCE_LOW),
+            0.0f, 1.0f);
+    }
+    current.detailRisk = static_cast<float>(detailRiskSum / std::max(1, blockCount));
     m_state->history.push_back(current);
     while (static_cast<int>(m_state->history.size()) > prm->filmGrain.modelWindow) m_state->history.pop_front();
     m_state->stableNoise = 0.0f;
-    for (const auto& frame : m_state->history) m_state->stableNoise += frame.measuredNoise;
+    diagnostics.detailRisk = 0.0f;
+    for (const auto& frame : m_state->history) {
+        m_state->stableNoise += frame.measuredNoise;
+        diagnostics.detailRisk += frame.detailRisk;
+    }
     m_state->stableNoise /= m_state->history.size();
+    diagnostics.detailRisk /= m_state->history.size();
+    if (prm->filmGrain.residualRetain < 0.0f) {
+        const float target = auto_retain_from_detail_risk(diagnostics.detailRisk);
+        // The rolling model window removes frame noise; an additional two-step
+        // deadband prevents a single quantization boundary from changing the
+        // base/synthesis split on adjacent frames.  A fresh scene adopts its
+        // target immediately.
+        if (m_state->history.size() == 1
+            || std::abs(target - m_state->autoRetain) >= FGS_AUTO_RETAIN_STEP * 2.0f - 1e-6f) {
+            m_state->autoRetain = target;
+        }
+        diagnostics.residualRetain = m_state->autoRetain;
+    } else {
+        diagnostics.residualRetain = prm->filmGrain.residualRetain;
+    }
     m_state->lastTimestamp = source->timestamp;
     diagnostics.modelFrames = static_cast<int>(m_state->history.size());
     diagnostics.sceneReset = sceneReset;
@@ -1335,14 +1381,14 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if (sts != RGY_ERR_NONE) return sts;
     }
     diagnostics.reliable = modelValid;
-    if (modelValid && params.applyGrain && prm->filmGrain.residualRetain > 0.0f) {
+    if (modelValid && params.applyGrain && diagnostics.residualRetain > 0.0f) {
         // Residual retention: keep retain * (source - clean) in the base luma
         // and shrink the signalled synthesis so total variance is preserved.
         // The scaling is applied to a local copy each frame; the hysteresis
         // state keeps comparing unscaled fits.  Applied before the table
         // recording and the level-compensation LUT so both describe what the
         // decoder actually synthesizes on top of the blended base.
-        const float retain = prm->filmGrain.residualRetain;
+        const float retain = diagnostics.residualRetain;
         const float synthScale = std::sqrt(std::max(0.0f, 1.0f - retain * retain));
         for (uint32_t i = 0; i < params.numYPoints; ++i) {
             params.pointYScaling[i] = static_cast<uint8_t>(clamp(
@@ -1412,11 +1458,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             pointsCr += strsprintf(_T(" %d:%d"), params.pointCrValue[i], params.pointCrScaling[i]);
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
-            _T("noise=%.2f/%.2f/%.2f scaleShift=%d arShift=%d corrCb=%d corrCr=%d y=[%s] cb=[%s] cr=[%s]\n"),
+            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
+            _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             modelValid ? 1 : 0, diagnostics.sceneReset ? 1 : 0, diagnostics.modelHeld ? 1 : 0,
             diagnostics.flatBlocks, diagnostics.totalBlocks, diagnostics.modelFrames,
             diagnostics.noiseStdDev[0], diagnostics.noiseStdDev[1], diagnostics.noiseStdDev[2],
+            diagnostics.detailRisk, diagnostics.residualRetain,
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,

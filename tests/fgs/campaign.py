@@ -71,10 +71,13 @@ def reader_args(src):
 def v_fgs_retain(retain, denoiser="motion"):
     def build(src, out, tbl):
         fgs = f"denoise=auto,chroma=auto,denoiser={denoiser}"
-        if retain > 0.0:
+        if retain == "auto":
+            fgs += ",retain=auto"
+        elif retain > 0.0:
             fgs += f",retain={retain:g}"
         return [[NVENCC, *reader_args(src), "--codec", "av1", "--output-depth", "10", "--qvbr", "26", *TUNED, *COLOR,
                  "--av1-film-grain", fgs, "--film-grain-table-out", tbl,
+                 "--log-level", "debug",
                  "-i", src, "-o", out]]
     return build
 
@@ -93,6 +96,7 @@ VARIANTS = {
     "fgs_r75": v_fgs_retain(0.75),
     "fgs_r90": v_fgs_retain(0.90),
     "fgs_fft3d": v_fgs_retain(0.0, "fft3d"),
+    "fgs_fft3d_auto": v_fgs_retain("auto", "fft3d"),
     "fgs_fft3d_r25": v_fgs_retain(0.25, "fft3d"),
     "fgs_fft3d_r50": v_fgs_retain(0.50, "fft3d"),
     "fgs_bilateral": v_fgs_retain(0.0, "bilateral"),
@@ -109,6 +113,20 @@ def run(cmd, timeout=1800, **kw):
     if r.returncode != 0:
         raise RuntimeError(f"cmd failed ({r.returncode}): {cmd if isinstance(cmd,str) else ' '.join(cmd)}\n{r.stderr[-1500:]}")
     return r
+
+
+def analyzer_diagnostics(log):
+    values = [(float(risk), float(retain)) for risk, retain in
+              re.findall(r"risk=([0-9.]+) retain=([0-9.]+)", log)]
+    if not values:
+        return {}
+    risks, retains = zip(*values)
+    return {
+        "detail_risk_mean": round(statistics.mean(risks), 3),
+        "retain_mean": round(statistics.mean(retains), 3),
+        "retain_min": min(retains),
+        "retain_max": max(retains),
+    }
 
 
 def shell(cmd, timeout=1800):
@@ -251,7 +269,8 @@ def write_results(work, args, wanted, variants, rows):
     out_csv = os.path.join(work, "results.csv")
     fields = ["title", "variant", "mb", "vmaf", "vmaf_min", "ssimu2", "ssimu2_p5",
               "psnr_y", "ssim", "ciede2000", "hf_sigma", "base_hf_sigma",
-              "encode_seconds", "grain_entries", "grain_coverage_seconds", "note"]
+              "encode_seconds", "grain_entries", "grain_coverage_seconds",
+              "detail_risk_mean", "retain_mean", "retain_min", "retain_max", "note"]
     with open(out_csv, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
         writer.writeheader()
@@ -336,15 +355,26 @@ def main():
             tbl = os.path.join(d, f"{var}.tbl")
             try:
                 encode_seconds = None
+                encode_log = ""
                 if not valid_video(out):
                     if os.path.exists(out):
                         os.unlink(out)
                     encode_seconds = 0.0
                     for cmd in VARIANTS[var](clip, out, tbl):
-                        encode_seconds += run(cmd).elapsed_seconds
+                        result = run(cmd)
+                        encode_seconds += result.elapsed_seconds
+                        encode_log += result.stdout + result.stderr
+                    with open(os.path.join(d, f"{var}.log"), "w") as log_file:
+                        log_file.write(encode_log)
+                else:
+                    log_path = os.path.join(d, f"{var}.log")
+                    if os.path.isfile(log_path):
+                        with open(log_path) as log_file:
+                            encode_log = log_file.read()
                 row = {"title": name, "variant": var,
                        "mb": round(os.path.getsize(out) / 1e6, 1),
                        "encode_seconds": round(encode_seconds, 2) if encode_seconds is not None else None}
+                row.update(analyzer_diagnostics(encode_log))
                 row.update(score(ref, out, var, d, height, args.frames))
                 row["hf_sigma"] = hf_sigma(out, width, height, decoder="libdav1d", filmgrain=1)
                 row["base_hf_sigma"] = hf_sigma(out, width, height, decoder="libdav1d", filmgrain=0)
