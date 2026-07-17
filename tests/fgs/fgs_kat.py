@@ -128,7 +128,8 @@ def generate(test, spec, path):
         nframes = spec.get("frames", FRAMES)
         for n in range(nframes):
             grainy = not (grain_free or (test == "cut" and n >= CUT_FRAME))
-            base = base_luma(6 if test == "cut" and n >= CUT_FRAME else 0)
+            base = base_luma(spec.get("cut_roll", 6)) + spec.get("cut_offset", 0) \
+                if test in ("cut", "cut_grainy") and n >= CUT_FRAME else base_luma(0)
             if grainy:
                 unit = correlated_unit_noise(rng, (H, W)) if spec["sigma_y_mode"] == "coarse" \
                     else rng.normal(0.0, 1.0, (H, W))
@@ -309,6 +310,13 @@ TESTS = {
     "dark_luma":     {"sigma_y_mode": "const", "sigma_y": 6.0, "bits": 10, "limited": True,
                       "levels": [70, 82, 96, 115, 140, 175, 220, 280, 360, 460, 580, 720],
                       "clip": (64, 940)},
+    # SUBTLE hard cut between two grainy scenes: the post-cut shot differs only
+    # moderately (bands rolled 3 + offset), so the cross-cut SAD sits between
+    # grain SAD and an obvious scene change -- the regime where a temporal
+    # denoiser with a mistuned scene threshold blends across the cut (the real
+    # Taxi Driver f388 ghost).  A loud cut trips even broken thresholds.
+    "cut_grainy":    {"sigma_y_mode": "const", "sigma_y": 3.0, "bits": 10, "frames": FRAMES_CUT,
+                      "cut_roll": 3, "cut_offset": 60},
 }
 
 # Regression guard for coarse_luma, not a quality target: real 35mm grain is
@@ -373,6 +381,27 @@ def run_test(test, keep):
         n_reliable = len([f for f in reliable if f >= SKIP])
         ok &= check("model reliable after warm-up", n_reliable >= nframes - SKIP - 1,
                     f"{n_reliable}/{nframes - SKIP} frames")
+    elif test == "cut_grainy":
+        expected_post = np.roll(LEVELS, spec.get("cut_roll", 6)) + spec.get("cut_offset", 0)
+        off_cut = band_means(off, [CUT_FRAME])
+        ghost = np.abs(off_cut - expected_post)
+        print(f"  [info] base band deviation on first post-cut frame: {fmt(ghost)}")
+        ok &= check("no cross-cut ghost in base layer",
+                    bool(ghost.max() <= 12.0 * DS / 4),
+                    f"max band deviation {ghost.max():.1f} (10-bit codes; ghosting blends the previous shot's bands)")
+        if FGS_DENOISER == "motion":
+            # only motion mode has SAD-based cut detection; the spatial
+            # denoisers rely on the noise-ratio reset, which by design does
+            # not fire when both scenes carry the same grain level
+            resets = [m["frame"] for m in models if m["reset"]]
+            ok &= check("scene reset at grainy cut", any(CUT_FRAME <= f <= CUT_FRAME + 1 for f in resets),
+                        f"resets at {resets[:8]}")
+        pre, _ = measure(on, off, range(SKIP, CUT_FRAME))
+        post, _ = measure(on, off, range(CUT_FRAME + 4, nframes))
+        exp = expected[0].mean()
+        ok &= check("grain present in both scenes",
+                    pre[0].mean() > 0.6 * exp and post[0].mean() > 0.6 * exp,
+                    f"pre {pre[0].mean() / DS:.2f}, post {post[0].mean() / DS:.2f} vs injected {exp / DS:.2f} (8-bit units)")
     elif test == "coarse_luma":
         sigma, _ = measure(on, off, range(SKIP, nframes))
         ratio = float(sigma[0].mean() / max(expected[0].mean(), 1e-9))
