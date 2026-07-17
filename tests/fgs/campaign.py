@@ -52,6 +52,16 @@ TITLES = [
 ]
 
 # variant name -> command builder(src_clip, out_path, table_path) -> list[list[str]] of commands to run in order
+def v_fgs_retain(retain):
+    def build(src, out, tbl):
+        fgs = "denoise=auto,chroma=auto,denoiser=motion"
+        if retain > 0.0:
+            fgs += f",retain={retain:g}"
+        return [[NVENCC, "--avhw", "--codec", "av1", "--output-depth", "10", "--qvbr", "26", *TUNED, *COLOR,
+                 "--av1-film-grain", fgs, "-i", src, "-o", out]]
+    return build
+
+
 def v_fgs(src, out, tbl):
     return [[NVENCC, "--avhw", "--codec", "av1", "--output-depth", "10", "--qvbr", "26", *TUNED, *COLOR,
              "--av1-film-grain", "denoise=auto,chroma=auto,denoiser=motion", "-i", src, "-o", out]]
@@ -60,7 +70,14 @@ def v_plain(src, out, tbl):
     return [[NVENCC, "--avhw", "--codec", "av1", "--output-depth", "10", "--qvbr", "26", *TUNED, *COLOR,
              "-i", src, "-o", out]]
 
-VARIANTS = {"fgs": v_fgs, "plain": v_plain}
+VARIANTS = {
+    "fgs": v_fgs,
+    "fgs_r25": v_fgs_retain(0.25),
+    "fgs_r50": v_fgs_retain(0.50),
+    "fgs_r75": v_fgs_retain(0.75),
+    "fgs_r90": v_fgs_retain(0.90),
+    "plain": v_plain,
+}
 # svt / hybrid variants are shell pipelines, handled specially
 PIPELINE_VARIANTS = ("svt", "hybrid")
 
