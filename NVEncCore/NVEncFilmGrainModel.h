@@ -55,6 +55,8 @@ struct NVEncFilmGrainDiagnostics {
     int modelFrames;
     std::array<float, 3> noiseStdDev;
     std::array<uint64_t, 3> observations;
+    float detailRisk;
+    float residualRetain;
     bool reliable;
     bool sceneReset;
     bool modelHeld;

@@ -40,6 +40,7 @@
 
 NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     flatBlocks(0), totalBlocks(0), modelFrames(0), noiseStdDev(), observations(),
+    detailRisk(0.0f), residualRetain(0.0f),
     reliable(false), sceneReset(false), modelHeld(false) {
 }
 

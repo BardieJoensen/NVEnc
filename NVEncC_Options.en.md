@@ -920,7 +920,7 @@ Analyze film grain on the GPU, remove the analyzed grain from the encoded pictur
 - `chroma=auto|off`: analyze chroma grain (default), or model luma grain only.
 - `denoiser=fft3d|bilateral|motion`: select the clean-base generator. `fft3d` is the default. `motion` retains the original frame, builds a motion-compensated clean luma base, and estimates grain from the original-minus-base residual; chroma uses the local edge-aware denoiser.
 - `motion-refs=1|2`: use two causal references by default for stronger temporal separation, or one to reduce processing cost. This only affects `denoiser=motion`; the default is `2`.
-- `retain=<float>`: keep this fraction of the measured grain residual in the encoded picture's luma and scale the signalled synthesis by sqrt(1-retain^2) so the played-out grain variance stays matched (0.0 - 0.9, default 0.0). Retained grain costs bitrate but keeps its original position; synthesized grain is free but positionally random.
+- `retain=auto|<float>`: keep part of the measured grain residual in the encoded picture's luma and scale the signalled synthesis by sqrt(1-retain^2) so the played-out grain variance stays matched. `auto` selects a scene-smoothed value from 0.0 to 0.5 in 0.05 steps according to directional-detail risk; a numeric value fixes the fraction from 0.0 to 0.9 (default 0.0). Retained residual costs bitrate but preserves source-position grain and detail that cannot be separated confidently; synthesized grain is free but positionally random.
 
 The analyzer is conservative: until a stable model can be estimated, it leaves the picture unchanged and explicitly disables synthesis for that frame. This option is AV1-only, incompatible with parallel encoding, and mutually exclusive with `--film-grain-table`.
 
