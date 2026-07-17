@@ -113,9 +113,17 @@ enum class IvtcMixedSection : uint8_t {
 
 
 RGY_ERR run_ivtc_score_candidates(const RGYFrameInfo *pPrev, const RGYFrameInfo *pCur, const RGYFrameInfo *pNext, int tff, int nt, int T, int combPelThresh, int y0, int y1, uint32_t *scoreDev, cudaStream_t stream);
+struct IvtcScoreSummary {
+    uint64_t sum[6];
+    uint32_t count[6];
+    uint32_t max[3];
+    uint64_t blocks[3];
+};
+RGY_ERR run_ivtc_score_reduce(const uint32_t *scoreDev, size_t wgCount, uint32_t clipThreshold, IvtcScoreSummary *summaryDev, cudaStream_t stream);
 RGY_ERR run_ivtc_synthesize_frame(RGYFrameInfo *pOutputFrame, const RGYFrameInfo *pPrev, const RGYFrameInfo *pCur, const RGYFrameInfo *pNext, int tff, int match, int applyBlend, int dthresh, cudaStream_t stream);
 RGY_ERR run_ivtc_bwdif_frame(RGYFrameInfo *pOutputFrame, const RGYFrameInfo *pPrev2, const RGYFrameInfo *pPrev, const RGYFrameInfo *pCur, const RGYFrameInfo *pNext, const RGYFrameInfo *pNext2, int tff, int sceneChange, int dthresh, cudaStream_t stream);
 RGY_ERR run_ivtc_frame_diff(const RGYFrameInfo *pA, const RGYFrameInfo *pB, uint32_t *diffDev, cudaStream_t stream);
+RGY_ERR run_ivtc_diff_reduce(const uint32_t *diffDev, size_t wgCount, uint64_t *summaryDev, cudaStream_t stream);
 RGY_ERR run_ivtc_field_overlay(RGYFrameInfo *pDst, const RGYFrameInfo *pSrc, int tff, cudaStream_t stream);
 
 class NVEncFilterIvtc : public NVEncFilter {
@@ -208,11 +216,11 @@ protected:
     // Called from run_filter on every input frame including pass-through / drain.
     void logInputFrame(const RGYFrameInfo *pInputFrame, int frameNum);
 
-        std::vector<std::unique_ptr<CUFrameBuf>> m_cacheFrames; // リングバッファ: prev/cur/next の3枚
+    std::vector<std::unique_ptr<CUFrameBuf>> m_cacheFrames; // リングバッファ: prev/cur/next の3枚
     std::unique_ptr<CUMemBuf> m_scoreBuf;                   // WGごとのスコア集計バッファ
-    std::vector<uint32_t> m_scoreHost;                      // ホスト側リードバック用
+    std::unique_ptr<CUMemBufPair> m_scoreSummary;           // GPU集計済みスコアのリードバック用
     std::unique_ptr<CUMemBuf> m_diffBuf;                    // WGごとの SAD 集計バッファ (reused)
-    std::vector<uint32_t> m_diffHost;                       // ホスト側リードバック用
+    std::unique_ptr<CUMemBufPair> m_diffSummary;            // GPU集計済み SAD のリードバック用
     std::vector<int64_t> m_cycleInPts;                      // サイクル内フレームの入力タイムスタンプ
     std::vector<int64_t> m_cycleInDur;                      // サイクル内フレームの入力 duration
     std::vector<int> m_cycleInputIds;                       // サイクル内フレームの inputFrameId (ログ用)

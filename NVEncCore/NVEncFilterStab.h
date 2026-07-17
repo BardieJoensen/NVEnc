@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <vector>
 #include "NVEncFilter.h"
 #include "rgy_prm.h"
 
@@ -34,7 +33,7 @@ protected:
     std::unique_ptr<CUMemBuf> m_prevFreq;
     std::unique_ptr<CUMemBuf> m_corrFreq;
     std::unique_ptr<CUMemBuf> m_corrReal;
-    std::vector<float> m_corrHost;
+    std::unique_ptr<CUMemBufPair> m_corrSummary;
     bool m_havePrev;
     float m_smoothShiftX;
     float m_smoothShiftY;

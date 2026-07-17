@@ -135,9 +135,9 @@ NVEncFilterIvtc::NVEncFilterIvtc() :
     NVEncFilter(),
     m_cacheFrames(),
     m_scoreBuf(),
-    m_scoreHost(),
+    m_scoreSummary(),
     m_diffBuf(),
-    m_diffHost(),
+    m_diffSummary(),
     m_cycleInPts(),
     m_cycleInDur(),
     m_cycleInputIds(),
@@ -833,14 +833,21 @@ RGY_ERR NVEncFilterIvtc::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     const int wg_count_y = (prm->frameIn.height + IVTC_BLOCK_Y - 1) / IVTC_BLOCK_Y;
     const size_t wg_count = (size_t)wg_count_x * wg_count_y;
     const size_t score_count = wg_count * 9;
-    if (!m_scoreBuf || m_scoreHost.size() != score_count) {
+    if (!m_scoreBuf || m_scoreBuf->nSize != score_count * sizeof(uint32_t)) {
         m_scoreBuf = std::make_unique<CUMemBuf>(score_count * sizeof(uint32_t));
         if (m_scoreBuf->alloc() != RGY_ERR_NONE) m_scoreBuf.reset();
         if (!m_scoreBuf) {
             AddMessage(RGY_LOG_ERROR, _T("failed to allocate score buffer.\n"));
             return RGY_ERR_MEMORY_ALLOC;
         }
-        m_scoreHost.assign(score_count, 0u);
+    }
+    if (!m_scoreSummary) {
+        m_scoreSummary = std::make_unique<CUMemBufPair>(sizeof(IvtcScoreSummary));
+        if (m_scoreSummary->alloc() != RGY_ERR_NONE) m_scoreSummary.reset();
+        if (!m_scoreSummary) {
+            AddMessage(RGY_LOG_ERROR, _T("failed to allocate score summary buffer.\n"));
+            return RGY_ERR_MEMORY_ALLOC;
+        }
     }
     // SAD 集計用バッファ (WGごとに uint×1)。
     // NOTE: allocated unconditionally (not gated on cycleLen > 0) because
@@ -849,14 +856,21 @@ RGY_ERR NVEncFilterIvtc::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // buffer was only created when cycle-decimation was on, which caused a
     // null-deref crash on ~24fps inputs (auto-cycle=0) — the crash cascaded
     // into encoder output init failing with AVERROR_INVALIDDATA.
-    if (!m_diffBuf || m_diffHost.size() != wg_count) {
+    if (!m_diffBuf || m_diffBuf->nSize != wg_count * sizeof(uint32_t)) {
         m_diffBuf = std::make_unique<CUMemBuf>(wg_count * sizeof(uint32_t));
         if (m_diffBuf->alloc() != RGY_ERR_NONE) m_diffBuf.reset();
         if (!m_diffBuf) {
             AddMessage(RGY_LOG_ERROR, _T("failed to allocate diff buffer.\n"));
             return RGY_ERR_MEMORY_ALLOC;
         }
-        m_diffHost.assign(wg_count, 0u);
+    }
+    if (!m_diffSummary) {
+        m_diffSummary = std::make_unique<CUMemBufPair>(sizeof(uint64_t));
+        if (m_diffSummary->alloc() != RGY_ERR_NONE) m_diffSummary.reset();
+        if (!m_diffSummary) {
+            AddMessage(RGY_LOG_ERROR, _T("failed to allocate diff summary buffer.\n"));
+            return RGY_ERR_MEMORY_ALLOC;
+        }
     }
     // サイクルのメタデータ用ベクトル
     if (cycleLen > 0) {
@@ -1199,30 +1213,18 @@ RGY_ERR NVEncFilterIvtc::scoreCandidates(const RGYFrameInfo *prev, const RGYFram
         const int wg_count_x = divCeil(planeCur.width,  IVTC_BLOCK_X);
         const int wg_count_y = divCeil(planeCur.height, IVTC_BLOCK_Y);
         const size_t wg_count = (size_t)wg_count_x * (size_t)wg_count_y;
-        const size_t score_bytes = wg_count * 9 * sizeof(uint32_t);
-        auto cudaerr = cudaMemcpyAsync(m_scoreHost.data(), m_scoreBuf->ptr, score_bytes, cudaMemcpyDeviceToHost, stream);
-        if (cudaerr == cudaSuccess) cudaerr = cudaStreamSynchronize(stream);
+        err = run_ivtc_score_reduce((const uint32_t *)m_scoreBuf->ptr, wg_count,
+            CLIP_THRESH, (IvtcScoreSummary *)m_scoreSummary->ptrDevice, stream);
+        if (err != RGY_ERR_NONE) return err;
+        err = m_scoreSummary->copyDtoHAsync(stream);
+        if (err != RGY_ERR_NONE) return err;
+        auto cudaerr = cudaStreamSynchronize(stream);
         if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
 
-        uint64_t sum[6] = { 0, 0, 0, 0, 0, 0 };
-        uint32_t cnt[6] = { 0, 0, 0, 0, 0, 0 };
-        uint32_t maxC[3] = { 0, 0, 0 };
-        uint64_t blocksC[3] = { 0, 0, 0 };
-        for (size_t i = 0; i < wg_count; i++) {
-            const uint32_t *e = &m_scoreHost[i * 9];
-            for (int k = 0; k < 6; k++) {
-                if (e[k] > CLIP_THRESH) { sum[k] += e[k]; cnt[k]++; }
-            }
-            maxC[0] = std::max(maxC[0], e[3]);
-            maxC[1] = std::max(maxC[1], e[4]);
-            maxC[2] = std::max(maxC[2], e[5]);
-            blocksC[0] += e[6];
-            blocksC[1] += e[7];
-            blocksC[2] += e[8];
-        }
-        for (int k = 0; k < 6; k++) out[k] = (cnt[k] >= 2) ? (sum[k] / (uint64_t)cnt[k]) : 0ULL;
-        outMax[0] = maxC[0]; outMax[1] = maxC[1]; outMax[2] = maxC[2];
-        outBlocks[0] = blocksC[0]; outBlocks[1] = blocksC[1]; outBlocks[2] = blocksC[2];
+        const auto summary = static_cast<const IvtcScoreSummary *>(m_scoreSummary->ptrHost);
+        for (int k = 0; k < 6; k++) out[k] = (summary->count[k] >= 2) ? (summary->sum[k] / (uint64_t)summary->count[k]) : 0ULL;
+        outMax[0] = summary->max[0]; outMax[1] = summary->max[1]; outMax[2] = summary->max[2];
+        outBlocks[0] = summary->blocks[0]; outBlocks[1] = summary->blocks[1]; outBlocks[2] = summary->blocks[2];
         return RGY_ERR_NONE;
     };
 
@@ -1295,13 +1297,15 @@ RGY_ERR NVEncFilterIvtc::computePairDiff(const RGYFrameInfo *pA, const RGYFrameI
         AddMessage(RGY_LOG_ERROR, _T("error at run_ivtc_frame_diff: %s.\n"), get_err_mes(err));
         return err;
     }
-    const size_t bytes = m_diffHost.size() * sizeof(uint32_t);
-    auto cudaerr = cudaMemcpyAsync(m_diffHost.data(), m_diffBuf->ptr, bytes, cudaMemcpyDeviceToHost, stream);
-    if (cudaerr == cudaSuccess) cudaerr = cudaStreamSynchronize(stream);
+    const size_t wgCount = m_diffBuf->nSize / sizeof(uint32_t);
+    err = run_ivtc_diff_reduce((const uint32_t *)m_diffBuf->ptr, wgCount,
+        (uint64_t *)m_diffSummary->ptrDevice, stream);
+    if (err != RGY_ERR_NONE) return err;
+    err = m_diffSummary->copyDtoHAsync(stream);
+    if (err != RGY_ERR_NONE) return err;
+    auto cudaerr = cudaStreamSynchronize(stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
-    uint64_t sum = 0;
-    for (const uint32_t v : m_diffHost) sum += v;
-    diffOut = sum;
+    diffOut = *static_cast<const uint64_t *>(m_diffSummary->ptrHost);
     return RGY_ERR_NONE;
 }
 
@@ -4431,9 +4435,9 @@ void NVEncFilterIvtc::close() {
 
     m_cacheFrames.clear();
     m_scoreBuf.reset();
-    m_scoreHost.clear();
+    m_scoreSummary.reset();
     m_diffBuf.reset();
-    m_diffHost.clear();
+    m_diffSummary.reset();
     m_cycleInPts.clear();
     m_cycleInDur.clear();
     m_cycleInputIds.clear();
