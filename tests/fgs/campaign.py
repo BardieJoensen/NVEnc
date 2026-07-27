@@ -186,14 +186,26 @@ def extract_clip(src, start, dst, seconds, frames):
 
 
 def make_ref(clip, ref, frames):
+    """Build the lossless reference FFVship scores against.
+
+    ffvhuff rather than ffv1: FFMS2 decodes ffv1 badly, and the reference is
+    decoded twice per variant (SSIMULACRA2 and Butteraugli).  Measured
+    2026-07-27 on 120 4K frames -- SSIMULACRA2 6458ms -> 2532ms and Butteraugli
+    8480ms -> 6613ms, with bit-identical scores, plus the encode itself halving
+    (4204ms -> 2091ms).  Costs ~37% more disk (656MB -> 902MB per 120 frames).
+
+    This reference exists only because FFMS2 cannot read DV dual-layer HEVC:
+    pointing FFVship at the packet-copied clip scores -48.13 against the
+    correct 15.44.  vmaf does not need it -- see vmaf_run.
+    """
     codec = run(["ffprobe", "-v", "error", "-select_streams", "v:0",
                  "-show_entries", "stream=codec_name", "-of", "default=nw=1:nk=1",
                  clip]).stdout.strip()
-    if codec == "ffv1":
+    if codec == "ffvhuff":
         return clip
     if not os.path.exists(ref):
         run(["ffmpeg", "-v", "error", "-y", "-i", clip, "-vframes", str(frames), "-an",
-             "-c:v", "ffv1", "-pix_fmt", "yuv420p10le", ref])
+             "-c:v", "ffvhuff", "-pix_fmt", "yuv420p10le", ref])
     return ref
 
 
@@ -205,11 +217,14 @@ def pct(sorted_vals, p):
 
 
 def ffvship(ref, enc, tag, d, frames, metric, out_name):
+    # --cache-index lets the second metric over the same pair reuse the FFMS2
+    # index instead of rebuilding it (~550ms per variant at 4K/120f)
     out_json = os.path.join(d, out_name)
     if not os.path.isfile(out_json):
         run(["docker", "run", "--rm", "--gpus", "all", "-v", f"{d}:/data", "--entrypoint", "FFVship", FFVSHIP_IMG,
              "-s", f"/data/{os.path.basename(ref)}", "-e", f"/data/{os.path.basename(enc)}",
-             "--end", str(frames), "-m", metric, "--json", f"/data/{out_name}"])
+             "--end", str(frames), "-m", metric, "--cache-index",
+             "--json", f"/data/{out_name}"])
     return json.load(open(out_json))
 
 
@@ -220,11 +235,16 @@ def vmaf_run(ref, enc, models, feat_json, tag, frames):
     Each is passed as its own --model with name= set to the key, so the pooled
     metrics come back under those names.
 
-    Scoring both models in one invocation decodes the reference once.  That
-    reference is a 4K FFV1 intermediate whose decode (~4s per 120 frames, fully
-    threaded and CPU-bound) dominates this phase outright -- VMAF's own GPU work
-    hides entirely behind it -- so a second invocation would near-double the
-    phase for nothing.
+    `ref` should be the extracted clip, not the lossless intermediate.  vmaf
+    consumes ffmpeg-decoded y4m, and make_ref's intermediate is built from that
+    exact same decode, so the pixels are identical by construction -- verified
+    bit-identical across vmaf/vmaf_neg/psnr_y/ssim/ciede2000/motion on a DV
+    title.  Skipping the intermediate avoids re-decoding it: 4144ms -> 3024ms
+    per variant at 4K/120f.  Unlike FFMS2, ffmpeg reads DV dual-layer HEVC
+    correctly, so the clip is safe here even though it is not safe for FFVship.
+
+    Scoring both models in one invocation decodes the reference once, so a
+    second invocation would near-double the phase for nothing.
 
     This requires a libvmaf containing the accumulator-memset stream fix
     (`cuda: zero motion/vif accumulators on the picture stream`).  Without it,
@@ -269,7 +289,7 @@ def vmaf_run(ref, enc, models, feat_json, tag, frames):
     return doc["pooled_metrics"]
 
 
-def score(ref, enc, tag, d, height, frames):
+def score(ref, clip, enc, tag, d, height, frames):
     out, t = {}, {}
     uhd = height > 1200
     model = "version=vmaf_4k_v0.6.1" if uhd else "version=vmaf_v0.6.1"
@@ -299,7 +319,7 @@ def score(ref, enc, tag, d, height, frames):
     # of the enhancement bonus the default model is handing out.  Both models
     # ride the same decode.
     t0 = time.monotonic()
-    fm = vmaf_run(ref, enc, {"vmaf": model, "vmaf_neg": model_neg},
+    fm = vmaf_run(clip, enc, {"vmaf": model, "vmaf_neg": model_neg},
                   os.path.join(d, f"metrics-cuda-{tag}.json"), tag, frames)
     out["vmaf"] = round(fm["vmaf"]["mean"], 2)
     out["vmaf_min"] = round(fm["vmaf"]["min"], 2)
@@ -450,7 +470,7 @@ def main():
                        "mb": round(os.path.getsize(out) / 1e6, 1),
                        "encode_seconds": round(encode_seconds, 2) if encode_seconds is not None else None}
                 row.update(analyzer_diagnostics(encode_log))
-                row.update(score(ref, out, var, d, height, args.frames))
+                row.update(score(ref, clip, out, var, d, height, args.frames))
                 # dav1d stays here regardless of what score() uses: the grain-off
                 # base layer needs libdav1d's -filmgrain 0, which NVDEC/av1_cuvid
                 # does not expose (it applies bitstream grain unconditionally).
