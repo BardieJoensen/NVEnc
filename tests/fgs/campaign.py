@@ -197,35 +197,60 @@ def make_ref(clip, ref, frames):
     return ref
 
 
-def score(ref, enc, tag, d, height, frames):
-    out = {}
-    model = "version=vmaf_4k_v0.6.1" if height > 1200 else "version=vmaf_v0.6.1"
-    ssimu_json = os.path.join(d, f"ssimu2-{tag}.json")
-    if not os.path.isfile(ssimu_json):
+def pct(sorted_vals, p):
+    """p-th percentile of an already-sorted list, clamped to valid indices."""
+    if not sorted_vals:
+        return None
+    return sorted_vals[min(len(sorted_vals) - 1, max(0, int(len(sorted_vals) * p / 100.0)))]
+
+
+def ffvship(ref, enc, tag, d, frames, metric, out_name):
+    out_json = os.path.join(d, out_name)
+    if not os.path.isfile(out_json):
         run(["docker", "run", "--rm", "--gpus", "all", "-v", f"{d}:/data", "--entrypoint", "FFVship", FFVSHIP_IMG,
              "-s", f"/data/{os.path.basename(ref)}", "-e", f"/data/{os.path.basename(enc)}",
-             "--end", str(frames), "-m", "SSIMULACRA2", "--json", f"/data/ssimu2-{tag}.json"])
-    s = sorted(x[0] for x in json.load(open(ssimu_json)))
-    out["ssimu2"], out["ssimu2_p5"] = round(statistics.mean(s), 2), round(s[int(len(s) * 0.05)], 2)
+             "--end", str(frames), "-m", metric, "--json", f"/data/{out_name}"])
+    return json.load(open(out_json))
 
-    # The local libvmaf build supplies CUDA versions of the model's ADM, VIF,
-    # and motion extractors as well as PSNR, SSIM, and CIEDE2000.  gpumask=0
-    # explicitly selects them.  Model prediction itself is a tiny CPU step.
-    # Writers run with stdio detached
-    # from the capture pipes (a crashed vmaf must not deadlock the runner on
-    # orphaned writers) and are cleaned up by captured PID -- never by pattern
-    # matching, which twice managed to SIGTERM its own shell because the
-    # writer command text appears inside the shell's own command line.
-    feat_json = os.path.join(d, f"metrics-cuda-{tag}.json")
+
+def vmaf_run(ref, enc, models, feat_json, tag, frames):
+    """Score every model in `models` in one pass over fifo-fed 10-bit y4m.
+
+    `models` maps output key -> model spec, e.g. {"vmaf": "version=vmaf_v0.6.1"}.
+    Each is passed as its own --model with name= set to the key, so the pooled
+    metrics come back under those names.
+
+    Scoring both models in one invocation decodes the reference once.  That
+    reference is a 4K FFV1 intermediate whose decode (~4s per 120 frames, fully
+    threaded and CPU-bound) dominates this phase outright -- VMAF's own GPU work
+    hides entirely behind it -- so a second invocation would near-double the
+    phase for nothing.
+
+    This requires a libvmaf containing the accumulator-memset stream fix
+    (`cuda: zero motion/vif accumulators on the picture stream`).  Without it,
+    two models plus the CUDA feature extractors race: measured 2026-07-27 over
+    30 runs, 25 distinct pooled means, 21 zeroed integer_motion frames and 2
+    null frames.  The null check below is the tripwire if VMAF_BIN ever points
+    at a build predating that fix.
+
+    Writers run with stdio detached from the capture pipes (a crashed vmaf must
+    not deadlock the runner on orphaned writers) and are cleaned up by captured
+    PID -- never by pattern matching, which twice managed to SIGTERM its own
+    shell because the writer command text appears inside the shell's own
+    command line.
+    """
+    d = os.path.dirname(feat_json)
     rp, dp = os.path.join(d, f"rp-{tag}"), os.path.join(d, f"dp-{tag}")
     q = shlex.quote
+    model_args = " ".join(f"--model {q(spec + ':name=' + key)}"
+                          for key, spec in models.items())
     fifo_cmd = (
         # plain ';' sequencing: an '&&' chain ending in 'cmd &' would background
         # the whole chain, racing vmaf ahead of mkfifo
         f"rm -f {q(rp)} {q(dp)}; mkfifo {q(rp)} {q(dp)} || exit 1; "
         f"ffmpeg -v error -i {q(ref)} -frames:v {frames} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y {q(rp)} >/dev/null 2>&1 & w1=$!; "
         f"ffmpeg -v error -c:v libdav1d -i {q(enc)} -frames:v {frames} -pix_fmt yuv420p10le -strict -1 -f yuv4mpegpipe -y {q(dp)} >/dev/null 2>&1 & w2=$!; "
-        f"{q(VMAF)} --reference {q(rp)} --distorted {q(dp)} --gpumask 0 --model {q(model)} "
+        f"{q(VMAF)} --reference {q(rp)} --distorted {q(dp)} --gpumask 0 {model_args} "
         f"--feature psnr_cuda --feature ssim_cuda --feature ciede_cuda --json --output {q(feat_json)}; st=$?; "
         f"kill $w1 $w2 2>/dev/null; wait 2>/dev/null; rm -f {q(rp)} {q(dp)}; exit $st")
     if not os.path.isfile(feat_json):
@@ -233,12 +258,59 @@ def score(ref, enc, tag, d, height, frames):
             shell(fifo_cmd, timeout=900)
         except Exception:
             shell(fifo_cmd, timeout=900)  # one retry; transient CUDA-init failures observed
-    fm = json.load(open(feat_json))["pooled_metrics"]
+    doc = json.load(open(feat_json))
+    for key in models:
+        nulls = sum(1 for f in doc["frames"] if f["metrics"].get(key) is None)
+        if nulls:
+            raise RuntimeError(
+                f"{os.path.basename(feat_json)}: {nulls} frame(s) scored null for "
+                f"'{key}' -- pooled means are unusable.  VMAF_BIN is probably a build "
+                "without the accumulator-memset stream fix; delete the json and rerun")
+    return doc["pooled_metrics"]
+
+
+def score(ref, enc, tag, d, height, frames):
+    out, t = {}, {}
+    uhd = height > 1200
+    model = "version=vmaf_4k_v0.6.1" if uhd else "version=vmaf_v0.6.1"
+    model_neg = "version=vmaf_4k_v0.6.1neg" if uhd else "version=vmaf_v0.6.1neg"
+
+    t0 = time.monotonic()
+    s = sorted(x[0] for x in ffvship(ref, enc, tag, d, frames, "SSIMULACRA2", f"ssimu2-{tag}.json"))
+    out["ssimu2"], out["ssimu2_p5"] = round(statistics.mean(s), 2), round(pct(s, 5), 2)
+    t["t_ssimu2"] = round(time.monotonic() - t0, 1)
+
+    # Butteraugli rows are [2norm, 3norm, maxnorm]; lower is better.  The max
+    # norm is the localized-artifact signal that mean-pooled SSIMU2 and VMAF
+    # average away, so the tail (p95) is the number worth reading.
+    t0 = time.monotonic()
+    b = ffvship(ref, enc, tag, d, frames, "Butteraugli", f"butter-{tag}.json")
+    out["butter_2norm"] = round(statistics.mean(x[0] for x in b), 3)
+    out["butter_max_p95"] = round(pct(sorted(x[2] for x in b), 95), 2)
+    t["t_butteraugli"] = round(time.monotonic() - t0, 1)
+
+    # The local libvmaf build supplies CUDA versions of the model's ADM, VIF,
+    # and motion extractors as well as PSNR, SSIM, and CIEDE2000.  gpumask=0
+    # explicitly selects them.  Model prediction itself is a tiny CPU step.
+    #
+    # NEG penalises enhancement (sharpening, contrast) that is not in the
+    # source.  Grain synthesis adds structure that was never there, so for FGS
+    # variants the neg score is the honest one and vmaf-minus-neg is the size
+    # of the enhancement bonus the default model is handing out.  Both models
+    # ride the same decode.
+    t0 = time.monotonic()
+    fm = vmaf_run(ref, enc, {"vmaf": model, "vmaf_neg": model_neg},
+                  os.path.join(d, f"metrics-cuda-{tag}.json"), tag, frames)
     out["vmaf"] = round(fm["vmaf"]["mean"], 2)
     out["vmaf_min"] = round(fm["vmaf"]["min"], 2)
+    out["vmaf_neg"] = round(fm["vmaf_neg"]["mean"], 2)
+    out["vmaf_neg_gap"] = round(out["vmaf"] - out["vmaf_neg"], 2)
     out["psnr_y"] = round(fm["psnr_y"]["mean"], 2)
     out["ssim"] = round(fm["float_ssim"]["mean"], 4)
     out["ciede2000"] = round(fm["ciede2000"]["mean"], 2)
+    t["t_vmaf"] = round(time.monotonic() - t0, 1)
+
+    out.update(t)
     return out
 
 
@@ -267,10 +339,13 @@ def hf_sigma(path, width, height, frames=(6, 10, 14), decoder=None, filmgrain=No
 
 def write_results(work, args, wanted, variants, rows):
     out_csv = os.path.join(work, "results.csv")
-    fields = ["title", "variant", "mb", "vmaf", "vmaf_min", "ssimu2", "ssimu2_p5",
+    fields = ["title", "variant", "mb", "vmaf", "vmaf_min", "vmaf_neg", "vmaf_neg_gap",
+              "ssimu2", "ssimu2_p5", "butter_2norm", "butter_max_p95",
               "psnr_y", "ssim", "ciede2000", "hf_sigma", "base_hf_sigma",
               "encode_seconds", "grain_entries", "grain_coverage_seconds",
-              "detail_risk_mean", "retain_mean", "retain_min", "retain_max", "note"]
+              "detail_risk_mean", "retain_mean", "retain_min", "retain_max",
+              # phase timings, to show where a campaign run actually spends time
+              "t_ssimu2", "t_butteraugli", "t_vmaf", "t_hf_sigma", "note"]
     with open(out_csv, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
         writer.writeheader()
@@ -376,8 +451,13 @@ def main():
                        "encode_seconds": round(encode_seconds, 2) if encode_seconds is not None else None}
                 row.update(analyzer_diagnostics(encode_log))
                 row.update(score(ref, out, var, d, height, args.frames))
+                # dav1d stays here regardless of what score() uses: the grain-off
+                # base layer needs libdav1d's -filmgrain 0, which NVDEC/av1_cuvid
+                # does not expose (it applies bitstream grain unconditionally).
+                t0 = time.monotonic()
                 row["hf_sigma"] = hf_sigma(out, width, height, decoder="libdav1d", filmgrain=1)
                 row["base_hf_sigma"] = hf_sigma(out, width, height, decoder="libdav1d", filmgrain=0)
+                row["t_hf_sigma"] = round(time.monotonic() - t0, 1)
                 if os.path.isfile(tbl):
                     entries = filmgrn.load(tbl)
                     row["grain_entries"] = len(entries)
