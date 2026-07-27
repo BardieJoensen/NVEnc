@@ -51,6 +51,12 @@ TITLES = [
     ("deerhunter", "/media/merged-storage/media/movies/The Deer Hunter (1978) [tmdbid-11778]/The Deer Hunter (1978) [tmdbid-11778] - [Hybrid][Remux-2160p][DTS-HD MA 5.1][DV HDR10][HEVC]-FraMeSToR.mkv", "00:45:00", "heavy 35mm grain, 4K PQ remux"),
     ("interstellar", "/media/merged-storage/media/movies/Interstellar (2014) [tmdbid-157336]/Interstellar (2014) [tmdbid-157336] - [Hybrid][Remux-2160p][DTS-HD MA 5.1][DV HDR10][HEVC]-FraMeSToR.mkv", "00:50:00", "mixed IMAX/35mm grain, 4K PQ remux"),
     ("dune",    "/media/merged-storage/media/movies/Dune (2021) [tmdbid-438631]/Dune (2021) [tmdbid-438631] - [Hybrid][Remux-2160p][TrueHD Atmos 7.1][DV HDR10Plus][HEVC]-WiLDCAT.mkv", "00:20:00", "fine digital grain, 4K PQ (library AV1)"),
+    # Points at the download, not the library copy: the library file is our own
+    # AV1 re-encode and measures HF sigma 0.63 against the remux's 1.22, i.e.
+    # it has already lost half the grain energy.  Scoring against it would make
+    # the reference itself lossy and flatter every variant.  Fine-grain modern
+    # digital -- less than taxi's 3.13, more than animation.
+    ("hailmary", "/tmp/downloads/movies/Project.Hail.Mary.2026.Hybrid.2160p.UHD.Blu-ray.Remux.DV.HDR10P.HEVC.TrueHD.Atmos.7.1-CiNEPHiLES.mkv", "01:00:00", "fine digital grain, 4K DV PQ remux (HF 1.22)"),
     # normal 1080p content classes
     ("1883",    "/media/merged-storage/media/tv-shows/1883 (2021)/Season 01/1883 (2021) - S01E01 - 1883 [AMZN][WEBDL-1080p][EAC3 5.1][h264]-NTb.mkv", "00:15:00", "1080p prestige TV, film-look WEB-DL (HEVC)"),
     ("adventure", "/media/merged-storage/media/tv-shows/Adventure Time/Season 8/Adventure Time - S08E02 - Don't Look WEBRip-1080p.mkv", "00:03:00", "1080p 2D animation (library AV1)"),
@@ -58,6 +64,68 @@ TITLES = [
     ("minecraft", "/media/merged-storage/media/movies/A Minecraft Movie (2025)/A Minecraft Movie (2025) [tmdbid-950387] - [Remux-1080p Proper][TrueHD Atmos 7.1][AVC]-TRiToN.mkv", "00:20:00", "1080p CGI (HEVC library file)"),
     ("28days",  "/media/merged-storage/media/movies/28 Days Later (2002) [tmdbid-170]/28 Days Later 2002 REPACK BluRay 1080p DTS-HD MA 5 1 AVC HYBRID REMUX-FraMeSToR.mkv", "00:20:00", "1080p gritty DV-era source (library AV1)"),
 ]
+
+
+# Release names state the source codec; the container tells the truth.  When
+# they disagree the file has been re-encoded since it was named, i.e. it is one
+# of our own library transcodes rather than the original.  Scoring against one
+# stacks two lossy generations and does not just shift scores, it distorts the
+# ranking: on Project Hail Mary, scoring against the library AV1 instead of the
+# remux inflated SSIMULACRA2 by +18.7 for the fgs variant but +30.7 for plain,
+# widening the gap between them by 12 points.
+_CODEC_ALIASES = {
+    "h264": "h264", "x264": "h264", "avc": "h264",
+    "h265": "hevc", "x265": "hevc", "hevc": "hevc",
+    "av1": "av1", "vp9": "vp9",
+    "mpeg2": "mpeg2video", "vc1": "vc1", "xvid": "mpeg4", "divx": "mpeg4",
+}
+
+
+def verify_source(path):
+    """Raise if `path` looks like a re-encode rather than an original source.
+
+    Returns a note string when the check passes but could not be verified.
+    """
+    codec = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+         "stream=codec_name", "-of", "default=nw=1:nk=1", path],
+        capture_output=True, text=True).stdout.strip()
+    if not codec:
+        raise RuntimeError(f"cannot probe video codec of {path}")
+
+    # Drop the dot only where it sits inside a codec name ("H.264" -> "h264");
+    # stripping every dot would merge dot-separated release names, so the
+    # "...Blu-ray.Remux.DV.HDR10P.HEVC..." form would stop tokenising at all.
+    name = os.path.basename(path).lower()
+    tokens = set(re.split(r"[^a-z0-9]+", re.sub(r"(?<=[a-z])\.(?=\d)", "", name)))
+    claimed = {v for k, v in _CODEC_ALIASES.items() if k in tokens}
+
+    # UHD/BD remuxes are HEVC, AVC or VC-1 -- never AV1.  An AV1 file calling
+    # itself a remux is definitionally a re-encode, whatever else the name says.
+    if codec == "av1" and "remux" in tokens:
+        raise RuntimeError(
+            f"{os.path.basename(path)}: container is AV1 but the name claims a remux -- "
+            "this is a re-encode, not an original; score against the download instead")
+
+    # AV1 is this pipeline's *output* format, so an AV1 file sitting in the
+    # library is our own transcode even when the name carries no codec to
+    # contradict.  AV1 arriving as a download (some WEB-DLs now ship AV1) is
+    # legitimate, so only the library location is disqualifying.
+    in_library = path.startswith("/media/") and "/downloads/" not in path
+    if codec == "av1" and in_library:
+        raise RuntimeError(
+            f"{os.path.basename(path)}: AV1 inside the library is our own transcode "
+            "(AV1 is what this pipeline emits) -- score against the download instead")
+
+    if not claimed:
+        return f"source codec {codec} unverifiable (no codec in filename)"
+    if codec not in claimed:
+        raise RuntimeError(
+            f"{os.path.basename(path)}: filename claims {'/'.join(sorted(claimed))} but the "
+            f"container is {codec} -- this is a re-encode, not an original.  Point the title at "
+            "the download (/tmp/downloads/movies, or the long-term-seeding volumes) so the "
+            "reference is not itself lossy.")
+    return ""
 
 
 def reader_args(src):
@@ -470,6 +538,10 @@ def main():
         title_ok = True
         print(f"== {name}: {note}")
         try:
+            # refuse before spending an extract/encode on a lossy reference
+            unverified = verify_source(src)
+            if unverified:
+                print(f"   source: WARNING - {unverified}")
             extract_clip(src, start, clip, args.seconds, args.frames)
             ref = make_ref(clip, ref, args.frames)
             width, height = probe_res(clip)
@@ -480,7 +552,8 @@ def main():
             write_results(work, args, recorded_titles, recorded_variants, rows)
             continue
         rows.append({"title": name, "variant": "source", "mb": round(os.path.getsize(clip) / 1e6, 1),
-                     "hf_sigma": src_hf, "note": note})
+                     "hf_sigma": src_hf,
+                     "note": f"{note}{'; ' + unverified if unverified else ''}"})
         print(f"   source: {rows[-1]['mb']}MB HF={src_hf}")
         write_results(work, args, recorded_titles, recorded_variants, rows)
         for var in variants:
