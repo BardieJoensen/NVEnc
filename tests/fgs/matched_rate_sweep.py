@@ -92,7 +92,7 @@ def grain_structure(path, w, h, frames=(6, 10, 14), decoder=None):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--clip", required=True, help="source clip")
-    ap.add_argument("--ref", required=True, help="FFV1 reference for scoring")
+    ap.add_argument("--ref", required=True, help="lossless reference for scoring (ffvhuff preferred; FFMS2 decodes ffv1 slowly)")
     ap.add_argument("--svt", default="", help="same-size SVT-AV1 file to include")
     ap.add_argument("--rate", type=int, default=31700, help="VBR kbps for every NVENC variant")
     ap.add_argument("--denoiser", default="fft3d")
@@ -126,7 +126,7 @@ def main():
     for tag, enc in variants:
         row = {"mb": round(os.path.getsize(enc) / 1e6, 1)}
         print(f"[score] {tag} ({row['mb']}MB)", flush=True)
-        row.update(score(args.ref, enc, f"mrs-{tag}", d, h, args.frames))
+        row.update(score(args.ref, enc, f"mrs-{tag}", d, h, args.frames, clip=args.clip))
         row["hf"] = hf_sigma(enc, w, h, decoder="libdav1d")
         row.update(grain_structure(enc, w, h, decoder="libdav1d"))
         results[tag] = row

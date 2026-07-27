@@ -292,8 +292,15 @@ def vmaf_run(ref, enc, models, feat_json, tag, frames):
     return doc["pooled_metrics"]
 
 
-def score(ref, clip, enc, tag, d, height, frames):
+def score(ref, enc, tag, d, height, frames, clip=None):
     """Score one encode.  The two tracks below run concurrently.
+
+    `clip` is optional and only an optimisation: when given, vmaf reads the
+    source clip instead of `ref`, skipping a decode of the lossless
+    intermediate (4144ms -> 3024ms at 4K/120f).  The pixels are identical
+    either way because make_ref builds the intermediate from that same ffmpeg
+    decode.  Omitting it is always correct, just slower -- external callers
+    (matched_rate_sweep.py) that only have a reference keep working unchanged.
 
     FFVship saturates the GPU (Butteraugli measured at 85% mean utilisation)
     while the vmaf track spends most of its time on CPU-bound decode of the
@@ -313,6 +320,7 @@ def score(ref, clip, enc, tag, d, height, frames):
     uhd = height > 1200
     model = "version=vmaf_4k_v0.6.1" if uhd else "version=vmaf_v0.6.1"
     model_neg = "version=vmaf_4k_v0.6.1neg" if uhd else "version=vmaf_v0.6.1neg"
+    vmaf_ref = clip or ref
 
     def ffvship_track():
         r = {}
@@ -344,7 +352,7 @@ def score(ref, clip, enc, tag, d, height, frames):
         # models ride the same decode.
         r = {}
         t0 = time.monotonic()
-        fm = vmaf_run(clip, enc, {"vmaf": model, "vmaf_neg": model_neg},
+        fm = vmaf_run(vmaf_ref, enc, {"vmaf": model, "vmaf_neg": model_neg},
                       os.path.join(d, f"metrics-cuda-{tag}.json"), tag, frames)
         r["vmaf"] = round(fm["vmaf"]["mean"], 2)
         r["vmaf_min"] = round(fm["vmaf"]["min"], 2)
@@ -503,7 +511,7 @@ def main():
                        "mb": round(os.path.getsize(out) / 1e6, 1),
                        "encode_seconds": round(encode_seconds, 2) if encode_seconds is not None else None}
                 row.update(analyzer_diagnostics(encode_log))
-                row.update(score(ref, clip, out, var, d, height, args.frames))
+                row.update(score(ref, out, var, d, height, args.frames, clip=clip))
                 # dav1d stays here regardless of what score() uses: the grain-off
                 # base layer needs libdav1d's -filmgrain 0, which NVDEC/av1_cuvid
                 # does not expose (it applies bitstream grain unconditionally).
