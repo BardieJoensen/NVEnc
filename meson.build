@@ -1098,6 +1098,8 @@ cuda_sources = files(
   'NVEncCore/NVEncFilterFilmGrain.cu',
   'NVEncCore/NVEncFilterSubburn.cu',
   'NVEncCore/NVEncFilterTransform.cu',
+  'NVEncCore/NVEncFilterLensCorrection.cu',
+  'NVEncCore/NVEncFilterV360.cu',
   'NVEncCore/NVEncFilterSoftLight.cu',
   'NVEncCore/NVEncFilterTweak.cu',
   'NVEncCore/NVEncFilterUnsharp.cu',
