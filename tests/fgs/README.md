@@ -37,7 +37,7 @@ synthesis is worth the bits on real material.
 ## Matched-bitrate routing comparison
 
 ```sh
-python3 tests/fgs/matched_rate_sweep.py --clip <clip.mkv> --ref <ffv1-ref.mkv> \
+python3 tests/fgs/matched_rate_sweep.py --clip <clip.mkv> --ref <ffvhuff-ref.mkv> \
     [--svt <same-size-svt.mkv>] [--rate 31700]
 ```
 

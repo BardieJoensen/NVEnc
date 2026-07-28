@@ -133,9 +133,9 @@ def reader_args(src):
         ["ffprobe", "-v", "error", "-select_streams", "v:0",
          "-show_entries", "stream=codec_name", "-of", "default=nw=1:nk=1", src],
         text=True).strip()
-    # CUVID cannot open the lossless FFV1 clips used when packet-copy seeking
-    # is unsafe.  Decode those with libavcodec; encoding and FGS stay on GPU.
-    return ["--avsw"] if codec == "ffv1" else ["--avhw"]
+    # CUVID cannot open the lossless clips used when packet-copy seeking is
+    # unsafe. Decode those with libavcodec; encoding and FGS stay on GPU.
+    return ["--avsw"] if codec in {"ffv1", "ffvhuff"} else ["--avhw"]
 
 
 # variant name -> command builder(src_clip, out_path, table_path) -> list[list[str]] of commands to run in order
@@ -250,7 +250,7 @@ def extract_clip(src, start, dst, seconds, frames):
         os.unlink(dst)
     run(["ffmpeg", "-v", "error", "-y", "-ss", start, "-i", src, "-t", str(seconds),
          "-frames:v", str(frames),
-         "-map", "0:v:0", "-an", "-c:v", "ffv1", "-level", "3",
+         "-map", "0:v:0", "-an", "-c:v", "ffvhuff",
          "-pix_fmt", "yuv420p10le", dst])
     if not valid_video(dst):
         raise RuntimeError(f"could not extract a valid clip from {src}")
