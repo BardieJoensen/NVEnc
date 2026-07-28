@@ -120,6 +120,31 @@ static bool is_valid_rtgmc_rep_pad(const int value) {
     return rgy_rtgmc_repair_pad_level_is_valid(value);
 }
 
+static int parse_degrain_search_early_sad(int *dst, const tstring& value, const bool allowAuto) {
+    const auto normalized = tolowercase(trim(value, _T("\"")));
+    if (normalized == _T("off")) {
+        *dst = FILTER_DEFAULT_DEGRAIN_SEARCH_EARLY_SAD;
+        return 0;
+    }
+    if (allowAuto && normalized == _T("auto")) {
+        *dst = FILTER_DEFAULT_KFM_SEARCH_EARLY_SAD_OVERRIDE;
+        return 0;
+    }
+    try {
+        size_t idx = 0;
+        const auto parsed = std::stoll(normalized, &idx);
+        if (idx != normalized.length()
+            || parsed < FILTER_MIN_DEGRAIN_SEARCH_EARLY_SAD
+            || parsed > FILTER_MAX_DEGRAIN_SEARCH_EARLY_SAD) {
+            return 1;
+        }
+        *dst = (int)parsed;
+    } catch (...) {
+        return 1;
+    }
+    return 0;
+}
+
 #if FOR_AUO
 #pragma warning (disable: 4100)
 #else
@@ -2775,7 +2800,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             "rep1-thin", "rep1-pad",
             "rep2-thin", "rep2-pad", "rep_chroma",
             "blksize", "search", "thsad", "thsad1", "thsad2", "thscd1", "thscd2", "pel", "levels", "overlap", "delta",
-            "subpelinterp", "searchparam", "pelsearch",
+            "subpelinterp", "searchparam", "pelsearch", "search_early_sad",
             "truemotion", "lambda", "lsad", "pnew", "plevel", "globalmotion", "dct", "useflag",
             "delta_analyze", "delta_tr1", "delta_tr2"
         };
@@ -2816,6 +2841,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             bool pel = false;
             bool searchParam = false;
             bool pelSearch = false;
+            bool searchEarlySad = false;
             bool lambda = false;
             bool noiseProcess = false;
             bool denoiser = false;
@@ -2926,6 +2952,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             const int bs2 = 32;
             const int blocksize = (p <= (int)VppRtgmcPreset::Fast) ? bs : bs2;
             const int overlap = (p <= (int)VppRtgmcPreset::Faster) ? blocksize / 2 : blocksize / 4;
+            const int searchEarlySad = get_vpp_rtgmc_search_early_sad(preset);
             const auto defaultLambda = [](const VppDegrain& prm) {
                 return ((prm.trueMotion ? 1000 : 100) * prm.blksize * prm.blksize) / (8 * 8);
             };
@@ -3028,6 +3055,9 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                 }
                 if (!override.pelSearch) {
                     stagePrm->pelSearch = pelsearch[p];
+                }
+                if (!override.searchEarlySad) {
+                    stagePrm->searchEarlySad = searchEarlySad;
                 }
                 if (!override.lambda) {
                     stagePrm->lambda = defaultLambda(*stagePrm);
@@ -3645,6 +3675,19 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                     presetOverride.pelSearch = true;
                     continue;
                 }
+                if (param_arg == _T("search_early_sad")) {
+                    int value = 0;
+                    if (parse_degrain_search_early_sad(&value, param_val, false)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val,
+                            _T("search_early_sad should be off or -1 - 65535."));
+                        return 1;
+                    }
+                    parsedRtgmc.analyze.searchEarlySad = value;
+                    parsedRtgmc.tr1.searchEarlySad = value;
+                    parsedRtgmc.tr2.searchEarlySad = value;
+                    presetOverride.searchEarlySad = true;
+                    continue;
+                }
                 if (param_arg == _T("subpelinterp")) {
                     if (check_fixed_int(param_arg, param_val, 2)) return 1;
                     continue;
@@ -3816,7 +3859,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
 
         const auto paramList = std::vector<std::string>{
             "enable", "mode", "preset", "timing", "past_cycles",
-            "thswitch", "ucf", "nr", "is120", "debug", "debug_stage", "timecode"
+            "thswitch", "ucf", "nr", "is120", "rff", "debug", "debug_stage", "timecode", "search_early_sad"
         };
 
         for (const auto& param : split(strInput[i], _T(","))) {
@@ -3850,6 +3893,14 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                         return 1;
                     }
                     vpp->kfm.preset = (VppRtgmcPreset)value;
+                    continue;
+                }
+                if (param_arg == _T("search_early_sad")) {
+                    if (parse_degrain_search_early_sad(&vpp->kfm.searchEarlySadOverride, param_val, true)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val,
+                            _T("search_early_sad should be auto, off, or -1 - 65535."));
+                        return 1;
+                    }
                     continue;
                 }
                 if (param_arg == _T("timing")) {
@@ -3907,6 +3958,16 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                     bool b = false;
                     if (!cmd_string_to_bool(&b, param_val)) {
                         vpp->kfm.is120 = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("rff")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->kfm.rff = b;
                     } else {
                         print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                         return 1;
@@ -5833,7 +5894,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
 
         const auto paramList = std::vector<std::string>{
             "enable", "model", "modelfile", "provider", "device", "interop", "precision",
-            "colormatrix", "colormatrix_out", "colorrange", "colorspace", "noise", "out_res", "resize"
+            "colormatrix", "colormatrix_out", "colorrange", "colorspace", "noise", "frames", "mask", "out_res", "resize"
         };
 
         for (const auto& param : split(strInput[i], _T(","))) {
@@ -5946,6 +6007,23 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                         print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                         return 1;
                     }
+                    continue;
+                }
+                if (param_arg == _T("frames")) {
+                    try {
+                        vpp->onnx.frames = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    if (vpp->onnx.frames < 1 || (vpp->onnx.frames % 2) == 0) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("framesは正の奇数で指定してください"));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("mask")) {
+                    vpp->onnx.maskFile = param_val;
                     continue;
                 }
                 if (param_arg == _T("out_res")) {
@@ -6582,7 +6660,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
         i++;
         const auto paramList = std::vector<std::string>{
             "enable", "preset", "mode", "stage", "tr", "blksize", "search", "thsad", "thsadc", "thscd1", "thscd2", "pel", "levels", "overlap", "delta", "tr0", "rep0", "search_refine",
-            "subpelinterp", "searchparam", "pelsearch",
+            "subpelinterp", "searchparam", "pelsearch", "search_early_sad",
             "truemotion", "lambda", "lsad", "pnew", "plevel", "globalmotion", "dct", "useflag",
             "mv_spatial_refine", "chroma", "binomial", "tv_range"
         };
@@ -6768,6 +6846,14 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                 }
                 if (param_arg == _T("pelsearch")) {
                     if (parse_int(&parsedDegrain.pelSearch, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("search_early_sad")) {
+                    if (parse_degrain_search_early_sad(&parsedDegrain.searchEarlySad, param_val, false)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val,
+                            _T("search_early_sad should be off or -1 - 65535."));
                         return 1;
                     }
                     continue;
@@ -7174,7 +7260,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
         i++;
         const auto paramList = std::vector<std::string>{
             "shader", "res", "width", "height", "csp", "chromaloc", "colorsystem", "transfer", "resampler",
-            "radius", "clamp", "taper", "blur", "antiring", "linear", "sigmoid", "sigmoid_center", "sigmoid_slope"
+            "radius", "clamp", "taper", "blur", "antiring", "linear", "sigmoid", "sigmoid_center", "sigmoid_slope", "custom"
         };
         for (const auto &param : split(strInput[i], _T(","))) {
             auto pos = param.find_first_of(_T("="));
@@ -7361,7 +7447,16 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                     }
                     continue;
                 }
-                shader.params.push_back(std::make_pair(param_arg, param_val));
+                if (param_arg == _T("custom")) {
+                    auto eqpos = param_val.find_first_of(_T("="));
+                    if (eqpos == tstring::npos) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" custom="), param_val);
+                        return 1;
+                    }
+                    shader.custom_params.push_back(std::make_pair(param_val.substr(0, eqpos), param_val.substr(eqpos + 1)));
+                    continue;
+                }
+                shader.params.push_back(std::make_pair(param.substr(0, pos), param_val));
                 continue;
             } else {
                 print_cmd_error_unknown_opt_param(option_name, param, paramList);
@@ -9267,6 +9362,64 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
         } else {
             print_cmd_error_invalid_value(option_name, strInput[i], list_vpp_mirroring);
             return 1;
+        }
+        return 0;
+    }
+    if (IS_OPTION("vpp-v360")) {
+        vpp->v360.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) return 0;
+        i++;
+        const auto paramList = std::vector<std::string>{ "in", "out", "yaw", "pitch", "roll", "in_hfov", "h_fov", "w", "h" };
+        for (const auto &param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos == std::string::npos) { print_cmd_error_unknown_opt_param(option_name, param, paramList); return 1; }
+            auto param_arg = tolowercase(param.substr(0, pos));
+            auto param_val = param.substr(pos + 1);
+            if (param_arg == _T("enable")) {
+                bool b = false; if (!cmd_string_to_bool(&b, param_val)) vpp->v360.enable = b;
+                else { print_cmd_error_invalid_value(tstring(option_name) + _T(" enable="), param_val); return 1; }
+            } else if (param_arg == _T("in") || param_arg == _T("out")) {
+                int value = 0;
+                if (!get_list_value(list_vpp_v360_proj, param_val.c_str(), &value)) { print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_v360_proj); return 1; }
+                if (param_arg == _T("in")) vpp->v360.in_proj = value; else vpp->v360.out_proj = value;
+            } else if (param_arg == _T("yaw") || param_arg == _T("pitch") || param_arg == _T("roll") || param_arg == _T("in_hfov") || param_arg == _T("h_fov")) {
+                try {
+                    const float value = std::stof(param_val);
+                    if (param_arg == _T("yaw")) vpp->v360.yaw = value;
+                    else if (param_arg == _T("pitch")) vpp->v360.pitch = value;
+                    else if (param_arg == _T("roll")) vpp->v360.roll = value;
+                    else if (param_arg == _T("in_hfov")) vpp->v360.in_hfov = value;
+                    else vpp->v360.out_hfov = value;
+                } catch (...) { print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val); return 1; }
+            } else if (param_arg == _T("w") || param_arg == _T("h")) {
+                try { const int value = std::stoi(param_val); if (param_arg == _T("w")) vpp->v360.w = value; else vpp->v360.h = value; }
+                catch (...) { print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val); return 1; }
+            } else { print_cmd_error_unknown_opt_param(option_name, param_arg, paramList); return 1; }
+        }
+        return 0;
+    }
+    if (IS_OPTION("vpp-lenscorrection")) {
+        vpp->lenscorrection.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) return 0;
+        i++;
+        const auto paramList = std::vector<std::string>{ "k1", "k2", "cx", "cy" };
+        for (const auto &param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos == std::string::npos) { print_cmd_error_unknown_opt_param(option_name, param, paramList); return 1; }
+            auto param_arg = tolowercase(param.substr(0, pos));
+            auto param_val = param.substr(pos + 1);
+            if (param_arg == _T("enable")) {
+                bool b = false; if (!cmd_string_to_bool(&b, param_val)) vpp->lenscorrection.enable = b;
+                else { print_cmd_error_invalid_value(tstring(option_name) + _T(" enable="), param_val); return 1; }
+            } else if (param_arg == _T("k1") || param_arg == _T("k2") || param_arg == _T("cx") || param_arg == _T("cy")) {
+                try {
+                    const float value = std::stof(param_val);
+                    if (param_arg == _T("k1")) vpp->lenscorrection.k1 = value;
+                    else if (param_arg == _T("k2")) vpp->lenscorrection.k2 = value;
+                    else if (param_arg == _T("cx")) vpp->lenscorrection.cx = value;
+                    else vpp->lenscorrection.cy = value;
+                } catch (...) { print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val); return 1; }
+            } else { print_cmd_error_unknown_opt_param(option_name, param_arg, paramList); return 1; }
         }
         return 0;
     }
@@ -13295,6 +13448,14 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
             ADD_BOOL(_T("globalmotion"), rtgmc.analyze.globalMotion);
             ADD_NUM(_T("searchparam"), rtgmc.analyze.searchParam);
             ADD_NUM(_T("pelsearch"), rtgmc.analyze.pelSearch);
+            if (param->rtgmc.analyze.searchEarlySad != defaultPrm->rtgmc.analyze.searchEarlySad) {
+                tmp << _T(",search_early_sad=");
+                if (param->rtgmc.analyze.searchEarlySad < 0) {
+                    tmp << _T("off");
+                } else {
+                    tmp << param->rtgmc.analyze.searchEarlySad;
+                }
+            }
             ADD_NUM(_T("delta_analyze"), rtgmc.analyze.delta);
             ADD_NUM(_T("delta_tr1"), rtgmc.tr1.delta);
             ADD_NUM(_T("delta_tr2"), rtgmc.tr2.delta);
@@ -13334,9 +13495,20 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
             ADD_BOOL(_T("ucf"), kfm.ucf);
             ADD_BOOL(_T("nr"), kfm.nr);
             ADD_BOOL(_T("is120"), kfm.is120);
+            ADD_BOOL(_T("rff"), kfm.rff);
             ADD_BOOL(_T("debug"), kfm.debug);
             ADD_LST(_T("debug_stage"), kfm.debugStage, list_vpp_kfm_debug_stage);
             ADD_PATH(_T("timecode"), kfm.timecode.c_str());
+            if (param->kfm.searchEarlySadOverride != defaultPrm->kfm.searchEarlySadOverride) {
+                tmp << _T(",search_early_sad=");
+                if (param->kfm.searchEarlySadOverride == FILTER_DEFAULT_KFM_SEARCH_EARLY_SAD_OVERRIDE) {
+                    tmp << _T("auto");
+                } else if (param->kfm.searchEarlySadOverride < 0) {
+                    tmp << _T("off");
+                } else {
+                    tmp << param->kfm.searchEarlySadOverride;
+                }
+            }
         }
         if (!tmp.str().empty()) {
             cmd << _T(" --vpp-kfm ") << tmp.str().substr(1);
@@ -13738,6 +13910,12 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
             tmp << _T(",colorrange=") << get_cx_desc(list_colorrange, param->onnx.colorrange);
             tmp << _T(",colorspace=") << param->onnx.colorspace;
             tmp << _T(",noise=") << param->onnx.noise;
+            if (param->onnx.frames > 1) {
+                tmp << _T(",frames=") << param->onnx.frames;
+            }
+            if (!param->onnx.maskFile.empty()) {
+                tmp << _T(",mask=") << param->onnx.maskFile;
+            }
             if (param->onnx.postResizeW != 0 && param->onnx.postResizeH != 0) {
                 tmp << _T(",out_res=") << param->onnx.postResizeW << _T("x") << param->onnx.postResizeH;
                 tmp << _T(",resize=") << get_cx_desc(list_vpp_resize, param->onnx.postResizeAlgo);
@@ -13886,6 +14064,14 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
             if (degrain.searchRefine != defaultDegrain.searchRefine) tmp << _T(",search_refine=") << degrain.searchRefine;
             if (degrain.searchParam != defaultDegrain.searchParam) tmp << _T(",searchparam=") << degrain.searchParam;
             if (degrain.pelSearch != defaultDegrain.pelSearch) tmp << _T(",pelsearch=") << degrain.pelSearch;
+            if (degrain.searchEarlySad != defaultDegrain.searchEarlySad) {
+                tmp << _T(",search_early_sad=");
+                if (degrain.searchEarlySad < 0) {
+                    tmp << _T("off");
+                } else {
+                    tmp << degrain.searchEarlySad;
+                }
+            }
             if (degrain.trueMotion != defaultDegrain.trueMotion) tmp << _T(",truemotion=") << (degrain.trueMotion ? _T("true") : _T("false"));
             if (degrain.lambda != defaultDegrain.lambda) tmp << _T(",lambda=") << degrain.lambda;
             if (degrain.lsad != defaultDegrain.lsad) tmp << _T(",lsad=") << degrain.lsad;
@@ -14055,6 +14241,9 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
                 if (param->libplacebo_shader[i].sigmoid_slope != shaderDefault.sigmoid_slope
                     && param->libplacebo_shader[i].sigmoid_slope) {
                     tmp << _T(",sigmoid_slope=") << std::setprecision(3) << *param->libplacebo_shader[i].sigmoid_slope;
+                }
+                for (const auto& custom : param->libplacebo_shader[i].custom_params) {
+                    tmp << _T(",custom=") << custom.first << _T("=") << custom.second;
                 }
             }
             if (!tmp.str().empty()) {
@@ -15920,6 +16109,7 @@ tstring gen_cmd_help_vpp() {
         _T("      plevel=<int>           predictor level (default=0)\n")
         _T("      globalmotion=<bool>    enable global motion tuning (default=true)\n")
         _T("      searchparam/pelsearch=<int> preset-expanded motion search params (1 - 2)\n")
+        _T("      search_early_sad=<int|off> level0 early SAD threshold in 8x8 block / 8-bit units (preset default)\n")
         _T("      sharpness=<float>      retouch sharpness (default=%.2f, 0.0 - 1.0)\n")
         _T("      limit=<float>          legacy retouch limit (default=%.2f, 0.0 - 1.0)\n")
         _T("      smode=<int>            resharpen mode (default=%d, 0 - 2)\n")
@@ -15943,12 +16133,14 @@ tstring gen_cmd_help_vpp() {
         _T("    params\n")
         _T("      mode=<string>          vfr(default), 60, 24\n")
         _T("      preset=<string>        speed preset (default=faster)\n")
+        _T("      search_early_sad=<int|auto|off> level0 early SAD threshold in 8x8 block / 8-bit units (default=auto)\n")
         _T("      timing=<string>        realtime, realtime+(default), strict\n")
         _T("      past_cycles=<int>      commit delay cycles for realtime+ (default=30)\n")
         _T("      thswitch=<float>       60p switch threshold (default=0.5)\n")
         _T("      ucf=<bool>             use placeholder UCF copy stage (default=false)\n")
         _T("      nr=<bool>              reserve NR path parameter (default=false)\n")
         _T("      is120=<bool>           reserve 120fps duration correction flag (default=true)\n")
+        _T("      rff=<bool>             preserve progressive RFF frames (default=true)\n")
         _T("      debug=<bool>           reserve stage dump flag (default=false)\n")
         _T("      debug_stage=<string>   none(default), switch-flag(-min), contains-combe, combe-mask(-min) for 24p debug output\n")
         _T("      timecode=<path>        reserve timecode v2 dump path\n"));
@@ -16398,6 +16590,7 @@ tstring gen_cmd_help_vpp() {
 #if ENCODER_NVENC
         _T("      provider=<string>           execution provider for inference\n")
         _T("                                    auto (default, = cuda), cuda, tensorrt\n")
+        _T("      prec=<string>               auto (default, TensorRT fp16) / fp16 / fp32\n")
 #endif
         _T("      colormatrix=<string>        same list as --colormatrix; onnx supports\n")
         _T("                                    auto / auto_res / smpte170m / bt470bg\n")
@@ -16410,6 +16603,8 @@ tstring gen_cmd_help_vpp() {
         _T("                                    auto (default, tv) / tv / limited / pc / full\n")
         _T("      colorspace=<string>         rgb(default) or ycbcr (for 3ch models)\n")
         _T("      noise=<int>                 noise sigma 0-255 for noise models (default 15)\n")
+        _T("      frames=<int>                odd temporal window size for T*3ch RGB models (default 1)\n")
+        _T("      mask=<path>                 grayscale mask for a 2-input ONNX model (white = process)\n")
         _T("      out_res=<WxH>               end-of-chain resize to an arbitrary final size,\n")
         _T("                                  applied AFTER the network so CNN upscale + fit run\n")
         _T("                                  in one pass, e.g. out_res=1440x1080. A negative\n")
@@ -16557,6 +16752,7 @@ tstring gen_cmd_help_vpp() {
         _T("      mv_spatial_refine=<int|auto> motion vector spatial refinement count (default=auto)\n")
         _T("      searchparam=<int>      motion search parameter (default=%d)\n")
         _T("      pelsearch=<int>        subpixel search parameter (default=%d)\n")
+        _T("      search_early_sad=<int|off> level0 early SAD threshold in 8x8 block / 8-bit units (default=off)\n")
         _T("      truemotion=<bool>      use true-motion tuning (default=%s)\n")
         _T("      lambda=<int>           motion penalty strength (default=%d)\n")
         _T("      lsad=<int>             large SAD threshold (default=%d)\n")
@@ -16640,6 +16836,7 @@ tstring gen_cmd_help_vpp() {
         _T("     Apply custom shader using libplacebo.\n")
         _T("    params\n")
         _T("      shader=<string>           Target shader file path.\n")
+        _T("      custom=<name>=<value>     Set a //!PARAM value declared by the shader.\n")
         _T("      res=<int>x<int>           Output resolution of filter, must be positive value.\n")
         _T("      csp=<string>              Input csp to pass to libplacebo.\n")
         _T("                                  default: %s\n"), get_cx_desc(list_vpp_libplacebo_shader_csp, FILTER_DEFAULT_LIBPLACEBO_SHADER_CSP)
@@ -17025,6 +17222,12 @@ tstring gen_cmd_help_vpp() {
         _T("      flip_y=<bool>\n")
         _T("      transpose=<bool>\n")
     );
+    str += strsprintf(_T("\n")
+        _T("   --vpp-lenscorrection [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("      k1=<float>, k2=<float>     radial distortion coefficients\n")
+        _T("      cx=<float>, cy=<float>     correction centre (default=0.5,0.5)\n")
+        _T("   --vpp-v360 [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("      in/out=equirect|flat|cubemap, yaw/pitch/roll=<float>, h_fov=<float>, w/h=<int>\n"));
 #if ENABLE_VPP_FILTER_DEBAND
     str += strsprintf(_T("\n")
         _T("   --vpp-deband [<param1>=<value>][,<param2>=<value>][...]\n")

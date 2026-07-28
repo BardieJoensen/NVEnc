@@ -214,6 +214,36 @@ NVIDIA グラフィックドライバ 551.23
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【メモ】
+2026.07.27 (9.27)
+- AviUtl2でプロジェクト単位の出力設定の保存・復元に対応。
+- --vpp-kfm/--vpp-rtgmc/--vpp-degrainの動き探索にSAD閾値による打ち切りを追加して高速化。
+- --vpp-kfmの冗長処理を除去し高速化。
+- --vpp-kfmで混合RFF素材を適切に処理するように。
+- --vpp-kfmのmode=24の出力停止とタイムスタンプを修正。
+- --vpp-rtgmcの色差Degrain解析を修正。 ( #786 )
+- --vpp-nnediの高ビット深度分散計算を修正。 ( #779 )
+
+2026.07.25 (9.26)
+- --vpp-lenscorrectionと--vpp-v360を追加。
+- --vpp-onnxにマスク入力とマルチフレーム(時系列)対応を追加。
+- --vpp-libplacebo-shaderにcustom指定を追加。
+- --vpp-onnxのfp16指定がTensorRTでfp32になる問題を修正。
+- --vpp-kfm/--vpp-degrainを高速化。
+- --vpp-rtgmcの精度・動作を修正し、高速化。
+- --vpp-rtgmcの10bitでのオーバーフローを修正。
+- --vship-ssimulacra2の統計情報をログに追加。
+- TensorRTキャッシュを実行環境・入力条件ごとに分離。
+
+2026.07.18 (9.25)
+- Windowsの名前付きパイプに対応。 ( #785 )
+- --vpp-kfmの精度を改善。
+- --vpp-degrain/--vpp-rtgmcの処理を、キャッシュのゼロコピー参照化と動き探索の並列化により高速化。
+- libvmafを更新し、enable_floatを有効に。 ( #783 )
+- libvmafのCPU自動fallbackを追加。
+- --vpp-libplacebo-tonemappingのuse_doviをbool文字列で指定した際に誤って失敗扱いになる問題を修正。
+- --audio-source/--sub-sourceのinput_optで末尾トークンの範囲外読み取りを修正。
+- 潜在的な不具合を修正。
+
 2026.07.11 (9.24)
 - 長時間処理時の--vpp-kfmを高速化。
 - --vpp-fft3d フィルタの時間軸オプションを拡張。
