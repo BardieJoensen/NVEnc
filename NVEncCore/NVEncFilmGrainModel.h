@@ -117,7 +117,7 @@ FGS_HOST_DEVICE constexpr int fgs_stratified_sample_offset(const int extent,
 // the compact bilateral profile; coarse grain smoothly reaches the wider
 // profile without turning a synthetic-fixture boundary into a routing rule.
 FGS_HOST_DEVICE constexpr float fgs_bilateral_spatial_spread(const float correlation) {
-    constexpr float fineCorrelation = 0.20f;
+    constexpr float fineCorrelation = 0.60f;
     constexpr float coarseCorrelation = 0.80f;
     const float spread = (correlation - fineCorrelation)
         / (coarseCorrelation - fineCorrelation);
