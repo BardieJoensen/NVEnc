@@ -397,6 +397,12 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
                     (threadIdx.y + FGS_BILATERAL_RADIUS + dy) * tileWidth
                     + threadIdx.x + FGS_BILATERAL_RADIUS + dx) * components + component;
                 const int sample = tile[sampleIndex];
+                if (dx == 0 && dy == 0) {
+                    constexpr float centerWeight = spatial[2] * spatial[2];
+                    weighted += centerWeight * center;
+                    weightSum += centerWeight;
+                    continue;
+                }
                 const float difference = static_cast<float>(sample - center);
                 const float rangeWeight = 1.0f / (1.0f + difference * difference * invRange2);
                 const float weight = spatial[dx + 2] * spatial[dy + 2] * rangeWeight;
