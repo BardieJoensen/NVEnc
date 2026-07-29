@@ -744,13 +744,15 @@ struct NVEncFilterFilmGrain::AnalyzerState {
     NV_ENC_FILM_GRAIN_PARAMS_AV1 pendingParams;
     bool lastParamsValid;
     bool pendingParamsValid;
+    bool modelWindowSettled;
     int pendingStreak;
     int framesSinceModelUpdate;
     int heldStreak;
 
     AnalyzerState() : history(), previousBlockMeans(), stableNoise(0.0f), autoRetain(0.0f),
         lastTimestamp(std::numeric_limits<int64_t>::min()), lastParams(), pendingParams(),
-        lastParamsValid(false), pendingParamsValid(false), pendingStreak(0), framesSinceModelUpdate(0), heldStreak(0) {}
+        lastParamsValid(false), pendingParamsValid(false), modelWindowSettled(false),
+        pendingStreak(0), framesSinceModelUpdate(0), heldStreak(0) {}
     void advanceModelAge() {
         if (framesSinceModelUpdate < std::numeric_limits<int>::max()) ++framesSinceModelUpdate;
     }
@@ -764,6 +766,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
         std::memset(&pendingParams, 0, sizeof(pendingParams));
         lastParamsValid = false;
         pendingParamsValid = false;
+        modelWindowSettled = false;
         pendingStreak = 0;
         framesSinceModelUpdate = 0;
         heldStreak = 0;
@@ -1538,8 +1541,28 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             m_state->lastParams = params;
             m_state->lastParamsValid = true;
             m_state->pendingParamsValid = false;
+            m_state->modelWindowSettled = diagnostics.modelFrames >= prm->filmGrain.modelWindow;
             m_state->pendingStreak = 0;
             m_state->framesSinceModelUpdate = 0;
+        } else if (!m_state->modelWindowSettled
+            && diagnostics.modelFrames >= prm->filmGrain.modelWindow) {
+            // The first model is intentionally available after one frame so
+            // synthesis never starts late, but it is a noisy estimate.  Once
+            // the rolling window fills, adopt that statistically stronger fit
+            // immediately instead of pinning the one-frame model for the
+            // normal 24-frame anti-twinkle cadence.
+            m_state->modelWindowSettled = true;
+            m_state->pendingParamsValid = false;
+            m_state->pendingStreak = 0;
+            if (film_grain_params_close(
+                params, m_state->lastParams, modelTolerance, modelTolerance)) {
+                params = m_state->lastParams;
+                diagnostics.modelHeld = true;
+                m_state->advanceModelAge();
+            } else {
+                m_state->lastParams = params;
+                m_state->framesSinceModelUpdate = 0;
+            }
         } else if (film_grain_params_close(
             params, m_state->lastParams, modelTolerance, modelTolerance)) {
             // Hold the previously signalled model while the fresh fit only
