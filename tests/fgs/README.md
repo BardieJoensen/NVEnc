@@ -70,6 +70,9 @@ The corresponding optimized snapshot is
 `baselines/2026-07-17-optimized.json`.  See
 `FINDINGS-2026-07-17.md` for the synthetic and CUDA-scored real-title
 before/after results, interpretation, and remaining limits.
+See `FINDINGS-2026-07-29-PERFORMANCE.md` for the subsequent CUDA speed profile,
+bilateral/FFT3D trade-off, coarse-grain diagnostic, and production metric
+priorities.
 
 Real-title testing is handled separately by `campaign.py`; source paths in that
 script are local configuration and media is never committed.
