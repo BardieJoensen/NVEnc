@@ -118,16 +118,20 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     }
 
     const int count = bw * bh;
-    double sum = 0.0;
-    double sumX = 0.0;
-    double sumY = 0.0;
-    double normX = 0.0;
-    double normY = 0.0;
+    // Consumer NVIDIA GPUs have very low FP64 throughput. None of these
+    // per-32x32-block values needs double precision: variance is accumulated
+    // from the fitted residual directly, so there is no large mean-square
+    // cancellation even with 10-bit input.
+    float sum = 0.0f;
+    float sumX = 0.0f;
+    float sumY = 0.0f;
+    float normX = 0.0f;
+    float normY = 0.0f;
     for (int y = 0; y < bh; ++y) {
-        const double yn = (2.0 * y - (bh - 1)) / bh;
+        const float yn = (2.0f * y - (bh - 1)) / bh;
         for (int x = 0; x < bw; ++x) {
-            const double xn = (2.0 * x - (bw - 1)) / bw;
-            const double value = load_code<Type, shift>(src, pitch, x0 + x, y0 + y);
+            const float xn = (2.0f * x - (bw - 1)) / bw;
+            const float value = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y));
             sum += value;
             sumX += value * xn;
             sumY += value * yn;
@@ -135,29 +139,29 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
             normY += yn * yn;
         }
     }
-    const double mean = sum / count;
-    const double planeX = sumX / fmax(normX, 1e-12);
-    const double planeY = sumY / fmax(normY, 1e-12);
+    const float mean = sum / count;
+    const float planeX = sumX / fmaxf(normX, 1e-12f);
+    const float planeY = sumY / fmaxf(normY, 1e-12f);
 
-    double variance = 0.0;
-    double gxx = 0.0;
-    double gxy = 0.0;
-    double gyy = 0.0;
+    float variance = 0.0f;
+    float gxx = 0.0f;
+    float gxy = 0.0f;
+    float gyy = 0.0f;
     int gradientCount = 0;
     for (int y = 0; y < bh; ++y) {
-        const double yn = (2.0 * y - (bh - 1)) / bh;
+        const float yn = (2.0f * y - (bh - 1)) / bh;
         for (int x = 0; x < bw; ++x) {
-            const double xn = (2.0 * x - (bw - 1)) / bw;
-            const double value = load_code<Type, shift>(src, pitch, x0 + x, y0 + y);
-            const double residual = value - (mean + planeX * xn + planeY * yn);
+            const float xn = (2.0f * x - (bw - 1)) / bw;
+            const float value = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y));
+            const float residual = value - (mean + planeX * xn + planeY * yn);
             variance += residual * residual;
             if (x > 0 && x + 1 < bw && y > 0 && y + 1 < bh) {
-                const double left = load_code<Type, shift>(src, pitch, x0 + x - 1, y0 + y);
-                const double right = load_code<Type, shift>(src, pitch, x0 + x + 1, y0 + y);
-                const double up = load_code<Type, shift>(src, pitch, x0 + x, y0 + y - 1);
-                const double down = load_code<Type, shift>(src, pitch, x0 + x, y0 + y + 1);
-                const double gx = (right - left) * 0.5 - planeX * (2.0 / bw);
-                const double gy = (down - up) * 0.5 - planeY * (2.0 / bh);
+                const float left = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x - 1, y0 + y));
+                const float right = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x + 1, y0 + y));
+                const float up = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y - 1));
+                const float down = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y + 1));
+                const float gx = (right - left) * 0.5f - planeX * (2.0f / bw);
+                const float gy = (down - up) * 0.5f - planeY * (2.0f / bh);
                 gxx += gx * gx;
                 gxy += gx * gy;
                 gyy += gy * gy;
@@ -170,34 +174,34 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     gxy /= max(gradientCount, 1);
     gyy /= max(gradientCount, 1);
 
-    const double maxValue = static_cast<double>((1 << bitDepth) - 1);
-    const double scale2 = maxValue * maxValue;
-    const double varNorm = variance / scale2;
+    const float maxValue = static_cast<float>((1 << bitDepth) - 1);
+    const float scale2 = maxValue * maxValue;
+    const float varNorm = variance / scale2;
     gxx /= scale2;
     gxy /= scale2;
     gyy /= scale2;
-    const double trace = gxx + gyy;
-    const double determinant = gxx * gyy - gxy * gxy;
-    const double discriminant = fmax(0.0, trace * trace - 4.0 * determinant);
-    const double e1 = (trace + sqrt(discriminant)) * 0.5;
-    const double e2 = (trace - sqrt(discriminant)) * 0.5;
-    const double ratio = e1 / fmax(e2, 1e-6);
+    const float trace = gxx + gyy;
+    const float determinant = gxx * gyy - gxy * gxy;
+    const float discriminant = fmaxf(0.0f, trace * trace - 4.0f * determinant);
+    const float e1 = (trace + sqrtf(discriminant)) * 0.5f;
+    const float e2 = (trace - sqrtf(discriminant)) * 0.5f;
+    const float ratio = e1 / fmaxf(e2, 1e-6f);
 
-    const double traceThreshold = 0.15 / (FGS_BLOCK_SIZE * FGS_BLOCK_SIZE);
-    const double normThreshold = 0.08 / (FGS_BLOCK_SIZE * FGS_BLOCK_SIZE);
-    const double varThreshold = 0.005 / count;
+    const float traceThreshold = 0.15f / (FGS_BLOCK_SIZE * FGS_BLOCK_SIZE);
+    const float normThreshold = 0.08f / (FGS_BLOCK_SIZE * FGS_BLOCK_SIZE);
+    const float varThreshold = 0.005f / count;
     const bool isFlat = trace < traceThreshold && ratio < 1.25 && e1 < normThreshold && varNorm > varThreshold;
-    double scoreArg = -6682.0 * varNorm - 0.2056 * ratio + 13087.0 * trace - 12434.0 * e1 + 2.5694;
-    scoreArg = fmin(100.0, fmax(-25.0, scoreArg));
+    float scoreArg = -6682.0f * varNorm - 0.2056f * ratio + 13087.0f * trace - 12434.0f * e1 + 2.5694f;
+    scoreArg = fminf(100.0f, fmaxf(-25.0f, scoreArg));
 
-    out.mean = static_cast<float>(mean);
-    out.sigma = static_cast<float>(sqrt(fmax(variance, 0.0)));
-    out.score = varNorm > varThreshold ? static_cast<float>(1.0 / (1.0 + exp(-scoreArg))) : 0.0f;
+    out.mean = mean;
+    out.sigma = sqrtf(fmaxf(variance, 0.0f));
+    out.score = varNorm > varThreshold ? 1.0f / (1.0f + expf(-scoreArg)) : 0.0f;
     // Random grain has similar gradient energy in every direction, while
     // edges and line-like texture concentrate it along one eigenvector.  Keep
     // this continuous confidence so the refinement mask can be interpolated
     // without introducing visible 32x32 block boundaries.
-    out.coherence = static_cast<float>((e1 - e2) / fmax(trace, 1e-12));
+    out.coherence = (e1 - e2) / fmaxf(trace, 1e-12f);
     out.flat = isFlat ? 1u : 0u;
     metrics[blockIndex] = out;
 }
@@ -333,26 +337,11 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
 
     constexpr int coeffCount = chroma ? FGS_AR_COEFFS_CHROMA : FGS_AR_COEFFS;
     constexpr int triCount = chroma ? FGS_TRI_C : FGS_TRI_Y;
-    __shared__ int64_t ata[triCount];
-    __shared__ int64_t atb[coeffCount];
-    __shared__ int64_t residualSum;
-    __shared__ uint64_t residualSumSq;
-    __shared__ int64_t predSum;
-    __shared__ uint64_t predSumSq;
-    __shared__ unsigned int sampleCount;
-
     const int tid = threadIdx.y * blockDim.x + threadIdx.x;
     const int threads = blockDim.x * blockDim.y;
-    for (int i = tid; i < triCount; i += threads) ata[i] = 0;
-    for (int i = tid; i < coeffCount; i += threads) atb[i] = 0;
-    if (tid == 0) {
-        residualSum = 0;
-        residualSumSq = 0;
-        predSum = 0;
-        predSumSq = 0;
-        sampleCount = 0;
-    }
-    __syncthreads();
+    __shared__ int predictors[64][coeffCount];
+    __shared__ int values[64];
+    __shared__ uint8_t valid[64];
 
     const int modelBlock = chroma ? FGS_BLOCK_SIZE / 2 : FGS_BLOCK_SIZE;
     const int x0 = bx * modelBlock;
@@ -363,17 +352,17 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
     const int usableH = yEnd - y0 - FGS_AR_LAG;
     const int x = x0 + FGS_AR_LAG + (usableW > 0 ? (usableW - 1) * threadIdx.x / max(1, static_cast<int>(blockDim.x) - 1) : 0);
     const int y = y0 + FGS_AR_LAG + (usableH > 0 ? (usableH - 1) * threadIdx.y / max(1, static_cast<int>(blockDim.y) - 1) : 0);
-    if (usableW > 0 && usableH > 0 && x < width && y < height) {
-        int predictors[coeffCount];
+    valid[tid] = usableW > 0 && usableH > 0 && x < width && y < height;
+    if (valid[tid]) {
         int index = 0;
         for (int dy = -FGS_AR_LAG; dy < 0; ++dy) {
             for (int dx = -FGS_AR_LAG; dx <= FGS_AR_LAG; ++dx) {
-                predictors[index++] = residual_at<Type, shift, components>(
+                predictors[tid][index++] = residual_at<Type, shift, components>(
                     src, srcPitch, denoised, denoisedPitch, x + dx, y + dy, component);
             }
         }
         for (int dx = -FGS_AR_LAG; dx < 0; ++dx) {
-            predictors[index++] = residual_at<Type, shift, components>(
+            predictors[tid][index++] = residual_at<Type, shift, components>(
                 src, srcPitch, denoised, denoisedPitch, x + dx, y, component);
         }
         if (chroma) {
@@ -386,32 +375,62 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
                         lumaDenoised, lumaDenoisedPitch, lx + dx, ly + dy, 0);
                 }
             }
-            predictors[index++] = (lumaResidual + (lumaResidual >= 0 ? 2 : -2)) / 4;
+            predictors[tid][index++] = (lumaResidual + (lumaResidual >= 0 ? 2 : -2)) / 4;
         }
-
-        const int value = residual_at<Type, shift, components>(src, srcPitch, denoised, denoisedPitch, x, y, component);
-        for (int i = 0; i < coeffCount; ++i) {
-            atomic_add_i64(atb + i, static_cast<int64_t>(predictors[i]) * value);
-            for (int j = i; j < coeffCount; ++j) {
-                atomic_add_i64(ata + tri_index(coeffCount, i, j),
-                    static_cast<int64_t>(predictors[i]) * predictors[j]);
-            }
-        }
-
-        atomic_add_i64(&residualSum, value);
-        atomic_add_u64(&residualSumSq, static_cast<uint64_t>(static_cast<int64_t>(value) * value));
-        if (chroma) {
-            const int pred = predictors[coeffCount - 1];
-            atomic_add_i64(&predSum, pred);
-            atomic_add_u64(&predSumSq, static_cast<uint64_t>(static_cast<int64_t>(pred) * pred));
-        }
-        atomicAdd(&sampleCount, 1u);
+        values[tid] = residual_at<Type, shift, components>(
+            src, srcPitch, denoised, denoisedPitch, x, y, component);
     }
     __syncthreads();
 
-    for (int i = tid; i < triCount; i += threads) atomic_add_i64(output->ata + i, ata[i]);
-    for (int i = tid; i < coeffCount; i += threads) atomic_add_i64(output->atb + i, atb[i]);
-    if (tid == 0 && sampleCount > 0) {
+    // The old implementation issued one shared-memory 64-bit atomic for
+    // every sample/coefficient product (more than 22,000 per chroma block).
+    // Give each normal-equation element to one thread instead. It sums all
+    // samples locally and performs the same single global accumulation.
+    // Inputs and sums stay integer, so this produces identical statistics.
+    for (int packed = tid; packed < triCount; packed += threads) {
+        int i = 0;
+        int j = packed;
+        for (int rowLength = coeffCount; j >= rowLength; --rowLength) {
+            j -= rowLength;
+            ++i;
+        }
+        j += i;
+        int64_t sum = 0;
+        for (int sample = 0; sample < threads; ++sample) {
+            if (valid[sample]) {
+                sum += static_cast<int64_t>(predictors[sample][i]) * predictors[sample][j];
+            }
+        }
+        atomic_add_i64(output->ata + packed, sum);
+    }
+    for (int i = tid; i < coeffCount; i += threads) {
+        int64_t sum = 0;
+        for (int sample = 0; sample < threads; ++sample) {
+            if (valid[sample]) {
+                sum += static_cast<int64_t>(predictors[sample][i]) * values[sample];
+            }
+        }
+        atomic_add_i64(output->atb + i, sum);
+    }
+    if (tid == 0) {
+        int64_t residualSum = 0;
+        uint64_t residualSumSq = 0;
+        int64_t predSum = 0;
+        uint64_t predSumSq = 0;
+        unsigned int sampleCount = 0;
+        for (int sample = 0; sample < threads; ++sample) {
+            if (!valid[sample]) continue;
+            const int value = values[sample];
+            residualSum += value;
+            residualSumSq += static_cast<uint64_t>(static_cast<int64_t>(value) * value);
+            if (chroma) {
+                const int pred = predictors[sample][coeffCount - 1];
+                predSum += pred;
+                predSumSq += static_cast<uint64_t>(static_cast<int64_t>(pred) * pred);
+            }
+            ++sampleCount;
+        }
+        if (sampleCount == 0) return;
         // One strength observation per flat block: the block's residual
         // variance keyed by the block's mean luma, as in libaom
         // add_noise_std_observations.  Binning single pixels by their own
