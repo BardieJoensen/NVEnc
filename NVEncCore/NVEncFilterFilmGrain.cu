@@ -67,6 +67,7 @@ constexpr int FGS_MODEL_MIN_UPDATE_FRAMES = 24;
 constexpr float FGS_SCENE_MEAN_DELTA_8BIT = 12.0f;
 constexpr float FGS_SCENE_BLOCK_DELTA_8BIT = 20.0f;
 constexpr float FGS_SCENE_CHANGED_BLOCK_FRACTION = 0.65f;
+constexpr int FGS_FLAT_THREADS = 128;
 
 struct FilmGrainBlockMetric {
     float mean;
@@ -101,19 +102,16 @@ template<typename Type, int shift>
 __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const int pitch,
     const int width, const int height, const int blocksX, const int bitDepth,
     FilmGrainBlockMetric *__restrict__ metrics) {
-    const int blockIndex = blockIdx.x * blockDim.x + threadIdx.x;
-    const int blocksY = (height + FGS_BLOCK_SIZE - 1) / FGS_BLOCK_SIZE;
-    if (blockIndex >= blocksX * blocksY) return;
-
+    const int blockIndex = blockIdx.x;
+    const int tid = threadIdx.x;
     const int bx = blockIndex % blocksX;
     const int by = blockIndex / blocksX;
     const int x0 = bx * FGS_BLOCK_SIZE;
     const int y0 = by * FGS_BLOCK_SIZE;
     const int bw = min(FGS_BLOCK_SIZE, width - x0);
     const int bh = min(FGS_BLOCK_SIZE, height - y0);
-    FilmGrainBlockMetric out = {};
     if (bw < 8 || bh < 8) {
-        metrics[blockIndex] = out;
+        if (tid == 0) metrics[blockIndex] = {};
         return;
     }
 
@@ -122,57 +120,102 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     // per-32x32-block values needs double precision: variance is accumulated
     // from the fitted residual directly, so there is no large mean-square
     // cancellation even with 10-bit input.
-    float sum = 0.0f;
-    float sumX = 0.0f;
-    float sumY = 0.0f;
-    float normX = 0.0f;
-    float normY = 0.0f;
-    for (int y = 0; y < bh; ++y) {
+    float localSum = 0.0f;
+    float localSumX = 0.0f;
+    float localSumY = 0.0f;
+    float localNormX = 0.0f;
+    float localNormY = 0.0f;
+    for (int index = tid; index < count; index += FGS_FLAT_THREADS) {
+        const int x = index % bw;
+        const int y = index / bw;
         const float yn = (2.0f * y - (bh - 1)) / bh;
-        for (int x = 0; x < bw; ++x) {
-            const float xn = (2.0f * x - (bw - 1)) / bw;
-            const float value = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y));
-            sum += value;
-            sumX += value * xn;
-            sumY += value * yn;
-            normX += xn * xn;
-            normY += yn * yn;
-        }
+        const float xn = (2.0f * x - (bw - 1)) / bw;
+        const float value = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y));
+        localSum += value;
+        localSumX += value * xn;
+        localSumY += value * yn;
+        localNormX += xn * xn;
+        localNormY += yn * yn;
     }
-    const float mean = sum / count;
-    const float planeX = sumX / fmaxf(normX, 1e-12f);
-    const float planeY = sumY / fmaxf(normY, 1e-12f);
+    __shared__ float reduce0[FGS_FLAT_THREADS];
+    __shared__ float reduce1[FGS_FLAT_THREADS];
+    __shared__ float reduce2[FGS_FLAT_THREADS];
+    __shared__ float reduce3[FGS_FLAT_THREADS];
+    __shared__ float reduce4[FGS_FLAT_THREADS];
+    __shared__ int reduceCount[FGS_FLAT_THREADS];
+    __shared__ float mean;
+    __shared__ float planeX;
+    __shared__ float planeY;
+    reduce0[tid] = localSum;
+    reduce1[tid] = localSumX;
+    reduce2[tid] = localSumY;
+    reduce3[tid] = localNormX;
+    reduce4[tid] = localNormY;
+    __syncthreads();
+    for (int stride = FGS_FLAT_THREADS / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            reduce0[tid] += reduce0[tid + stride];
+            reduce1[tid] += reduce1[tid + stride];
+            reduce2[tid] += reduce2[tid + stride];
+            reduce3[tid] += reduce3[tid + stride];
+            reduce4[tid] += reduce4[tid + stride];
+        }
+        __syncthreads();
+    }
+    if (tid == 0) {
+        mean = reduce0[0] / count;
+        planeX = reduce1[0] / fmaxf(reduce3[0], 1e-12f);
+        planeY = reduce2[0] / fmaxf(reduce4[0], 1e-12f);
+    }
+    __syncthreads();
 
-    float variance = 0.0f;
-    float gxx = 0.0f;
-    float gxy = 0.0f;
-    float gyy = 0.0f;
-    int gradientCount = 0;
-    for (int y = 0; y < bh; ++y) {
+    float localVariance = 0.0f;
+    float localGxx = 0.0f;
+    float localGxy = 0.0f;
+    float localGyy = 0.0f;
+    int localGradientCount = 0;
+    for (int index = tid; index < count; index += FGS_FLAT_THREADS) {
+        const int x = index % bw;
+        const int y = index / bw;
         const float yn = (2.0f * y - (bh - 1)) / bh;
-        for (int x = 0; x < bw; ++x) {
-            const float xn = (2.0f * x - (bw - 1)) / bw;
-            const float value = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y));
-            const float residual = value - (mean + planeX * xn + planeY * yn);
-            variance += residual * residual;
-            if (x > 0 && x + 1 < bw && y > 0 && y + 1 < bh) {
-                const float left = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x - 1, y0 + y));
-                const float right = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x + 1, y0 + y));
-                const float up = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y - 1));
-                const float down = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y + 1));
-                const float gx = (right - left) * 0.5f - planeX * (2.0f / bw);
-                const float gy = (down - up) * 0.5f - planeY * (2.0f / bh);
-                gxx += gx * gx;
-                gxy += gx * gy;
-                gyy += gy * gy;
-                ++gradientCount;
-            }
+        const float xn = (2.0f * x - (bw - 1)) / bw;
+        const float value = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y));
+        const float residual = value - (mean + planeX * xn + planeY * yn);
+        localVariance += residual * residual;
+        if (x > 0 && x + 1 < bw && y > 0 && y + 1 < bh) {
+            const float left = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x - 1, y0 + y));
+            const float right = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x + 1, y0 + y));
+            const float up = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y - 1));
+            const float down = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y + 1));
+            const float gx = (right - left) * 0.5f - planeX * (2.0f / bw);
+            const float gy = (down - up) * 0.5f - planeY * (2.0f / bh);
+            localGxx += gx * gx;
+            localGxy += gx * gy;
+            localGyy += gy * gy;
+            ++localGradientCount;
         }
     }
-    variance /= count;
-    gxx /= max(gradientCount, 1);
-    gxy /= max(gradientCount, 1);
-    gyy /= max(gradientCount, 1);
+    reduce0[tid] = localVariance;
+    reduce1[tid] = localGxx;
+    reduce2[tid] = localGxy;
+    reduce3[tid] = localGyy;
+    reduceCount[tid] = localGradientCount;
+    __syncthreads();
+    for (int stride = FGS_FLAT_THREADS / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            reduce0[tid] += reduce0[tid + stride];
+            reduce1[tid] += reduce1[tid + stride];
+            reduce2[tid] += reduce2[tid + stride];
+            reduce3[tid] += reduce3[tid + stride];
+            reduceCount[tid] += reduceCount[tid + stride];
+        }
+        __syncthreads();
+    }
+    if (tid != 0) return;
+    const float variance = reduce0[0] / count;
+    float gxx = reduce1[0] / max(reduceCount[0], 1);
+    float gxy = reduce2[0] / max(reduceCount[0], 1);
+    float gyy = reduce3[0] / max(reduceCount[0], 1);
 
     const float maxValue = static_cast<float>((1 << bitDepth) - 1);
     const float scale2 = maxValue * maxValue;
@@ -194,6 +237,7 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     float scoreArg = -6682.0f * varNorm - 0.2056f * ratio + 13087.0f * trace - 12434.0f * e1 + 2.5694f;
     scoreArg = fminf(100.0f, fmaxf(-25.0f, scoreArg));
 
+    FilmGrainBlockMetric out = {};
     out.mean = mean;
     out.sigma = sqrtf(fmaxf(variance, 0.0f));
     out.score = varNorm > varThreshold ? 1.0f / (1.0f + expf(-scoreArg)) : 0.0f;
@@ -473,8 +517,7 @@ static float auto_retain_from_detail_risk(const float detailRisk) {
 template<typename Type, int shift>
 static RGY_ERR launch_flat_metrics(const RGYFrameInfo& luma, FilmGrainBlockMetric *metrics,
     const int blocksX, const int blocksY, const int bitDepth, cudaStream_t stream) {
-    constexpr int threads = 128;
-    kernel_fgs_flat_metrics<Type, shift><<<divCeil(blocksX * blocksY, threads), threads, 0, stream>>>(
+    kernel_fgs_flat_metrics<Type, shift><<<blocksX * blocksY, FGS_FLAT_THREADS, 0, stream>>>(
         luma.ptr[0], luma.pitch[0], luma.width, luma.height, blocksX, bitDepth, metrics);
     return err_to_rgy(cudaGetLastError());
 }
