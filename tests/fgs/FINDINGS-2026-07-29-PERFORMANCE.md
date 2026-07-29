@@ -14,17 +14,16 @@ change:
 `77e8329a` adds a source-grain scale diagnostic. It costs about 0.009 ms/frame
 at 1080p and does not affect the model or encoded pixels.
 
-Two later quality fixes use the faster analyzer rather than changing encoder
+One later quality fix uses the faster analyzer rather than changing encoder
 levers:
 
 - `f259e251` replaces the necessarily weak single-frame opening model as soon
   as the eight-frame rolling window fills.
-- `d23400f4` widens the existing bilateral kernel continuously for spatially
-  correlated grain, improving coarse-grain separation without adding a pass
-  or changing the fine-grain/detail path.
-- `d807b990` keeps that wider profile for the genuinely coarse extreme after
-  a matched-rate Silo A/B showed that moderate real-film correlation should
-  stay on the production filter.
+
+The later `d23400f4`/`d807b990` correlation-adaptive bilateral experiment did
+not generalize from generated grain to real film. `a4b84e1a` removes it after
+matched-rate tests on both a real midpoint title and its intended Taxi Driver
+endpoint; source correlation remains a diagnostic, not a filter control.
 
 These commits modify `NVEncFilterFilmGrain.cu` and
 `NVEncFilmGrainModel.{h,cpp}` and therefore require rebuilding NVEncC; they are
@@ -32,9 +31,8 @@ not test-only changes.
 
 All 18 GPU known-answer fixtures, both 8/10-bit retention sweeps (10 points),
 the CPU solver and parser tests pass. The speed-only commits leave headline
-quality metrics and every retention-sweep encoded byte count unchanged; the
-later quality commits intentionally change model timing or coarse-grain
-separation as measured below.
+quality metrics and every retention-sweep encoded byte count unchanged;
+`f259e251` intentionally changes opening model timing as measured below.
 
 ### Taxi Driver grain-strength correction
 
@@ -97,7 +95,7 @@ Neither partial-retention control improved the decision. At the same QVBR,
 the distortion tails slightly worse; `retain=auto` reduced retention to 0.885
 without saving bytes. Zero retention remains the Taxi candidate.
 
-### Startup convergence and coarse-grain separation
+### Startup convergence and rejected coarse-grain adaptation
 
 The analyzer deliberately accepts a model on frame zero so grain is present
 from the first decoded frame. That first model only contains one frame of
@@ -112,33 +110,27 @@ On the Taxi 60 production control this moves the first table boundary from
 frame 25 to frame 7. Over decoded frames 8-23, synthesized luma sigma improves
 from 1.014 to 1.058 (+4.4%) with a 697-byte size reduction.
 
-The remaining bilateral limit was its fixed spatial response. Two 5x5 passes
-used a compact `[1 4 6 4 1]` profile regardless of grain scale. A uniformly
-wider profile captured more coarse grain but unnecessarily reduced detail
-transfer. `d23400f4` instead maps the already-measured source correlation
-continuously to a profile between `[1 4 6 4 1]` and `[1 2 2 2 1]`. This is
-not a routing threshold: correlations from 0.60 to 0.80 interpolate smoothly,
-and only the standalone bilateral path changes.
+The remaining bilateral limit appeared to be its fixed spatial response. An
+experiment mapped the already-measured source correlation continuously between
+the compact `[1 4 6 4 1]` profile and a wider `[1 2 2 2 1]` profile. On the
+generated fixtures this looked narrowly positive:
 
-| Bilateral KAT measure | Fixed profile | Adaptive profile |
+| Bilateral KAT measure | Compact profile | Adaptive profile |
 | --- | ---: | ---: |
 | Fine-grain synthesized sigma | 5.42-5.69 | 5.42-5.69 |
 | Fine-detail transfer | 0.468 | 0.468 |
 | Structured-edge RMSE (8-bit) | 2.31 | 2.31 |
 | Coarse-grain amplitude captured | 36% | 40% |
 
-The fine/detail fixtures are identical because their median correlation is
-near zero. On the Taxi 60 control (frames 8-23), synthesized luma sigma rises
-from 1.053 to 1.173 (+11.3%), lag-one spatial autocorrelation moves from 0.600
-to 0.624, and bytes move from 20,738,325 to 20,744,490 (+0.03%). Throughput is
-unchanged within run noise: 25.64 fps on the pre-change optimized binary and
-25.68 fps with adaptive weighting.
+On the Taxi 60 control (frames 8-23), synthesized luma sigma rose from 1.053
+to 1.173 (+11.3%) and lag-one spatial autocorrelation from 0.600 to 0.624,
+with bytes effectively unchanged. Throughput was also unchanged within run
+noise. Those local texture measures did not predict full-reference quality.
 
-The initial experiment began interpolation at 0.20. A real Silo S03E01 run
-measured 0.36-0.47 and therefore partially activated the wider profile even
-though the title already retained grain correctly. At the same QVBR 25.4, the
-compact and broad variants landed within 0.8% bytes; the compact profile won
-the real-content comparison:
+The first real check caught one failure. The initial interpolation began at
+correlation 0.20, so Silo S03E01 at 0.36-0.47 partially activated it even
+though that title already retained grain correctly. At the same QVBR 25.4,
+the compact profile won:
 
 | Silo S03E01, first 600 frames | Broad from 0.20 | Compact through 0.60 |
 | --- | ---: | ---: |
@@ -147,9 +139,46 @@ the real-content comparison:
 | Butteraugli 2-norm / max p95 | 0.917 / 3.33 | **0.905 / 3.26** |
 | VMAF / minimum | 93.68 / 83.00 | **93.85 / 84.19** |
 
-`d807b990` therefore moves the onset to 0.60. This leaves Silo on the measured
-production path while preserving the full coarse-fixture and Taxi Driver
-improvement (Taxi's measured correlation is 0.823).
+Moving the onset to 0.60 fixed Silo but did not resolve the underlying
+assumption. Real-title correlations occupy the middle of the ramp rather than
+the synthetic endpoints. The Shining is the exact control: aggregate
+correlation 0.696, with per-frame values around 0.68, so the narrowed ramp
+applied roughly 40% of the wide profile. A 288-frame, 4K PQ comparison was
+rate matched to within 0.19% for compact versus midpoint and 1.31% for wide
+versus midpoint:
+
+| The Shining | Compact | Ramp midpoint | Fully wide |
+| --- | ---: | ---: | ---: |
+| Bytes | 9,968,971 | 9,988,329 | 9,857,497 |
+| SSIMULACRA2 / p5 | **17.68 / 10.95** | 16.87 / 10.44 | 14.11 / 7.71 |
+| Butteraugli 2-norm / max p95 | **2.721 / 11.37** | 2.757 / 11.73 | 2.880 / 12.15 |
+| VMAF / minimum | **94.43 / 92.22** | 94.33 / 92.17 | 93.86 / 91.50 |
+| VMAF NEG | **93.81** | 93.71 | 93.20 |
+| PSNR-Y / SSIM | **44.72 / 0.9984** | 44.59 / 0.9984 | 44.24 / 0.9983 |
+| CIEDE2000 (lower is better) | 43.48 | 43.37 | **43.06** |
+
+Compact wins every texture/distortion family except the small color-error
+movement. More importantly, the intended endpoint also fails. Taxi Driver's
+aggregate correlation is 0.823, so the narrowed ramp selects fully wide. A
+second 288-frame matched-rate comparison gave the wider result 0.86% more
+bytes:
+
+| Taxi Driver | Compact | Fully wide |
+| --- | ---: | ---: |
+| Bytes | 30,175,070 | 30,435,728 |
+| SSIMULACRA2 / p5 | **1.29 / -6.59** | -0.57 / -7.88 |
+| Butteraugli 2-norm / max p95 | **3.271** / 13.82 | 3.341 / **13.71** |
+| VMAF / minimum | **87.72 / 86.58** | 87.20 / 86.08 |
+| VMAF NEG | **87.37** | 86.87 |
+| PSNR-Y / SSIM | **40.07 / 0.9966** | 39.89 / 0.9965 |
+| CIEDE2000 (lower is better) | 39.26 | **39.11** |
+
+The wide profile again loses the main texture and fidelity metrics; only the
+Butteraugli extreme tail and color error move slightly in its favor. The
+synthetic coarse-capture improvement therefore does not justify a production
+code path. `a4b84e1a` restores the compact profile everywhere and returns the
+coarse KAT to its original regression-only 30% floor (actual capture 36%).
+Correlation stays in diagnostics for measurement and future research.
 
 Three tempting variants were rejected rather than committed:
 
