@@ -59,12 +59,12 @@ architectural floor.
 ## End-to-end production result
 
 A fixed 1200-frame input was run for three alternating rounds through the
-production r4029 build and the clean-image r4033 build. End to end, r4033
-roughly doubled FGS throughput and removed the old 91% FGS penalty. On this
-input the optimized FGS encode even finished before the no-FGS control:
-denoising reduced the residual that NVENC had to code, producing a 4.24 MB
-stream instead of 5.79 MB, and that encoder saving more than paid for the
-analyzer.
+production r4029 build and the clean-image r4033 build. Median elapsed time
+fell from 4.2 to 2.7 seconds (58.5% higher throughput in the unrounded
+measurement), removing the old 91% FGS penalty. A separate warm r4033 control
+rounded both FGS and no-FGS to 2.2 seconds. Denoising reduced the residual that
+NVENC had to code, producing a 4.24 MB stream instead of 5.79 MB, so the
+encoder saving paid for the analyzer on this input.
 
 The output is not literally byte-identical after FP64-to-FP32 analysis. The
 elementary bitstream moved by 11,348 bytes (+0.081%), while the scored quality
@@ -79,6 +79,33 @@ This supersedes the earlier operational assumption that FGS deliberately
 traded throughput for quality. The current production recommendation is to
 rebuild the tdarr-node image with r4033 and restart only after its in-flight
 encodes have drained.
+
+## Exact follow-up optimizations
+
+Two additional bit-exact changes were profiled after the r4033 deployment
+candidate:
+
+- `ec413f96` cooperatively loads each bilateral block's 5x5 halo into shared
+  memory instead of repeatedly addressing the same global pixels.
+- `b252f866` handles the zero-difference center tap directly, avoiding one
+  precise reciprocal out of 25.
+
+At 1080p they reduce bilateral time from 0.4386 to 0.3700 ms/frame (-15.6%)
+and all named FGS kernels from 0.5875 to 0.5187 ms/frame (-11.7%). The
+shared-tile change alone reduces the 4K FGS profile by 11.7%. A 32-frame fixed
+input produces the same cleaned-base SHA-256 as r4033; the AV1 elementary
+stream and container size are also identical.
+
+These are useful future-build improvements, not a reason to interrupt the
+fresh r4033 production deployment: r4033 has already removed the measurable
+FGS wall-clock penalty on the production control.
+
+An experimental approximate range reciprocal reduces the 1080p FGS profile
+further to 0.4492 ms/frame (-23.5% versus r4033). All 17 KAT cases and 10
+retention points pass, but dark-scene rounding moves by 0.01 and encoded bytes
+move by up to +0.11%. It remains uncommitted pending a real-content A/B. An
+exact warp-barrier reduction was also tested; it produced no measurable
+improvement and was reverted.
 
 ### Determinism methodology
 
