@@ -163,6 +163,62 @@ broader real-title A/B is collected:
 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral
 ```
 
+## Quality and size operating points
+
+The FGS bitrate saving can either remain a storage saving or be spent on the
+clean base. Two 60-second Silo controls were encoded with the deployed r4033
+bilateral path and rescored over the same first 600 frames. The QVBR 27 HQ arm
+lands close to the old plain QVBR 29 byte budget while leaving played-out grain
+unchanged:
+
+| Clip / setting | MiB | VMAF | VMAF min | SSIMULACRA2 | p5 | Butteraugli p95 | Grain retention |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| E01 HQ QVBR 29 | 13.39 | 93.42 | 84.01 | 80.71 | 74.99 | 3.68 | 1.009 |
+| E01 HQ QVBR 27 | 17.02 | 93.79 | 84.67 | 81.62 | 76.11 | 3.28 | 1.009 |
+| E02 HQ QVBR 29 | 13.45 | 93.87 | 85.80 | 78.08 | 74.43 | 3.62 | 1.000 |
+| E02 HQ QVBR 27 | 17.09 | 94.17 | 86.36 | 78.99 | 75.38 | 3.43 | 1.000 |
+
+Lower Butteraugli is better. QVBR 27 costs 27.1% more than the QVBR 29 FGS
+arm, but the resulting 17.02/17.09 MiB files are still no larger than the
+17.1/18.0 MiB plain QVBR 29 controls. It improves every reported distortion
+measure without changing grain retention. This is the clean quality-first
+choice when the pre-FGS byte budget is acceptable. Keep QVBR 29 when the
+22-25% FGS size reduction is the goal.
+
+The earlier three-class FGS sweep shows the same separation between grain and
+base quality. Moving QVBR 29 to 27 costs 26.6% on grainy film and 27.5% on
+clean digital while changing retention by 0.000 and +0.004 respectively; VMAF
+improves by 0.80/0.24 and SSIMULACRA2 by 2.57/0.78. Animation's QVBR 34 to 31
+step costs 41.1% for +0.42 VMAF and +1.73 SSIMULACRA2, so the current animation
+bucket has a much weaker quality-per-byte case for lowering QVBR.
+
+`retain=auto` is a different trade rather than a free improvement:
+
+| Clip / setting | MiB | VMAF | VMAF min | SSIMULACRA2 | p5 | Butteraugli p95 | Grain retention |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| E01 QVBR 29, retain 0 | 13.39 | 93.42 | 84.01 | 80.71 | 74.99 | 3.68 | 1.009 |
+| E01 QVBR 29, retain auto | 13.93 | 94.19 | 86.55 | 81.51 | 76.03 | 3.48 | 0.939 |
+| E02 QVBR 29, retain 0 | 13.45 | 93.87 | 85.80 | 78.08 | 74.43 | 3.62 | 1.000 |
+| E02 QVBR 29, retain auto | 14.19 | 94.80 | 86.38 | 79.25 | 76.32 | 3.49 | 0.890 |
+
+Auto retention improves all listed distortion metrics for only 4.0-5.5% more
+bytes, but it also lowers measured grain energy by 7-11%. The risk detector
+selected mean retention 0.429/0.456 and spent much of both clips at its 0.50
+cap. It is therefore a defensible clean/digital fidelity mode, not the default
+for a grain-retention pipeline. The compensation model should be calibrated on
+more real titles before auto retention is promoted.
+
+Two encoder-side candidates did not produce a general win:
+
+- UHQ changes the meaning of the QVBR scale; QVBR 24 was required to
+  approximately match HQ QVBR 29 size. At that matched rate it improved mean
+  VMAF by 0.43-0.45 and the Butteraugli tail by 0.27-0.28, but reduced VMAF
+  minimum by 0.26-0.31 and mean SSIMULACRA2 by 0.14-0.19. It also enables
+  lookahead and temporal filtering and is slower. Keep HQ for production.
+- Pinning AQ strength 8 moved bytes by +0.08%, left mean quality and retention
+  effectively unchanged, and moved tail metrics in opposite directions. Keep
+  the driver's automatic AQ strength.
+
 ## Routing and the new grain-scale signal
 
 The matched-rate Taxi Driver sample in `FINDINGS-2026-07-17.md` remains a
@@ -198,8 +254,8 @@ The highest-value additions are:
    rather than only clip means.
 2. Multi-lag and radial grain autocorrelation so grain size is measured beyond
    a single neighbouring pixel.
-3. Matched-quality rate efficiency (bytes at a fixed quality target), alongside
-   matched-rate quality; QVBR-only comparisons can hide the routing decision.
+3. Broader matched-quality rate efficiency. The two Silo controls above now
+   establish one production operating point, but not a cross-title curve.
 4. End-to-end media-minutes/hour, GPU utilization, energy/frame, output bytes,
    and failure rate at each Tdarr concurrency level.
 
