@@ -22,6 +22,9 @@ levers:
 - `d23400f4` widens the existing bilateral kernel continuously for spatially
   correlated grain, improving coarse-grain separation without adding a pass
   or changing the fine-grain/detail path.
+- `d807b990` keeps that wider profile for the genuinely coarse extreme after
+  a matched-rate Silo A/B showed that moderate real-film correlation should
+  stay on the production filter.
 
 These commits modify `NVEncFilterFilmGrain.cu` and
 `NVEncFilmGrainModel.{h,cpp}` and therefore require rebuilding NVEncC; they are
@@ -114,7 +117,7 @@ used a compact `[1 4 6 4 1]` profile regardless of grain scale. A uniformly
 wider profile captured more coarse grain but unnecessarily reduced detail
 transfer. `d23400f4` instead maps the already-measured source correlation
 continuously to a profile between `[1 4 6 4 1]` and `[1 2 2 2 1]`. This is
-not a routing threshold: correlations from 0.20 to 0.80 interpolate smoothly,
+not a routing threshold: correlations from 0.60 to 0.80 interpolate smoothly,
 and only the standalone bilateral path changes.
 
 | Bilateral KAT measure | Fixed profile | Adaptive profile |
@@ -130,6 +133,23 @@ from 1.053 to 1.173 (+11.3%), lag-one spatial autocorrelation moves from 0.600
 to 0.624, and bytes move from 20,738,325 to 20,744,490 (+0.03%). Throughput is
 unchanged within run noise: 25.64 fps on the pre-change optimized binary and
 25.68 fps with adaptive weighting.
+
+The initial experiment began interpolation at 0.20. A real Silo S03E01 run
+measured 0.36-0.47 and therefore partially activated the wider profile even
+though the title already retained grain correctly. At the same QVBR 25.4, the
+compact and broad variants landed within 0.8% bytes; the compact profile won
+the real-content comparison:
+
+| Silo S03E01, first 600 frames | Broad from 0.20 | Compact through 0.60 |
+| --- | ---: | ---: |
+| Bytes | 14,730,354 | 14,848,643 |
+| SSIMULACRA2 / p5 | 80.39 / 74.90 | **80.66 / 75.21** |
+| Butteraugli 2-norm / max p95 | 0.917 / 3.33 | **0.905 / 3.26** |
+| VMAF / minimum | 93.68 / 83.00 | **93.85 / 84.19** |
+
+`d807b990` therefore moves the onset to 0.60. This leaves Silo on the measured
+production path while preserving the full coarse-fixture and Taxi Driver
+improvement (Taxi's measured correlation is 0.823).
 
 Three tempting variants were rejected rather than committed:
 
