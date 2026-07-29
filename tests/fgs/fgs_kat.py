@@ -7,6 +7,7 @@ dav1d (grain synthesis on and off), and compares the statistics of the
 synthesized grain against the injected grain:
 
   const_luma     constant-strength luma grain, pristine chroma
+  warmup_luma    atypical first frame followed by stable luma grain
   ramp_luma      luma grain strength rising with intensity, pristine chroma
   chroma_corr    luma grain plus luma-correlated chroma grain
   chroma_ind     luma grain plus independent chroma grain
@@ -161,6 +162,8 @@ def generate(test, spec, path, clean_path=None):
                 unit = correlated_unit_noise(rng, (H, W)) if spec["sigma_y_mode"] == "coarse" \
                     else rng.normal(0.0, 1.0, (H, W))
                 noise_y = unit * sigma_map_for(spec, base)
+                if n == 0 and "first_sigma_y" in spec:
+                    noise_y *= spec["first_sigma_y"] / spec["sigma_y"]
             else:
                 noise_y = np.zeros((H, W))
             y = np.clip(np.rint(base + noise_y), CLIP_LO, CLIP_HI).astype(DTYPE)
@@ -364,6 +367,10 @@ def fmt(a):
 
 TESTS = {
     "const_luma":    {"sigma_y_mode": "const", "sigma_y": 6.0},
+    # The first accepted model necessarily has one frame of statistics.  This
+    # fixture makes that frame atypical without crossing the scene-reset noise
+    # ratio, then verifies the full rolling-window fit replaces it promptly.
+    "warmup_luma":   {"sigma_y_mode": "const", "sigma_y": 6.0, "first_sigma_y": 4.0},
     "ramp_luma":     {"sigma_y_mode": "ramp"},
     "chroma_corr":   {"sigma_y_mode": "const", "sigma_y": 6.0, "corr_c": 0.8, "sigma_c": 1.0},
     "chroma_ind":    {"sigma_y_mode": "const", "sigma_y": 6.0, "sigma_c": 3.0},
@@ -592,6 +599,11 @@ def run_test(test, keep):
         refreshes = [m["frame"] for m in models if m["reliable"] and not m["held"] and m["frame"] > 0]
         ok &= check("model stable (no twinkle)", len(refreshes) <= 3,
                     f"model refreshed at frames {refreshes[:10]}")
+        if test == "warmup_luma":
+            ok &= check("full-window model replaces first-frame fit",
+                        bool(refreshes) and refreshes[0] <= SKIP,
+                        f"first refresh frame {refreshes[0] if refreshes else 'none'} "
+                        f"(rolling window completes at frame {SKIP - 1})")
         seed_corr = grain_frame_corr(on, off, range(SKIP, SKIP + 10))
         ok &= check("grain decorrelates frame-to-frame", seed_corr < 0.25,
                     f"mean |corr| between consecutive grain fields {seed_corr:.3f}")
