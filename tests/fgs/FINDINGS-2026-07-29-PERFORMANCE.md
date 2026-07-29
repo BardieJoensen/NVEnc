@@ -156,12 +156,16 @@ versus midpoint:
 | VMAF NEG | **93.81** | 93.71 | 93.20 |
 | PSNR-Y / SSIM | **44.72 / 0.9984** | 44.59 / 0.9984 | 44.24 / 0.9983 |
 | CIEDE2000 (lower is better) | 43.48 | 43.37 | **43.06** |
+| Decoded HF sigma (source 1.30) | 1.48 | 1.49 | 1.54 |
+| Synth sigma / lag-one ACF | 0.809 / 0.429 | 0.832 / 0.440 | 0.931 / 0.492 |
 
 Compact wins every texture/distortion family except the small color-error
-movement. More importantly, the intended endpoint also fails. Taxi Driver's
-aggregate correlation is 0.823, so the narrowed ramp selects fully wide. A
-second 288-frame matched-rate comparison gave the wider result 0.86% more
-bytes:
+movement. The grain-specific measures do not rescue the ramp: The Shining
+already exceeds its source HF energy with the compact profile, and widening
+adds still more synthesized energy. More importantly, the intended endpoint
+also fails. Taxi Driver's aggregate correlation is 0.823, so the narrowed ramp
+selects fully wide. A second 288-frame matched-rate comparison gave the wider
+result 0.86% more bytes:
 
 | Taxi Driver | Compact | Fully wide |
 | --- | ---: | ---: |
@@ -172,9 +176,15 @@ bytes:
 | VMAF NEG | **87.37** | 86.87 |
 | PSNR-Y / SSIM | **40.07 / 0.9966** | 39.89 / 0.9965 |
 | CIEDE2000 (lower is better) | 39.26 | **39.11** |
+| Decoded HF sigma (source 2.46) | 2.28 | 2.28 |
+| Grain-off base HF sigma | 1.58 | 1.57 |
+| Synth sigma / lag-one ACF | 1.328 / 0.587 | 1.384 / 0.605 |
 
 The wide profile again loses the main texture and fidelity metrics; only the
-Butteraugli extreme tail and color error move slightly in its favor. The
+Butteraugli extreme tail and color error move slightly in its favor. Its
+synthesized grain is 4.2% stronger and slightly more spatially correlated, but
+the grain-off base becomes equally smoother, leaving total decoded HF energy
+unchanged. It reallocates texture rather than improving retention. The
 synthetic coarse-capture improvement therefore does not justify a production
 code path. `a4b84e1a` restores the compact profile everywhere and returns the
 coarse KAT to its original regression-only 30% floor (actual capture 36%).
