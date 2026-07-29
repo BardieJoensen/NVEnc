@@ -1342,7 +1342,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     std::nth_element(grainCorrelationSamples.begin(), correlationMiddle, grainCorrelationSamples.end());
     const float measuredGrainCorrelation = *correlationMiddle;
     // Source correlation is a continuous grain-scale descriptor, not a
-    // routing threshold.  Keep the proven fine-grain filter through 0.20,
+    // routing threshold.  Keep the proven production filter through 0.60,
     // then smoothly widen its spatial profile up to the coarse-grain proxy
     // at 0.80.  This changes weights only; it adds no filter pass or samples.
     const float bilateralSpatialSpread = fgs_bilateral_spatial_spread(measuredGrainCorrelation);

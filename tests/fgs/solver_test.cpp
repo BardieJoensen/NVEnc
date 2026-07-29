@@ -80,7 +80,9 @@ void testBilateralSpatialSpread() {
         "negative/fine correlation keeps compact bilateral profile");
     expectNear(fgs_bilateral_spatial_spread(0.2f), 0.0, 1e-6,
         "fine correlation endpoint keeps compact bilateral profile");
-    expectNear(fgs_bilateral_spatial_spread(0.5f), 0.5, 1e-6,
+    expectNear(fgs_bilateral_spatial_spread(0.6f), 0.0, 1e-6,
+        "production correlation range keeps compact bilateral profile");
+    expectNear(fgs_bilateral_spatial_spread(0.7f), 0.5, 1e-6,
         "mid correlation interpolates bilateral profile");
     expectNear(fgs_bilateral_spatial_spread(0.8f), 1.0, 1e-6,
         "coarse correlation endpoint reaches wide bilateral profile");
