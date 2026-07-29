@@ -407,11 +407,9 @@ TESTS = {
 # spatially correlated like this fixture, and as of 2026-07-16 the FFT3D+
 # bilateral denoiser only captures a fraction of it (confirmed on real 4K
 # remuxes: NVEncFilterFilmGrain output landed at ~95-107% of source remux
-# size on heavy-grain content instead of the 30-40% target). Standalone
-# bilateral now widens its existing kernel continuously with measured grain
-# scale; guard that specific gain while leaving the other denoisers at their
-# established regression floor.
-COARSE_LUMA_MIN_CAPTURE_RATIO = 0.38 if FGS_DENOISER == "bilateral" else 0.30
+# size on heavy-grain content instead of the 30-40% target). This threshold
+# only catches a regression below that already-limited baseline.
+COARSE_LUMA_MIN_CAPTURE_RATIO = 0.30
 COARSE_LUMA_MIN_SOURCE_CORRELATION = 0.50
 FINE_LUMA_MAX_SOURCE_CORRELATION = 0.10
 

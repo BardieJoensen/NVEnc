@@ -311,8 +311,7 @@ __global__ void kernel_fgs_motion_confidence(uint8_t *__restrict__ flatMask,
 template<typename Type, int shift, int components>
 __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPitch,
     const uint8_t *__restrict__ src, const int srcPitch, const int width, const int height,
-    const int maxValue, const float sigma, const float spatialSpread,
-    const float *__restrict__ sigmaMap,
+    const int maxValue, const float sigma, const float *__restrict__ sigmaMap,
     const FilmGrainBlockMetric *__restrict__ detailMetrics,
     const int blocksX, const int blocksY, const int planeBlockSize) {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -342,16 +341,7 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
     __syncthreads();
     if (x >= width || y >= height) return;
 
-    // The original binomial profile is deliberately compact for fine,
-    // uncorrelated grain.  Coarse grain needs a wider low-pass response to
-    // move its low/mid-frequency energy out of the encoded base and into the
-    // synthesis model.  Interpolate the same 5x5 kernel rather than adding
-    // another pass: zero is [1 4 6 4 1], one is [1 2 2 2 1].
-    const float nearSpatial = 4.0f - 2.0f * spatialSpread;
-    const float centerSpatial = 6.0f - 4.0f * spatialSpread;
-    const float spatial[5] = {
-        1.0f, nearSpatial, centerSpatial, nearSpatial, 1.0f
-    };
+    constexpr float spatial[5] = { 1.0f, 4.0f, 6.0f, 4.0f, 1.0f };
     int ix = 0;
     int iy = 0;
     int ix1 = 0;
@@ -408,7 +398,7 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
                     + threadIdx.x + FGS_BILATERAL_RADIUS + dx) * components + component;
                 const int sample = tile[sampleIndex];
                 if (dx == 0 && dy == 0) {
-                    const float centerWeight = spatial[2] * spatial[2];
+                    constexpr float centerWeight = spatial[2] * spatial[2];
                     weighted += centerWeight * center;
                     weightSum += centerWeight;
                     continue;
@@ -717,14 +707,13 @@ static RGY_ERR launch_residual_retain(const RGYFrameInfo& lumaDst, const RGYFram
 template<typename Type, int shift, int components>
 static RGY_ERR launch_bilateral(const RGYFrameInfo& dst, const RGYFrameInfo& src,
     const int width, const int height, const int bitDepth, const float sigma,
-    const float spatialSpread,
     const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
     const int blocksX, const int blocksY, const int planeBlockSize, cudaStream_t stream) {
     const dim3 block(FGS_BILATERAL_BLOCK_X, FGS_BILATERAL_BLOCK_Y);
     const dim3 grid(divCeil(width, static_cast<int>(block.x)), divCeil(height, static_cast<int>(block.y)));
     kernel_fgs_bilateral<Type, shift, components><<<grid, block, 0, stream>>>(
         dst.ptr[0], dst.pitch[0], src.ptr[0], src.pitch[0], width, height, (1 << bitDepth) - 1, sigma,
-        spatialSpread, sigmaMap, detailMetrics, blocksX, blocksY, planeBlockSize);
+        sigmaMap, detailMetrics, blocksX, blocksY, planeBlockSize);
     return err_to_rgy(cudaGetLastError());
 }
 
@@ -889,7 +878,6 @@ namespace {
 template<typename Type, int shift>
 static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFrameInfo *src,
     const bool chroma, const bool includeLuma, const int passes, const int bitDepth, const float sigma,
-    const float spatialSpread,
     const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
     const int blocksX, const int blocksY, cudaStream_t stream) {
     for (int pass = 0; pass < passes; ++pass) {
@@ -899,7 +887,7 @@ static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const 
             auto srcY = getPlane(passSrc, RGY_PLANE_Y);
             auto dstY = getPlane(passDst, RGY_PLANE_Y);
             auto sts = launch_bilateral<Type, shift, 1>(dstY, srcY, srcY.width, srcY.height, bitDepth, sigma,
-                spatialSpread, sigmaMap, detailMetrics, blocksX, blocksY, FGS_BLOCK_SIZE, stream);
+                sigmaMap, detailMetrics, blocksX, blocksY, FGS_BLOCK_SIZE, stream);
             if (sts != RGY_ERR_NONE) return sts;
         }
         if (!chroma) continue;
@@ -908,14 +896,14 @@ static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const 
             auto srcUV = getPlane(passSrc, RGY_PLANE_U);
             auto dstUV = getPlane(passDst, RGY_PLANE_U);
             auto sts = launch_bilateral<Type, shift, 2>(dstUV, srcUV, src->width / 2, src->height / 2, bitDepth, sigma,
-                spatialSpread, sigmaMap, nullptr, blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream);
+                sigmaMap, nullptr, blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream);
             if (sts != RGY_ERR_NONE) return sts;
         } else {
             for (int plane = RGY_PLANE_U; plane <= RGY_PLANE_V; ++plane) {
                 auto srcC = getPlane(passSrc, static_cast<RGY_PLANE>(plane));
                 auto dstC = getPlane(passDst, static_cast<RGY_PLANE>(plane));
                 auto sts = launch_bilateral<Type, shift, 1>(dstC, srcC, srcC.width, srcC.height, bitDepth, sigma,
-                    spatialSpread, sigmaMap, nullptr, blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream);
+                    sigmaMap, nullptr, blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream);
                 if (sts != RGY_ERR_NONE) return sts;
             }
         }
@@ -925,17 +913,16 @@ static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const 
 
 static RGY_ERR denoise_frame(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFrameInfo *src,
     const bool chroma, const bool includeLuma, const int passes, const int bitDepth, const float sigma,
-    const float spatialSpread,
     const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
     const int blocksX, const int blocksY, cudaStream_t stream) {
     switch (src->csp) {
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
-        return denoise_frame_typed<uint8_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, spatialSpread, sigmaMap, detailMetrics, blocksX, blocksY, stream);
+        return denoise_frame_typed<uint8_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream);
     case RGY_CSP_YV12_10:
-        return denoise_frame_typed<uint16_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, spatialSpread, sigmaMap, detailMetrics, blocksX, blocksY, stream);
+        return denoise_frame_typed<uint16_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream);
     case RGY_CSP_P010:
-        return denoise_frame_typed<uint16_t, 6>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, spatialSpread, sigmaMap, detailMetrics, blocksX, blocksY, stream);
+        return denoise_frame_typed<uint16_t, 6>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream);
     default:
         return RGY_ERR_UNSUPPORTED;
     }
@@ -1341,11 +1328,6 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     const auto correlationMiddle = grainCorrelationSamples.begin() + grainCorrelationSamples.size() / 2;
     std::nth_element(grainCorrelationSamples.begin(), correlationMiddle, grainCorrelationSamples.end());
     const float measuredGrainCorrelation = *correlationMiddle;
-    // Source correlation is a continuous grain-scale descriptor, not a
-    // routing threshold.  Keep the proven production filter through 0.60,
-    // then smoothly widen its spatial profile up to the coarse-grain proxy
-    // at 0.80.  This changes weights only; it adds no filter pass or samples.
-    const float bilateralSpatialSpread = fgs_bilateral_spatial_spread(measuredGrainCorrelation);
     const bool adaptiveSigma = prm->filmGrain.denoiseLevel <= 0.0f;
     const float denoiseSigma = adaptiveSigma
         ? measuredNoise : prm->filmGrain.denoiseLevel * depthScale;
@@ -1435,7 +1417,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         sts = copyFrameAsync(&m_denoiseWork->frame, output, stream);
         if (sts != RGY_ERR_NONE) return sts;
         sts = denoise_frame(output, &m_denoiseWork->frame, &m_denoiseWork->frame, prm->filmGrain.analyzeChroma, true,
-            1, bitDepth, denoiseSigma, 0.0f,
+            1, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
             static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
             m_blocksX, m_blocksY, stream);
@@ -1449,14 +1431,14 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if (sts != RGY_ERR_NONE) return sts;
         sts = denoise_frame(output, &m_denoiseWork->frame, &m_denoiseWork->frame,
             prm->filmGrain.analyzeChroma, true,
-            1, bitDepth, denoiseSigma, 0.0f,
+            1, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
             nullptr,
             m_blocksX, m_blocksY, stream);
         if (sts != RGY_ERR_NONE) return sts;
     } else {
         sts = denoise_frame(output, &m_denoiseWork->frame, source, prm->filmGrain.analyzeChroma, true,
-            prm->filmGrain.denoisePasses, bitDepth, denoiseSigma, bilateralSpatialSpread,
+            prm->filmGrain.denoisePasses, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
             nullptr,
             m_blocksX, m_blocksY, stream);

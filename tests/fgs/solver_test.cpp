@@ -75,21 +75,6 @@ void testStratifiedSampling() {
     }
 }
 
-void testBilateralSpatialSpread() {
-    expectNear(fgs_bilateral_spatial_spread(-0.2f), 0.0, 1e-6,
-        "negative/fine correlation keeps compact bilateral profile");
-    expectNear(fgs_bilateral_spatial_spread(0.2f), 0.0, 1e-6,
-        "fine correlation endpoint keeps compact bilateral profile");
-    expectNear(fgs_bilateral_spatial_spread(0.6f), 0.0, 1e-6,
-        "production correlation range keeps compact bilateral profile");
-    expectNear(fgs_bilateral_spatial_spread(0.7f), 0.5, 1e-6,
-        "mid correlation interpolates bilateral profile");
-    expectNear(fgs_bilateral_spatial_spread(0.8f), 1.0, 1e-6,
-        "coarse correlation endpoint reaches wide bilateral profile");
-    expectNear(fgs_bilateral_spatial_spread(1.2f), 1.0, 1e-6,
-        "coarse correlation clamps wide bilateral profile");
-}
-
 // White noise of std `sigma` on every strength bin: diagonal normal equations,
 // zero correlation with the predictors.
 void fillWhitePlane(FilmGrainGpuPlaneStats& plane, const double sigma, const bool chroma) {
@@ -256,7 +241,6 @@ void testStrengthLut() {
 
 int main() {
     testStratifiedSampling();
-    testBilateralSpatialSpread();
     testWhiteLuma();
     testRampLuma();
     testChromaCorrelationClamp();
