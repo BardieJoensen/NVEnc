@@ -68,6 +68,9 @@ constexpr float FGS_SCENE_MEAN_DELTA_8BIT = 12.0f;
 constexpr float FGS_SCENE_BLOCK_DELTA_8BIT = 20.0f;
 constexpr float FGS_SCENE_CHANGED_BLOCK_FRACTION = 0.65f;
 constexpr int FGS_FLAT_THREADS = 128;
+constexpr int FGS_BILATERAL_BLOCK_X = 32;
+constexpr int FGS_BILATERAL_BLOCK_Y = 8;
+constexpr int FGS_BILATERAL_RADIUS = 2;
 
 struct FilmGrainBlockMetric {
     float mean;
@@ -313,6 +316,29 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
     const int blocksX, const int blocksY, const int planeBlockSize) {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
+    constexpr int tileWidth = FGS_BILATERAL_BLOCK_X + FGS_BILATERAL_RADIUS * 2;
+    constexpr int tileHeight = FGS_BILATERAL_BLOCK_Y + FGS_BILATERAL_RADIUS * 2;
+    constexpr int tilePixels = tileWidth * tileHeight;
+    constexpr int blockThreads = FGS_BILATERAL_BLOCK_X * FGS_BILATERAL_BLOCK_Y;
+    __shared__ int tile[tilePixels * components];
+
+    // Neighbourhoods overlap heavily: the original implementation issued 25
+    // global source loads per output component.  Cooperatively cache this
+    // block's 5x5 halo once, preserving the exact sample values and arithmetic
+    // order used by the filter below.
+    const int tid = threadIdx.y * FGS_BILATERAL_BLOCK_X + threadIdx.x;
+    for (int index = tid; index < tilePixels * components; index += blockThreads) {
+        const int component = index % components;
+        const int pixel = index / components;
+        const int tx = pixel % tileWidth;
+        const int ty = pixel / tileWidth;
+        const int sx = min(width - 1, max(0,
+            static_cast<int>(blockIdx.x) * FGS_BILATERAL_BLOCK_X + tx - FGS_BILATERAL_RADIUS));
+        const int sy = min(height - 1, max(0,
+            static_cast<int>(blockIdx.y) * FGS_BILATERAL_BLOCK_Y + ty - FGS_BILATERAL_RADIUS));
+        tile[index] = load_code<Type, shift>(src, srcPitch, sx, sy, component, components);
+    }
+    __syncthreads();
     if (x >= width || y >= height) return;
 
     constexpr float spatial[5] = { 1.0f, 4.0f, 6.0f, 4.0f, 1.0f };
@@ -359,14 +385,18 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
             / (FGS_DETAIL_COHERENCE_HIGH - FGS_DETAIL_COHERENCE_LOW)));
     }
     for (int component = 0; component < components; ++component) {
-        const int center = load_code<Type, shift>(src, srcPitch, x, y, component, components);
+        const int centerIndex = (
+            (threadIdx.y + FGS_BILATERAL_RADIUS) * tileWidth
+            + threadIdx.x + FGS_BILATERAL_RADIUS) * components + component;
+        const int center = tile[centerIndex];
         float weighted = 0.0f;
         float weightSum = 0.0f;
         for (int dy = -2; dy <= 2; ++dy) {
-            const int sy = min(height - 1, max(0, y + dy));
             for (int dx = -2; dx <= 2; ++dx) {
-                const int sx = min(width - 1, max(0, x + dx));
-                const int sample = load_code<Type, shift>(src, srcPitch, sx, sy, component, components);
+                const int sampleIndex = (
+                    (threadIdx.y + FGS_BILATERAL_RADIUS + dy) * tileWidth
+                    + threadIdx.x + FGS_BILATERAL_RADIUS + dx) * components + component;
+                const int sample = tile[sampleIndex];
                 const float difference = static_cast<float>(sample - center);
                 const float rangeWeight = 1.0f / (1.0f + difference * difference * invRange2);
                 const float weight = spatial[dx + 2] * spatial[dy + 2] * rangeWeight;
@@ -663,7 +693,7 @@ static RGY_ERR launch_bilateral(const RGYFrameInfo& dst, const RGYFrameInfo& src
     const int width, const int height, const int bitDepth, const float sigma,
     const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
     const int blocksX, const int blocksY, const int planeBlockSize, cudaStream_t stream) {
-    const dim3 block(32, 8);
+    const dim3 block(FGS_BILATERAL_BLOCK_X, FGS_BILATERAL_BLOCK_Y);
     const dim3 grid(divCeil(width, static_cast<int>(block.x)), divCeil(height, static_cast<int>(block.y)));
     kernel_fgs_bilateral<Type, shift, components><<<grid, block, 0, stream>>>(
         dst.ptr[0], dst.pitch[0], src.ptr[0], src.pitch[0], width, height, (1 << bitDepth) - 1, sigma,
