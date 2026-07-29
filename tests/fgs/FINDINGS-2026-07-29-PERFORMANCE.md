@@ -22,6 +22,67 @@ All 17 GPU known-answer fixtures, both 8/10-bit retention sweeps (10 points),
 the CPU solver and parser tests pass. Headline quality metrics and every
 retention-sweep encoded byte count are unchanged.
 
+### Taxi Driver grain-strength correction
+
+The original Taxi Driver routing conclusion exposed an analyzer defect rather
+than an AV1 film-grain format limit. The sparse AR estimator sampled the same
+8x8 lattice in every 32x32 model block. On the film residual that lattice
+aliased the spatial correlation and inflated the fitted AR synthesis gain:
+
+| Taxi 20 diagnostic | AR gain |
+| --- | ---: |
+| libaom, all usable pixels | 2.02 |
+| old fixed lattice, frame 0 | 4.25 |
+| old fixed lattice, 32 frames | 3.55 |
+| staggered 64-point simulation, frame 0 | 2.04 |
+| staggered 64-point simulation, 32 frames | 2.12 |
+
+The strength curve is divided by this gain once, so the biased fit explained
+why the old build signalled roughly half the required luma amplitude even
+though its AR coefficient *shape* looked plausible. `09dae08c` keeps 64
+observations per block but chooses one deterministic, block-staggered sample
+from each spatial stratum. It also keeps every predictor inside its model
+block, removing an out-of-frame read on the rightmost old sample.
+
+On the exact same source/clean pairs, decoded luma-grain sigma now follows the
+libaom oracle:
+
+| Scene | Measured residual | Old NVEnc | Corrected NVEnc | libaom |
+| --- | ---: | ---: | ---: | ---: |
+| Taxi 20 | 1.255 | 0.707 | 1.208 | 1.178 |
+| Taxi 40 | 1.675 | 0.430 | 1.359 | 1.366 |
+| Taxi 60 | 1.243 | 0.393 | 1.013 | 1.084 |
+| Taxi 80 | 1.305 | 0.639 | 1.115 | 1.079 |
+
+The corrected result is within -6.6% to +3.3% of libaom on all four scenes.
+The residual-to-synthesis ratio is not always one even for libaom because the
+residual also contains separator error and components the compact AV1 model
+does not reproduce.
+
+The matched production-style QVBR 26 rerun changes the decision materially:
+
+| Scene | Old MiB | Corrected MiB | Size change | Old retention | Corrected retention |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Taxi 20 | 25.75 | 19.99 | -22.3% | 0.741 | 0.921 |
+| Taxi 40 | 28.82 | 19.59 | -32.0% | 0.611 | 0.828 |
+| Taxi 60 | 26.70 | 19.78 | -25.9% | 0.758 | 0.878 |
+| Taxi 80 | 28.73 | 19.66 | -31.6% | 0.614 | 0.854 |
+
+This is the first real-title confirmation that Taxi Driver no longer needs to
+be routed away merely because FGS under-signals its grain. It is not yet a
+blind deployment recommendation: source-position distortion metrics penalize
+correctly randomized synthesis heavily. On Taxi 20, SSIMULACRA2 moved from
+17.19 to 5.12 and the Butteraugli max-norm p95 from 3.31 to 16.39 while grain
+retention improved from 0.741 to 0.921. Those numbers describe a real
+pixel-position difference but cannot distinguish correctly sized,
+decorrelated grain from objectionable noise. A playback A/B of several dark,
+bright and moving scenes remains the release gate.
+
+Neither partial-retention control improved the decision. At the same QVBR,
+`retain=0.25` left bytes and grain retention effectively unchanged and made
+the distortion tails slightly worse; `retain=auto` reduced retention to 0.885
+without saving bytes. Zero retention remains the Taxi candidate.
+
 ## Correctness audit
 
 The parallel flat-analysis reduction intentionally reuses shared storage:
@@ -221,10 +282,11 @@ Two encoder-side candidates did not produce a general win:
 
 ## Routing and the new grain-scale signal
 
-The matched-rate Taxi Driver sample in `FINDINGS-2026-07-17.md` remains a
-useful routing hypothesis: on that sample, a plain tuned encode beat FGS
-because the synthesized field carried the wrong spatial texture. It does not
-establish a general coarse-film rule.
+The matched-rate Taxi Driver sample in `FINDINGS-2026-07-17.md` accurately
+described the old build, but its routing conclusion is superseded by the
+fixed-lattice correction above. The AV1 model was not the primary ceiling:
+NVEnc's strength fit was too small. A plain tuned encode remains a useful
+control, not the preferred Taxi route solely on the old result.
 
 The new detrended lag-one source correlation cleanly separates the generated
 fixtures:
@@ -242,9 +304,10 @@ property of the generated controls, not evidence of bimodal film classes.
 
 `grainCorr` remains useful as a continuous descriptor and as one input to a
 failure predictor. It is not an engage/disengage gate by itself. Taxi Driver
-is the most useful targeted validation case because it combines the highest
-observed source correlation (0.823) with the only failing retention result
-(0.68 across four scenes).
+was the highest-value targeted case because it combined the highest observed
+source correlation (0.823) with the only failing retention result; the
+corrected four-scene result shows why routing on that correlation would have
+hidden a fixable estimator error.
 
 ## Next measurements
 
@@ -252,8 +315,9 @@ The highest-value additions are:
 
 1. Local grain-energy flicker over time, including scene-percentile tails
    rather than only clip means.
-2. Multi-lag and radial grain autocorrelation so grain size is measured beyond
-   a single neighbouring pixel.
+2. The quality tooling now records multi-lag spatial autocorrelation. Add
+   radial correlation and scene-percentile summaries so grain size is measured
+   beyond one neighbouring pixel and one clip mean.
 3. Broader matched-quality rate efficiency. The two Silo controls above now
    establish one production operating point, but not a cross-title curve.
 4. End-to-end media-minutes/hour, GPU utilization, energy/frame, output bytes,
