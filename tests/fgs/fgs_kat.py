@@ -254,10 +254,12 @@ def parse_log(log):
         if not m:
             continue
         adaptive = re.search(r"risk=([0-9.]+) retain=([0-9.]+)", line)
+        grain_corr = re.search(r"grainCorr=(-?[0-9.]+)", line)
         out.append({"frame": int(m.group(1)), "reliable": int(m.group(2)),
                     "reset": int(m.group(3)), "held": int(m.group(4) or 0),
                     "risk": float(adaptive.group(1)) if adaptive else 0.0,
-                    "retain": float(adaptive.group(2)) if adaptive else 0.0})
+                    "retain": float(adaptive.group(2)) if adaptive else 0.0,
+                    "grain_corr": float(grain_corr.group(1)) if grain_corr else 0.0})
     return out
 
 
@@ -401,6 +403,8 @@ TESTS = {
 # size on heavy-grain content instead of the 30-40% target). This threshold
 # only catches a regression below that already-limited baseline.
 COARSE_LUMA_MIN_CAPTURE_RATIO = 0.30
+COARSE_LUMA_MIN_SOURCE_CORRELATION = 0.50
+FINE_LUMA_MAX_SOURCE_CORRELATION = 0.10
 
 
 def run_test(test, keep):
@@ -532,6 +536,11 @@ def run_test(test, keep):
     elif test == "coarse_luma":
         sigma, _ = measure(on, off, range(SKIP, nframes))
         ratio = float(sigma[0].mean() / max(expected[0].mean(), 1e-9))
+        adaptive = [m for m in models if m["frame"] >= SKIP and m["reliable"]]
+        grain_corr = float(np.median([m["grain_corr"] for m in adaptive])) if adaptive else 0.0
+        ok &= check("coarse-grain source correlation",
+                    grain_corr >= COARSE_LUMA_MIN_SOURCE_CORRELATION,
+                    f"lag-one {grain_corr:.3f} (minimum {COARSE_LUMA_MIN_SOURCE_CORRELATION:.2f})")
         ok &= check("spatially-correlated grain capture ratio (informational, see comment above TESTS)",
                     ratio >= COARSE_LUMA_MIN_CAPTURE_RATIO,
                     f"captured {ratio * 100:.0f}% of injected coarse-grain sigma "
@@ -542,6 +551,13 @@ def run_test(test, keep):
     else:
         sigma, corr = measure(on, off, range(SKIP, nframes))
         ratio = sigma[0] / np.maximum(expected[0], 1e-9)
+        if test == "const_luma":
+            adaptive = [m for m in models if m["frame"] >= SKIP and m["reliable"]]
+            grain_corr = float(np.median([m["grain_corr"] for m in adaptive])) if adaptive else 0.0
+            ok &= check("fine-grain source correlation",
+                        abs(grain_corr) <= FINE_LUMA_MAX_SOURCE_CORRELATION,
+                        f"lag-one {grain_corr:.3f} "
+                        f"(maximum magnitude {FINE_LUMA_MAX_SOURCE_CORRELATION:.2f})")
         ok &= check("luma strength tracks injected grain",
                     bool((ratio > 0.6).all() and (ratio < 1.25).all()),
                     f"synth {fmt(sigma[0] / DS)} vs injected {fmt(expected[0] / DS)} (8-bit units)")

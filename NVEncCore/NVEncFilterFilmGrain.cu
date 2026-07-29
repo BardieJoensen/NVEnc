@@ -74,6 +74,7 @@ struct FilmGrainBlockMetric {
     float sigma;
     float score;
     float coherence;
+    float spatialCorrelation;
     uint32_t flat;
 };
 
@@ -142,6 +143,7 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     __shared__ float reduce2[FGS_FLAT_THREADS];
     __shared__ float reduce3[FGS_FLAT_THREADS];
     __shared__ float reduce4[FGS_FLAT_THREADS];
+    __shared__ float reduce5[FGS_FLAT_THREADS];
     __shared__ int reduceCount[FGS_FLAT_THREADS];
     __shared__ float mean;
     __shared__ float planeX;
@@ -173,6 +175,8 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     float localGxx = 0.0f;
     float localGxy = 0.0f;
     float localGyy = 0.0f;
+    float localCorrelationProduct = 0.0f;
+    float localCorrelationEnergy = 0.0f;
     int localGradientCount = 0;
     for (int index = tid; index < count; index += FGS_FLAT_THREADS) {
         const int x = index % bw;
@@ -192,6 +196,15 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
             localGxx += gx * gx;
             localGxy += gx * gy;
             localGyy += gy * gy;
+            const float rightXn = (2.0f * (x + 1) - (bw - 1)) / bw;
+            const float downYn = (2.0f * (y + 1) - (bh - 1)) / bh;
+            const float rightResidual = right - (mean + planeX * rightXn + planeY * yn);
+            const float downResidual = down - (mean + planeX * xn + planeY * downYn);
+            localCorrelationProduct += residual * (rightResidual + downResidual);
+            localCorrelationEnergy += 0.5f * (
+                2.0f * residual * residual
+                + rightResidual * rightResidual
+                + downResidual * downResidual);
             ++localGradientCount;
         }
     }
@@ -199,6 +212,8 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     reduce1[tid] = localGxx;
     reduce2[tid] = localGxy;
     reduce3[tid] = localGyy;
+    reduce4[tid] = localCorrelationProduct;
+    reduce5[tid] = localCorrelationEnergy;
     reduceCount[tid] = localGradientCount;
     __syncthreads();
     for (int stride = FGS_FLAT_THREADS / 2; stride > 0; stride >>= 1) {
@@ -207,6 +222,8 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
             reduce1[tid] += reduce1[tid + stride];
             reduce2[tid] += reduce2[tid + stride];
             reduce3[tid] += reduce3[tid + stride];
+            reduce4[tid] += reduce4[tid + stride];
+            reduce5[tid] += reduce5[tid + stride];
             reduceCount[tid] += reduceCount[tid + stride];
         }
         __syncthreads();
@@ -246,6 +263,11 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     // this continuous confidence so the refinement mask can be interpolated
     // without introducing visible 32x32 block boundaries.
     out.coherence = (e1 - e2) / fmaxf(trace, 1e-12f);
+    // Lag-one correlation distinguishes fine, nearly white grain from coarse
+    // grain whose spatial scale the compact AV1 AR model may not reproduce.
+    // The symmetric energy denominator keeps the diagnostic bounded.
+    out.spatialCorrelation = fminf(1.0f, fmaxf(-1.0f,
+        reduce4[0] / fmaxf(reduce5[0], 1e-12f)));
     out.flat = isFlat ? 1u : 0u;
     metrics[blockIndex] = out;
 }
@@ -507,6 +529,7 @@ struct FilmGrainHostStats {
     FilmGrainGpuStats gpu;
     float measuredNoise;
     float detailRisk;
+    float grainCorrelation;
 };
 
 static float auto_retain_from_detail_risk(const float detailRisk) {
@@ -1409,6 +1432,14 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     FilmGrainHostStats current = {};
     std::memcpy(&current.gpu, m_modelStats->ptrHost, sizeof(current.gpu));
     current.measuredNoise = measuredNoise;
+    std::vector<float> grainCorrelationSamples;
+    grainCorrelationSamples.reserve(selected);
+    for (int i = 0; i < blockCount; ++i) {
+        if (mask[i]) grainCorrelationSamples.push_back(metrics[i].spatialCorrelation);
+    }
+    const auto correlationMiddle = grainCorrelationSamples.begin() + grainCorrelationSamples.size() / 2;
+    std::nth_element(grainCorrelationSamples.begin(), correlationMiddle, grainCorrelationSamples.end());
+    current.grainCorrelation = *correlationMiddle;
     double detailRiskSum = 0.0;
     for (int i = 0; i < blockCount; ++i) {
         detailRiskSum += clamp(
@@ -1421,12 +1452,15 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     while (static_cast<int>(m_state->history.size()) > prm->filmGrain.modelWindow) m_state->history.pop_front();
     m_state->stableNoise = 0.0f;
     diagnostics.detailRisk = 0.0f;
+    diagnostics.grainCorrelation = 0.0f;
     for (const auto& frame : m_state->history) {
         m_state->stableNoise += frame.measuredNoise;
         diagnostics.detailRisk += frame.detailRisk;
+        diagnostics.grainCorrelation += frame.grainCorrelation;
     }
     m_state->stableNoise /= m_state->history.size();
     diagnostics.detailRisk /= m_state->history.size();
+    diagnostics.grainCorrelation /= m_state->history.size();
     if (prm->filmGrain.residualRetain < 0.0f) {
         const float target = auto_retain_from_detail_risk(diagnostics.detailRisk);
         // The rolling model window removes frame noise; an additional two-step
@@ -1594,13 +1628,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             pointsCr += strsprintf(_T(" %d:%d"), params.pointCrValue[i], params.pointCrScaling[i]);
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
-            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
+            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             modelValid ? 1 : 0, diagnostics.sceneReset ? 1 : 0, diagnostics.modelHeld ? 1 : 0,
             diagnostics.flatBlocks, diagnostics.totalBlocks, diagnostics.modelFrames,
             diagnostics.noiseStdDev[0], diagnostics.noiseStdDev[1], diagnostics.noiseStdDev[2],
-            diagnostics.detailRisk, diagnostics.residualRetain,
+            diagnostics.detailRisk, diagnostics.residualRetain, diagnostics.grainCorrelation,
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,

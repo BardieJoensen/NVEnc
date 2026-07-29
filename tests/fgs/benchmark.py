@@ -87,6 +87,7 @@ def parse_kat(output):
     metrics = {}
     patterns = {
         "coarse_capture_percent": r"captured ([0-9.]+)% of injected coarse-grain sigma",
+        "coarse_source_correlation": r"coarse-grain source correlation: lag-one ([0-9.]+)",
         "ramp_strength_correlation": r"strength curve follows intensity ramp: corr ([0-9.]+)",
         "dark_max_mean_delta": r"black level preserved under synthesis: max \|mean delta\| ([0-9.]+)",
         "detail_transfer_gain": r"fine detail survives the cleaned base: high-pass transfer ([0-9.]+)",
