@@ -85,6 +85,34 @@ FGS_HOST_DEVICE constexpr int tri_index(const int n, const int i, const int j) {
     return i * n - i * (i + 1) / 2 + j;
 }
 
+// Mix the block/sample index so the sparse AR observations do not repeatedly
+// hit the same pixel phase in every model block.  A fixed 8x8 lattice can
+// alias spatially correlated film grain and substantially overestimate the AR
+// synthesis gain.
+FGS_HOST_DEVICE constexpr uint32_t fgs_sample_hash(uint32_t value) {
+    value ^= value >> 16;
+    value *= 0x7feb352dU;
+    value ^= value >> 15;
+    value *= 0x846ca68bU;
+    value ^= value >> 16;
+    return value;
+}
+
+// Pick one deterministic, staggered sample from each of eight strata.  Margins
+// keep every AR predictor inside the frame/model block. Partial edge blocks
+// may have fewer pixels than strata, in which case adjacent strata safely
+// reuse the same coordinate.
+FGS_HOST_DEVICE constexpr int fgs_stratified_sample_offset(const int extent,
+    const int leadingMargin, const int trailingMargin, const int stratum,
+    const uint32_t random) {
+    const int usable = extent - leadingMargin - trailingMargin;
+    if (usable <= 0) return leadingMargin;
+    const int begin = leadingMargin + usable * stratum / 8;
+    const int end = leadingMargin + usable * (stratum + 1) / 8;
+    const int span = end - begin;
+    return begin + (span > 0 ? static_cast<int>(random % static_cast<uint32_t>(span)) : 0);
+}
+
 // Accumulators filled by the CUDA statistics kernels and merged on the host
 // over the rolling model window; layout must stay memcpy/memset-compatible.
 struct FilmGrainGpuPlaneStats {

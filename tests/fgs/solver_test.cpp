@@ -38,6 +38,43 @@ void expectNear(const double got, const double want, const double tol, const cha
 
 constexpr uint64_t N_OBS = 100000;
 
+void testStratifiedSampling() {
+    bool sawLumaX[FGS_BLOCK_SIZE] = {};
+    bool sawLumaY[FGS_BLOCK_SIZE] = {};
+    bool sawChromaX[FGS_BLOCK_SIZE / 2] = {};
+    for (int block = 0; block < 256; ++block) {
+        for (int tid = 0; tid < 64; ++tid) {
+            const int tx = tid & 7;
+            const int ty = tid >> 3;
+            const uint32_t hash = fgs_sample_hash(static_cast<uint32_t>(block * 64 + tid));
+            const int lx = fgs_stratified_sample_offset(
+                FGS_BLOCK_SIZE, FGS_AR_LAG, FGS_AR_LAG, tx, hash);
+            const int ly = fgs_stratified_sample_offset(
+                FGS_BLOCK_SIZE, FGS_AR_LAG, 0, ty, hash >> 8);
+            const int cx = fgs_stratified_sample_offset(
+                FGS_BLOCK_SIZE / 2, FGS_AR_LAG, FGS_AR_LAG, tx, hash);
+            expect(lx >= FGS_AR_LAG && lx + FGS_AR_LAG < FGS_BLOCK_SIZE,
+                "luma horizontal sample keeps AR margins");
+            expect(ly >= FGS_AR_LAG && ly < FGS_BLOCK_SIZE,
+                "luma vertical sample keeps AR margin");
+            expect(cx >= FGS_AR_LAG && cx + FGS_AR_LAG < FGS_BLOCK_SIZE / 2,
+                "chroma horizontal sample keeps AR margins");
+            sawLumaX[lx] = true;
+            sawLumaY[ly] = true;
+            sawChromaX[cx] = true;
+        }
+    }
+    for (int x = FGS_AR_LAG; x < FGS_BLOCK_SIZE - FGS_AR_LAG; ++x) {
+        expect(sawLumaX[x], "staggered luma samples cover every safe column");
+    }
+    for (int y = FGS_AR_LAG; y < FGS_BLOCK_SIZE; ++y) {
+        expect(sawLumaY[y], "staggered luma samples cover every safe row");
+    }
+    for (int x = FGS_AR_LAG; x < FGS_BLOCK_SIZE / 2 - FGS_AR_LAG; ++x) {
+        expect(sawChromaX[x], "staggered chroma samples cover every safe column");
+    }
+}
+
 // White noise of std `sigma` on every strength bin: diagonal normal equations,
 // zero correlation with the predictors.
 void fillWhitePlane(FilmGrainGpuPlaneStats& plane, const double sigma, const bool chroma) {
@@ -203,6 +240,7 @@ void testStrengthLut() {
 } // namespace
 
 int main() {
+    testStratifiedSampling();
     testWhiteLuma();
     testRampLuma();
     testChromaCorrelationClamp();

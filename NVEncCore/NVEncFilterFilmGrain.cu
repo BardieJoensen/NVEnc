@@ -450,11 +450,21 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
     const int y0 = by * modelBlock;
     const int xEnd = min(width, x0 + modelBlock);
     const int yEnd = min(height, y0 + modelBlock);
-    const int usableW = xEnd - x0 - FGS_AR_LAG;
-    const int usableH = yEnd - y0 - FGS_AR_LAG;
-    const int x = x0 + FGS_AR_LAG + (usableW > 0 ? (usableW - 1) * threadIdx.x / max(1, static_cast<int>(blockDim.x) - 1) : 0);
-    const int y = y0 + FGS_AR_LAG + (usableH > 0 ? (usableH - 1) * threadIdx.y / max(1, static_cast<int>(blockDim.y) - 1) : 0);
-    valid[tid] = usableW > 0 && usableH > 0 && x < width && y < height;
+    const int blockW = xEnd - x0;
+    const int blockH = yEnd - y0;
+    const uint32_t sampleHash = fgs_sample_hash(static_cast<uint32_t>(blockIndex * 64 + tid));
+    // The AR template reaches three pixels left/right and three rows upward.
+    // Stagger one observation within each 8x8 stratum instead of sampling the
+    // same 4-pixel lattice in every block.  The fixed lattice aliases coarse
+    // film grain and can nearly double the fitted AR gain, which halves the
+    // signalled grain strength.
+    const int x = x0 + fgs_stratified_sample_offset(
+        blockW, FGS_AR_LAG, FGS_AR_LAG, threadIdx.x, sampleHash);
+    const int y = y0 + fgs_stratified_sample_offset(
+        blockH, FGS_AR_LAG, 0, threadIdx.y, sampleHash >> 8);
+    valid[tid] = blockW > FGS_AR_LAG * 2 && blockH > FGS_AR_LAG
+        && x >= FGS_AR_LAG && x + FGS_AR_LAG < width
+        && y >= FGS_AR_LAG && y < height;
     if (valid[tid]) {
         int index = 0;
         for (int dy = -FGS_AR_LAG; dy < 0; ++dy) {
