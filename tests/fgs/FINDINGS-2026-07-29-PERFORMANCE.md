@@ -14,13 +14,24 @@ change:
 `77e8329a` adds a source-grain scale diagnostic. It costs about 0.009 ms/frame
 at 1080p and does not affect the model or encoded pixels.
 
+Two later quality fixes use the faster analyzer rather than changing encoder
+levers:
+
+- `f259e251` replaces the necessarily weak single-frame opening model as soon
+  as the eight-frame rolling window fills.
+- `d23400f4` widens the existing bilateral kernel continuously for spatially
+  correlated grain, improving coarse-grain separation without adding a pass
+  or changing the fine-grain/detail path.
+
 These commits modify `NVEncFilterFilmGrain.cu` and
 `NVEncFilmGrainModel.{h,cpp}` and therefore require rebuilding NVEncC; they are
 not test-only changes.
 
-All 17 GPU known-answer fixtures, both 8/10-bit retention sweeps (10 points),
-the CPU solver and parser tests pass. Headline quality metrics and every
-retention-sweep encoded byte count are unchanged.
+All 18 GPU known-answer fixtures, both 8/10-bit retention sweeps (10 points),
+the CPU solver and parser tests pass. The speed-only commits leave headline
+quality metrics and every retention-sweep encoded byte count unchanged; the
+later quality commits intentionally change model timing or coarse-grain
+separation as measured below.
 
 ### Taxi Driver grain-strength correction
 
@@ -82,6 +93,52 @@ Neither partial-retention control improved the decision. At the same QVBR,
 `retain=0.25` left bytes and grain retention effectively unchanged and made
 the distortion tails slightly worse; `retain=auto` reduced retention to 0.885
 without saving bytes. Zero retention remains the Taxi candidate.
+
+### Startup convergence and coarse-grain separation
+
+The analyzer deliberately accepts a model on frame zero so grain is present
+from the first decoded frame. That first model only contains one frame of
+statistics, however, and the ordinary 24-frame model-update cadence could hold
+an atypical opening frame well after the rolling window became representative.
+`f259e251` keeps immediate frame-zero signalling, then permits one immediate
+replacement when the eight-frame window first fills. The new `warmup_luma`
+fixture starts at sigma 4 and settles at sigma 6; its first full-window model
+now replaces the opening fit on frame 7.
+
+On the Taxi 60 production control this moves the first table boundary from
+frame 25 to frame 7. Over decoded frames 8-23, synthesized luma sigma improves
+from 1.014 to 1.058 (+4.4%) with a 697-byte size reduction.
+
+The remaining bilateral limit was its fixed spatial response. Two 5x5 passes
+used a compact `[1 4 6 4 1]` profile regardless of grain scale. A uniformly
+wider profile captured more coarse grain but unnecessarily reduced detail
+transfer. `d23400f4` instead maps the already-measured source correlation
+continuously to a profile between `[1 4 6 4 1]` and `[1 2 2 2 1]`. This is
+not a routing threshold: correlations from 0.20 to 0.80 interpolate smoothly,
+and only the standalone bilateral path changes.
+
+| Bilateral KAT measure | Fixed profile | Adaptive profile |
+| --- | ---: | ---: |
+| Fine-grain synthesized sigma | 5.42-5.69 | 5.42-5.69 |
+| Fine-detail transfer | 0.468 | 0.468 |
+| Structured-edge RMSE (8-bit) | 2.31 | 2.31 |
+| Coarse-grain amplitude captured | 36% | 40% |
+
+The fine/detail fixtures are identical because their median correlation is
+near zero. On the Taxi 60 control (frames 8-23), synthesized luma sigma rises
+from 1.053 to 1.173 (+11.3%), lag-one spatial autocorrelation moves from 0.600
+to 0.624, and bytes move from 20,738,325 to 20,744,490 (+0.03%). Throughput is
+unchanged within run noise: 25.64 fps on the pre-change optimized binary and
+25.68 fps with adaptive weighting.
+
+Three tempting variants were rejected rather than committed:
+
+- Fully bypassing bilateral refinement in coherent blocks raised detail
+  transfer from 0.468 to 0.657 but raised edge RMSE from 2.31 to 5.46.
+- A regularized strength curve reduced Taxi synthesis by 1.5%; the separator,
+  not sparse curve bins, was limiting the result.
+- Four times as many luma AR observations improved Taxi synthesis by only
+  0.12%, confirming the staggered 64-point estimator is already converged.
 
 ## Correctness audit
 
@@ -202,7 +259,7 @@ isolated raw benchmark, while the synthetic controls show a quality trade-off:
 | Fine-grain synthesized/source sigma | 0.98-1.02 | 0.89-0.94 |
 | Fine-detail transfer through base | 0.429 | 0.469 |
 | Structured-edge RMSE (8-bit) | 1.89 | 2.31 |
-| Coarse-grain amplitude captured | 36% | 32% |
+| Coarse-grain amplitude captured | 41% | 40% |
 
 Bilateral preserves slightly more high-frequency detail and models chroma
 strength somewhat better. FFT3D is stronger on these generated controls for
@@ -323,6 +380,8 @@ The highest-value additions are:
 4. End-to-end media-minutes/hour, GPU utilization, energy/frame, output bytes,
    and failure rate at each Tdarr concurrency level.
 
-Further CUDA work should profile a shared-memory or fused bilateral pass.
-Removing a per-frame host synchronization would require GPU-resident selection
-or pipelined one-frame-late decisions and has a larger correctness/latency risk.
+The shared-memory bilateral pass is now implemented. Further CUDA work should
+profile fusing its two passes, although the intermediate frame dependency makes
+that substantially more complex than fusing independent kernels. Removing a
+per-frame host synchronization would require GPU-resident selection or
+pipelined one-frame-late decisions and has a larger correctness/latency risk.
