@@ -36,6 +36,16 @@ class QualityMetricsTest(unittest.TestCase):
         self.assertEqual(float(filtered[:, :14].max()), 0.0)
         self.assertGreater(float(np.abs(filtered[:, 15:17]).max()), 0.0)
 
+    def test_spatial_autocorrelation_separates_grain_scale(self):
+        rng = np.random.default_rng(11)
+        white = rng.normal(size=(128, 128))
+        coarse = (white + np.roll(white, 1, 0) + np.roll(white, 1, 1)) / 3.0
+        white_acf = quality_metrics.spatial_autocorrelation([white])
+        coarse_acf = quality_metrics.spatial_autocorrelation([coarse])
+        self.assertLess(abs(white_acf[0]), 0.03)
+        self.assertGreater(coarse_acf[0], 0.3)
+        self.assertGreater(coarse_acf[0], coarse_acf[1])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -95,6 +95,32 @@ def high_frequency_fraction(spectrum):
     return float(sum(spectrum[len(spectrum) // 2:]))
 
 
+def spatial_autocorrelation(images, max_lag=3):
+    """Mean horizontal/vertical normalized autocorrelation at each pixel lag.
+
+    Grain amplitude alone cannot distinguish fine, independent noise from
+    coarse grain whose neighboring samples move together. Subtract each
+    image's mean before measuring so a small residual DC offset does not look
+    like spatial structure.
+    """
+    correlations = [[] for _ in range(max_lag)]
+    for image in images:
+        centered = image.astype(np.float64, copy=False) - float(np.mean(image))
+        variance = float(np.mean(centered * centered))
+        if variance <= 0.0:
+            continue
+        for lag in range(1, max_lag + 1):
+            if lag >= min(centered.shape):
+                break
+            horizontal = float(np.mean(centered[:, :-lag] * centered[:, lag:]))
+            vertical = float(np.mean(centered[:-lag, :] * centered[lag:, :]))
+            correlations[lag - 1].append((horizontal + vertical) / (2.0 * variance))
+    return [
+        float(np.mean(values)) if values else 0.0
+        for values in correlations
+    ]
+
+
 def _frame_correlation(current, previous):
     current = current[::8, ::8].astype(np.float64).ravel()
     previous = previous[::8, ::8].astype(np.float64).ravel()
@@ -216,12 +242,14 @@ def grain_metrics(grain_on_path, grain_off_path, width, height, bits,
     spectrum_step = max(1, math.ceil(count / max_spectrum_frames))
     energy = 0.0
     spectrum_frames = []
+    spatial_correlations = []
     temporal_correlations = []
     previous = None
     for relative, frame in enumerate(range(first_frame, frame_count)):
         grain = (grain_on.luma(frame).astype(np.float64)
                  - grain_off.luma(frame).astype(np.float64))
         energy += float(np.sum(grain * grain))
+        spatial_correlations.append(spatial_autocorrelation([grain]))
         if relative % spectrum_step == 0:
             spectrum_frames.append(grain)
         if previous is not None:
@@ -232,6 +260,9 @@ def grain_metrics(grain_on_path, grain_off_path, width, height, bits,
         "sigma_8bit": math.sqrt(energy / (count * width * height)) / scale,
         "temporal_correlation": (
             float(np.mean(temporal_correlations)) if temporal_correlations else 0.0),
+        "spatial_autocorrelation": (
+            np.mean(spatial_correlations, axis=0).tolist()
+            if spatial_correlations else [0.0, 0.0, 0.0]),
         "spectrum": spectrum,
         "high_frequency_fraction": high_frequency_fraction(spectrum),
     }
