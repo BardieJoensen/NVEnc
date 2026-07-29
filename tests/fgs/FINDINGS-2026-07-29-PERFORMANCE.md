@@ -3,7 +3,8 @@
 ## Result
 
 Two CUDA changes reduce the analyzer's measured film-grain kernel time by
-about 82% on the production bilateral path without changing encoded output:
+about 82% on the production bilateral path without a measurable quality
+change:
 
 - `170b9a4c`: replace FP64 flat analysis and shared 64-bit model-stat atomics
   with FP32 residual analysis and local normal-equation accumulation.
@@ -54,6 +55,45 @@ NVENC settings, storage, decoding, and concurrent Tdarr jobs determine the
 wall-clock result. The remaining profile is dominated by the two bilateral
 passes; two required per-frame GPU-to-host decision points are the other
 architectural floor.
+
+## End-to-end production result
+
+A fixed 1200-frame input was run for three alternating rounds through the
+production r4029 build and the clean-image r4033 build. End to end, r4033
+roughly doubled FGS throughput and removed the old 91% FGS penalty. On this
+input the optimized FGS encode even finished before the no-FGS control:
+denoising reduced the residual that NVENC had to code, producing a 4.24 MB
+stream instead of 5.79 MB, and that encoder saving more than paid for the
+analyzer.
+
+The output is not literally byte-identical after FP64-to-FP32 analysis. The
+elementary bitstream moved by 11,348 bytes (+0.081%), while the scored quality
+was measurably identical:
+
+| Build | Grain retention | CAMBI | SSIMULACRA2 |
+| --- | ---: | ---: | ---: |
+| r4029 | 1.009 | 0.000 | 80.0153 |
+| r4033 | 1.009 | 0.000 | 80.0172 |
+
+This supersedes the earlier operational assumption that FGS deliberately
+traded throughput for quality. The current production recommendation is to
+rebuild the tdarr-node image with r4033 and restart only after its in-flight
+encodes have drained.
+
+### Determinism methodology
+
+Do not use whole-MKV hashes to test encoder determinism: Matroska includes a
+random SegmentUID and mux timestamp, so identical elementary streams can have
+different container hashes. Compare a fixed input's video stream instead:
+
+```sh
+ffmpeg -i output.mkv -map 0:v:0 -c copy -f md5 -
+```
+
+Both tested binaries are deterministic by that comparison. Avoid using
+`--seek` with hardware decode for this check; identical runs showed a 6% size
+swing because the decoded sample boundary was not stable. Pre-cut the source
+once or decode the same seek-free fixed fixture for every build.
 
 Disabling chroma analysis on the same fixture reduces current FGS kernel work
 from 0.5875 to about 0.398 ms/frame (-32%). It is only safe when the source has
