@@ -113,17 +113,6 @@ FGS_HOST_DEVICE constexpr int fgs_stratified_sample_offset(const int extent,
     return begin + (span > 0 ? static_cast<int>(random % static_cast<uint32_t>(span)) : 0);
 }
 
-// Source correlation describes grain scale continuously.  Fine grain keeps
-// the compact bilateral profile; coarse grain smoothly reaches the wider
-// profile without turning a synthetic-fixture boundary into a routing rule.
-FGS_HOST_DEVICE constexpr float fgs_bilateral_spatial_spread(const float correlation) {
-    constexpr float fineCorrelation = 0.60f;
-    constexpr float coarseCorrelation = 0.80f;
-    const float spread = (correlation - fineCorrelation)
-        / (coarseCorrelation - fineCorrelation);
-    return spread < 0.0f ? 0.0f : (spread > 1.0f ? 1.0f : spread);
-}
-
 // Accumulators filled by the CUDA statistics kernels and merged on the host
 // over the rolling model window; layout must stay memcpy/memset-compatible.
 struct FilmGrainGpuPlaneStats {
