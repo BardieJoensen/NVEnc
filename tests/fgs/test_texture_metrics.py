@@ -44,7 +44,7 @@ class TextureMetricsTest(unittest.TestCase):
         coarse_on_frames = []
         off_frames = []
         for _ in range(4):
-            clean = np.full((128, 128), 96.0, dtype=np.float32)
+            clean = np.full((128, 128), 112.0, dtype=np.float32)
             white = rng.normal(0.0, 4.0, clean.shape)
             coarse = (
                 white + np.roll(white, 1, axis=0)
@@ -87,6 +87,16 @@ class TextureMetricsTest(unittest.TestCase):
         coarse_sigma = report["descriptors"]["coarse"]["core"]["3"][
             "energy_diagnostic"]["sigma_8bit_p50"]
         self.assertAlmostEqual(white_sigma, coarse_sigma, delta=0.15)
+        detected = texture_metrics.labelled_negative_gate(
+            report, "coarse", "white",
+            minimum_spectrum_tv=0.01, minimum_acf_rmse=0.01,
+            minimum_occupancy_coverage=0.9)
+        missed = texture_metrics.labelled_negative_gate(
+            report, "white", "white",
+            minimum_spectrum_tv=0.01, minimum_acf_rmse=0.01,
+            minimum_occupancy_coverage=0.9)
+        self.assertEqual(detected["status"], "PASS")
+        self.assertEqual(missed["status"], "FAIL")
 
     def test_sparse_luma_bands_are_na_not_passes(self):
         rng = np.random.default_rng(7)

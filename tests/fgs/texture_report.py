@@ -30,6 +30,9 @@ def parse_bands(spec):
 
 
 def print_summary(report):
+    def metric(value):
+        return "n/a" if value is None else f"{value:.4f}"
+
     print("== amplitude-independent grain texture ==")
     selection = report["flat_selection"]
     for name, mask in selection["masks"].items():
@@ -42,10 +45,10 @@ def print_summary(report):
             aggregate = result["occupancy_weighted"]
             print(
                 f"  {mask_name:<9} coverage={result['occupancy_coverage']:.3f} "
-                f"spectrum-TV={aggregate['spectrum_total_variation']:.4f} "
-                f"ACF-RMSE={aggregate['acf_rmse']:.4f} "
-                f"anisotropy={aggregate['anisotropy_abs_delta']:.4f} "
-                f"flicker={aggregate['temporal_spread_abs_delta']:.4f}")
+                f"spectrum-TV={metric(aggregate['spectrum_total_variation'])} "
+                f"ACF-RMSE={metric(aggregate['acf_rmse'])} "
+                f"anisotropy={metric(aggregate['anisotropy_abs_delta'])} "
+                f"flicker={metric(aggregate['temporal_spread_abs_delta'])}")
 
 
 def main():

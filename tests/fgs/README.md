@@ -105,6 +105,23 @@ does not use amplitude in any texture distance. Interpret energy with the
 retention monitor and clean-detail substitution with the base-fidelity canary;
 each detector answers one question.
 
+For aligned media, let the wrapper decode all inputs and require a labelled
+texture-difference pair to separate:
+
+```sh
+python3 tests/fgs/texture_media_report.py \
+    --source source.mkv --clean corrected-clean.y4m \
+    --arm corrected=corrected.mkv --arm widened=widened.mkv \
+    --frames 24 --labelled-negative widened,corrected \
+    --output /tmp/texture-negative.json
+```
+
+The labelled-negative gate validates detector sensitivity only. It requires
+both masks to exceed a deliberately loose spectrum-TV or ACF-RMSE floor with
+enough source-luma coverage; it does not claim either arm is closer to the
+source. That remains a descriptor-by-descriptor interpretation alongside the
+base-fidelity canary.
+
 ## libaom reference comparison
 
 Build the pinned official libaom `noise_model` example outside this repository,
@@ -134,3 +151,19 @@ The checked-in `baselines/2026-07-17-libaom-reference.json` report records the
 pinned libaom comparison before analyzer changes. Its actual synthesis results,
 not scaling-point values alone, are the reference because AR coefficients also
 change the final grain variance.
+
+Run the real-film guard with `--texture` to add NVEnc and libaom synthesis from
+the same clean input:
+
+```sh
+python3 tests/fgs/reference_compare_real.py \
+    --nvencc /path/to/nvencc --aom-noise-model /path/to/noise_model \
+    --frames 24 --denoiser bilateral --texture \
+    --json-out /tmp/fgs-real-texture.json
+```
+
+The harness hashes both grain-off decodes and invalidates the texture result if
+their base pixels differ. If libaom matches the source and NVEnc does not, that
+is analyzer headroom. If both miss similarly, a compact-model limit is
+plausible but not proven; establishing the format ceiling requires a separately
+optimized best-fit AV1 model.

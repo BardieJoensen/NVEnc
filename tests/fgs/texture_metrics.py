@@ -528,3 +528,56 @@ def analyze_raw_texture(source_path, clean_path, arms, width, height, bits,
         "comparisons": comparisons,
         "pairwise_arm_comparisons": pairwise,
     }
+
+
+def labelled_negative_gate(report, bad_label, good_label,
+                           minimum_spectrum_tv=0.01,
+                           minimum_acf_rmse=0.01,
+                           minimum_occupancy_coverage=0.50):
+    """Require a known-different texture pair to separate on every mask.
+
+    This validates detector sensitivity only. It deliberately makes no claim
+    that either arm is closer to the source; base fidelity is a separate gate.
+    """
+    descriptors = report.get("descriptors", {})
+    for label in (bad_label, good_label):
+        if label not in descriptors:
+            raise ValueError(f"texture arm not found: {label}")
+    weights = report["flat_selection"][
+        "source_luma_occupancy"]["weights_by_band"]
+    comparison = compare_descriptor_sets(
+        descriptors[bad_label], descriptors[good_label], weights)
+    masks = {}
+    passed = True
+    for mask_name, result in comparison.items():
+        aggregate = result["occupancy_weighted"]
+        spectrum_tv = aggregate["spectrum_total_variation"]
+        acf_rmse = aggregate["acf_rmse"]
+        enough_coverage = (
+            result["occupancy_coverage"] >= minimum_occupancy_coverage)
+        separated = (
+            (spectrum_tv is not None and spectrum_tv >= minimum_spectrum_tv)
+            or (acf_rmse is not None and acf_rmse >= minimum_acf_rmse)
+        )
+        mask_passed = enough_coverage and separated
+        passed &= mask_passed
+        masks[mask_name] = {
+            "status": "PASS" if mask_passed else "FAIL",
+            "occupancy_coverage": result["occupancy_coverage"],
+            "spectrum_total_variation": spectrum_tv,
+            "acf_rmse": acf_rmse,
+            "separated": separated,
+        }
+    return {
+        "status": "PASS" if passed else "FAIL",
+        "purpose": "detector sensitivity, not source-fidelity ranking",
+        "known_bad": bad_label,
+        "known_good": good_label,
+        "thresholds": {
+            "minimum_spectrum_total_variation": minimum_spectrum_tv,
+            "minimum_acf_rmse": minimum_acf_rmse,
+            "minimum_occupancy_coverage": minimum_occupancy_coverage,
+            "logic": "coverage AND (spectrum-TV OR ACF-RMSE), on every mask",
+        },
+        "masks": masks,
+    }

@@ -58,6 +58,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import filmgrn                                                  # noqa: E402
 import reference_compare as rc                                  # noqa: E402
+import texture_metrics                                           # noqa: E402
 
 # NVEncC over libaom on the luma scaling-curve RMS. Sol's corrected build lands
 # within -6.6%..+3.3% on decoded sigma; this is deliberately looser so it is a
@@ -136,7 +137,40 @@ def to_y4m(src, dst, frames):
                "-strict", "-1", "-f", "yuv4mpegpipe", dst], timeout=3600)
 
 
-def check_clip(label, path, expect, nvencc, aom, frames, work, denoiser):
+def synthesize_table(nvencc, clean, table, prefix, bits, frames):
+    """Apply one table to the common clean input and decode grain on/off."""
+    encoded = prefix + ".mkv"
+    grain_on = prefix + "-on.raw"
+    grain_off = prefix + "-off.raw"
+    argv = [
+        nvencc, "--codec", "av1", "--cqp", "20",
+        "--film-grain-table", table,
+    ]
+    if bits > 8:
+        argv.extend(["--output-depth", str(bits)])
+    argv.extend(["-i", clean, "-o", encoded])
+    commands = {"encode": rc.run(argv)}
+    pixel_format = "yuv420p" if bits == 8 else "yuv420p10le"
+    for enabled, output, name in (
+            (1, grain_on, "decode_on"), (0, grain_off, "decode_off")):
+        commands[name] = rc.run([
+            "ffmpeg", "-v", "error", "-y", "-c:v", "libdav1d",
+            "-filmgrain", str(enabled), "-i", encoded,
+            "-frames:v", str(frames), "-pix_fmt", pixel_format,
+            "-f", "rawvideo", output,
+        ])
+    return {
+        "encoded": encoded,
+        "grain_on": grain_on,
+        "grain_off": grain_off,
+        "grain_off_sha256": rc.sha256(grain_off),
+        "encoded_bytes": os.path.getsize(encoded),
+        "commands": commands,
+    }
+
+
+def check_clip(label, path, expect, nvencc, aom, frames, work, denoiser,
+               measure_texture=False, keep_texture_media=False):
     if not os.path.exists(path):
         return {"label": label, "status": "SKIP", "reason": "clip missing"}
     wh = probe(path, "stream=width,height")
@@ -179,17 +213,84 @@ def check_clip(label, path, expect, nvencc, aom, frames, work, denoiser):
     cosine = (cmp_.get("coefficients", {}).get("y") or {}).get("cosine")
     weights = luma_occupancy(src_y4m, frames)
     ratio = curve_ratio(nv_rep, aom_rep, weights) if (nv_rep and aom_rep) else None
-    for p in (src_y4m, clean, src_raw, cln_raw):
-        if os.path.exists(p):
-            os.remove(p)
     if ratio is None:
         return {"label": label, "status": "FAIL", "reason": "no luma curve to compare"}
     ok = MIN_RATIO <= ratio <= MAX_RATIO
-    return {"label": label, "expect": expect, "status": "PASS" if ok else "FAIL",
-            "rms_ratio": round(ratio, 4),
-            "rms_ratio_unweighted": round(raw_ratio, 4) if raw_ratio else None,
-            "ar_cosine": round(cosine, 5) if cosine else None,
-            "relative_rmse": round(y.get("relative_rmse") or 0, 4)}
+    result = {
+        "label": label,
+        "expect": expect,
+        "status": "PASS" if ok else "FAIL",
+        "rms_ratio": round(ratio, 4),
+        "rms_ratio_unweighted": round(raw_ratio, 4) if raw_ratio else None,
+        "ar_cosine": round(cosine, 5) if cosine else None,
+        "relative_rmse": round(y.get("relative_rmse") or 0, 4),
+    }
+    texture_media = []
+    if measure_texture:
+        try:
+            nv_synthesis = synthesize_table(
+                nvencc, clean, nv_tbl,
+                os.path.join(work, f"{label}_texture_nvenc"),
+                bits, frames)
+            aom_synthesis = synthesize_table(
+                nvencc, clean, aom_tbl,
+                os.path.join(work, f"{label}_texture_libaom"),
+                bits, frames)
+            texture_media.extend([
+                nv_synthesis["encoded"], nv_synthesis["grain_on"],
+                nv_synthesis["grain_off"], aom_synthesis["encoded"],
+                aom_synthesis["grain_on"], aom_synthesis["grain_off"],
+            ])
+            same_base = (
+                nv_synthesis["grain_off_sha256"]
+                == aom_synthesis["grain_off_sha256"])
+            texture = texture_metrics.analyze_raw_texture(
+                src_raw, cln_raw,
+                {
+                    "nvenc": (
+                        nv_synthesis["grain_on"],
+                        nv_synthesis["grain_off"]),
+                    "libaom": (
+                        aom_synthesis["grain_on"],
+                        aom_synthesis["grain_off"]),
+                },
+                w, h, bits, frame_count=frames)
+            texture["common_synthesis_base"] = {
+                "identical": same_base,
+                "nvenc_grain_off_sha256": (
+                    nv_synthesis["grain_off_sha256"]),
+                "libaom_grain_off_sha256": (
+                    aom_synthesis["grain_off_sha256"]),
+            }
+            texture["synthesis"] = {
+                "nvenc": {
+                    "encoded_bytes": nv_synthesis["encoded_bytes"],
+                    "commands": nv_synthesis["commands"],
+                },
+                "libaom": {
+                    "encoded_bytes": aom_synthesis["encoded_bytes"],
+                    "commands": aom_synthesis["commands"],
+                },
+            }
+            result["texture"] = texture
+            result["texture_status"] = (
+                "MEASURED" if same_base else "INVALID")
+            if not same_base:
+                result["status"] = "FAIL"
+                result["texture_reason"] = (
+                    "NVEnc and libaom arms did not decode to a common "
+                    "grain-off base")
+        except Exception as error:
+            result["status"] = "FAIL"
+            result["texture_status"] = "FAIL"
+            result["texture_reason"] = str(error)
+    cleanup = (
+        [] if keep_texture_media
+        else [src_y4m, clean, src_raw, cln_raw, *texture_media])
+    for cleanup_path in cleanup:
+        if os.path.exists(cleanup_path):
+            os.remove(cleanup_path)
+    return result
 
 
 def main():
@@ -203,6 +304,13 @@ def main():
     ap.add_argument("--denoiser", default="bilateral")
     ap.add_argument("--work", default=None)
     ap.add_argument("--json-out", default=None)
+    ap.add_argument(
+        "--texture", action="store_true",
+        help="synthesize NVEnc and libaom tables on the same clean base and "
+             "emit per-luma texture descriptors")
+    ap.add_argument(
+        "--keep-texture-media", action="store_true",
+        help="keep source, clean, encoded, and grain-on/off intermediates")
     args = ap.parse_args()
 
     clips = DEFAULT_CLIPS
@@ -222,7 +330,8 @@ def main():
     results, failed, coarse_seen = [], 0, False
     for label, path, expect in clips:
         r = check_clip(label, path, expect, args.nvencc, args.aom_noise_model,
-                       args.frames, work, args.denoiser)
+                       args.frames, work, args.denoiser,
+                       args.texture, args.keep_texture_media)
         results.append(r)
         if r["status"] == "FAIL":
             failed += 1
@@ -234,6 +343,19 @@ def main():
             print(f"{label:<14}{expect:<12}{r['rms_ratio']:>10.3f}"
                   f"{(r['rms_ratio_unweighted'] or 0):>8.3f}"
                   f"{(r['ar_cosine'] or 0):>9.4f}  {r['status']}")
+            if "texture" in r:
+                def metric(value):
+                    return "n/a" if value is None else f"{value:.4f}"
+                for arm in ("nvenc", "libaom"):
+                    summary = r["texture"]["comparisons"][
+                        f"{arm}_vs_source"]["core"]["occupancy_weighted"]
+                    print(
+                        f"  texture {arm:<7} "
+                        f"spectrum-TV={metric(summary['spectrum_total_variation'])} "
+                        f"ACF-RMSE={metric(summary['acf_rmse'])}")
+                print(
+                    f"  common synthesis base: "
+                    f"{r['texture']['common_synthesis_base']['identical']}")
         else:
             print(f"{label:<14}{expect:<12}{'':>10}{'':>8}{'':>9}  {r['status']} ({r['reason']})")
 
