@@ -14,6 +14,8 @@ ARG DEBIAN_FRONTEND=noninteractive \
     VSHIP_HEADERS_URL=https://codeberg.org/Line-fr/Vship/archive/v5.0.0.tar.gz \
     FFMPEG_PREFIX=/opt/build_scripts/ffmpeg_dll/build_dll/x64/build \
     VMAF_PREFIX=/opt/build_scripts/ffmpeg_dll/x64/build \
+    NASM_VERSION=2.16.03 \
+    NASM_SHA256=1412a1c760bbd05db026b6c0d1657affd6631cd0a63cddb6f73cc6d4aa616148 \
     CUDA_VER_MAJOR=11 \
     CUDA_VER_MINOR=2 \
     CUDA_DEB_URL=https://developer.download.nvidia.com/compute/cuda/11.2.1/local_installers/cuda-repo-ubuntu2004-11-2-local_11.2.1-460.32.03-1_amd64.deb \
@@ -51,6 +53,17 @@ RUN apt update \
       libx11-dev \
       openssl \
       libssl-dev \
+    && curl -fsSL "https://www.nasm.us/pub/nasm/releasebuilds/${NASM_VERSION}/nasm-${NASM_VERSION}.tar.xz" -o /tmp/nasm.tar.xz \
+    && echo "${NASM_SHA256}  /tmp/nasm.tar.xz" | sha256sum -c - \
+    && mkdir -p /tmp/nasm-src \
+    && tar -xJf /tmp/nasm.tar.xz --strip-components=1 -C /tmp/nasm-src \
+    && cd /tmp/nasm-src \
+    && ./configure --prefix=/usr/local \
+    && make -j"$(nproc)" \
+    && make install \
+    && cd / \
+    && nasm -v \
+    && rm -rf /tmp/nasm-src /tmp/nasm.tar.xz \
     && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc \
       | gpg --dearmor \
       > /usr/share/keyrings/kitware-archive-keyring.gpg \
