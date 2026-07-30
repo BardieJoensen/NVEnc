@@ -89,6 +89,21 @@ __device__ inline void atomic_add_u64(uint64_t *address, const uint64_t value) {
     atomicAdd(reinterpret_cast<unsigned long long *>(address), static_cast<unsigned long long>(value));
 }
 
+__device__ inline void atomic_add_f64(double *address, const double value) {
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+    atomicAdd(address, value);
+#else
+    auto addr = reinterpret_cast<unsigned long long *>(address);
+    auto old = *addr;
+    unsigned long long assumed;
+    do {
+        assumed = old;
+        old = atomicCAS(addr, assumed,
+            __double_as_longlong(value + __longlong_as_double(assumed)));
+    } while (assumed != old);
+#endif
+}
+
 template<typename Type, int shift>
 __device__ inline int load_code(const uint8_t *ptr, const int pitch, const int x, const int y, const int component = 0, const int components = 1) {
     const auto row = reinterpret_cast<const Type *>(ptr + static_cast<size_t>(y) * pitch);
@@ -554,13 +569,13 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
         const int maxValue = (1 << bitDepth) - 1;
         const int bin = min(FGS_STRENGTH_BINS - 1, max(0,
             static_cast<int>(metrics[blockIndex].mean * FGS_STRENGTH_BINS / (maxValue + 1))));
-        atomicAdd(output->binVarSum + bin, variance);
+        atomic_add_f64(output->binVarSum + bin, variance);
         atomic_add_u64(output->binBlockCount + bin, 1ULL);
         if (chroma) {
             const double meanPred = static_cast<double>(predSum) / samples;
             const double predVariance = fmax(0.0,
                 static_cast<double>(predSumSq) / samples - meanPred * meanPred);
-            atomicAdd(&output->lumaPredVarSum, predVariance);
+            atomic_add_f64(&output->lumaPredVarSum, predVariance);
             atomic_add_u64(&output->lumaPredBlocks, 1ULL);
         }
         atomic_add_u64(&output->observations, sampleCount);
