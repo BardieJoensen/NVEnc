@@ -353,6 +353,11 @@ static bool parseUpdatedParameters(FilmGrainTokenReader& reader,
             "Cb and Cr scaling point counts must be zero for 4:2:0 when the "
             "Y scaling point count is zero");
     }
+    if ((numCbPoints == 0) != (numCrPoints == 0)) {
+        return fail(error, reader.line(), reader.column(),
+            "Cb and Cr scaling point counts must both be zero or both be "
+            "non-zero for 4:2:0");
+    }
     params.numYPoints = numYPoints;
     params.numCbPoints = numCbPoints;
     params.numCrPoints = numCrPoints;
