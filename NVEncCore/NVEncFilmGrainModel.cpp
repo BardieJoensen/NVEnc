@@ -31,6 +31,10 @@
 // is an independent implementation and does not require libaom at runtime.
 // ------------------------------------------------------------------------------------------
 
+#if defined(_WIN32) && !defined(NOMINMAX)
+#define NOMINMAX
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
