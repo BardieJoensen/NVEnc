@@ -112,7 +112,7 @@ texture-difference pair to separate:
 python3 tests/fgs/texture_media_report.py \
     --source source.mkv --clean corrected-clean.y4m \
     --arm corrected=corrected.mkv --arm widened=widened.mkv \
-    --frames 24 --labelled-negative widened,corrected \
+    --frames 24 --labelled-negative widened,corrected --require-common-base \
     --output /tmp/texture-negative.json
 ```
 

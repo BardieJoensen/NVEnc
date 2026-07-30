@@ -3,6 +3,7 @@
 
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import shutil
@@ -42,6 +43,14 @@ def parse_pair(spec):
         raise argparse.ArgumentTypeError(
             "labelled negative must be BAD_LABEL,GOOD_LABEL")
     return bad, good
+
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as source:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def probe(path):
@@ -90,6 +99,9 @@ def main():
     parser.add_argument("--minimum-spectrum-tv", type=float, default=0.01)
     parser.add_argument("--minimum-acf-rmse", type=float, default=0.01)
     parser.add_argument("--minimum-occupancy-coverage", type=float, default=0.50)
+    parser.add_argument(
+        "--require-common-base", action="store_true",
+        help="fail unless every arm's grain-off decode is byte-identical")
     args = parser.parse_args()
 
     arms = dict(args.arm)
@@ -146,6 +158,16 @@ def main():
             "arms": arms,
         }
         report["commands"] = commands
+        base_hashes = {
+            label: sha256(grain_off)
+            for label, (_, grain_off) in raw_arms.items()
+        }
+        common_base = len(set(base_hashes.values())) == 1
+        report["common_synthesis_base"] = {
+            "identical": common_base,
+            "grain_off_sha256": base_hashes,
+            "required": args.require_common_base,
+        }
         exit_code = 0
         if args.labelled_negative:
             bad, good = args.labelled_negative
@@ -155,6 +177,8 @@ def main():
                 args.minimum_occupancy_coverage)
             report["labelled_negative_gate"] = gate
             exit_code = 0 if gate["status"] == "PASS" else 1
+        if args.require_common_base and not common_base:
+            exit_code = 1
         output = os.path.abspath(args.output)
         os.makedirs(os.path.dirname(output), exist_ok=True)
         with open(output, "w") as destination:
@@ -165,6 +189,7 @@ def main():
             print(
                 f"\nlabelled negative: "
                 f"{report['labelled_negative_gate']['status']}")
+        print(f"common synthesis base: {common_base}")
         print(f"\nreport: {output}")
         if args.keep_work:
             print(f"work: {work}")
