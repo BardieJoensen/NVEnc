@@ -66,6 +66,8 @@ The amplitude guard first reproduces the luma-occupancy correction:
 |---|---:|---:|---:|
 | Taxi Driver, coarse 35mm | 0.9885 | 0.8139 | 0.99953 |
 | Silo, fine digital | 1.0559 | 1.0471 | 0.99254 |
+| Casino, 35mm | 0.9486 | 0.8077 | 0.99872 |
+| The Shining, 35mm | 1.1133 | 1.0527 | 0.99935 |
 
 Both synthesized arms were applied to the same clean input. Their grain-off
 decodes were byte-identical.
@@ -82,6 +84,14 @@ Amplitude-independent texture distance to the source residual:
 | Silo / NVEnc | expanded | 0.937 | 0.0242 | 0.0150 |
 | Silo / libaom | core | 0.843 | 0.0341 | 0.0142 |
 | Silo / libaom | expanded | 0.937 | 0.0151 | 0.0161 |
+| Casino / NVEnc | core | 1.000 | 0.0497 | 0.0202 |
+| Casino / NVEnc | expanded | 1.000 | 0.0511 | 0.0239 |
+| Casino / libaom | core | 1.000 | 0.0557 | 0.0387 |
+| Casino / libaom | expanded | 1.000 | 0.0614 | 0.0432 |
+| Shining / NVEnc | core | 1.000 | 0.0370 | 0.0156 |
+| Shining / NVEnc | expanded | 1.000 | 0.0757 | 0.0276 |
+| Shining / libaom | core | 1.000 | 0.0344 | 0.0169 |
+| Shining / libaom | expanded | 1.000 | 0.0758 | 0.0294 |
 
 NVEnc versus libaom on the same base:
 
@@ -91,12 +101,24 @@ NVEnc versus libaom on the same base:
 | Taxi | expanded | 0.0173 | 0.0050 |
 | Silo | core | 0.0151 | 0.0126 |
 | Silo | expanded | 0.0144 | 0.0125 |
+| Casino | core | 0.0331 | 0.0230 |
+| Casino | expanded | 0.0330 | 0.0229 |
+| Shining | core | 0.0112 | 0.0056 |
+| Shining | expanded | 0.0115 | 0.0058 |
 
 Taxi's two analyzers are much closer to one another than either is to the
 source residual. That makes a compact-model ceiling plausible, but it does not
 prove one: a separately optimized best-fit AV1 model is required to establish
-the format's expressiveness limit. Silo leaves mild model-fitting headroom,
-but not enough evidence for an encoder change before broader baselines.
+the format's expressiveness limit. Silo leaves mild model-fitting headroom;
+Casino instead favors NVEnc on these source-texture distances. Neither is
+enough evidence for an encoder change.
+
+The Shining is the important mask-sensitivity result. Absolute source spectrum
+TV moves from 0.0370 to 0.0757 for NVEnc and from 0.0344 to 0.0758 for libaom
+when the relaxed mask admits more structured patches. NVEnc-versus-libaom
+remains nearly fixed at 0.0112 to 0.0115. The movement therefore belongs mainly
+to reference-patch heterogeneity, not one analyzer. Reports now expose the
+core/expanded delta explicitly rather than inviting a threshold to hide it.
 
 ## Labelled negative: r4047 widening
 
@@ -132,7 +154,9 @@ was achieved by replacing real detail.
 ## Release posture
 
 No absolute real-film texture threshold is set yet. The current gate only
-requires a known change to be detectable. Tightening should wait for
-scene-by-scene baselines from corrected Taxi Driver, Casino, The Shining, and
-Silo. Temporal local-energy spread is recorded now but should remain
-informational until those baselines establish its natural film variability.
+requires a known change to be detectable. One scene each from corrected Taxi
+Driver, Casino, The Shining, and Silo now forms the initial baseline. Tightening
+should wait for multiple scenes per title and should treat large core/expanded
+movement as selector-sensitive rather than a quality pass or failure. Temporal
+local-energy spread is recorded now but should remain informational until those
+baselines establish its natural film variability.

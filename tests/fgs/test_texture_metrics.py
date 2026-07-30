@@ -97,6 +97,11 @@ class TextureMetricsTest(unittest.TestCase):
             minimum_occupancy_coverage=0.9)
         self.assertEqual(detected["status"], "PASS")
         self.assertEqual(missed["status"], "FAIL")
+        sensitivity = report["mask_sensitivity"][
+            "source_comparisons"]["coarse_vs_source"]
+        self.assertIsNotNone(sensitivity)
+        self.assertIn(
+            "spectrum_total_variation", sensitivity["absolute_delta"])
 
     def test_sparse_luma_bands_are_na_not_passes(self):
         rng = np.random.default_rng(7)

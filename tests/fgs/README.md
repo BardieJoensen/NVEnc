@@ -101,7 +101,9 @@ patches from the source/clean pair and calculates every descriptor separately
 inside source-luma bands. It reports normalized radial spectra, lagged spatial
 autocorrelation, anisotropy, and normalized local-energy flicker for both a
 strict core mask and a relaxed mask. Empty or under-sampled luma bands are
-`N/A`, never passes.
+`N/A`, never passes. The JSON also reports each comparison's absolute movement
+between the two masks as a threshold-sensitivity diagnostic; it does not turn
+that movement into another fixture-derived pass/fail bound.
 
 The report keeps median sigma as an explicitly labelled energy diagnostic, but
 does not use amplitude in any texture distance. Interpret energy with the

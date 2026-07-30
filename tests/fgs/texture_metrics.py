@@ -442,6 +442,28 @@ def compare_descriptor_sets(candidate, reference, occupancy_weights):
     return masks
 
 
+def comparison_mask_sensitivity(comparison):
+    """Expose descriptor movement between the strict and relaxed masks."""
+    if "core" not in comparison or "expanded" not in comparison:
+        return None
+    core = comparison["core"]["occupancy_weighted"]
+    expanded = comparison["expanded"]["occupancy_weighted"]
+    deltas = {}
+    for name in core:
+        left, right = core[name], expanded.get(name)
+        deltas[name] = (
+            abs(right - left)
+            if left is not None and right is not None else None)
+    return {
+        "purpose": "threshold sensitivity diagnostic; no pass/fail bound",
+        "core_occupancy_coverage": comparison[
+            "core"]["occupancy_coverage"],
+        "expanded_occupancy_coverage": comparison[
+            "expanded"]["occupancy_coverage"],
+        "absolute_delta": deltas,
+    }
+
+
 def analyze_raw_texture(source_path, clean_path, arms, width, height, bits,
                         first_frame=0, frame_count=None,
                         block_size=DEFAULT_BLOCK_SIZE,
@@ -506,6 +528,16 @@ def analyze_raw_texture(source_path, clean_path, arms, width, height, bits,
     for left, right in itertools.combinations(arms, 2):
         pairwise[f"{right}_vs_{left}"] = compare_descriptor_sets(
             descriptors[right], descriptors[left], weights)
+    mask_sensitivity = {
+        "source_comparisons": {
+            name: comparison_mask_sensitivity(comparison)
+            for name, comparison in comparisons.items()
+        },
+        "pairwise_arm_comparisons": {
+            name: comparison_mask_sensitivity(comparison)
+            for name, comparison in pairwise.items()
+        },
+    }
     return {
         "schema": SCHEMA,
         "geometry": {
@@ -527,6 +559,7 @@ def analyze_raw_texture(source_path, clean_path, arms, width, height, bits,
         "descriptors": descriptors,
         "comparisons": comparisons,
         "pairwise_arm_comparisons": pairwise,
+        "mask_sensitivity": mask_sensitivity,
     }
 
 
