@@ -42,6 +42,7 @@ RUN apt update \
       python3-pip \
       build-essential \
       libx11-dev \
+      libvulkan-dev \
       openssl \
       libssl-dev \
     && wget -q https://developer.download.nvidia.com/compute/cuda/repos/${OSVER}/x86_64/cuda-${OSVER}.pin \

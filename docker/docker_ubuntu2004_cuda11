@@ -50,6 +50,7 @@ RUN apt update \
       gperf \
       build-essential \
       libx11-dev \
+      libvulkan-dev \
       openssl \
       libssl-dev \
     && curl -fsSL "https://www.nasm.us/pub/nasm/releasebuilds/${NASM_VERSION}/nasm-${NASM_VERSION}.tar.xz" -o /tmp/nasm.tar.xz \
