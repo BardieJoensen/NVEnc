@@ -191,6 +191,25 @@ void testSingularChromaFallsBackToLumaOnly() {
     expect(params.cbMult == 0 && params.crMult == 0, "chroma index mults untouched");
 }
 
+void testAsymmetricChromaFallsBackToLumaOnly() {
+    FilmGrainGpuStats stats = {};
+    fillWhitePlane(stats.plane[0], 6.0, false);
+    // A 4:2:0 AV1 stream must apply grain to both chroma planes or neither.
+    // Reproduce the production failure where Cb was unsolvable but Cr was
+    // valid: emitting numCbPoints=0 with numCrPoints>0 makes a non-conformant
+    // frame header which dav1d rejects.
+    fillWhitePlane(stats.plane[2], 2.0, true);
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 params;
+    NVEncFilmGrainDiagnostics diag;
+    expect(build_film_grain_params(stats, 8, true, true, params, diag),
+        "asymmetric chroma keeps luma model");
+    expect(params.numYPoints == 14, "asymmetric chroma keeps luma points");
+    expect(params.numCbPoints == 0 && params.numCrPoints == 0,
+        "asymmetric chroma is disabled as a pair");
+    expect(params.cbMult == 0 && params.crMult == 0,
+        "asymmetric chroma index mults stay disabled");
+}
+
 void testParamsClose() {
     NV_ENC_FILM_GRAIN_PARAMS_AV1 a, b, c;
     NVEncFilmGrainDiagnostics diag;
@@ -245,6 +264,7 @@ int main() {
     testRampLuma();
     testChromaCorrelationClamp();
     testSingularChromaFallsBackToLumaOnly();
+    testAsymmetricChromaFallsBackToLumaOnly();
     testParamsClose();
     testEvalScalingCurve();
     testStrengthLut();

@@ -236,11 +236,16 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     solved[0] = solve_plane(stats.plane[0], false, nullptr);
     if (!solved[0].valid) return false;
     if (analyzeChroma) {
-        // A chroma plane without a solvable model (e.g. residuals are exactly
-        // zero on clean chroma) degrades to luma-only grain instead of
-        // invalidating the whole model.
+        // AV1 4:2:0 requires grain on both chroma components or neither.  A
+        // single solvable chroma plane must therefore degrade to luma-only
+        // grain; numCbPoints=0 with numCrPoints>0 (or the reverse) is a
+        // non-conformant frame header.
         solved[1] = solve_plane(stats.plane[1], true, &solved[0]);
         solved[2] = solve_plane(stats.plane[2], true, &solved[0]);
+        if (!solved[1].valid || !solved[2].valid) {
+            solved[1] = FilmGrainSolvedPlane();
+            solved[2] = FilmGrainSolvedPlane();
+        }
     }
     std::array<std::vector<StrengthPoint>, 3> points = {
         fit_strength_points(solved[0], bitDepth, 14),

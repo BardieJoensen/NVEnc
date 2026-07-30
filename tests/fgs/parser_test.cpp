@@ -79,6 +79,17 @@ const char *const FIXTURE_INVALID_COUNTS =
     "p 0 8 0 8 1 1 0 0 0 0 0 0\n"
     "sY 15\n";
 
+const char *const FIXTURE_INVALID_ASYMMETRIC_CHROMA =
+    "filmgrn1\n"
+    "E 0 10000000 1 12345 1\n"
+    "p 0 8 0 8 0 1 0 0 0 128 192 256\n"
+    "sY 1 0 20\n"
+    "sCb 0\n"
+    "sCr 1 0 1\n"
+    "cY\n"
+    "cCb 0\n"
+    "cCr 0\n";
+
 } // namespace
 
 int main() {
@@ -91,6 +102,7 @@ int main() {
     writeFixture("invalid-scaling-order.filmgrn1", FIXTURE_INVALID_SCALING_ORDER);
     writeFixture("invalid-inheritance-before-model.filmgrn1", FIXTURE_INVALID_INHERIT_FIRST);
     writeFixture("invalid-malformed-counts.filmgrn1", FIXTURE_INVALID_COUNTS);
+    writeFixture("invalid-asymmetric-chroma.filmgrn1", FIXTURE_INVALID_ASYMMETRIC_CHROMA);
 
     tstring error;
     const auto table = NVEncFilmGrainTable::load(
@@ -141,6 +153,8 @@ int main() {
         _T("cannot inherit"));
     expectInvalid(_T("invalid-malformed-counts.filmgrn1"),
         _T("scaling point count must be in [0, 14]"));
+    expectInvalid(_T("invalid-asymmetric-chroma.filmgrn1"),
+        _T("both be zero or both be non-zero"));
 
     std::cout << "all filmgrn1 parser behavior tests passed\n";
     return 0;
