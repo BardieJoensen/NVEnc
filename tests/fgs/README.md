@@ -73,6 +73,9 @@ before/after results, interpretation, and remaining limits.
 See `FINDINGS-2026-07-29-PERFORMANCE.md` for the subsequent CUDA speed profile,
 bilateral/FFT3D trade-off, coarse-grain diagnostic, and production metric
 priorities.
+See `FINDINGS-2026-07-30-TEXTURE.md` for the amplitude-independent real-film
+texture detector, common-base NVEnc/libaom comparison, and r4047 labelled
+negative.
 
 Real-title testing is handled separately by `campaign.py`; source paths in that
 script are local configuration and media is never committed.
