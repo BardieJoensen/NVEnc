@@ -77,6 +77,34 @@ priorities.
 Real-title testing is handled separately by `campaign.py`; source paths in that
 script are local configuration and media is never committed.
 
+## Grain-texture report
+
+Grain energy and clean-base fidelity do not establish that synthesized grain
+has the right spatial or temporal texture. Generate an amplitude-independent
+texture report from aligned raw YUV420 streams with:
+
+```sh
+python3 tests/fgs/texture_report.py \
+    --source-raw source.yuv --clean-raw clean-reference.yuv \
+    --arm nvenc=nvenc-on.yuv,nvenc-off.yuv \
+    --arm libaom=libaom-on.yuv,libaom-off.yuv \
+    --width 3840 --height 2160 --bits 10 --frames 24 \
+    --title taxi --build r4050 --output /tmp/taxi-texture.json
+```
+
+The source residual is `source - clean-reference`; each synthesized arm is
+`grain-on - grain-off`. The evaluator freezes candidate-independent 32x32 flat
+patches from the source/clean pair and calculates every descriptor separately
+inside source-luma bands. It reports normalized radial spectra, lagged spatial
+autocorrelation, anisotropy, and normalized local-energy flicker for both a
+strict core mask and a relaxed mask. Empty or under-sampled luma bands are
+`N/A`, never passes.
+
+The report keeps median sigma as an explicitly labelled energy diagnostic, but
+does not use amplitude in any texture distance. Interpret energy with the
+retention monitor and clean-detail substitution with the base-fidelity canary;
+each detector answers one question.
+
 ## libaom reference comparison
 
 Build the pinned official libaom `noise_model` example outside this repository,
