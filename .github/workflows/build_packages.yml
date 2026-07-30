@@ -28,7 +28,6 @@ jobs:
     env:
       DOCKER_IMAGE: ${{ matrix.dockerimg }}
       PKG_TYPE: ${{ matrix.pkgtype }}
-      BASE_IMAGE_REPO: ghcr.io/${{ github.repository_owner }}/nvenc-build
       FFMPEG_PREFIX: /opt/build_scripts/ffmpeg_dll/build_dll/x64/build
       VMAF_PREFIX: /opt/build_scripts/ffmpeg_dll/x64/build
       NVENC_HEADER_DIR: /opt/nvenc_headers
@@ -48,7 +47,8 @@ jobs:
           OUTPUT_DIR=`pwd`/output
           LOCAL_USER_ID=$(id -u)
           LOCAL_GROUP_ID=$(id -g)
-          BASE_IMAGE="${{ env.BASE_IMAGE_REPO }}:${{ env.DOCKER_IMAGE }}"
+          OWNER=$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')
+          BASE_IMAGE="ghcr.io/${OWNER}/nvenc-build:${{ env.DOCKER_IMAGE }}"
           echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
           echo "nproc=${NPROC}" >> $GITHUB_OUTPUT
           echo "output_dir=${OUTPUT_DIR}" >> $GITHUB_OUTPUT
