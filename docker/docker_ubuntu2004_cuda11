@@ -5,8 +5,7 @@ ARG DEBIAN_FRONTEND=noninteractive \
     LOCAL_USER_ID=1000 \
     LOCAL_GROUP_ID=1000 \
     FFMPEG_DLL_REPO=https://github.com/rigaya/build_scripts.git \
-    FFMPEG_DLL_REF=master \
-    FFMPEG_DLL_REV=unknown \
+    FFMPEG_DLL_REV=4d489561112417c9b51dd649915c86c00c003a59 \
     BUILD_SCRIPTS_DIR=/opt/build_scripts \
     NVENC_HEADER_DIR=/opt/nvenc_headers \
     AVISYNTH_HEADERS_URL=https://github.com/AviSynth/AviSynthPlus/archive/refs/tags/v3.7.5.tar.gz \
@@ -99,8 +98,11 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     && /usr/local/cargo/bin/cargo install cargo-c --version '0.10.18+cargo-0.92.0' --locked \
     && /usr/local/cargo/bin/cargo cbuild --version
 
-RUN echo "Using build_scripts ${FFMPEG_DLL_REF}@${FFMPEG_DLL_REV}" \
-    && git clone --depth 1 --branch ${FFMPEG_DLL_REF} ${FFMPEG_DLL_REPO} ${BUILD_SCRIPTS_DIR} \
+RUN echo "Using build_scripts ${FFMPEG_DLL_REV}" \
+    && git init "${BUILD_SCRIPTS_DIR}" \
+    && git -C "${BUILD_SCRIPTS_DIR}" remote add origin "${FFMPEG_DLL_REPO}" \
+    && git -C "${BUILD_SCRIPTS_DIR}" fetch --depth 1 origin "${FFMPEG_DLL_REV}" \
+    && git -C "${BUILD_SCRIPTS_DIR}" checkout --detach FETCH_HEAD \
     && cd ${BUILD_SCRIPTS_DIR}/ffmpeg_dll \
     && sed -i 's/\r$//' ./build_ffmpeg_dll.sh \
     && sed -i 's/\r$//' ./build_libvmaf.sh \
