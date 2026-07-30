@@ -19,7 +19,6 @@ jobs:
 
     env:
       DOCKER_FILE: docker/docker_${{ matrix.dockerimg }}
-      IMAGE_REPO: ghcr.io/${{ github.repository_owner }}/nvenc-build
       FFMPEG_DLL_REPO: https://github.com/rigaya/build_scripts.git
       FFMPEG_DLL_REF: master
       NVENC_HEADER_DIR: /opt/nvenc_headers
@@ -28,6 +27,12 @@ jobs:
       VSHIP_HEADERS_URL: https://codeberg.org/Line-fr/Vship/archive/v5.0.0.tar.gz
 
     steps:
+      - name: Resolve image repository
+        id: image
+        run: |
+          OWNER=$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')
+          echo "repository=ghcr.io/${OWNER}/nvenc-build" >> "$GITHUB_OUTPUT"
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -60,7 +65,7 @@ jobs:
           context: ./
           file: ${{ env.DOCKER_FILE }}
           push: true
-          tags: ${{ env.IMAGE_REPO }}:${{ matrix.dockerimg }}
+          tags: ${{ steps.image.outputs.repository }}:${{ matrix.dockerimg }}
           build-args: |
             FFMPEG_DLL_REPO=${{ env.FFMPEG_DLL_REPO }}
             FFMPEG_DLL_REF=${{ env.FFMPEG_DLL_REF }}
