@@ -1,0 +1,63 @@
+name: FGS CPU Tests
+
+# Tier 1 of the film-grain test suite: everything that needs no GPU, no libaom
+# and no media. See tests/fgs/TIERS.md for what this tier can and cannot catch.
+#
+# This workflow is deliberately separate from the three packaging workflows.
+# It must stay hosted-runner-safe: adding a GPU or media test here would
+# produce a green tick that checked nothing, which is worse than no check at
+# all. The GPU tier lives in tests/fgs/local_gate.sh and cannot run here.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fgs-cpu-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpu-tests:
+    name: Film grain CPU suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # v4 to match the packaging workflows; it emits a Node 20 deprecation
+      # warning but still runs. Bump it with those, not separately.
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy
+
+      - name: Compiler and interpreter versions
+        run: |
+          g++ --version | head -1
+          python3 -c 'import numpy, sys; print("python", sys.version.split()[0], "numpy", numpy.__version__)'
+
+      # solver_test.cpp, parser_test.cpp, test_filmgrn.py,
+      # test_quality_metrics.py, test_texture_metrics.py, test_model_gate.py
+      - name: Run tests/fgs/run_cpu_tests.sh
+        run: bash tests/fgs/run_cpu_tests.sh
+
+      # The suite above must fail when the code under test is wrong, not only
+      # pass when it is right. A suite that has never been observed failing is
+      # indistinguishable from one that cannot fail, so break the solver on a
+      # scratch copy and require a non-zero exit.
+      - name: Meta-check that the suite can fail
+        run: bash tests/fgs/selftest_can_fail.sh

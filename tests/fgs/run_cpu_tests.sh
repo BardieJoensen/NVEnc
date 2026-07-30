@@ -1,5 +1,12 @@
-#!/bin/sh -e
+#!/bin/sh
 # Build and run the GPU-free film grain unit tests (solver + filmgrn1 parser).
+#
+# `set -e` is here in the body, not only on the shebang line.  The shebang's
+# options are ignored when the script is invoked as `sh run_cpu_tests.sh` or
+# `bash run_cpu_tests.sh` -- which is how README.md and CI call it -- and
+# without it the script exits with the status of the LAST command, so a failing
+# solver test would still report success.
+set -e
 cd "$(dirname "$0")/../.."
 CXX=${CXX:-g++}
 OUT=${TMPDIR:-/tmp}
@@ -12,3 +19,4 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
 python3 tests/fgs/test_filmgrn.py
 python3 tests/fgs/test_quality_metrics.py
 python3 tests/fgs/test_texture_metrics.py
+python3 tests/fgs/test_model_gate.py

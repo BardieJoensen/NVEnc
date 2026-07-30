@@ -4,13 +4,32 @@ These tests exercise the CUDA AV1 film-grain analyzer without requiring any
 copyrighted media. Set `NVENCC` when the binary is not at
 `build-fgs-cuda/nvencc`.
 
+**Read `TIERS.md` first.** It says which tier catches which class of defect,
+and why the GPU tier is not and cannot be hosted in CI.
+
+## Automated entry points
+
+| | command | where it runs |
+|---|---|---|
+| tier 1 | `bash tests/fgs/run_cpu_tests.sh` | GitHub Actions, every push |
+| tier 1 meta-check | `bash tests/fgs/selftest_can_fail.sh` | GitHub Actions, every push |
+| tier 2 quick | `tests/fgs/local_gate.sh --quick` | this box; pre-push hook |
+| tier 2 full | `tests/fgs/local_gate.sh --full` | this box, before shipping a build |
+
+Install the pre-push hook with:
+
+```sh
+ln -sf ../../tests/fgs/hooks/pre-push .git/hooks/pre-push
+```
+
 ## Fast CPU tests
 
 ```sh
 bash tests/fgs/run_cpu_tests.sh
 ```
 
-This builds and runs the model-solver and `filmgrn1` parser behavior tests.
+This builds and runs the model-solver and `filmgrn1` parser behavior tests,
+plus the Python descriptor and model-gate tests.
 
 ## GPU known-answer tests
 
@@ -172,3 +191,36 @@ their base pixels differ. If libaom matches the source and NVEnc does not, that
 is analyzer headroom. If both miss similarly, a compact-model limit is
 plausible but not proven; establishing the format ceiling requires a separately
 optimized best-fit AV1 model.
+
+`local_gate.sh` provisions the pinned `noise_model` into
+`${FGS_GATE_CACHE:-~/.cache/fgs-gate}` automatically, so the manual
+`mktemp -d /tmp/...` recipe above is only needed for one-off work. The gate
+pins libaom by *revision*, not by binary hash: a rebuild of the same source is
+not bit-identical.
+
+## Texture model gate
+
+Grain energy, base fidelity and the texture report all take encoded media as
+their subject. None of them can answer "should this set of AR coefficients be
+accepted?", and on 2026-07-30 that gap became concrete: a directly optimized
+model beat the texture report's gated descriptors by ~3x while being worse on
+descriptors the gate does not measure.
+
+```sh
+python3 tests/fgs/model_gate.py \
+    --source taxi_src.y4m --clean taxi_clean.y4m \
+    --incumbent shipping.tbl --candidate proposed.json \
+    --expect reject
+```
+
+Gated descriptors (radial spectrum TV, H/V autocorrelation over lags 1-8) may
+only help a candidate. Held-out descriptors (gradient anisotropy, diagonal
+lag-1 autocorrelation) may only veto one. `--expect` asserts the verdict, so a
+labelled adversarial specimen can be used as a negative control rather than
+merely documented. Exit status is 0 for ACCEPT, 1 for REJECT, 2 for an error;
+with `--expect` it is 0 when the verdict matches and 1 when it does not.
+
+The unit-testable core runs in CI (`test_model_gate.py`); the media-backed
+assertion against
+`/media/merged-storage/media/test-encodes/ceiling/taxi_ceiling_q.json` is stage
+`model_negative` of the local gate.

@@ -1,0 +1,66 @@
+#!/bin/bash
+# Pre-push gate for the film-grain analyzer.
+#
+# Install with:
+#     ln -sf ../../tests/fgs/hooks/pre-push .git/hooks/pre-push
+#
+# WHAT THIS DOES AND DOES NOT COVER
+# It runs tier 1 (CPU, seconds) and the quick half of tier 2 (18 GPU fixtures
+# plus the offline adversarial texture specimen, ~3.5 minutes). It does NOT run
+# the libaom real-film oracle, the texture negative or the base-fidelity
+# canary: those need real-film encodes and take tens of minutes.
+#
+# That is a deliberate trade, and it has a consequence worth stating plainly:
+# BOTH regressions that reached production on 2026-07-29/30 passed all 18 GPU
+# fixtures. This hook would not have stopped either of them. Only
+#     tests/fgs/local_gate.sh --full
+# runs the stages that did catch them, and that is the gate to run before
+# building an image for the library.
+#
+# Set FGS_PREPUSH=full to run everything, or FGS_PREPUSH=off to skip the GPU
+# tier entirely (tier 1 still runs).
+
+set -uo pipefail
+
+REPO="$(git rev-parse --show-toplevel)"
+MODE="${FGS_PREPUSH:-quick}"
+
+printf '\n== pre-push: film grain tier 1 (CPU)\n'
+if ! bash "$REPO/tests/fgs/run_cpu_tests.sh"; then
+    echo "pre-push: CPU test suite failed" >&2
+    exit 1
+fi
+
+if [ "$MODE" = "off" ]; then
+    printf '\npre-push: FGS_PREPUSH=off, skipping the GPU tier.\n'
+    printf 'Run tests/fgs/local_gate.sh --full before shipping a build.\n'
+    exit 0
+fi
+
+if ! command -v nvidia-smi >/dev/null 2>&1 || ! nvidia-smi -L >/dev/null 2>&1; then
+    # Never let a missing GPU turn into a silent pass.
+    echo "
+pre-push: no GPU on this machine, so the tier-2 gate cannot run here.
+The GPU tier is not optional coverage -- it is the only tier that caught either
+production regression. Push from the GPU box, or set FGS_PREPUSH=off if you
+have run tests/fgs/local_gate.sh --full elsewhere for this commit." >&2
+    exit 1
+fi
+
+if [ "$MODE" = "full" ]; then
+    printf '\n== pre-push: film grain tier 2 (full)\n'
+    exec bash "$REPO/tests/fgs/local_gate.sh" --full
+fi
+
+printf '\n== pre-push: film grain tier 2 (quick)\n'
+if ! bash "$REPO/tests/fgs/local_gate.sh" --quick; then
+    echo "pre-push: quick GPU gate failed" >&2
+    exit 1
+fi
+
+printf '
+pre-push: quick gate passed. It does NOT cover the real-film libaom oracle,
+the r4047 texture negative or the base-fidelity canary. Run
+    tests/fgs/local_gate.sh --full
+before building an image that will touch the library.
+'

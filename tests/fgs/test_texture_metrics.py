@@ -122,6 +122,62 @@ class TextureMetricsTest(unittest.TestCase):
         self.assertEqual(bands["1"]["status"], "OK")
         self.assertEqual(bands["7"]["status"], "N/A")
 
+    def test_texture_distance_ignores_amplitude(self):
+        """Two arms with identical texture at different energies must not
+        separate.
+
+        The test above holds both arms at sigma 4.0, so it establishes that
+        texture differences are seen but not that energy differences are
+        ignored -- and amplitude independence is the property the whole texture
+        axis rests on. Grain energy belongs to the retention monitor; if it
+        leaks into the texture distance, a louder-but-identical model reads as
+        a texture change and the two detectors stop being independent.
+        """
+        rng = np.random.default_rng(13)
+        clean_frames, source_frames = [], []
+        quiet_frames, loud_frames = [], []
+        for _ in range(4):
+            clean = np.full((128, 128), 112.0, dtype=np.float32)
+            grain = rng.normal(0.0, 3.0, clean.shape)
+            clean_frames.append(clean)
+            source_frames.append(clean + grain)
+            quiet_frames.append(clean + grain)
+            loud_frames.append(clean + 3.0 * grain)
+
+        with tempfile.TemporaryDirectory() as work:
+            paths = {}
+            for name, values in (("source", source_frames),
+                                 ("clean", clean_frames),
+                                 ("quiet", quiet_frames),
+                                 ("loud", loud_frames)):
+                paths[name] = os.path.join(work, name + ".yuv")
+                write_yuv420(paths[name], values)
+            report = texture_metrics.analyze_raw_texture(
+                paths["source"], paths["clean"],
+                {"quiet": (paths["quiet"], paths["clean"]),
+                 "loud": (paths["loud"], paths["clean"])},
+                128, 128, 8, minimum_blocks=1)
+
+        comparison = texture_metrics.compare_descriptor_sets(
+            report["descriptors"]["loud"], report["descriptors"]["quiet"],
+            report["flat_selection"]["source_luma_occupancy"][
+                "weights_by_band"])
+        aggregate = comparison["core"]["occupancy_weighted"]
+        self.assertLess(aggregate["spectrum_total_variation"], 0.01)
+        self.assertLess(aggregate["acf_rmse"], 0.01)
+        self.assertLess(aggregate["anisotropy_abs_delta"], 0.01)
+
+        # The energy diagnostic is the one thing that must move, or the arms
+        # were not actually at different amplitudes.
+        band = next(key for key, value in
+                    report["descriptors"]["quiet"]["core"].items()
+                    if value.get("status") == "OK")
+        quiet_sigma = report["descriptors"]["quiet"]["core"][band][
+            "energy_diagnostic"]["sigma_8bit_p50"]
+        loud_sigma = report["descriptors"]["loud"]["core"][band][
+            "energy_diagnostic"]["sigma_8bit_p50"]
+        self.assertAlmostEqual(loud_sigma / quiet_sigma, 3.0, delta=0.1)
+
 
 if __name__ == "__main__":
     unittest.main()
