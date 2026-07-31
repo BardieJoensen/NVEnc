@@ -90,7 +90,9 @@ def main():
         clip = clip.strip()
         name = os.path.splitext(os.path.basename(clip))[0].replace("clip_", "")
         d = os.path.dirname(os.path.abspath(clip))
-        stem = os.path.join(d, "rc-" + name)
+        # Encode filenames must carry the rate mode, or a second run at a
+        # different quality point silently reuses the first run's files.
+        stem = os.path.join(d, f"rc-{name}" + (f"-q{args.qvbr}" if args.qvbr else ""))
         r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0",
                             "-show_entries", "stream=width,height", "-of", "csv=p=0", clip],
                            capture_output=True, text=True, check=True)
@@ -113,7 +115,8 @@ def main():
                          args.rate, opt, qvbr=args.qvbr, frames=args.frames)
             e = {"mb": round(os.path.getsize(enc) / 1e6, 1)}
             print(f"[score] {name}/{tag} ({e['mb']}MB)", flush=True)
-            e.update(score(ref, enc, f"rc-{name}-{tag}", d, h, args.frames, clip=clip))
+            e.update(score(ref, enc, f"{os.path.basename(stem)}-{tag}", d, h,
+                           args.frames, clip=clip))
             e["hf"] = hf_sigma(enc, w, h, decoder="libdav1d")
             e.update(grain_structure(enc, w, h, decoder="libdav1d"))
             e["retention"] = round(e["hf"] / max(src["hf"], 1e-6), 3)
