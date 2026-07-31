@@ -95,6 +95,9 @@ priorities.
 See `FINDINGS-2026-07-30-TEXTURE.md` for the amplitude-independent real-film
 texture detector, common-base NVEnc/libaom comparison, and r4047 labelled
 negative.
+See `FINDINGS-2026-07-31-ROUTING.md` for the matched-rate re-test of the
+"heavy 35mm is better served by a plain tuned encode" conclusion, which no
+longer holds: run it with `routing_check.py`.
 See `FINDINGS-2026-07-31-MODEL-STATS.md` for the model-stats and flat-metrics
 speed-ups, the setup/accumulation timing method, seven measured CUDA variants
 (five rejected), and why fusing the two bilateral passes is not worth doing.
