@@ -95,6 +95,9 @@ priorities.
 See `FINDINGS-2026-07-30-TEXTURE.md` for the amplitude-independent real-film
 texture detector, common-base NVEnc/libaom comparison, and r4047 labelled
 negative.
+See `FINDINGS-2026-07-31-MODEL-STATS.md` for the model-stats and flat-metrics
+speed-ups, the setup/accumulation timing method, seven measured CUDA variants
+(five rejected), and why fusing the two bilateral passes is not worth doing.
 
 Real-title testing is handled separately by `campaign.py`; source paths in that
 script are local configuration and media is never committed.

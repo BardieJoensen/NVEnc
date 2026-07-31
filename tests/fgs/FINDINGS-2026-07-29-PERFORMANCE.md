@@ -439,8 +439,14 @@ The highest-value additions are:
 4. End-to-end media-minutes/hour, GPU utilization, energy/frame, output bytes,
    and failure rate at each Tdarr concurrency level.
 
-The shared-memory bilateral pass is now implemented. Further CUDA work should
-profile fusing its two passes, although the intermediate frame dependency makes
-that substantially more complex than fusing independent kernels. Removing a
-per-frame host synchronization would require GPU-resident selection or
-pipelined one-frame-late decisions and has a larger correctness/latency risk.
+The shared-memory bilateral pass is now implemented. Removing a per-frame host
+synchronization would require GPU-resident selection or pipelined one-frame-late
+decisions and has a larger correctness/latency risk.
+
+Fusing the two bilateral passes was proposed here as the next CUDA step.
+`FINDINGS-2026-07-31-MODEL-STATS.md` retires that suggestion: the bilateral
+runs at about 14% of DRAM peak with ten global memory instructions against
+~298 math instructions, so fusion would trade halo recomputation for traffic
+that is not the bottleneck. That file also supersedes the `model_stats` share
+of the profile table above, which was measured on generated fixtures and
+understates the kernel by roughly half on real film.
