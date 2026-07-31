@@ -506,6 +506,15 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
         }
         values[tid] = residual_at<Type, shift, components>(
             src, srcPitch, denoised, denoisedPitch, x, y, component);
+    } else {
+        // Zero an unusable sample instead of testing valid[] inside the
+        // accumulation loops below.  A zero predictor contributes exactly
+        // zero to every normal-equation product, so the statistics are
+        // unchanged while the inner loops lose a per-sample branch.
+        for (int i = 0; i < coeffCount; ++i) {
+            predictors[tid][i] = 0;
+        }
+        values[tid] = 0;
     }
     __syncthreads();
 
@@ -514,6 +523,18 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
     // Give each normal-equation element to one thread instead. It sums all
     // samples locally and performs the same single global accumulation.
     // Inputs and sums stay integer, so this produces identical statistics.
+    //
+    // The block-local sums are accumulated in 32 bits.  Residuals are
+    // differences of two same-plane samples, so |residual| <= 1023 at the
+    // deepest supported bit depth; a product is at most 1023*1023 and the
+    // sum spans exactly `threads` (64) samples, so the magnitude cannot
+    // exceed 66,977,856 -- about 32x inside int32.  The global accumulators
+    // stay 64-bit because they sum every block in the frame.  A 64-bit
+    // block-local sum costs widening multiplies plus carry fix-up on every
+    // one of the 300+ elements, which dominated this kernel.
+    // predictors[]/values[] are sized for 64 samples, so `threads` is 64.
+    static_assert(64LL * 1023 * 1023 <= 2147483647LL,
+        "block-local int32 accumulation must not overflow at 10-bit residuals");
     for (int packed = tid; packed < triCount; packed += threads) {
         int i = 0;
         int j = packed;
@@ -522,22 +543,18 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
             ++i;
         }
         j += i;
-        int64_t sum = 0;
+        int32_t sum = 0;
         for (int sample = 0; sample < threads; ++sample) {
-            if (valid[sample]) {
-                sum += static_cast<int64_t>(predictors[sample][i]) * predictors[sample][j];
-            }
+            sum += predictors[sample][i] * predictors[sample][j];
         }
-        atomic_add_i64(output->ata + packed, sum);
+        atomic_add_i64(output->ata + packed, static_cast<int64_t>(sum));
     }
     for (int i = tid; i < coeffCount; i += threads) {
-        int64_t sum = 0;
+        int32_t sum = 0;
         for (int sample = 0; sample < threads; ++sample) {
-            if (valid[sample]) {
-                sum += static_cast<int64_t>(predictors[sample][i]) * values[sample];
-            }
+            sum += predictors[sample][i] * values[sample];
         }
-        atomic_add_i64(output->atb + i, sum);
+        atomic_add_i64(output->atb + i, static_cast<int64_t>(sum));
     }
     if (tid == 0) {
         int64_t residualSum = 0;
