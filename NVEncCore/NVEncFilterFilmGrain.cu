@@ -135,6 +135,18 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     }
 
     const int count = bw * bh;
+    // Both passes below walk the same block, and the gradient pass adds four
+    // neighbour taps per pixel -- about six global loads per pixel in total.
+    // Those taps are guarded to stay strictly inside the block, so the whole
+    // working set is bw*bh with no halo.  Stage it in shared memory once and
+    // read every later tap from there, preserving the sample values and the
+    // arithmetic order used below.
+    __shared__ int tile[FGS_BLOCK_SIZE * FGS_BLOCK_SIZE];
+    for (int index = tid; index < count; index += FGS_FLAT_THREADS) {
+        tile[index] = load_code<Type, shift>(src, pitch, x0 + index % bw, y0 + index / bw);
+    }
+    __syncthreads();
+
     // Consumer NVIDIA GPUs have very low FP64 throughput. None of these
     // per-32x32-block values needs double precision: variance is accumulated
     // from the fitted residual directly, so there is no large mean-square
@@ -149,7 +161,7 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
         const int y = index / bw;
         const float yn = (2.0f * y - (bh - 1)) / bh;
         const float xn = (2.0f * x - (bw - 1)) / bw;
-        const float value = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y));
+        const float value = static_cast<float>(tile[index]);
         localSum += value;
         localSumX += value * xn;
         localSumY += value * yn;
@@ -201,14 +213,14 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
         const int y = index / bw;
         const float yn = (2.0f * y - (bh - 1)) / bh;
         const float xn = (2.0f * x - (bw - 1)) / bw;
-        const float value = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y));
+        const float value = static_cast<float>(tile[index]);
         const float residual = value - (mean + planeX * xn + planeY * yn);
         localVariance += residual * residual;
         if (x > 0 && x + 1 < bw && y > 0 && y + 1 < bh) {
-            const float left = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x - 1, y0 + y));
-            const float right = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x + 1, y0 + y));
-            const float up = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y - 1));
-            const float down = static_cast<float>(load_code<Type, shift>(src, pitch, x0 + x, y0 + y + 1));
+            const float left = static_cast<float>(tile[index - 1]);
+            const float right = static_cast<float>(tile[index + 1]);
+            const float up = static_cast<float>(tile[index - bw]);
+            const float down = static_cast<float>(tile[index + bw]);
             const float gx = (right - left) * 0.5f - planeX * (2.0f / bw);
             const float gy = (down - up) * 0.5f - planeY * (2.0f / bh);
             localGxx += gx * gx;
