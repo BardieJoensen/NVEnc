@@ -33,18 +33,29 @@ from campaign import NVENCC, COLOR, TUNED, run, score, hf_sigma
 from matched_rate_sweep import grain_structure
 
 
-def encode(clip, out, rate, fg):
+def encode(clip, out, rate, fg, qvbr=0, frames=0):
     """Same arms as matched_rate_sweep.encode, but software-decoded.
 
     The preserved masters are lossless FFV1, which NVDEC cannot decode, so
     --avhw fails outright ("codec ffv1(yuv420p10le) unable to decode by
     cuvid"). Software decode is also the deterministic path for a fixed
     fixture, so nothing is lost by it here.
+
+    Two rate modes, answering different questions:
+      --vbr   matched *bytes*: what quality do equal bits buy? (routing)
+      --qvbr  matched *quality setting*: how many bytes does FGS save at the
+              production operating point? (general-library)
     """
     if os.path.exists(out):
         return out
-    cmd = [NVENCC, "--avsw", "--codec", "av1", "--output-depth", "10",
-           "--vbr", str(rate), "--max-bitrate", str(rate * 2), *TUNED, *COLOR]
+    cmd = [NVENCC, "--avsw", "--codec", "av1", "--output-depth", "10"]
+    if qvbr:
+        cmd += ["--qvbr", str(qvbr), "--max-bitrate", "50000"]
+    else:
+        cmd += ["--vbr", str(rate), "--max-bitrate", str(rate * 2)]
+    cmd += [*TUNED, *COLOR]
+    if frames:
+        cmd += ["--frames", str(frames)]
     if fg:
         cmd += ["--av1-film-grain", fg]
     cmd += ["-i", clip, "-o", out]
@@ -67,6 +78,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--clips", required=True, help="comma-separated source clips")
     ap.add_argument("--rate", type=int, default=31700, help="VBR kbps for every arm")
+    ap.add_argument("--qvbr", type=int, default=0, help="use --qvbr N instead of --vbr (matched quality setting)")
     ap.add_argument("--frames", type=int, default=288)
     ap.add_argument("--denoiser", default="bilateral", help="production default is bilateral")
     ap.add_argument("--extra", default="", help="extra --av1-film-grain sub-options for a third arm")
@@ -84,6 +96,8 @@ def main():
                            capture_output=True, text=True, check=True)
         w, h = (int(x) for x in r.stdout.strip().split(",")[:2])
         ref = ffvhuff_ref(clip, args.frames)
+        if args.qvbr:
+            print(f"  (qvbr {args.qvbr}: comparing bytes at a matched quality setting)", flush=True)
 
         fg = f"denoise=auto,chroma=auto,denoiser={args.denoiser}"
         arms = [("plain", None), ("fgs", fg)]
@@ -96,7 +110,7 @@ def main():
         row = {"_source": src}
         for tag, opt in arms:
             enc = encode(clip, f"{stem}-{tag.replace('+','_').replace('=','')}.mkv",
-                         args.rate, opt)
+                         args.rate, opt, qvbr=args.qvbr, frames=args.frames)
             e = {"mb": round(os.path.getsize(enc) / 1e6, 1)}
             print(f"[score] {name}/{tag} ({e['mb']}MB)", flush=True)
             e.update(score(ref, enc, f"rc-{name}-{tag}", d, h, args.frames, clip=clip))
