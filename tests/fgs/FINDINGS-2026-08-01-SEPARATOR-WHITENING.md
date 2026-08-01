@@ -302,12 +302,45 @@ motion compensation cannot land exactly. `motion` still ranks first:
 | fft3d + `psd=on` | 48% | 0.404 | 0.321 |
 
 Adding motion costs every arm detail and reorders some of them --- `psd=on`
-overtakes plain `fft3d`, reversing the static result --- but it does not
-reproduce `motion`'s real-film collapse. So the fixture suite still cannot
-predict that behaviour, and the reason is still unknown. A uniform global
-translation is the easiest motion there is; real film adds parallax, rotation,
-deformation, occlusion and cuts, and 4K rather than 1080p. Any of those remains
-a candidate.
+overtakes plain `fft3d`, reversing the static result --- but `motion` still
+ranks first, so this does not reproduce its real-film collapse.
+
+**The real-film damage tracks motion magnitude.** Per-frame Butteraugli against
+a per-frame motion proxy, split at the title's own motion quartiles:
+
+| title | gap, low-motion quartile | gap, high-motion quartile |
+| --- | ---: | ---: |
+| The Shining | 4.3 | **35.6** |
+| Casino | 10.3 | 27.1 |
+| Scarface | 9.1 | 22.5 |
+| Taxi Driver | 4.2 | 7.9 |
+
+All four in the same direction. It is also not a few bad frames --- `motion` is
+worse on 94-100% of frames --- and not a temporal misalignment: testing offsets
+-2..+2 puts the best match at 0 for both arms, with equal MSE.
+
+So harder motion was tried. `coarse_detail_move` adds a fast pan with rotation
+and zoom, making the displacement vary across the frame so no single vector fits:
+
+| arm | detail transfer: static / pan / hard motion |
+| --- | --- |
+| bilateral | 0.531 / 0.431 / 0.424 |
+| fft3d | 0.487 / 0.257 / 0.262 |
+| **motion** | **0.693 / 0.591 / 0.500** |
+
+`motion` does degrade fastest with motion --- it loses 0.193 where bilateral
+loses 0.107 --- but it has not crossed over, so **the fixtures still cannot
+reproduce the real-film result**.
+
+The property they are missing is now identifiable. Every motion this generator
+can produce is a geometric transform of one texture layer, so every pixel's
+content existed somewhere in the previous frame. Real motion **reveals content
+that was not previously visible**: foreground moving over background, objects
+entering frame, cuts. A temporal denoiser cannot predict disoccluded content by
+construction, and that is exactly where a motion-compensated one has no fallback
+while a purely spatial one is unaffected. Producing it needs layered content,
+which a single analytic texture cannot express --- so this is a generator
+limitation, not a parameter that needs turning up.
 
 **What is established** is narrower than the earlier draft of this document
 claimed: fixture rankings do not transfer to real film, demonstrated twice over

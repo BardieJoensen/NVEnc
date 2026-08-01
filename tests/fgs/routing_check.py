@@ -82,6 +82,12 @@ def main():
     ap.add_argument("--frames", type=int, default=288)
     ap.add_argument("--denoiser", default="bilateral", help="production default is bilateral")
     ap.add_argument("--extra", default="", help="extra --av1-film-grain sub-options for a third arm")
+    ap.add_argument("--tag", default="",
+                    help="appended to every encode filename. Required whenever a run "
+                         "differs from a previous one by something the arm name does "
+                         "not capture -- a different binary, or an analyzer setting "
+                         "passed by environment -- because `encode` skips files that "
+                         "already exist and would otherwise rescore the earlier run.")
     ap.add_argument("--output", default="")
     args = ap.parse_args()
 
@@ -107,9 +113,13 @@ def main():
         # already exists, so without it a second run at a different denoiser
         # silently rescores the first run's encode. The plain arm carries no
         # analyzer, so it is deliberately shared across denoiser runs.
-        arms = [("plain", None), (f"fgs-{args.denoiser}", fg)]
+        # --tag lands on the FGS arms only. The plain arm carries no analyzer,
+        # so it is identical across analyzer settings and is deliberately shared
+        # rather than re-encoded and re-scored once per tag.
+        suffix = f"-{args.tag}" if args.tag else ""
+        arms = [("plain", None), (f"fgs-{args.denoiser}{suffix}", fg)]
         if args.extra:
-            arms.append((f"fgs-{args.denoiser}+{args.extra}", f"{fg},{args.extra}"))
+            arms.append((f"fgs-{args.denoiser}+{args.extra}{suffix}", f"{fg},{args.extra}"))
 
         src = {"hf": hf_sigma(clip, w, h), **grain_structure(clip, w, h)}
         print(f"\n=== {name}: source HF {src['hf']} acf {src['acf1']}/{src['acf2']}/{src['acf3']}",

@@ -20,8 +20,12 @@ synthesized grain against the injected grain:
   detail_luma    static fine detail plus grain; separation/detail-loss probe
   coarse_detail  correlated grain OVER detail: does chasing coarse grain take
                  picture detail with it?  (fails with FGS_KAT_DENOISER=bilateral)
-  coarse_detail_pan  the same with the picture panning fractionally; the only
-                 fixture here whose content moves at all
+  coarse_detail_pan  the same with the picture panning fractionally
+  coarse_detail_move the same with fast pan + rotation + zoom, so displacement
+                 varies across the frame.  These two are the only fixtures whose
+                 content moves at all, and neither reproduces the real-film
+                 ranking of denoiser=motion: see
+                 FINDINGS-2026-08-01-SEPARATOR-WHITENING.md
   auto_retain_*  content-aware residual retention on flat and detailed inputs
   dark_luma      grain clipped at legal black; shadow strength + black level
   retain_luma    retain 60% of original luma grain in the encoded base layer
@@ -86,7 +90,7 @@ def apply_spec(spec):
     CLIP_LO, CLIP_HI = spec.get("clip", (0, MAXVAL))
 
 
-def base_luma(shift=0, detail=False, pan=(0.0, 0.0)):
+def base_luma(shift=0, detail=False, pan=(0.0, 0.0), rot=0.0, zoom=1.0):
     y = np.empty((H, W), np.float64)
     for i, level in enumerate(np.roll(LEVELS, shift)):
         y[:, i * BAND_W:(i + 1) * BAND_W] = level
@@ -105,6 +109,14 @@ def base_luma(shift=0, detail=False, pan=(0.0, 0.0)):
         top = H // 2
         left, right = BAND_W, W - BAND_W
         yy, xx = np.mgrid[32:top - 32, left:right]
+        # Rotation and zoom about the region centre make the displacement vary
+        # across the frame, so no single motion vector describes it.
+        if rot or zoom != 1.0:
+            cy, cx = 0.5 * (32 + top - 32), 0.5 * (left + right)
+            dx, dy = xx - cx, yy - cy
+            c, s = np.cos(rot), np.sin(rot)
+            xx = cx + (c * dx - s * dy) / zoom
+            yy = cy + (s * dx + c * dy) / zoom
         xx = xx - pan[0]
         yy = yy - pan[1]
         texture = (6.0 * np.sin(2.0 * np.pi * xx / 8.0)
@@ -172,10 +184,13 @@ def generate(test, spec, path, clean_path=None):
             grainy = not (grain_free or (test == "cut" and n >= CUT_FRAME))
             pan = spec.get("pan", (0.0, 0.0))
             offset = (pan[0] * n, pan[1] * n)
-            base = base_luma(spec.get("cut_roll", 6), spec.get("detail", False), offset) \
+            rot = np.deg2rad(spec.get("rot", 0.0) * n)
+            zoom = spec.get("zoom", 1.0) ** n
+            base = base_luma(spec.get("cut_roll", 6), spec.get("detail", False),
+                             offset, rot, zoom) \
                 + spec.get("cut_offset", 0) \
                 if test in ("cut", "cut_grainy") and n >= CUT_FRAME \
-                else base_luma(0, spec.get("detail", False), offset)
+                else base_luma(0, spec.get("detail", False), offset, rot, zoom)
             if grainy:
                 unit = correlated_unit_noise(rng, (H, W)) if spec["sigma_y_mode"] == "coarse" \
                     else rng.normal(0.0, 1.0, (H, W))
@@ -418,6 +433,12 @@ TESTS = {
     # deliberately fractional so motion compensation cannot land exactly.
     "coarse_detail_pan": {"sigma_y_mode": "coarse", "sigma_y": 6.0, "detail": True,
                           "pan": (0.77, 0.31)},
+    # Hard motion: fast pan plus rotation and zoom, so the displacement varies
+    # across the frame and no single vector fits it.  coarse_detail_pan turned
+    # out to be too easy -- it left `motion` ranked first, where real 4K film
+    # ranks it last, and the real-film damage tracks motion magnitude.
+    "coarse_detail_move": {"sigma_y_mode": "coarse", "sigma_y": 6.0, "detail": True,
+                           "pan": (5.3, 2.1), "rot": 0.35, "zoom": 1.004},
     "auto_retain_flat": {"sigma_y_mode": "const", "sigma_y": 6.0, "retain": "auto"},
     "auto_retain_detail": {"sigma_y_mode": "const", "sigma_y": 6.0,
                            "detail": True, "retain": "auto"},
@@ -576,7 +597,8 @@ def run_test(test, keep):
                     f"ratio {fmt(total_ratio)}, target 1.00")
         if not keep and os.path.exists(src_raw):
             os.remove(src_raw)
-    elif test in ("coarse_luma", "coarse_detail", "coarse_detail_pan"):
+    elif test in ("coarse_luma", "coarse_detail", "coarse_detail_pan",
+                  "coarse_detail_move"):
         sigma, _ = measure(on, off, range(SKIP, nframes))
         ratio = float(sigma[0].mean() / max(expected[0].mean(), 1e-9))
         adaptive = [m for m in models if m["frame"] >= SKIP and m["reliable"]]
@@ -659,7 +681,7 @@ def run_test(test, keep):
         ok &= check("fine detail survives the cleaned base",
                     separation["detail_transfer_gain"] >= 0.25,
                     f"high-pass transfer {separation['detail_transfer_gain']:.3f} (baseline floor 0.25)")
-        if test == "coarse_detail_pan":
+        if test in ("coarse_detail_pan", "coarse_detail_move"):
             # Both edge measures are unusable once the picture moves: the
             # systematic one is a temporal mean, so damage that travels with the
             # picture averages out of it, and the plain one is dominated by
@@ -687,7 +709,7 @@ def run_test(test, keep):
                 ok &= check("auto retention restores at-risk fine detail",
                             separation["detail_transfer_gain"] >= 0.65,
                             f"high-pass transfer {separation['detail_transfer_gain']:.3f} (target 0.65)")
-        elif test != "coarse_detail_pan":
+        elif test not in ("coarse_detail_pan", "coarse_detail_move"):
             # coarse_detail_pan is excluded deliberately: this guard is plain
             # edge RMSE, which coarse grain left in the base dominates, and the
             # fixture reports it as information above instead.
