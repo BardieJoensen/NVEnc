@@ -508,3 +508,79 @@ the quantised recursion.  The next candidate measures that realised template
 gain deterministically, compensates only up to 1.25x, and rejects/holds any
 fit needing more.  `modelsrc` remains default-off and none of these candidates
 has been deployed to Tdarr.
+
+## Temporal truth, dense strength and the apparent regulariser loss
+
+The temporal control settles the premise for correlation regularisation.  The
+Shining's source truth is 0.632 lag-1 while unrestricted synthesis is 0.750;
+Interstellar is 0.707 against 0.835.  The excess persists under the tighter
+flat mask and in every populated luma band.  These are labelled texture errors,
+not merely titles that happen to sit above the corpus mean, so the regulariser
+is correct in kind.
+
+`d61de68c` implemented the deterministic quantised-template gain gate described
+above.  A pinned build linked successfully.  On the seven-frame Deer Hunter
+control it changes the quantised-only synthesis from 0.829 to 0.837 amplitude,
+with the same 0.552 / 0.077 lag-1 / lag-2 and a low 0.017 frame-to-frame
+amplitude SD.  It is safe and stable, but the gain correction is too small to
+explain the remaining weak synthesis.
+
+`2f286f24` keeps the AR normal equations on 64 stratified observations per
+block, but derives source and base strength variance from every pixel already
+read by the block-plane fit.  The orthogonal `{1, x, y}` basis makes this one
+extra sum-of-squares accumulator rather than a second image pass.  Removing the
+now-unused sparse base-value array offsets the additional reduction storage.
+The pinned build SHA-256 is
+`39d506df864bc44102e1dcc0748f43ddbb69e8f689e52dbcfc2eb2a7e548b80d`;
+the complete 22-fixture GPU KAT passes with both explicit `modelsrc=off` and
+explicit `modelsrc=on`.
+
+Dense strength is measurable but small on the fixed Deer replay:
+
+| arm | synth amplitude | total amplitude | lag-1 / lag-2 |
+| --- | ---: | ---: | ---: |
+| gain-gated sparse | 0.837 | 0.857 | 0.552 / 0.077 |
+| gain-gated dense | 0.841 | 0.861 | 0.552 / 0.077 |
+
+The luma-band deltas are +0.003, +0.007, +0.010 and -0.012 from darkest to
+brightest populated band.  This falsifies the prediction that rectified sparse
+variance noise is the main Deer failure: the sparsest, weakest-grain band moves
+in the wrong direction, while the title mean gains only 0.004.
+
+The apparent 0.902 -> 0.837 amplitude cost from regularisation was also a mean
+artifact.  Per-frame replay shows the unrestricted and gain-gated tables are
+identical on every ordinary sampled interval:
+
+| frame | unrestricted | gain-gated | dense |
+| ---: | ---: | ---: | ---: |
+| 10 | 0.820 | 0.820 | 0.824 |
+| 58 | 0.827 | 0.827 | 0.831 |
+| 106 | 0.822 | 0.822 | 0.827 |
+| 154 | 0.870 | 0.870 | 0.875 |
+| 202 | 0.852 | 0.852 | 0.857 |
+| 250 | 0.838 | 0.838 | 0.843 |
+| 275 | **1.283** | **0.829** | 0.828 |
+
+Only the labelled near-unstable frame 275 changes.  Removing its 1.283
+over-synthesis lowers the aggregate while improving that frame; the regulariser
+does not tax the normal 0.82--0.87 intervals.
+
+Finally, evaluating dense `sqrt(V_source - V_base)` directly on the same static
+blocks predicts 0.942--0.954 of temporal truth on frames 10--250 (0.969 on
+frame 275).  The emitted synthesis is only 0.820--0.870.  The missing amplitude
+therefore appears after the dense block variances, in model/curve construction.
+The next isolated candidate is to use the realised quantised luma-template gain
+for every source-derived fit, not only fits whose correlation bound fired.
+Ordinary source fits currently divide the curve by the regression-derived
+`arGain`; a high regression gain weakens every emitted scaling point even when
+the correlation model itself is accepted.  This hypothesis still needs a
+pinned build and decoded-film validation before it becomes a finding.
+
+Artifacts:
+
+- `sourcefit-regularizer-20260801/Deer-dense-debug.tbl`
+- `sourcefit-regularizer-20260801/Deer-dense-replay.mkv`
+- `sourcefit-regularizer-20260801/Deer-dense-temporal.json`
+
+`modelsrc` remains default-off.  No candidate in this section has been deployed
+to Tdarr.
