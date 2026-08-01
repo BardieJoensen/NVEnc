@@ -98,6 +98,21 @@ def format_axis(row):
     return f"{row['sigma']:>8.2f}{lag1:>8.3f}{lag2:>8.3f}"
 
 
+def lag1(row):
+    return 0.5 * (row["h1"] + row["v1"])
+
+
+def masks_by_luma(frame, static, count):
+    """Split one source-derived mask into fixed normalised luma ranges."""
+    grid = blockwise(frame)
+    out = [[] for _ in range(count)]
+    for by, bx in static:
+        normalised = float(grid[by, bx].mean()) / 65536.0
+        index = min(count - 1, max(0, int(normalised * count)))
+        out[index].append((by, bx))
+    return out
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True)
@@ -108,6 +123,8 @@ def main():
     parser.add_argument("--flat-fraction", type=float, default=0.10)
     parser.add_argument("--static-lo", type=float, default=0.8)
     parser.add_argument("--static-hi", type=float, default=1.3)
+    parser.add_argument("--luma-bins", type=int, default=8,
+                        help="fixed normalised-luma bands in the JSON report (default 8)")
     parser.add_argument("--json-out", default="")
     args = parser.parse_args()
 
@@ -136,6 +153,7 @@ def main():
 
     truth_rows = []
     masks = []
+    luma_masks = []
     selected_counts = []
     for frame in frames:
         candidates, _, _ = select_flat(source[frame], 16, args.flat_fraction)
@@ -146,6 +164,7 @@ def main():
             raise SystemExit(
                 f"frame {frame}: only {len(static)} static flat blocks; choose a quieter frame")
         masks.append(static)
+        luma_masks.append(masks_by_luma(source[frame], static, args.luma_bins))
         selected_counts.append(len(static))
         truth_rows.append(field_acf(
             (source[frame] - source[frame + 1]) / math.sqrt(2.0),
@@ -160,6 +179,7 @@ def main():
         "static_blocks": selected_counts,
         "truth": average_acf(truth_rows),
         "arms": {},
+        "luma_bins": [],
     }
 
     print(f"{os.path.basename(args.source)}: {width}x{height}, frames {frames}")
@@ -205,6 +225,73 @@ def main():
         }
         report["arms"][label] = arm_report
         print(f"{label + ' variance closure':<28}{'':>24}{actual - predicted:>+12.3f}")
+
+    # A whole-title aggregate can repeat the dark-film occupancy trap in a new
+    # metric.  Report fixed luma ranges as a requirement, not an optional
+    # diagnostic.  A bin needs at least eight blocks in at least two sampled
+    # frames; anything thinner is recorded as absent rather than thresholded.
+    print("\nfixed luma-band decomposition")
+    print(f"{'range':<15}{'blocks':>8}{'truth s':>10}{'truth L1':>10}  "
+          f"{'arm':<18}{'synth amp':>11}{'synth L1':>10}{'total amp':>11}{'total L1':>10}")
+    for bin_index in range(args.luma_bins):
+        eligible = [
+            (frame, band)
+            for frame, per_frame in zip(frames, luma_masks)
+            if len((band := per_frame[bin_index])) >= 8
+        ]
+        if len(eligible) < 2:
+            continue
+        bin_truth = [
+            field_acf((source[frame] - source[frame + 1]) / math.sqrt(2.0),
+                      band, detrend=False)
+            for frame, band in eligible
+        ]
+        truth_axis = average_acf(bin_truth)
+        bin_record = {
+            "range": [bin_index / args.luma_bins, (bin_index + 1) / args.luma_bins],
+            "blocks": sum(len(band) for _, band in eligible),
+            "frames": [frame for frame, _ in eligible],
+            "truth": truth_axis,
+            "arms": {},
+        }
+        range_label = (f"{bin_index / args.luma_bins:.3f}-"
+                       f"{(bin_index + 1) / args.luma_bins:.3f}")
+        first = True
+        for label, layers in decoded.items():
+            layer_rows = {"base": [], "synth": [], "total": []}
+            for frame, band in eligible:
+                on, off = layers["on"], layers["off"]
+                layer_rows["base"].append(field_acf(
+                    (off[frame] - off[frame + 1]) / math.sqrt(2.0),
+                    band, detrend=False))
+                layer_rows["synth"].append(average_acf([
+                    field_acf(on[frame] - off[frame], band, detrend=False),
+                    field_acf(on[frame + 1] - off[frame + 1], band, detrend=False),
+                ]))
+                layer_rows["total"].append(field_acf(
+                    (on[frame] - on[frame + 1]) / math.sqrt(2.0),
+                    band, detrend=False))
+            measured = {}
+            for name, rows in layer_rows.items():
+                measured[name] = {
+                    "axis": average_acf(rows),
+                    "amplitude_ratio": ratio_rows(rows, bin_truth),
+                }
+            bin_record["arms"][label] = measured
+            synth, total = measured["synth"], measured["total"]
+            block_label = str(bin_record["blocks"]) if first else ""
+            truth_sigma_label = f"{truth_axis['sigma']:.1f}" if first else ""
+            truth_lag1_label = f"{lag1(truth_axis):.3f}" if first else ""
+            print(f"{(range_label if first else ''):<15}"
+                  f"{block_label:>8}"
+                  f"{truth_sigma_label:>10}"
+                  f"{truth_lag1_label:>10}  "
+                  f"{label:<18}{synth['amplitude_ratio']['mean']:>11.3f}"
+                  f"{lag1(synth['axis']):>10.3f}"
+                  f"{total['amplitude_ratio']['mean']:>11.3f}"
+                  f"{lag1(total['axis']):>10.3f}")
+            first = False
+        report["luma_bins"].append(bin_record)
 
     if args.json_out:
         with open(args.json_out, "w", encoding="utf-8") as handle:

@@ -325,3 +325,110 @@ before `grain_scale_shift` and before `modelsrc`, under a regime that taxed
 arms in proportion to the grain correlation they preserved -- and motion
 preserved the most. It has not been re-measured since either fix. That number
 should not be quoted again until it is.
+
+---
+
+# Six-film corpus gate, 2026-08-01
+
+The Taxi result generalises as a compression result, but unrestricted source
+fitting does **not** yet generalise as a safe grain model.  Six 288-frame 4K
+lossless excerpts were encoded at qvbr 29 with a plain arm and with
+`modelsrc=on` using both bilateral and motion separation:
+
+| title | plain bytes | bilateral bytes | vs plain | motion bytes | vs plain |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Taxi Driver | 30,678,671 | 30,589,682 | -0.3% | 19,666,605 | -35.9% |
+| Casino | 24,444,601 | 13,826,098 | -43.4% | 9,846,160 | -59.7% |
+| The Shining | 15,893,822 | 9,641,094 | -39.3% | 7,336,183 | -53.8% |
+| Scarface | 31,029,894 | 20,696,806 | -33.3% | 14,159,983 | -54.4% |
+| The Deer Hunter | 30,412,001 | 29,776,484 | -2.1% | 21,719,212 | -28.6% |
+| Interstellar | 18,442,464 | 11,510,240 | -37.6% | 8,212,064 | -55.5% |
+| **weighted total** | **150,901,453** | **116,040,404** | **-23.1%** | **80,940,207** | **-46.4%** |
+
+The 44.6% Taxi result therefore was not a lucky title.  Aggressive motion
+separation clears the 30--40% corpus target; bilateral does not.  This remains
+a statement about bytes, not permission to ship motion: its known
+disocclusion and misplaced-detail damage is unchanged.
+
+## Grain-texture result
+
+`temporal_grain_report.py` replaces whole-frame `hf_sigma` for this question.
+It selects static flat blocks once from the source and estimates the source
+grain as `(source[n] - source[n+1]) / sqrt(2)`.  Synthesised grain is measured
+independently as decoded grain-on minus decoded grain-off.  Amplitude and
+normalised lag-1/lag-2 autocorrelation are reported separately, including in
+fixed normalised-luma bands.  Energy therefore stays with the retention
+detector and cannot hide a texture error.
+
+| title | source lag-1 / lag-2 | residual-fit bilateral lag-1 | source-fit motion amplitude / lag-1 / lag-2 |
+| --- | ---: | ---: | ---: |
+| Taxi Driver | 0.805 / 0.456 | 0.569 | 1.034 / 0.797 / 0.456 |
+| Casino | 0.739 / 0.305 | 0.523 | 0.892 / 0.767 / 0.381 |
+| The Shining | 0.632 / 0.170 | 0.453 | 0.984 / 0.750 / 0.399 |
+| Scarface | 0.286 / -0.005 | 0.141 | 0.933 / 0.306 / 0.018 |
+| The Deer Hunter | 0.496 / -0.007 | 0.321 | 0.838 / 0.529 / 0.050 |
+| Interstellar | 0.707 / 0.334 | 0.503 | 1.044 / 0.835 / 0.592 |
+
+Source fitting reduces the mean absolute lag-1 error from about 0.192 to
+0.056 and improves every title.  It also clearly over-correlates The Shining
+and Interstellar.  Tightening the flat-block mask from 20% to 2% leaves The
+Shining synthesis near 0.757 lag-1 while the source remains near 0.62, and the
+fixed luma bands show the same excess in every populated band.  This is not a
+dark-film occupancy artifact or a loose-mask artifact.  A mean-plus-plane fit
+can still interpret picture structure as grain.
+
+The analyser's independent one-pixel `grainCorr` statistic is much closer to
+the temporal truth on all six films (title means 0.811, 0.761, 0.679, 0.300,
+0.582 and 0.775 respectively).  It is measured from the source before motion
+confidence is applied and is therefore a useful independent regulariser for
+the longer AR fit rather than a replacement for it.
+
+## Offline autocorrelation-cap prototype
+
+`cap_table_acf.py` is deliberately an offline table experiment, not production
+code.  It simulates each emitted table entry's autocorrelation and uniformly
+scales the luma AR coefficients only when implied lag-1 exceeds that entry's
+measured `grainCorr` by a conservative 0.05.  It compensates template sigma so
+the experiment is meant to change texture rather than energy.  Re-encoding
+the emitted clean base with the original table reproduced the original AV1
+elementary stream byte-for-byte on The Shining and Interstellar, so the A/B
+below isolates the table rule from the separator and encoder.
+
+| title | uncapped amplitude / lag-1 / lag-2 | capped amplitude / lag-1 / lag-2 |
+| --- | ---: | ---: |
+| Taxi Driver | 1.034 / 0.797 / 0.456 | unchanged |
+| Casino | 0.892 / 0.767 / 0.381 | 0.907 / 0.755 / 0.352 |
+| The Shining | 0.984 / 0.750 / 0.399 | 0.988 / 0.714 / 0.324 |
+| Scarface | 0.933 / 0.306 / 0.018 | unchanged |
+| The Deer Hunter | 0.902 / 0.578 / 0.142 | 1.053 / 0.539 / 0.050 (expanded sample) |
+| Interstellar | 1.044 / 0.835 / 0.592 | 1.069 / 0.794 / 0.500 |
+
+On the initial common frame set, mean lag-1 error falls another 27%, from about
+0.056 to 0.041; lag-2 error falls about 31%, from 0.107 to 0.074.  Correct Taxi
+Driver and Scarface entries are untouched.  An expanded Deer Hunter sample
+then exposed the decisive failure in the strength compensation.  At frame 275,
+source truth is lag-1 0.621 / lag-2 0.111.  The cap correctly moves synthesis
+from 0.876 / 0.695 to 0.601 / 0.049, but its simulated template-gain correction
+raises amplitude from an already-high 1.283 to **2.339**.  The near-unstable
+source fit asked for a 3.80x strength correction; realised decoder gain is not
+linear in that estimate.  Interstellar also rises from 1.044 to 1.069.
+
+The correlation bound is promising, but the current strength compensation is
+unsafe.  An implementation must either recompute gain from the regularised
+regression before quantisation and validate the realised decoder template, or
+reject/hold a fit that would require a large correction.  A hard correction
+bound and explicit affected-interval coverage are requirements before C++.
+The offline tool now defaults to rejecting any entry that would need more than
+1.25x strength (`--max-strength-gain`); on the Deer Hunter table it adjusts the
+ordinary 1.14x entry and preserves/rejects the pathological 3.80x entry.
+
+## Decision
+
+Keep `modelsrc` default-off and experimental.  The restructuring is viable:
+it recovers the right grain band, substantially improves texture on every
+real title tested, and makes the compression target achievable.  The current
+unrestricted source AR fit is not production-ready, and motion remains a
+separate perceptual blocker.  The next safe step is to validate the cap on
+every affected interval, bound its amplitude change, then implement a precise
+deterministic regulariser and rerun KAT, this corpus and the known-bad texture
+pair.  Do not flip the default or deploy the motion arm before that gate.
