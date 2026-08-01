@@ -206,9 +206,45 @@ test --- scaling rho down should cost capture slowly and recover detail quickly
 if the mechanism is right, since capture depends on the shape over flat blocks
 where it is correct.
 
-Neither is implemented. `psd=on` reaching the filter as a scalar is a real
-structural constraint, not a tuning oversight: per-block shaping needs the FFT3D
-filter to accept a shape map alongside the sigma map it already takes.
+Per-block shaping is not implemented, and `psd=on` reaching the filter as a
+scalar is a real structural constraint rather than a tuning oversight: it needs
+the FFT3D filter to accept a shape map alongside the sigma map it already takes.
+
+The cheaper prediction was testable immediately, by making the shaping strength
+a runtime scale on rho (worktree-only patch, never committed) and sweeping it.
+Grain figures are from `coarse_luma` ground truth; detail figures from
+`coarse_detail`:
+
+| rho scale | lag-2 retained | capture | detail transfer | systematic edge |
+| ---: | ---: | ---: | ---: | ---: |
+| 0.00 (`psd=off`) | 0.325 | 41% | 0.487 | 1.44 |
+| **0.25** | **0.497** | 46% | 0.455 | **1.62** |
+| 0.50 | 0.659 | 50% | 0.419 | 2.04 |
+| 0.75 | --- | **51%** | 0.393 | 2.58 |
+| 1.00 (`psd=on` as shipped) | 0.857 | 48% | 0.404 | 2.62 |
+
+The prediction holds: detail cost is bought back much faster than grain benefit
+is given up. At quarter strength, lag-2 retention is still up 53% and capture up
+5 points, for 0.18 of the 1.18 edge-RMSE increase --- 15% of the damage for a
+large share of the gain.
+
+**Full strength is past the optimum on the grain axis too.** Capture peaks at
+0.75 and *falls* at 1.00 (51% -> 48%) while edge damage keeps climbing. The
+shipped `psd=on` setting is strictly dominated by a weaker one: worse on both
+axes than 0.75, and it is the setting the earlier 41% -> 45% evaluation was
+made at. Whatever else is decided, the strength is mistuned.
+
+**The comparison that matters for production is against what production already
+ships,** not against an inherited threshold. `bilateral` --- today's setting ---
+scores systematic edge **1.95**. Quarter-strength shaping scores **1.62**: less
+repeatable detail damage than the current production denoiser, with 46% capture
+against its 36% and materially better correlation. On this fixture the
+production setting is not a conservative choice.
+
+That does not make it shippable. `coarse_detail` is one synthetic fixture, the
+1.5 threshold is provisional, and the branch's own gate --- the texture report on
+real film plus a playback A/B --- has not been run. But "PSD shaping damages
+detail" is now a strength setting rather than a property of the idea.
 
 ## What this does not yet establish
 
