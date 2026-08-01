@@ -422,6 +422,40 @@ The offline tool now defaults to rejecting any entry that would need more than
 1.25x strength (`--max-strength-gain`); on the Deer Hunter table it adjusts the
 ordinary 1.14x entry and preserves/rejects the pathological 3.80x entry.
 
+## Labelled negative and libaom arm
+
+The new temporal report was run against the retained r4047 widening / r4050
+corrected Taxi pair.  Both tables were applied to one byte-identical clean
+base.  The widened table moves synthesis amplitude from 0.576 to 0.642 and
+lag-1 from 0.561 to 0.596; the difference appears in every populated luma band.
+This proves the detector can see the known change rather than merely returning
+plausible values on good controls.  It does not call widening "worse" in
+isolation: the production r4047 defect was substitution caused by the changed
+base as well as the changed table, and that judgement belongs to base fidelity.
+
+libaom was then fitted to each motion-clean base and its table was synthesised
+through the same NVEncC application path.  The existing oracle's
+source-minus-clean texture score is not the deciding number here: it gives
+libaom the residual it was fitted to while `modelsrc` deliberately fits total
+source grain.  Scoring both synthesis layers against the independent temporal
+source truth removes that asymmetry:
+
+| title | source lag-1 / lag-2 | source-fit amp / lag-1 / lag-2 | libaom amp / lag-1 / lag-2 |
+| --- | ---: | ---: | ---: |
+| Taxi Driver | 0.803 / 0.451 | **0.986 / 0.795 / 0.443** | 0.596 / 0.667 / 0.225 |
+| The Shining | 0.624 / 0.152 | 0.889 / 0.755 / 0.412 | 0.685 / 0.544 / 0.072 |
+| Interstellar | 0.718 / 0.333 | 0.982 / 0.863 / 0.655 | 0.564 / 0.609 / 0.213 |
+
+Taxi confirms source fitting can beat the conventional residual analyser on
+both energy and texture.  The Shining and Interstellar show the opposite split:
+libaom is closer in texture but throws away 31--44% of amplitude, while source
+fit gets amplitude right and over-correlates.  This rules out "the compact AV1
+model cannot express it" as the explanation for those two source-fit failures.
+It also rules out reverting wholesale to the residual model.  The useful next
+candidate is source-derived strength and long-range shape, regularised by the
+independent one-pixel source correlation, with gain recomputed from the
+regularised regression rather than patched after table quantisation.
+
 ## Decision
 
 Keep `modelsrc` default-off and experimental.  The restructuring is viable:
