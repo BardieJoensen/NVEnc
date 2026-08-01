@@ -444,6 +444,17 @@ def score(ref, enc, tag, d, height, frames, clip=None):
 
 
 def hf_sigma(path, width, height, frames=(6, 10, 14), decoder=None, filmgrain=None):
+    """Whole-frame high-pass sigma.
+
+    WARNING: this measures edges and encoder ringing as well as grain, so it
+    inflates the apparent retention of whichever arm has more coding artifacts
+    -- which is the arm that destroyed the grain. It also returns one scalar
+    from three frames, and per-title retention varies scene to scene with sd up
+    to 0.746 (see FINDINGS-2026-08-01-RETENTION-DECOMPOSITION.md).
+
+    Use tests/fgs/flat_retention.py for a source-derived shared flat mask, or
+    retention_over_one.py to decompose base leakage from the synthesised layer.
+    """
     import numpy as np
     W, H = width, height
     fp = W * H * 3 // 2

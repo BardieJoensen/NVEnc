@@ -7,6 +7,27 @@ copyrighted media. Set `NVENCC` when the binary is not at
 **Read `TIERS.md` first.** It says which tier catches which class of defect,
 and why the GPU tier is not and cannot be hosted in CI.
 
+## Where the measurement docs live
+
+They are **not in this repo**. `TIERS.md` and the FINDINGS files cite them by
+bare filename, which is unresolvable from here and reads as "file not found":
+
+| document | path |
+|---|---|
+| measurement campaign, metric behaviour | `/opt/docker-apps/docs/fgs-measurement-campaign.md` |
+| open questions, blind-spot table, process rules | `/opt/docker-apps/docs/fgs-open-questions.md` |
+| pipeline robustness backlog | `/opt/docker-apps/docs/video-pipeline-robustness-backlog.md` |
+| evidence write-ups | `/opt/docker-apps/docs/evidence/` |
+
+**Before interpreting any full-reference score on grainy content**, read the
+SSIMULACRA2 section of `fgs-measurement-campaign.md`. SSIMULACRA2, VMAF and
+Butteraugli are *inverse* to grain retention here — about -392 SSIMULACRA2
+points per unit of retention — because synthesised grain is statistically
+faithful but not pixel-identical, so a full-reference metric scores it as error
+and ranks the encode that destroyed the most grain highest. The metric is valid
+and useless for ranking, not broken. Use grain retention and no-reference CAMBI
+to rank instead.
+
 ## Automated entry points
 
 | | command | where it runs |
@@ -95,6 +116,12 @@ priorities.
 See `FINDINGS-2026-07-30-TEXTURE.md` for the amplitude-independent real-film
 texture detector, common-base NVEnc/libaom comparison, and r4047 labelled
 negative.
+See `FINDINGS-2026-08-01-RETENTION-DECOMPOSITION.md` FIRST if you are about to
+quote a retention number: whole-frame HF sigma counts encoder ringing as grain,
+and per-title retention scalars are single draws from distributions with sd up
+to 0.746. It corrects several numbers in the 2026-07-31 documents and lists six
+falsified hypotheses. `flat_retention.py` is the flat-block shared-mask
+estimator.
 See `FINDINGS-2026-07-31-GENERAL-LIBRARY.md` for six 1080p library-typical
 titles at the production QVBR: a 17.4% corpus byte saving, large grain-retention
 gains, but full-reference metrics favouring the plain arm because the FGS arm
