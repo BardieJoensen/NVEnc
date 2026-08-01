@@ -104,8 +104,14 @@ def detrend_blocks(blocks):
     return centred - ax[..., None, None] * xn - ay[..., None, None] * yn
 
 
-def flat_scores(frame, bits, bs=BS):
-    """Per-block flatness score and sigma, replicating kernel_fgs_flat_metrics."""
+def flat_metrics(frame, bits, bs=BS):
+    """Per-block outputs from ``kernel_fgs_flat_metrics``.
+
+    Returning the strict-flat decision as well as the continuous score matters:
+    production starts with every strict block and then adds the best-scoring
+    decile.  A plain top-decile approximation can therefore measure a different
+    population from the one used to build the grain model.
+    """
     blocks = blockwise(frame, bs)
     resid = detrend_blocks(blocks)
     variance = (resid * resid).mean(axis=(-2, -1))
@@ -137,7 +143,49 @@ def flat_scores(frame, bits, bs=BS):
                   + 13087.0 * trace - 12434.0 * e1 + 2.5694, -25.0, 100.0)
     var_threshold = 0.005 / (bs * bs)
     score = np.where(var_norm > var_threshold, 1.0 / (1.0 + np.exp(-arg)), 0.0)
-    return score, np.sqrt(variance)
+    strict = ((trace < 0.15 / (bs * bs)) & (ratio < 1.25)
+              & (e1 < 0.08 / (bs * bs)) & (var_norm > var_threshold))
+    return score, np.sqrt(variance), strict
+
+
+def flat_scores(frame, bits, bs=BS):
+    """Per-block flatness score and sigma, preserving the original API."""
+    score, sigma, _strict = flat_metrics(frame, bits, bs)
+    return score, sigma
+
+
+def production_flat_blocks(frame, bits, bs=BS, min_flat_blocks=8,
+                           min_flat_fraction=0.02, min_noise_level=0.5,
+                           max_noise_level=50.0):
+    """Reproduce production's pre-motion-confidence flat-block selection.
+
+    The CUDA path accepts every eligible block passing the strict gradient
+    thresholds, then adds the highest-scoring decile of eligible candidates.
+    Motion confidence can remove blocks later; this function deliberately stops
+    at the exact spatial selection boundary so that its effect can be measured
+    separately.
+    """
+    score, sigma, strict = flat_metrics(frame, bits, bs)
+    depth_scale = 1 << (bits - 8)
+    eligible = ((sigma >= min_noise_level * depth_scale)
+                & (sigma <= max_noise_level * depth_scale) & (score > 0.0))
+    mask = eligible & strict
+    candidate_indices = np.flatnonzero(eligible & (score >= 0.5))
+    order = candidate_indices[np.argsort(-score.ravel()[candidate_indices], kind="stable")]
+    required = max(min_flat_blocks, int(np.ceil(score.size * min_flat_fraction)))
+    selected = int(mask.sum())
+    top_decile = score.size // 10
+    examined = 0
+    flat_mask = mask.ravel()
+    for index in order:
+        if examined >= top_decile and selected >= required:
+            break
+        if not flat_mask[index]:
+            flat_mask[index] = True
+            selected += 1
+        examined += 1
+    rows, cols = np.nonzero(mask)
+    return list(zip(rows.tolist(), cols.tolist())), score, sigma
 
 
 def select_flat(frame, bits, fraction=0.10, bs=BS):
