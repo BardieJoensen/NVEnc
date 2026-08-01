@@ -114,16 +114,45 @@ can compute that exactly: the template is a deterministic function of the fitted
 coefficients. That corrects the amplitude without spending headroom, but leaves
 the template's shape distorted by saturation, so it is the weaker fix.
 
+## Implemented, and it behaves as predicted
+
+`build_film_grain_params` now picks the smallest shift that pushes the clip out
+to `FGS_TEMPLATE_CLIP_SIGMA` = 3.5, and multiplies the strength curve by the
+same factor so the signalled sigma is unchanged --- only the split between curve
+and template moves.
+
+| fixture | capture before | capture after |
+| --- | ---: | ---: |
+| `coarse_luma` | 41% | **60%** |
+| `coarse_detail` | 41% | **59%** |
+| `detail_luma` | 99% | **99%, per-band sigmas bit-identical** |
+
+60% was predicted at 57% from the fft3d residual capture of 0.568 times a
+clipping loss of 1.0. Fine grain selects shift 0 and is untouched by
+construction rather than by tuning. Full KAT 21/21.
+
+**This passes the 46.3% "model ceiling"**, which confirms that number was a
+symptom of this bug and not a representational limit of the AV1 grain model.
+
+On real 4K film the saturation is gone entirely:
+
+| Taxi arm | shift chosen | clipped before | clipped after | retained before | after |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| bilateral | 1 | 4.85% | 0.02% | 0.896 | **0.999** |
+| fft3d | 2 | 7.46% | 0.00% | 0.833 | **1.000** |
+| motion | 2 | 8.04% | 0.00% | 0.804 | **1.000** |
+
 ## What is not established
 
-The fix is not implemented and not measured on real film. Everything above is
-prediction from the spec's recursion plus measurement of the existing encoder's
-output; the predictions match observation to within 0.02 across seven models at
-two bit depths, but a real encode with `grain_scale_shift` set has not been run.
+Whether correcting the amplitude improves *perceived* quality. It makes
+synthesised grain stronger, so full-reference metrics will get worse for the
+reasons already documented, and the release gate remains a playback A/B.
 
-Whether correcting the amplitude improves perceived quality is a separate
-question. It will make synthesised grain stronger and full-reference metrics
-worse, for the reasons already documented.
+The separator comparison has to be redone. Every arm was previously judged under
+a tax that grew with how much grain correlation it preserved, which is the
+ranking variable itself --- so `bilateral`'s advantage on real film, `motion`'s
+collapse, and `psd=on` being a net loss were all measured through it. Those
+conclusions are suspended, not overturned; the corpus is re-running.
 
 ## Method
 
