@@ -1,5 +1,35 @@
 # Korra S02E12: what the analyzer actually signals, 2026-08-01
 
+## CORRECTION 2026-08-01: the source was a library transcode
+
+Everything below was measured on the wrong input and the numbers should not be
+carried forward without re-measurement.
+
+The encode was fed
+`/media/storage1/media/tv-shows/.../S02E12 ... [Bluray-1080p Remux][DTS-HD MA
+5.1][h264]-NTb.mkv`. Despite `[h264]` and `Remux` in the name that file is
+**AV1, 10-bit, 59.94p, 990 MB** --- one of the user's own transcodes. The actual
+remux is in long-term seeding and is **H.264, 8-bit, 29.97 fps, field_order=tt
+(interlaced), 4.72 GB**.
+
+This is the exact trap the global instructions warn about: filenames lie about
+codec, and scoring or analysing a library copy measures two stacked lossy
+generations. The grain the analyzer was fitting here is the residue that
+survived a prior AV1 encode, not the film's grain.
+
+It also rewrites the last section. "A separate compounding factor: 59.94 fps"
+attributed the frame duplication to the source's authoring. It is not: the
+remux is 29.97i and the 59.94p is a bob-deinterlace introduced by the library
+transcode. The observation about duplicated frames still applies to the file
+that was encoded, but its origin was misidentified, and it says nothing about
+what the production flow would see from the remux.
+
+What survives unaffected: the model-cadence analysis is a statement about the
+analyzer's own behaviour given whatever input it received. It is still true that
+3,046 distinct parameter sets were signalled and that "one grain table per file"
+(`fgs-open-questions.md` 3g) is false. The strength-fit and retention numbers
+are not reliable.
+
 ## Result
 
 `fgs-open-questions.md` §3g attributes the Korra retention collapse to "the

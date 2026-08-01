@@ -102,9 +102,14 @@ def main():
             print(f"  (qvbr {args.qvbr}: comparing bytes at a matched quality setting)", flush=True)
 
         fg = f"denoise=auto,chroma=auto,denoiser={args.denoiser}"
-        arms = [("plain", None), ("fgs", fg)]
+        # The denoiser must appear in the FGS arm's filename for the same
+        # reason the rate mode appears in the stem: `encode` skips a file that
+        # already exists, so without it a second run at a different denoiser
+        # silently rescores the first run's encode. The plain arm carries no
+        # analyzer, so it is deliberately shared across denoiser runs.
+        arms = [("plain", None), (f"fgs-{args.denoiser}", fg)]
         if args.extra:
-            arms.append((f"fgs+{args.extra}", f"{fg},{args.extra}"))
+            arms.append((f"fgs-{args.denoiser}+{args.extra}", f"{fg},{args.extra}"))
 
         src = {"hf": hf_sigma(clip, w, h), **grain_structure(clip, w, h)}
         print(f"\n=== {name}: source HF {src['hf']} acf {src['acf1']}/{src['acf2']}/{src['acf3']}",

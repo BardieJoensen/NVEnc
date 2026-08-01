@@ -60,6 +60,9 @@ WORKDIR = os.environ.get("FGS_KAT_DIR", "/tmp/nvenc-fgs-tests/kat")
 FGS_DENOISER = os.environ.get("FGS_KAT_DENOISER", "fft3d").lower()
 if FGS_DENOISER not in ("fft3d", "bilateral", "motion"):
     sys.exit(f"invalid FGS_KAT_DENOISER: {FGS_DENOISER}")
+# Extra --av1-film-grain sub-options, so an analyzer change can be run against
+# the whole suite before it is considered for a default (e.g. FGS_KAT_EXTRA=psd=on).
+FGS_EXTRA = os.environ.get("FGS_KAT_EXTRA", "").strip()
 
 
 def apply_spec(spec):
@@ -220,6 +223,8 @@ COLOR_EXPECT = {
 
 def encode(src, out, spec):
     fgs_opts = f"denoise=auto,chroma=auto,denoiser={FGS_DENOISER}"
+    if FGS_EXTRA:
+        fgs_opts += "," + FGS_EXTRA
     if "retain" in spec:
         fgs_opts += f",retain={spec['retain']}"
     cmd = [NVENCC, "--codec", "av1", "--cqp", "20",
