@@ -584,3 +584,84 @@ Artifacts:
 
 `modelsrc` remains default-off.  No candidate in this section has been deployed
 to Tdarr.
+
+## Exact selector and realised gain: the remaining loss is base-energy attribution
+
+`cab207b8` adds an exact reproduction of the encoder's spatial selector to
+`source_fit.py` and a dedicated `strength_selection_report.py`.  The distinction
+from the old offline top-decile rule is material: production accepts every
+eligible strict-gradient block and then adds the highest-scoring decile; motion
+confidence removes blocks after that.  The report always prints the historical
+top-decile/static control, the production spatial population and its
+temporal-static subset, including fixed luma bands.
+
+On seven Deer Hunter frames, dense source-minus-base strength is:
+
+| mask | blocks | source sigma | base sigma | temporal truth | missing sigma | missing / truth |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| top-decile + static | 4,711 | 19.81 | 8.37 | 19.69 | 17.95 | 0.912 |
+| production spatial | 9,313 | 16.46 | 8.29 | 15.90 | 14.23 | 0.895 |
+| production + static | 6,318 | 18.09 | 7.94 | 17.93 | 16.27 | 0.907 |
+
+The production population is genuinely weaker in Deer, not merely darker.  In
+the dominant 0.000--0.125 luma band its missing sigma is 18.21 against 19.95 in
+the top-decile control, an 8.7% difference at the same brightness.  That result
+does **not** justify replacing production selection with the top decile.  The
+same four-frame check reverses on Taxi Driver (production-static missing sigma
+9.05, top-decile 6.84), is broadly neutral/stronger on The Shining, and is
+stronger in absolute sigma but leakier relative to temporal truth on
+Interstellar.  Flat-mask sensitivity is title-dependent; a fixed mask swap
+would improve one measurement by damaging another.
+
+`1f20fb1c` then applied the deterministic realised quantised-template gain to
+every source fit rather than only correlation-clamped fits.  The correction is
+bounded symmetrically to 0.8--1.25x and leaves the residual/default path before
+the simulator.  The pinned binary is:
+
+```
+commit  1f20fb1c4502290015b665cd0856cb30b6a87226
+sha256  d119abd866e0689d90c477ca43784fa8fe979c9624cf83751cc739eb0076f06d
+```
+
+The complete 22-fixture GPU KAT passes with explicit `modelsrc=off` and
+explicit `modelsrc=on`.  On the 288-frame Deer trace, strength correction is
+0.970--1.098 (mean 1.016), with zero rejected fits.  Decoded real-film synthesis
+moves only from 0.841 to **0.852** on the historical mask and to **0.865** when
+the temporal report uses production's own spatial mask.  Total amplitude is
+0.872 / 0.891 respectively.  Texture remains stable (production-mask synthesis
+lag-1 0.557, lag-2 0.086).  The generalised gain correction is safe and
+measurable, but analytical-versus-realised template gain is not the main Deer
+loss.
+
+The remaining error is now localised more tightly.  On production-static Deer
+blocks, source spatial sigma (18.09) agrees with temporal grain truth (17.93),
+but base spatial sigma is 7.94 while consecutive-frame temporal base residue is
+only about 0.217 of source truth, or 3.9 code values.  The current strength
+formula
+
+```
+sqrt(V_source_spatial - V_base_spatial)
+```
+
+therefore subtracts picture structure and/or motion-denoiser error that remains
+in the base as though all of it were retained grain.  From the measured base
+leak, the variance-closure target for synthesis is
+`sqrt(1 - 0.217^2) = 0.976`; the spatial subtraction predicts 0.907 and the
+quantised table delivers 0.865.  Dense variance and template-gain precision
+cannot fix this because the wrong physical quantity is being subtracted.
+
+This changes the next code experiment.  Do not tune the flat mask or add a
+post-hoc amplitude multiplier.  Measure retained base grain independently in
+the temporal/motion-aligned domain, then use that leak estimate for variance
+closure while leaving source-derived strength and AR texture separate.  The
+measurement must be luma-banded and validated on more than Deer: Taxi already
+proves that the direction of mask bias can reverse.  `modelsrc` stays
+default-off, and nothing in this section has been deployed to Tdarr.
+
+Artifacts:
+
+- `sourcefit-regularizer-20260801/Deer-strength-selection.json`
+- `sourcefit-gain-all-20260801/Deer-gain-all.tbl`
+- `sourcefit-gain-all-20260801/Deer-gain-all-temporal.json`
+- `sourcefit-gain-all-20260801/Deer-gain-all-temporal-production-mask.json`
+- `sourcefit-gain-all-20260801/{Taxi,Shining,Interstellar}-strength-selection.json`

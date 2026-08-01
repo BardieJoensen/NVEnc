@@ -33,7 +33,10 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from source_fit import blockwise, field_acf, select_flat, static_flat_blocks  # noqa: E402
+from source_fit import (  # noqa: E402
+    blockwise, field_acf, production_flat_blocks, select_flat,
+    static_flat_blocks,
+)
 
 FFMPEG = os.environ.get("FGS_FFMPEG", "/usr/local/bin/ffmpeg")
 
@@ -121,6 +124,10 @@ def main():
     parser.add_argument("--frames", default="10,58,106,154,202,250",
                         help="comma-separated frame indices; n+1 is also decoded")
     parser.add_argument("--flat-fraction", type=float, default=0.10)
+    parser.add_argument("--flat-selector", choices=("top10", "production"),
+                        default="top10",
+                        help="source spatial mask before temporal-static filtering; "
+                             "top10 preserves historical reports")
     parser.add_argument("--static-lo", type=float, default=0.8)
     parser.add_argument("--static-hi", type=float, default=1.3)
     parser.add_argument("--luma-bins", type=int, default=8,
@@ -156,7 +163,10 @@ def main():
     luma_masks = []
     selected_counts = []
     for frame in frames:
-        candidates, _, _ = select_flat(source[frame], 16, args.flat_fraction)
+        if args.flat_selector == "production":
+            candidates, _, _ = production_flat_blocks(source[frame], 16)
+        else:
+            candidates, _, _ = select_flat(source[frame], 16, args.flat_fraction)
         static = static_flat_blocks(
             source[frame], source[frame + 1], candidates,
             lo=args.static_lo, hi=args.static_hi)
@@ -175,6 +185,7 @@ def main():
         "dimensions": [width, height],
         "frames": frames,
         "flat_fraction": args.flat_fraction,
+        "flat_selector": args.flat_selector,
         "static_ratio": [args.static_lo, args.static_hi],
         "static_blocks": selected_counts,
         "truth": average_acf(truth_rows),
