@@ -118,6 +118,15 @@ void testSourceCorrelationRegularizer() {
         "source regularizer scales the AR coefficients");
     expect(diag.sourceModelCorrelation <= 0.205f,
         "source regularizer respects the correlation ceiling");
+    const double emittedScale = static_cast<double>(
+        1 << (params.arCoeffShiftMinus6 + 6));
+    std::vector<double> emittedCoefficients(FGS_AR_COEFFS, 0.0);
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
+        emittedCoefficients[i] =
+            (static_cast<int>(params.arCoeffsYPlus128[i]) - 128) / emittedScale;
+    }
+    expect(implied_luma_correlation(emittedCoefficients) <= 0.205,
+        "quantized AV1 coefficients respect the correlation ceiling");
     expect(diag.sourceStrengthGain > 1.0f
         && diag.sourceStrengthGain <= FGS_SOURCE_MAX_STRENGTH_GAIN,
         "source regularizer recomputes bounded strength");

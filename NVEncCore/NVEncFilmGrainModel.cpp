@@ -262,9 +262,43 @@ double implied_luma_correlation(const std::vector<double>& coeffs, const double 
     return std::clamp(0.5 * (h + v), -1.0, 1.0);
 }
 
+static double quantized_luma_correlation(const std::vector<double>& coeffs,
+    const double scale, const int arShift) {
+    const double coefficientScale = static_cast<double>(1 << arShift);
+    std::vector<double> quantized(coeffs.size(), 0.0);
+    for (size_t i = 0; i < coeffs.size(); ++i) {
+        quantized[i] = std::clamp(
+            static_cast<int>(std::lround(coeffs[i] * scale * coefficientScale)),
+            -128, 127) / coefficientScale;
+    }
+    return implied_luma_correlation(quantized);
+}
+
+static int choose_ar_shift(const std::array<FilmGrainSolvedPlane, 3>& solved) {
+    double maxCoeff = 1e-4;
+    double minCoeff = -1e-4;
+    for (const auto& plane : solved) {
+        if (!plane.valid) continue;
+        for (int i = 0; i < FGS_AR_COEFFS; ++i) {
+            maxCoeff = std::max(maxCoeff, plane.coeffs[i]);
+            minCoeff = std::min(minCoeff, plane.coeffs[i]);
+        }
+    }
+    for (int c = 1; c < 3; ++c) {
+        if (!solved[c].valid) continue;
+        maxCoeff = std::max(maxCoeff, solved[c].signalCorrelation);
+        minCoeff = std::min(minCoeff, solved[c].signalCorrelation);
+    }
+    const int positiveExponent = 1 + static_cast<int>(
+        std::floor(std::log2(std::max(maxCoeff, 1e-9))));
+    const int negativeExponent = static_cast<int>(
+        std::ceil(std::log2(std::max(-minCoeff, 1e-9))));
+    return std::clamp(7 - std::max(positiveExponent, negativeExponent), 6, 9);
+}
+
 static bool regularize_source_luma(const FilmGrainGpuPlaneStats& stats,
     FilmGrainSolvedPlane& solved, const double maxCorrelation,
-    NVEncFilmGrainDiagnostics& diagnostics) {
+    const int arShift, NVEncFilmGrainDiagnostics& diagnostics) {
     diagnostics.sourceArScale = 1.0f;
     diagnostics.sourceStrengthGain = 1.0f;
     diagnostics.sourceRegularizationRejected = false;
@@ -274,14 +308,15 @@ static bool regularize_source_luma(const FilmGrainGpuPlaneStats& stats,
     // was not requested.
     if (maxCorrelation < 0.0) return true;
     diagnostics.sourceModelCorrelation = static_cast<float>(
-        implied_luma_correlation(solved.coeffs));
+        quantized_luma_correlation(solved.coeffs, 1.0, arShift));
     if (diagnostics.sourceModelCorrelation <= maxCorrelation) return true;
 
     double low = 0.0;
     double high = 1.0;
     for (int iteration = 0; iteration < 10; ++iteration) {
         const double middle = 0.5 * (low + high);
-        if (implied_luma_correlation(solved.coeffs, middle) <= maxCorrelation) low = middle;
+        if (quantized_luma_correlation(
+            solved.coeffs, middle, arShift) <= maxCorrelation) low = middle;
         else high = middle;
     }
 
@@ -313,7 +348,7 @@ static bool regularize_source_luma(const FilmGrainGpuPlaneStats& stats,
     diagnostics.sourceArScale = static_cast<float>(low);
     diagnostics.sourceStrengthGain = static_cast<float>(strengthGain);
     diagnostics.sourceModelCorrelation = static_cast<float>(
-        implied_luma_correlation(solved.coeffs, low));
+        quantized_luma_correlation(solved.coeffs, low, arShift));
     if (!std::isfinite(newArGain) || !std::isfinite(strengthGain)
         || newArGain > 16.0 || strengthGain > FGS_SOURCE_MAX_STRENGTH_GAIN) {
         diagnostics.sourceRegularizationRejected = true;
@@ -371,9 +406,10 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     std::array<FilmGrainSolvedPlane, 3> solved;
     solved[0] = solve_plane(stats.plane[0], false, nullptr);
     if (!solved[0].valid) return false;
-    if (!regularize_source_luma(
-        stats.plane[0], solved[0], maxLumaCorrelation, diagnostics)) return false;
-    if (analyzeChroma) {
+    const auto solveChroma = [&]() {
+        solved[1] = FilmGrainSolvedPlane();
+        solved[2] = FilmGrainSolvedPlane();
+        if (!analyzeChroma) return;
         // AV1 4:2:0 requires grain on both chroma components or neither.  A
         // single solvable chroma plane must therefore degrade to luma-only
         // grain; numCbPoints=0 with numCrPoints>0 (or the reverse) is a
@@ -383,6 +419,28 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
         if (!solved[1].valid || !solved[2].valid) {
             solved[1] = FilmGrainSolvedPlane();
             solved[2] = FilmGrainSolvedPlane();
+        }
+    };
+    solveChroma();
+    const int provisionalArShift = choose_ar_shift(solved);
+    if (!regularize_source_luma(stats.plane[0], solved[0], maxLumaCorrelation,
+        provisionalArShift, diagnostics)) return false;
+    if (diagnostics.sourceArScale < 1.0f - 1e-6f) {
+        // Chroma's final predictor is luma.  Refit it after changing the luma
+        // model so its normal equation and the shared coefficient shift stay
+        // consistent with the table that will actually be emitted.
+        solveChroma();
+    }
+    const int arShift = choose_ar_shift(solved);
+    if (maxLumaCorrelation >= 0.0) {
+        diagnostics.sourceModelCorrelation = static_cast<float>(
+            quantized_luma_correlation(solved[0].coeffs, 1.0, arShift));
+        if (diagnostics.sourceModelCorrelation > maxLumaCorrelation + 0.005) {
+            // A shared-shift change after the chroma refit can move luma onto
+            // another quantization stair.  Holding the prior valid model is
+            // safer than emitting coefficients outside the measured bound.
+            diagnostics.sourceRegularizationRejected = true;
+            return false;
         }
     }
     // The decoder builds its grain template by running the AR recursion over
@@ -463,22 +521,6 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     }
 
     const std::array<double, 2> yCorrelation = { solved[1].signalCorrelation, solved[2].signalCorrelation };
-    double maxCoeff = 1e-4;
-    double minCoeff = -1e-4;
-    for (int c = 0; c < 3; ++c) {
-        if (!solved[c].valid) continue;
-        for (int i = 0; i < FGS_AR_COEFFS; ++i) {
-            maxCoeff = std::max(maxCoeff, solved[c].coeffs[i]);
-            minCoeff = std::min(minCoeff, solved[c].coeffs[i]);
-        }
-    }
-    for (const auto corr : yCorrelation) {
-        maxCoeff = std::max(maxCoeff, corr);
-        minCoeff = std::min(minCoeff, corr);
-    }
-    const int positiveExponent = 1 + static_cast<int>(std::floor(std::log2(std::max(maxCoeff, 1e-9))));
-    const int negativeExponent = static_cast<int>(std::ceil(std::log2(std::max(-minCoeff, 1e-9))));
-    const int arShift = std::clamp(7 - std::max(positiveExponent, negativeExponent), 6, 9);
     params.arCoeffShiftMinus6 = arShift - 6;
     const double coeffScale = static_cast<double>(1 << arShift);
     for (int i = 0; i < FGS_AR_COEFFS; ++i) {
