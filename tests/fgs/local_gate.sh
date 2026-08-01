@@ -234,6 +234,9 @@ build_candidate_from_pin() {
     done < <(git -C "$REPO" config --file .gitmodules --get-regexp path)
     docker run --rm --gpus all -v "$pin:/work" -w /work "$BUILD_IMAGE" \
         bash -lc 'git config --global --add safe.directory /work
+                  apt-get update -qq
+                  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+                      libass-dev libx11-dev libplacebo-dev
                   export PATH=/usr/local/cuda/bin:$PATH
                   meson setup build-gate . --buildtype=release \
                       -Denable_vmaf=disabled -Denable_libvship=disabled \
