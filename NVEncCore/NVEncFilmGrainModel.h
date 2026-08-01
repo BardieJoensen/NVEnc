@@ -58,6 +58,10 @@ struct NVEncFilmGrainDiagnostics {
     float detailRisk;
     float residualRetain;
     float grainCorrelation;
+    float sourceModelCorrelation;
+    float sourceArScale;
+    float sourceStrengthGain;
+    bool sourceRegularizationRejected;
     bool reliable;
     bool sceneReset;
     bool modelHeld;
@@ -82,6 +86,14 @@ constexpr int FGS_MAX_GRAIN_SCALE_SHIFT = 3;
 // the measured amplitude loss on coarse_luma falls from 30% to nothing, while
 // white grain (arGain ~1) still selects shift 0 and is untouched.
 constexpr double FGS_TEMPLATE_CLIP_SIGMA = 3.5;
+// A source-derived lag-3 fit can absorb picture structure that survives the
+// per-block plane.  Keep it near the independent one-pixel source statistic,
+// while leaving a deliberately conservative margin until more film is gated.
+constexpr double FGS_SOURCE_CORRELATION_MARGIN = 0.05;
+// Near-unstable fits can require several times more scaling strength after
+// their coefficients are regularised.  Reject/hold those models rather than
+// trading a texture error for an amplitude spike.
+constexpr double FGS_SOURCE_MAX_STRENGTH_GAIN = 1.25;
 
 #ifdef __CUDACC__
 #define FGS_HOST_DEVICE __host__ __device__
@@ -159,7 +171,8 @@ std::vector<StrengthPoint> fit_strength_points(const FilmGrainSolvedPlane& solve
 void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& src);
 bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,
     bool analyzeChroma, bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
-    NVEncFilmGrainDiagnostics& diagnostics);
+    NVEncFilmGrainDiagnostics& diagnostics, double maxLumaCorrelation = -1.0);
+double implied_luma_correlation(const std::vector<double>& coeffs, double scale = 1.0);
 double eval_scaling_curve(const uint8_t *values, const uint8_t *scalings, uint32_t count, double x);
 bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC_FILM_GRAIN_PARAMS_AV1& b,
     double relativeSigmaTolerance = 0.05, double coefficientTolerance = 0.05);

@@ -45,6 +45,8 @@
 NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     flatBlocks(0), totalBlocks(0), modelFrames(0), noiseStdDev(), observations(),
     detailRisk(0.0f), residualRetain(0.0f), grainCorrelation(0.0f),
+    sourceModelCorrelation(0.0f), sourceArScale(1.0f), sourceStrengthGain(1.0f),
+    sourceRegularizationRejected(false),
     reliable(false), sceneReset(false), modelHeld(false) {
 }
 
@@ -193,6 +195,140 @@ FilmGrainSolvedPlane solve_plane(const FilmGrainGpuPlaneStats& stats, const bool
     return solved;
 }
 
+double implied_luma_correlation(const std::vector<double>& coeffs, const double scale) {
+    if (coeffs.size() != FGS_AR_COEFFS || !std::isfinite(scale)) return 0.0;
+    // Match the AV1 lag-3 luma template footprint.  The fixed hash supplies a
+    // deterministic white field; only correlation is measured, so its uniform
+    // distribution does not affect the AR process's covariance.  Avoiding a
+    // random library makes table decisions repeatable across runs and hosts.
+    constexpr int width = 82;
+    constexpr int height = 73;
+    std::array<double, width * height> field = {};
+    for (size_t index = 0; index < field.size(); ++index) {
+        const uint32_t hash = fgs_sample_hash(static_cast<uint32_t>(index) + 0x9e3779b9U);
+        field[index] = (static_cast<double>(hash & 0xffffU) - 32767.5) / 32767.5;
+    }
+    for (int y = FGS_AR_LAG; y < height; ++y) {
+        for (int x = FGS_AR_LAG; x < width - FGS_AR_LAG; ++x) {
+            double value = field[y * width + x];
+            int coefficient = 0;
+            for (int dy = -FGS_AR_LAG; dy < 0; ++dy) {
+                for (int dx = -FGS_AR_LAG; dx <= FGS_AR_LAG; ++dx) {
+                    value += coeffs[coefficient++] * scale * field[(y + dy) * width + x + dx];
+                }
+            }
+            for (int dx = -FGS_AR_LAG; dx < 0; ++dx) {
+                value += coeffs[coefficient++] * scale * field[y * width + x + dx];
+            }
+            if (!std::isfinite(value) || std::abs(value) > 1e100) return 1.0;
+            field[y * width + x] = value;
+        }
+    }
+    const int x0 = FGS_AR_LAG;
+    const int x1 = width - FGS_AR_LAG;
+    const int y0 = FGS_AR_LAG;
+    double mean = 0.0;
+    uint64_t count = 0;
+    for (int y = y0; y < height; ++y) {
+        for (int x = x0; x < x1; ++x) {
+            mean += field[y * width + x];
+            ++count;
+        }
+    }
+    mean /= std::max<uint64_t>(1, count);
+    double variance = 0.0;
+    double horizontal = 0.0;
+    double vertical = 0.0;
+    uint64_t horizontalCount = 0;
+    uint64_t verticalCount = 0;
+    for (int y = y0; y < height; ++y) {
+        for (int x = x0; x < x1; ++x) {
+            const double value = field[y * width + x] - mean;
+            variance += value * value;
+            if (x > x0) {
+                horizontal += value * (field[y * width + x - 1] - mean);
+                ++horizontalCount;
+            }
+            if (y > y0) {
+                vertical += value * (field[(y - 1) * width + x] - mean);
+                ++verticalCount;
+            }
+        }
+    }
+    variance /= std::max<uint64_t>(1, count);
+    if (!(variance > 1e-12) || !std::isfinite(variance)) return 0.0;
+    const double h = horizontal / std::max<uint64_t>(1, horizontalCount) / variance;
+    const double v = vertical / std::max<uint64_t>(1, verticalCount) / variance;
+    return std::clamp(0.5 * (h + v), -1.0, 1.0);
+}
+
+static bool regularize_source_luma(const FilmGrainGpuPlaneStats& stats,
+    FilmGrainSolvedPlane& solved, const double maxCorrelation,
+    NVEncFilmGrainDiagnostics& diagnostics) {
+    diagnostics.sourceArScale = 1.0f;
+    diagnostics.sourceStrengthGain = 1.0f;
+    diagnostics.sourceRegularizationRejected = false;
+    diagnostics.sourceModelCorrelation = 0.0f;
+    // The shipping/default residual path must pay no simulator cost and must
+    // remain byte-identical.  A negative ceiling means source regularisation
+    // was not requested.
+    if (maxCorrelation < 0.0) return true;
+    diagnostics.sourceModelCorrelation = static_cast<float>(
+        implied_luma_correlation(solved.coeffs));
+    if (diagnostics.sourceModelCorrelation <= maxCorrelation) return true;
+
+    double low = 0.0;
+    double high = 1.0;
+    for (int iteration = 0; iteration < 10; ++iteration) {
+        const double middle = 0.5 * (low + high);
+        if (implied_luma_correlation(solved.coeffs, middle) <= maxCorrelation) low = middle;
+        else high = middle;
+    }
+
+    const double observations = static_cast<double>(stats.observations);
+    if (!(observations > 0.0)) return false;
+    double targetVariance = 0.0;
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
+        targetVariance += static_cast<double>(
+            stats.ata[tri_index(FGS_AR_COEFFS, i, i)]) / observations;
+    }
+    targetVariance /= FGS_AR_COEFFS;
+    std::vector<double> regularized = solved.coeffs;
+    for (auto& coefficient : regularized) coefficient *= low;
+    double residualVariance = targetVariance;
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
+        residualVariance -= 2.0 * regularized[i]
+            * static_cast<double>(stats.atb[i]) / observations;
+        for (int j = 0; j < FGS_AR_COEFFS; ++j) {
+            const int lo = std::min(i, j);
+            const int hi = std::max(i, j);
+            residualVariance += regularized[i] * regularized[j]
+                * static_cast<double>(stats.ata[tri_index(FGS_AR_COEFFS, lo, hi)])
+                / observations;
+        }
+    }
+    const double newArGain = std::max(1.0, std::sqrt(
+        std::max(1e-6, targetVariance) / std::max(1e-6, residualVariance)));
+    const double strengthGain = solved.templateGain / newArGain;
+    diagnostics.sourceArScale = static_cast<float>(low);
+    diagnostics.sourceStrengthGain = static_cast<float>(strengthGain);
+    diagnostics.sourceModelCorrelation = static_cast<float>(
+        implied_luma_correlation(solved.coeffs, low));
+    if (!std::isfinite(newArGain) || !std::isfinite(strengthGain)
+        || newArGain > 16.0 || strengthGain > FGS_SOURCE_MAX_STRENGTH_GAIN) {
+        diagnostics.sourceRegularizationRejected = true;
+        return false;
+    }
+
+    solved.coeffs = std::move(regularized);
+    solved.arGain = newArGain;
+    solved.templateGain = newArGain;
+    for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+        solved.strength[bin] *= strengthGain;
+    }
+    return true;
+}
+
 std::vector<StrengthPoint> fit_strength_points(const FilmGrainSolvedPlane& solved, const int bitDepth, const int maxPoints) {
     std::vector<StrengthPoint> points;
     const double maxValue = static_cast<double>((1 << bitDepth) - 1);
@@ -231,10 +367,12 @@ void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& 
 
 bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     const bool analyzeChroma, const bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
-    NVEncFilmGrainDiagnostics& diagnostics) {
+    NVEncFilmGrainDiagnostics& diagnostics, const double maxLumaCorrelation) {
     std::array<FilmGrainSolvedPlane, 3> solved;
     solved[0] = solve_plane(stats.plane[0], false, nullptr);
     if (!solved[0].valid) return false;
+    if (!regularize_source_luma(
+        stats.plane[0], solved[0], maxLumaCorrelation, diagnostics)) return false;
     if (analyzeChroma) {
         // AV1 4:2:0 requires grain on both chroma components or neither.  A
         // single solvable chroma plane must therefore degrade to luma-only

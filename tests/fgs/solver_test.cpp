@@ -89,6 +89,51 @@ void fillWhitePlane(FilmGrainGpuPlaneStats& plane, const double sigma, const boo
     plane.observations = N_OBS;
 }
 
+void fillHorizontalPlane(FilmGrainGpuPlaneStats& plane, const double sigma,
+    const double correlation) {
+    fillWhitePlane(plane, sigma, false);
+    // The final luma predictor is the immediately preceding sample on the
+    // current row.  Diagonal normal equations make its solved coefficient
+    // exactly `correlation` while keeping the fixture analytically simple.
+    plane.atb[FGS_AR_COEFFS - 1] = static_cast<int64_t>(
+        N_OBS * sigma * sigma * correlation);
+}
+
+void testSourceCorrelationRegularizer() {
+    std::vector<double> horizontal(FGS_AR_COEFFS, 0.0);
+    horizontal.back() = 0.60;
+    expect(implied_luma_correlation(horizontal) > 0.25,
+        "horizontal AR fixture has measurable lag-one correlation");
+    expect(std::abs(implied_luma_correlation(std::vector<double>(
+        FGS_AR_COEFFS, 0.0))) < 0.03, "white AR fixture stays near zero correlation");
+
+    FilmGrainGpuStats stats = {};
+    fillHorizontalPlane(stats.plane[0], 6.0, 0.60);
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 params;
+    NVEncFilmGrainDiagnostics diag;
+    expect(build_film_grain_params(
+        stats, 8, false, true, params, diag, 0.20),
+        "moderate source correlation can be regularised");
+    expect(diag.sourceArScale < 0.99f && diag.sourceArScale > 0.0f,
+        "source regularizer scales the AR coefficients");
+    expect(diag.sourceModelCorrelation <= 0.205f,
+        "source regularizer respects the correlation ceiling");
+    expect(diag.sourceStrengthGain > 1.0f
+        && diag.sourceStrengthGain <= FGS_SOURCE_MAX_STRENGTH_GAIN,
+        "source regularizer recomputes bounded strength");
+    expect(!diag.sourceRegularizationRejected,
+        "moderate source regularization is accepted");
+
+    FilmGrainGpuStats unstable = {};
+    fillHorizontalPlane(unstable.plane[0], 6.0, 0.90);
+    NVEncFilmGrainDiagnostics rejected;
+    expect(!build_film_grain_params(
+        unstable, 8, false, true, params, rejected, 0.20),
+        "near-unstable source fit is rejected instead of amplified");
+    expect(rejected.sourceRegularizationRejected,
+        "rejected source fit is exposed in diagnostics");
+}
+
 void testWhiteLuma() {
     FilmGrainGpuStats stats = {};
     fillWhitePlane(stats.plane[0], 6.0, false);
@@ -260,6 +305,7 @@ void testStrengthLut() {
 
 int main() {
     testStratifiedSampling();
+    testSourceCorrelationRegularizer();
     testWhiteLuma();
     testRampLuma();
     testChromaCorrelationClamp();
