@@ -181,6 +181,35 @@ Caveat on the threshold: the 1.5 limit is inherited from `auto_retain_detail`
 and fft3d clears it by 0.06, so it is provisional and should be re-derived. The
 82% relative movement is not threshold-sensitive; the pass/fail labels are.
 
+### Why `psd=on` damages detail, and what would fix it
+
+The obvious explanation is wrong. If rho were measured over the whole frame,
+picture detail would inflate it and over-shape the filter --- but rho is already
+a median over the *selected flat blocks only*
+(`NVEncFilterFilmGrain.cu:1368-1374`), and the fixtures confirm it empirically:
+`coarse_detail` measures lag-one **0.810** against `coarse_luma`'s **0.806**.
+Adding a detailed top half moved rho by 0.004. Detail is not leaking into the
+estimate.
+
+The asymmetry is in how the two quantities are applied. Sigma is **per block**
+--- textured blocks deliberately fall back to the median "so their own texture
+variance does not turn the denoiser into a blur" (`:1381`). The PSD shape is
+**per frame**: `fft3d.noisecorr` is a scalar on the filter's param struct, and
+changing it re-runs `m_fft3d->init` for the whole frame. So a shape derived
+correctly from flat, grainy blocks is then applied unchanged to blocks that are
+mostly picture. In those blocks the shape raises the subtracted threshold at
+exactly the low and mid frequencies where the detail lives.
+
+That predicts the fix: carry the shaping per block the way sigma already is, and
+fade it out for blocks outside the flat mask. It also predicts a cheaper partial
+test --- scaling rho down should cost capture slowly and recover detail quickly
+if the mechanism is right, since capture depends on the shape over flat blocks
+where it is correct.
+
+Neither is implemented. `psd=on` reaching the filter as a scalar is a real
+structural constraint, not a tuning oversight: per-block shaping needs the FFT3D
+filter to accept a shape map alongside the sigma map it already takes.
+
 ## What this does not yet establish
 
 The separator is localised; the deployment decision is not made. `motion` costs
