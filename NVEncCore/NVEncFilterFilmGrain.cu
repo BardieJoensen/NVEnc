@@ -451,6 +451,79 @@ __device__ inline int residual_at(const uint8_t *src, const int srcPitch,
         - load_code<Type, shift>(denoised, denoisedPitch, x, y, component, components);
 }
 
+// One block's mean-plus-plane, fitted cooperatively over the whole block.
+//
+// This is what lets the AR model be estimated from the source rather than from
+// the denoiser's residual.  It is a three-term least-squares fit over a single
+// 32x32 block, so it can only remove a trend at block scale; the grain band is
+// far above that and passes through untouched.  The denoiser cannot be this
+// gentle, because it has to produce a clean base at every pixel rather than
+// statistics over selected flat blocks -- which is exactly why its residual
+// comes back whitened.
+//
+// The basis is zero-mean over the block by construction (sum of xn is exactly
+// zero), so the slopes are independent of the mean and of each other and the
+// normal equations reduce to three ratios.
+struct FilmGrainBlockPlane {
+    float mean;
+    float slopeX;
+    float slopeY;
+    int x0, y0, width, height;
+};
+
+template<typename Type, int shift, int components>
+__device__ inline void fit_block_plane(const uint8_t *src, const int srcPitch,
+    const int x0, const int y0, const int blockW, const int blockH, const int component,
+    const int tid, const int threads, float *reduce, FilmGrainBlockPlane& plane) {
+    const int count = blockW * blockH;
+    float sum = 0.0f, sumX = 0.0f, sumY = 0.0f, sumXX = 0.0f, sumYY = 0.0f;
+    for (int index = tid; index < count; index += threads) {
+        const int lx = index % blockW;
+        const int ly = index / blockW;
+        const float value = static_cast<float>(
+            load_code<Type, shift>(src, srcPitch, x0 + lx, y0 + ly, component, components));
+        const float xn = (2.0f * lx - (blockW - 1)) / blockW;
+        const float yn = (2.0f * ly - (blockH - 1)) / blockH;
+        sum += value;
+        sumX += value * xn;
+        sumY += value * yn;
+        sumXX += xn * xn;
+        sumYY += yn * yn;
+    }
+    reduce[tid] = sum;
+    reduce[threads + tid] = sumX;
+    reduce[2 * threads + tid] = sumY;
+    reduce[3 * threads + tid] = sumXX;
+    reduce[4 * threads + tid] = sumYY;
+    __syncthreads();
+    for (int stride = threads / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            for (int k = 0; k < 5; ++k) {
+                reduce[k * threads + tid] += reduce[k * threads + tid + stride];
+            }
+        }
+        __syncthreads();
+    }
+    plane.mean = reduce[0] / fmaxf(static_cast<float>(count), 1.0f);
+    plane.slopeX = reduce[threads] / fmaxf(reduce[3 * threads], 1e-6f);
+    plane.slopeY = reduce[2 * threads] / fmaxf(reduce[4 * threads], 1e-6f);
+    plane.x0 = x0;
+    plane.y0 = y0;
+    plane.width = blockW;
+    plane.height = blockH;
+    __syncthreads();
+}
+
+template<typename Type, int shift, int components>
+__device__ inline int detrended_at(const uint8_t *src, const int srcPitch,
+    const int x, const int y, const int component, const FilmGrainBlockPlane& plane) {
+    const float xn = (2.0f * (x - plane.x0) - (plane.width - 1)) / plane.width;
+    const float yn = (2.0f * (y - plane.y0) - (plane.height - 1)) / plane.height;
+    const float value = static_cast<float>(
+        load_code<Type, shift>(src, srcPitch, x, y, component, components));
+    return __float2int_rn(value - (plane.mean + plane.slopeX * xn + plane.slopeY * yn));
+}
+
 template<typename Type, int shift, int components, bool chroma>
 __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const int srcPitch,
     const uint8_t *__restrict__ denoised, const int denoisedPitch, const int width, const int height,
@@ -458,7 +531,7 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
     const uint8_t *__restrict__ lumaDenoised, const int lumaDenoisedPitch,
     const int lumaWidth, const int lumaHeight, const int blocksX, const int bitDepth,
     const uint8_t *__restrict__ flatMask, const FilmGrainBlockMetric *__restrict__ metrics,
-    FilmGrainGpuPlaneStats *__restrict__ output) {
+    FilmGrainGpuPlaneStats *__restrict__ output, const bool modelFromSource) {
     const int bx = blockIdx.x;
     const int by = blockIdx.y;
     const int blockIndex = by * blocksX + bx;
@@ -471,6 +544,11 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
     __shared__ int predictors[64][coeffCount];
     __shared__ int values[64];
     __shared__ uint8_t valid[64];
+    __shared__ float planeReduce[5 * 64];
+    __shared__ FilmGrainBlockPlane blockPlane;
+    __shared__ FilmGrainBlockPlane lumaPlane;
+    __shared__ FilmGrainBlockPlane basePlane;
+    __shared__ int baseValues[64];
 
     const int modelBlock = chroma ? FGS_BLOCK_SIZE / 2 : FGS_BLOCK_SIZE;
     const int x0 = bx * modelBlock;
@@ -479,6 +557,31 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
     const int yEnd = min(height, y0 + modelBlock);
     const int blockW = xEnd - x0;
     const int blockH = yEnd - y0;
+    if (modelFromSource) {
+        fit_block_plane<Type, shift, components>(src, srcPitch, x0, y0, blockW, blockH,
+            component, tid, threads, planeReduce, blockPlane);
+        // The same fit on the clean base.  A source-derived strength curve
+        // measures the TOTAL grain, but the base still carries whatever the
+        // denoiser failed to remove, and synthesising the total on top of that
+        // over-delivers.  Subtracting the base's own detrended variance leaves
+        // exactly the variance that is missing and has to be put back.
+        //
+        // It removes the source fit's picture contamination for free: whatever
+        // structure survives the plane fit is present in both planes -- the
+        // denoiser preserves picture, that is its job -- so it cancels in the
+        // difference instead of inflating the curve.
+        fit_block_plane<Type, shift, components>(denoised, denoisedPitch, x0, y0,
+            blockW, blockH, component, tid, threads, planeReduce, basePlane);
+        if (chroma) {
+            // The chroma model carries one extra tap for the co-located luma
+            // sample, so that tap has to come from the same domain as the rest
+            // -- mixing a detrended chroma target with a denoised luma
+            // predictor would corrupt the fitted cross-plane correlation.
+            fit_block_plane<Type, shift, 1>(lumaSrc, lumaSrcPitch, x0 * 2, y0 * 2,
+                min(blockW * 2, lumaWidth - x0 * 2), min(blockH * 2, lumaHeight - y0 * 2),
+                0, tid, threads, planeReduce, lumaPlane);
+        }
+    }
     const uint32_t sampleHash = fgs_sample_hash(static_cast<uint32_t>(blockIndex * 64 + tid));
     // The AR template reaches three pixels left/right and three rows upward.
     // Stagger one observation within each 8x8 stratum instead of sampling the
@@ -496,13 +599,19 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
         int index = 0;
         for (int dy = -FGS_AR_LAG; dy < 0; ++dy) {
             for (int dx = -FGS_AR_LAG; dx <= FGS_AR_LAG; ++dx) {
-                predictors[tid][index++] = residual_at<Type, shift, components>(
-                    src, srcPitch, denoised, denoisedPitch, x + dx, y + dy, component);
+                predictors[tid][index++] = modelFromSource
+                    ? detrended_at<Type, shift, components>(
+                        src, srcPitch, x + dx, y + dy, component, blockPlane)
+                    : residual_at<Type, shift, components>(
+                        src, srcPitch, denoised, denoisedPitch, x + dx, y + dy, component);
             }
         }
         for (int dx = -FGS_AR_LAG; dx < 0; ++dx) {
-            predictors[tid][index++] = residual_at<Type, shift, components>(
-                src, srcPitch, denoised, denoisedPitch, x + dx, y, component);
+            predictors[tid][index++] = modelFromSource
+                ? detrended_at<Type, shift, components>(
+                    src, srcPitch, x + dx, y, component, blockPlane)
+                : residual_at<Type, shift, components>(
+                    src, srcPitch, denoised, denoisedPitch, x + dx, y, component);
         }
         if (chroma) {
             const int lx = min(lumaWidth - 2, max(0, x * 2));
@@ -510,14 +619,22 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
             int lumaResidual = 0;
             for (int dy = 0; dy < 2; ++dy) {
                 for (int dx = 0; dx < 2; ++dx) {
-                    lumaResidual += residual_at<Type, shift, 1>(lumaSrc, lumaSrcPitch,
-                        lumaDenoised, lumaDenoisedPitch, lx + dx, ly + dy, 0);
+                    lumaResidual += modelFromSource
+                        ? detrended_at<Type, shift, 1>(lumaSrc, lumaSrcPitch,
+                            lx + dx, ly + dy, 0, lumaPlane)
+                        : residual_at<Type, shift, 1>(lumaSrc, lumaSrcPitch,
+                            lumaDenoised, lumaDenoisedPitch, lx + dx, ly + dy, 0);
                 }
             }
             predictors[tid][index++] = (lumaResidual + (lumaResidual >= 0 ? 2 : -2)) / 4;
         }
-        values[tid] = residual_at<Type, shift, components>(
-            src, srcPitch, denoised, denoisedPitch, x, y, component);
+        values[tid] = modelFromSource
+            ? detrended_at<Type, shift, components>(src, srcPitch, x, y, component, blockPlane)
+            : residual_at<Type, shift, components>(
+                src, srcPitch, denoised, denoisedPitch, x, y, component);
+        baseValues[tid] = modelFromSource
+            ? detrended_at<Type, shift, components>(denoised, denoisedPitch, x, y, component, basePlane)
+            : 0;
     } else {
         // Zero an unusable sample instead of testing valid[] inside the
         // accumulation loops below.  A zero predictor contributes exactly
@@ -527,6 +644,7 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
             predictors[tid][i] = 0;
         }
         values[tid] = 0;
+        baseValues[tid] = 0;
     }
     __syncthreads();
 
@@ -571,6 +689,8 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
     if (tid == 0) {
         int64_t residualSum = 0;
         uint64_t residualSumSq = 0;
+        int64_t baseSum = 0;
+        uint64_t baseSumSq = 0;
         int64_t predSum = 0;
         uint64_t predSumSq = 0;
         unsigned int sampleCount = 0;
@@ -579,6 +699,9 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
             const int value = values[sample];
             residualSum += value;
             residualSumSq += static_cast<uint64_t>(static_cast<int64_t>(value) * value);
+            const int baseValue = baseValues[sample];
+            baseSum += baseValue;
+            baseSumSq += static_cast<uint64_t>(static_cast<int64_t>(baseValue) * baseValue);
             if (chroma) {
                 const int pred = predictors[sample][coeffCount - 1];
                 predSum += pred;
@@ -593,8 +716,14 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
         // noisy value biases the strength curve.
         const double samples = static_cast<double>(sampleCount);
         const double meanResidual = static_cast<double>(residualSum) / samples;
-        const double variance = fmax(0.0,
+        double variance = fmax(0.0,
             static_cast<double>(residualSumSq) / samples - meanResidual * meanResidual);
+        if (modelFromSource) {
+            const double meanBase = static_cast<double>(baseSum) / samples;
+            const double baseVariance = fmax(0.0,
+                static_cast<double>(baseSumSq) / samples - meanBase * meanBase);
+            variance = fmax(0.0, variance - baseVariance);
+        }
         const int maxValue = (1 << bitDepth) - 1;
         const int bin = min(FGS_STRENGTH_BINS - 1, max(0,
             static_cast<int>(metrics[blockIndex].mean * FGS_STRENGTH_BINS / (maxValue + 1))));
@@ -766,13 +895,14 @@ static RGY_ERR launch_model_stats(const RGYFrameInfo& src, const RGYFrameInfo& d
     const int width, const int height, const int component, const RGYFrameInfo& lumaSrc,
     const RGYFrameInfo& lumaDenoised, const int blocksX, const int blocksY, const int bitDepth,
     const uint8_t *flatMask, const FilmGrainBlockMetric *metrics,
-    FilmGrainGpuPlaneStats *stats, cudaStream_t stream) {
+    FilmGrainGpuPlaneStats *stats, const bool modelFromSource, cudaStream_t stream) {
     const dim3 block(8, 8);
     const dim3 grid(blocksX, blocksY);
     kernel_fgs_model_stats<Type, shift, components, chroma><<<grid, block, 0, stream>>>(
         src.ptr[0], src.pitch[0], denoised.ptr[0], denoised.pitch[0], width, height, component,
         lumaSrc.ptr[0], lumaSrc.pitch[0], lumaDenoised.ptr[0], lumaDenoised.pitch[0],
-        lumaSrc.width, lumaSrc.height, blocksX, bitDepth, flatMask, metrics, stats);
+        lumaSrc.width, lumaSrc.height, blocksX, bitDepth, flatMask, metrics, stats,
+        modelFromSource);
     return err_to_rgy(cudaGetLastError());
 }
 
@@ -819,7 +949,8 @@ struct NVEncFilterFilmGrain::AnalyzerState {
 
 NVEncFilmGrainAnalyzerConfig::NVEncFilmGrainAnalyzerConfig() :
     enable(true), analyzeChroma(true), clipToRestrictedRange(true),
-    denoiser(FGS_DENOISE_FFT3D), fft3dTemporal(1), motionRefs(2), residualRetain(0.0f), denoiseLevel(0.0f),
+    denoiser(FGS_DENOISE_FFT3D), fft3dTemporal(1), motionRefs(2), residualRetain(0.0f),
+    modelFromSource(false), denoiseLevel(0.0f),
     denoisePasses(2), modelWindow(8), minModelFrames(1), minFlatBlocks(8),
     minFlatFraction(0.02f), minNoiseLevel(0.5f), maxNoiseLevel(50.0f) {
 }
@@ -832,6 +963,7 @@ bool NVEncFilmGrainAnalyzerConfig::operator==(const NVEncFilmGrainAnalyzerConfig
         && fft3dTemporal == other.fft3dTemporal
         && motionRefs == other.motionRefs
         && residualRetain == other.residualRetain
+        && modelFromSource == other.modelFromSource
         && denoiseLevel == other.denoiseLevel
         && denoisePasses == other.denoisePasses
         && modelWindow == other.modelWindow
@@ -843,7 +975,7 @@ bool NVEncFilmGrainAnalyzerConfig::operator==(const NVEncFilmGrainAnalyzerConfig
 }
 
 tstring NVEncFilmGrainAnalyzerConfig::print() const {
-    return strsprintf(_T("film-grain: denoise=%s%s, denoiser=%s, chroma=%s, window=%d%s%s"),
+    return strsprintf(_T("film-grain: denoise=%s%s, denoiser=%s, chroma=%s, window=%d%s%s%s"),
         denoiseLevel <= 0.0f ? _T("auto") : _T(""),
         denoiseLevel <= 0.0f ? _T("") : strsprintf(_T("%.2f"), denoiseLevel).c_str(),
         denoiser == FGS_DENOISE_FFT3D
@@ -852,7 +984,8 @@ tstring NVEncFilmGrainAnalyzerConfig::print() const {
         analyzeChroma ? _T("on") : _T("off"), modelWindow,
         denoiser == FGS_DENOISE_MOTION ? strsprintf(_T(", motion-refs=%d"), motionRefs).c_str() : _T(""),
         residualRetain < 0.0f ? _T(", retain=auto")
-            : (residualRetain > 0.0f ? strsprintf(_T(", retain=%.2f"), residualRetain).c_str() : _T("")));
+            : (residualRetain > 0.0f ? strsprintf(_T(", retain=%.2f"), residualRetain).c_str() : _T("")),
+        modelFromSource ? _T(", modelsrc=on") : _T(""));
 }
 
 RGYFrameDataFilmGrain::RGYFrameDataFilmGrain() :
@@ -975,11 +1108,13 @@ static RGY_ERR denoise_frame(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFra
 template<typename Type, int shift>
 static RGY_ERR collect_model_stats_typed(const RGYFrameInfo *src, const RGYFrameInfo *denoised,
     const bool chroma, const int blocksX, const int blocksY, const int bitDepth, const uint8_t *mask,
-    const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats, cudaStream_t stream) {
+    const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats, const bool modelFromSource,
+    cudaStream_t stream) {
     const auto srcY = getPlane(src, RGY_PLANE_Y);
     const auto dstY = getPlane(denoised, RGY_PLANE_Y);
     auto sts = launch_model_stats<Type, shift, 1, false>(srcY, dstY, srcY.width, srcY.height, 0,
-        srcY, dstY, blocksX, blocksY, bitDepth, mask, metrics, &stats->plane[0], stream);
+        srcY, dstY, blocksX, blocksY, bitDepth, mask, metrics, &stats->plane[0],
+        modelFromSource, stream);
     if (sts != RGY_ERR_NONE || !chroma) return sts;
     const bool semiPlanar = src->csp == RGY_CSP_NV12 || src->csp == RGY_CSP_P010;
     if (semiPlanar) {
@@ -987,7 +1122,8 @@ static RGY_ERR collect_model_stats_typed(const RGYFrameInfo *src, const RGYFrame
         const auto dstUV = getPlane(denoised, RGY_PLANE_U);
         for (int component = 0; component < 2; ++component) {
             sts = launch_model_stats<Type, shift, 2, true>(srcUV, dstUV, src->width / 2, src->height / 2,
-                component, srcY, dstY, blocksX, blocksY, bitDepth, mask, metrics, &stats->plane[component + 1], stream);
+                component, srcY, dstY, blocksX, blocksY, bitDepth, mask, metrics,
+                &stats->plane[component + 1], modelFromSource, stream);
             if (sts != RGY_ERR_NONE) return sts;
         }
     } else {
@@ -995,7 +1131,8 @@ static RGY_ERR collect_model_stats_typed(const RGYFrameInfo *src, const RGYFrame
             const auto srcC = getPlane(src, static_cast<RGY_PLANE>(plane));
             const auto dstC = getPlane(denoised, static_cast<RGY_PLANE>(plane));
             sts = launch_model_stats<Type, shift, 1, true>(srcC, dstC, srcC.width, srcC.height, 0,
-                srcY, dstY, blocksX, blocksY, bitDepth, mask, metrics, &stats->plane[plane], stream);
+                srcY, dstY, blocksX, blocksY, bitDepth, mask, metrics, &stats->plane[plane],
+                modelFromSource, stream);
             if (sts != RGY_ERR_NONE) return sts;
         }
     }
@@ -1004,15 +1141,16 @@ static RGY_ERR collect_model_stats_typed(const RGYFrameInfo *src, const RGYFrame
 
 static RGY_ERR collect_model_stats(const RGYFrameInfo *src, const RGYFrameInfo *denoised,
     const bool chroma, const int blocksX, const int blocksY, const int bitDepth, const uint8_t *mask,
-    const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats, cudaStream_t stream) {
+    const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats, const bool modelFromSource,
+    cudaStream_t stream) {
     switch (src->csp) {
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
-        return collect_model_stats_typed<uint8_t, 0>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, stream);
+        return collect_model_stats_typed<uint8_t, 0>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, modelFromSource, stream);
     case RGY_CSP_YV12_10:
-        return collect_model_stats_typed<uint16_t, 0>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, stream);
+        return collect_model_stats_typed<uint16_t, 0>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, modelFromSource, stream);
     case RGY_CSP_P010:
-        return collect_model_stats_typed<uint16_t, 6>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, stream);
+        return collect_model_stats_typed<uint16_t, 6>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, modelFromSource, stream);
     default:
         return RGY_ERR_UNSUPPORTED;
     }
@@ -1494,7 +1632,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     sts = collect_model_stats(source, output, prm->filmGrain.analyzeChroma, m_blocksX, m_blocksY,
         bitDepth, static_cast<const uint8_t *>(m_blockMask->ptrDevice),
         static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
-        static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice), stream);
+        static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice),
+        prm->filmGrain.modelFromSource, stream);
     if (sts != RGY_ERR_NONE || (sts = m_modelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     cudaerr = cudaStreamSynchronize(stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);

@@ -110,6 +110,7 @@ NVEncVideoParamAV1::NVEncVideoParamAV1() :
     filmGrainDenoiser(0),
     filmGrainMotionRefs(2),
     filmGrainRetain(0.0f),
+    filmGrainModelSource(false),
     filmGrainTable(),
     filmGrainTableOut() {
 }
