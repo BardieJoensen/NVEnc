@@ -101,6 +101,49 @@ compensates for *unintentional* base leakage.
 This is small (3-7% on the film titles) and does not explain Cape Fear's synth
 1.273 at leak 0.149, which is a strength-curve error independent of leakage.
 
+## Synthesised grain is about half as spatially correlated as the source
+
+Decomposing the layers and measuring lag-1 autocorrelation inside the source's
+flat mask, rather than only their amplitude:
+
+| | flat sigma | lag-1 ACF |
+| --- | ---: | ---: |
+| Taxi, source | 0.400 | **+0.370** |
+| Taxi, base (leaked) | 0.106 | +0.330 |
+| Taxi, synth layer | 0.371 | **+0.195** |
+| Casino, source | 0.253 | **+0.410** |
+| Casino, base (leaked) | 0.070 | **-0.090** |
+| Casino, synth layer | 0.215 | **+0.184** |
+
+Amplitude is close (0.371 against 0.400; 0.215 against 0.253) while
+**correlation is roughly halved on both titles**. This reproduces across the
+wider corpus: the fgs/source lag-1 ratio is 0.72 (Taxi), 0.60 (Casino), 0.43
+(The Shining), 0.61 (Drag Race) on every source with lag-1 above 0.17.
+
+The synthesised grain is the right strength and the wrong *size*, consistently
+and in one direction. That is a better description of the coarse-grain failure
+than any amplitude measure, and it is consistent with capture ratios of 36-41%
+on the coarse fixture.
+
+**`base_hf` conflates two different things.** Taxi's leaked base has ACF +0.330,
+genuinely retained coarse grain. Casino's is **-0.090**; negative lag-1 is the
+signature of coding ringing, not grain. So "base leakage" is leaked grain on
+some titles and encoder artifacts on others, which is a likely reason it
+correlated with nothing above, and it matters for any gate built on
+`base_ratio`.
+
+**Casino discriminates the two causes.** Its separator leaves ringing rather
+than coarse grain, so the residual handed to the fit should carry the source's
+full correlation -- and synthesis still emerges at 0.184 against 0.410. That
+points at the AR estimation rather than the denoiser. The AV1 model has 24 free
+coefficients and demonstrated amplitude headroom (peaks 113 of 255 on Korra), so
+this is a fitting outcome, not a representational limit.
+
+The open comparison is our fitted AR coefficients against libaom's on the *same*
+residual, using the pinned `noise_model` binary and `reference_compare.py`. If
+libaom reproduces the source ACF and we do not, it is our solver; if neither
+does, it is the lag-3 template.
+
 ## Method
 
 `retention_over_one.py --fracs 0.10,0.25,0.40,0.55,0.70,0.85 --frames 6`, ten
