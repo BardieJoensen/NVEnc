@@ -62,8 +62,9 @@ The synthesis penalty should be roughly uniform. These are not:
 A tail metric nearly doubling is a different magnitude from the ~10% mean
 movement seen elsewhere, and Drag Race pays it for the smallest saving in the
 corpus. Saturated studio lighting with hard chroma edges is a plausible worst
-case for a grain separator. These two need a matched-byte re-run before FGS is
-considered safe on that content class.
+case for a grain separator. **The matched-byte re-run below confirms both**:
+at equal bytes Drag Race is still 9.47 -> 17.06 and Stormester 6.91 -> 12.78,
+so neither is explained by the byte difference.
 
 ## Big Brother: the question was asked and not answered
 
@@ -75,30 +76,99 @@ compression artifacts rather than grain, and that FGS discarding 30% of it
 
 The metrics do not support that reading: VMAF minimum drops 87.95 -> 78.62 and
 SSIMULACRA2 p5 drops 48.50 -> 35.59. Whatever that HF energy is, removing it
-cost measured quality. Either it was real detail, or the FGS arm's 14% smaller
-size is doing the damage. Unresolved.
+cost measured quality.
+
+The matched-byte re-run removes the remaining excuse. At `fgs@27` Big Brother
+is **larger** than `plain@29` (19.1 MB against 18.3) and still loses VMAF
+minimum 87.95 -> 82.32 and SSIMULACRA2 p5 48.50 -> 38.60. More bits do not
+recover it, and its retention is pinned at 0.696/0.701 across both quality
+points. The shortfall is architectural -- the model cannot represent that
+source's HF structure -- not a bit-allocation effect.
 
 ## Retention error is title-specific in sign and magnitude
 
 Across all ten titles measured today, FGS retention ranges 0.696 to 1.180 with
 no tested variable predicting it: not grain amount, not fineness, not
-autocorrelation shape, not source pipeline. Three hypotheses were proposed and
-all three failed against the next title.
+autocorrelation shape, not source pipeline, not rate sensitivity. Five
+hypotheses were proposed across this session and all five failed against the
+next title measured.
 
 The practical consequence is worth stating even without a mechanism: **a global
 calibration constant cannot fix this.** An error of -0.30 on one title and
 +0.18 on another is not a bias to tune out. Anyone reaching for "scale the
 strength curve by k" will improve half the library and harm the other half.
 
+## The matched-byte re-run, and what it settles
+
+The corpus was re-encoded at `--qvbr 27` and `fgs@27` compared against
+`plain@29`. At corpus level this lands on matched bytes: **77.8 MB -> 78.4 MB,
++0.8%**, so the missing-bits confound is gone.
+
+| title | arm | MB | VMAF | VMAF min | SSIMU2 | SSIMU2 p5 | Butt 2n | Butt p95 | ret |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Cape Fear | plain@29 | 13.1 | **92.68** | **87.71** | **67.57** | **60.40** | **1.335** | 5.96 | 0.748 |
+| Cape Fear | fgs@27 | 10.6 | 89.16 | 82.32 | 63.05 | 56.52 | 1.685 | **5.69** | **0.860** |
+| Silo | plain@29 | 3.8 | **93.07** | **86.08** | **84.00** | **80.80** | **0.636** | 3.50 | 0.333 |
+| Silo | fgs@27 | 3.5 | 91.79 | 84.92 | 82.57 | 79.38 | 0.758 | **3.34** | **1.016** |
+| Big Brother | plain@29 | 18.3 | **96.93** | **87.95** | **70.12** | **48.50** | **1.178** | 7.74 | **0.940** |
+| Big Brother | fgs@27 | 19.1 | 93.91 | 82.32 | 62.56 | 38.60 | 1.491 | **7.13** | 0.701 |
+| Drag Race | plain@29 | 20.7 | **97.91** | **87.96** | **76.21** | **65.02** | **0.969** | **9.47** | **0.970** |
+| Drag Race | fgs@27 | 23.2 | 94.68 | 82.35 | 62.52 | 32.70 | 1.603 | 17.06 | 1.184 |
+| Supergirl | plain@29 | 9.3 | **97.60** | **94.46** | **82.16** | **78.02** | **0.653** | **4.83** | 0.652 |
+| Supergirl | fgs@27 | 8.2 | 95.68 | 92.90 | 75.76 | 72.38 | 0.942 | 4.92 | **1.052** |
+| Stormester | plain@29 | 12.6 | **97.08** | **93.98** | **81.66** | **77.53** | **0.741** | **6.91** | 0.831 |
+| Stormester | fgs@27 | 13.8 | 94.90 | 90.55 | 78.21 | 73.15 | 0.895 | 12.78 | **0.906** |
+
+Titles where `fgs@27` beats `plain@29`, out of six: VMAF **0**, VMAF minimum
+**0**, SSIMULACRA2 **0**, SSIMULACRA2 p5 **0**, Butteraugli 2-norm **0**,
+Butteraugli max-p95 **3**.
+
+**This is the opposite of the 4K matched-rate result**, where every tail metric
+favoured FGS on all four titles. The argument made there -- that mean losses
+with tail gains is the signature of measurement bias rather than real loss --
+**does not reproduce on 1080p general-library content.** It should not be
+carried over.
+
+What FGS still wins is grain retention, and by a wide margin: Silo's plain arm
+discards two thirds of the source grain (0.333) where FGS reproduces it to
+within 2% (1.016); Supergirl moves 0.652 to 1.052.
+
+So the two measurements genuinely disagree, and nothing in this corpus resolves
+it. That is the documented state of the art rather than a gap in this run:
+Netflix has no full-reference quality model for FGS and validated theirs by A/B
+over roughly 300 titles, and `FINDINGS-2026-07-30-TEXTURE.md` exists for the
+same reason.
+
+Two titles are not ambiguous, though. Drag Race (Butteraugli p95 9.47 -> 17.06,
+while growing 12% in size) and Stormester (6.91 -> 12.78) show tail damage far
+outside the movement seen elsewhere. Those are bad outcomes on their own terms,
+not measurement artefacts.
+
+### Bearing on deployment
+
+The 4K heavy-grain routing reversal in `FINDINGS-2026-07-31-ROUTING.md` stands:
+matched-byte, tails favouring FGS on all four titles. **The general-library
+case has no equivalent support.** Blanket FGS on general content is currently
+justified by grain retention and byte savings, not by any quality metric.
+
 ## What should happen next
 
-1. **A matched-byte re-run of this corpus.** Encode the FGS arm at a lower QVBR
-   so both arms land on the same size, as `FINDINGS-2026-07-29-PERFORMANCE.md`
-   did for Silo with QVBR 27 against 29. That separates the synthesis penalty
-   from the missing 17.4% of bits, which this run cannot do.
-2. **The 07-30 texture report on the Drag Race and Stormester pairs**, which is
-   the detector built for "was real detail replaced by synthesized texture".
+1. **The 07-30 texture report on the Silo and Drag Race pairs.** Silo is the
+   cleanest case of metrics disagreeing with retention; Drag Race the clearest
+   damage. That detector was built for exactly this adjudication.
+2. **A playback A/B**, which remains the release gate and is the only thing that
+   can settle the Silo-style disagreement.
 3. Only then a routing decision for reality/studio content.
+
+## A note on the reasoning in this session
+
+Five separate hypotheses about the retention error were proposed during this
+work -- fine grain causing overshoot, autocorrelation shape, AMZN pipeline
+signature, artifact-versus-detail, and rate-sensitivity splitting the corpus
+into two behaviour classes. **All five were falsified by the next title
+measured.** They are recorded here rather than deleted because the failures are
+the useful part: with six to ten titles there is enough freedom to fit a story
+to any three of them, and that is what kept happening.
 
 ## Method
 
