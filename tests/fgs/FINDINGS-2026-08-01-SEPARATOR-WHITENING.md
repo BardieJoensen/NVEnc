@@ -284,18 +284,44 @@ Casino and 8.63 -> 53.86 on Shining, 4-6x worse than the arm it is supposed to
 beat. Losing the tails as well as the mean is the signature of real damage, not
 of measurement bias.
 
-**The cause is in the fixture suite, not in the measurement.** `base_luma`
-returns the identical picture for every frame; only the grain is redrawn. Apart
-from a hard cut in the `cut` fixtures, **every KAT fixture is a static image**.
-That is the best possible case for a motion-compensated denoiser --- perfect
-temporal prediction, nothing to compensate --- and it never occurs in film.
-`motion` was not measured on the thing it is worst at.
+**The fixtures are static.** `base_luma` returns the identical picture for every
+frame; only the grain is redrawn. Apart from a hard cut in the `cut` fixtures,
+every KAT fixture is a static image --- the best possible case for a
+motion-compensated denoiser, and one that never occurs in film. That was the
+obvious explanation, so it was tested rather than asserted.
 
-This is the same class of blind spot as the one `coarse_detail` was just added
-to close, and it caught this work in the same session: the fixture ranking was
-written up as an indictment of the production setting before the real-film arm
-had finished running. The correct reading is that **`bilateral` is defensible on
-real film and the fixture evidence against it was an artifact.**
+**It is not the explanation.** `coarse_detail_pan` adds a fractional pan (0.77,
+0.31 px/frame) to the picture while leaving the measurement bands in place, so
+motion compensation cannot land exactly. `motion` still ranks first:
+
+| arm | capture | detail transfer, static | detail transfer, panning |
+| --- | ---: | ---: | ---: |
+| bilateral | 36% | 0.531 | 0.431 |
+| fft3d | 41% | 0.487 | **0.257** |
+| motion | 40% | **0.693** | **0.591** |
+| fft3d + `psd=on` | 48% | 0.404 | 0.321 |
+
+Adding motion costs every arm detail and reorders some of them --- `psd=on`
+overtakes plain `fft3d`, reversing the static result --- but it does not
+reproduce `motion`'s real-film collapse. So the fixture suite still cannot
+predict that behaviour, and the reason is still unknown. A uniform global
+translation is the easiest motion there is; real film adds parallax, rotation,
+deformation, occlusion and cuts, and 4K rather than 1080p. Any of those remains
+a candidate.
+
+**What is established** is narrower than the earlier draft of this document
+claimed: fixture rankings do not transfer to real film, demonstrated twice over
+--- once by `motion` inverting outright, once by `psd=on` and `fft3d` swapping
+places when motion is added. The claim that `motion` beats `bilateral` "on every
+axis measured" was written from the fixtures before the real-film arm finished
+and is withdrawn. **`bilateral` is defensible on real film.**
+
+A methodological note worth keeping: `systematic_edge_bias_rms_8bit` is a
+temporal mean, so it is only meaningful on a static picture. On the panning
+fixture every arm's value *falls* (bilateral 1.95 -> 1.08) while detail
+preservation simultaneously worsens on every arm, because damage that travels
+with the picture averages out of a temporal mean. `coarse_detail_pan` therefore
+guards `detail_transfer_gain` and reports both edge numbers as information only.
 
 It also puts a boundary on the rest of this document. Claims measured on
 residuals and on real film --- the separator localisation, the ACF chain, the

@@ -82,18 +82,27 @@ def apply_spec(spec):
     CLIP_LO, CLIP_HI = spec.get("clip", (0, MAXVAL))
 
 
-def base_luma(shift=0, detail=False):
+def base_luma(shift=0, detail=False, pan=(0.0, 0.0)):
     y = np.empty((H, W), np.float64)
     for i, level in enumerate(np.roll(LEVELS, shift)):
         y[:, i * BAND_W:(i + 1) * BAND_W] = level
     if detail:
-        # Static high-frequency picture content occupies the top half while
-        # the bottom remains flat enough for a trustworthy noise estimate.
-        # Multiple incommensurate periods prevent one favorable FFT bin from
-        # making this an unrealistically easy preservation test.
+        # High-frequency picture content occupies the top half while the bottom
+        # remains flat enough for a trustworthy noise estimate.  Multiple
+        # incommensurate periods prevent one favorable FFT bin from making this
+        # an unrealistically easy preservation test.
+        #
+        # `pan` displaces this content by a (dx, dy) already multiplied by the
+        # frame index.  The texture is analytic, so a fractional displacement is
+        # evaluated exactly rather than resampled -- a resampling artifact would
+        # be indistinguishable from the denoiser damage this fixture measures.
+        # The bands do not move: they are the flat regions every per-band sigma
+        # measurement in this suite depends on.
         top = H // 2
         left, right = BAND_W, W - BAND_W
         yy, xx = np.mgrid[32:top - 32, left:right]
+        xx = xx - pan[0]
+        yy = yy - pan[1]
         texture = (6.0 * np.sin(2.0 * np.pi * xx / 8.0)
                    + 4.0 * np.sin(2.0 * np.pi * (xx + yy) / 17.0)
                    + 2.0 * np.sin(2.0 * np.pi * yy / 29.0))
@@ -157,10 +166,12 @@ def generate(test, spec, path, clean_path=None):
         nframes = spec.get("frames", FRAMES)
         for n in range(nframes):
             grainy = not (grain_free or (test == "cut" and n >= CUT_FRAME))
-            base = base_luma(spec.get("cut_roll", 6), spec.get("detail", False)) \
+            pan = spec.get("pan", (0.0, 0.0))
+            offset = (pan[0] * n, pan[1] * n)
+            base = base_luma(spec.get("cut_roll", 6), spec.get("detail", False), offset) \
                 + spec.get("cut_offset", 0) \
                 if test in ("cut", "cut_grainy") and n >= CUT_FRAME \
-                else base_luma(0, spec.get("detail", False))
+                else base_luma(0, spec.get("detail", False), offset)
             if grainy:
                 unit = correlated_unit_noise(rng, (H, W)) if spec["sigma_y_mode"] == "coarse" \
                     else rng.normal(0.0, 1.0, (H, W))
@@ -395,6 +406,14 @@ TESTS = {
     # which is the stated blind spot of the PSD-shaped Wiener gain
     # (FINDINGS-2026-07-31-WIENER-PSD.md) and the reason it is not in production.
     "coarse_detail": {"sigma_y_mode": "coarse", "sigma_y": 6.0, "detail": True},
+    # coarse_detail with the picture moving.  Every other fixture in this suite
+    # is a static image with fresh grain each frame, which is the ideal case for
+    # a motion-compensated denoiser and never occurs in film -- on 2026-08-01
+    # that gap ranked `motion` first on the fixtures while real 4K film put it
+    # far last (Butteraugli max-p95 8.63 -> 53.86 on The Shining).  The pan is
+    # deliberately fractional so motion compensation cannot land exactly.
+    "coarse_detail_pan": {"sigma_y_mode": "coarse", "sigma_y": 6.0, "detail": True,
+                          "pan": (0.77, 0.31)},
     "auto_retain_flat": {"sigma_y_mode": "const", "sigma_y": 6.0, "retain": "auto"},
     "auto_retain_detail": {"sigma_y_mode": "const", "sigma_y": 6.0,
                            "detail": True, "retain": "auto"},
@@ -553,7 +572,7 @@ def run_test(test, keep):
                     f"ratio {fmt(total_ratio)}, target 1.00")
         if not keep and os.path.exists(src_raw):
             os.remove(src_raw)
-    elif test in ("coarse_luma", "coarse_detail"):
+    elif test in ("coarse_luma", "coarse_detail", "coarse_detail_pan"):
         sigma, _ = measure(on, off, range(SKIP, nframes))
         ratio = float(sigma[0].mean() / max(expected[0].mean(), 1e-9))
         adaptive = [m for m in models if m["frame"] >= SKIP and m["reliable"]]
@@ -636,6 +655,16 @@ def run_test(test, keep):
         ok &= check("fine detail survives the cleaned base",
                     separation["detail_transfer_gain"] >= 0.25,
                     f"high-pass transfer {separation['detail_transfer_gain']:.3f} (baseline floor 0.25)")
+        if test == "coarse_detail_pan":
+            # Both edge measures are unusable once the picture moves: the
+            # systematic one is a temporal mean, so damage that travels with the
+            # picture averages out of it, and the plain one is dominated by
+            # leftover coarse grain.  Reported, not guarded.
+            print(f"  [info] systematic edge RMSE "
+                  f"{separation['systematic_edge_bias_rms_8bit']:.2f} "
+                  f"(temporal mean; not a guard on moving content)")
+            print(f"  [info] plain edge RMSE including leftover grain: "
+                  f"{separation['edge_clean_rmse_8bit']:.2f}")
         if test in ("auto_retain_detail", "coarse_detail"):
             # Ordinary edge RMSE includes random grain left in the base, which
             # is not detail damage.  auto_retain_detail retains it deliberately;
