@@ -387,6 +387,14 @@ TESTS = {
                       "width": 3840, "height": 2160, "frames": 24},
     "coarse_luma":   {"sigma_y_mode": "coarse", "sigma_y": 6.0},
     "detail_luma":   {"sigma_y_mode": "const", "sigma_y": 6.0, "detail": True},
+    # The combination neither of the two above can test. coarse_luma is
+    # correlated grain over flat bands, so nothing is at risk of being pulled
+    # into the grain layer; detail_luma has white grain, so a correlation-driven
+    # filter shape never engages. Only correlated grain OVER detail can show
+    # whether a separator that chases coarse grain takes picture detail with it,
+    # which is the stated blind spot of the PSD-shaped Wiener gain
+    # (FINDINGS-2026-07-31-WIENER-PSD.md) and the reason it is not in production.
+    "coarse_detail": {"sigma_y_mode": "coarse", "sigma_y": 6.0, "detail": True},
     "auto_retain_flat": {"sigma_y_mode": "const", "sigma_y": 6.0, "retain": "auto"},
     "auto_retain_detail": {"sigma_y_mode": "const", "sigma_y": 6.0,
                            "detail": True, "retain": "auto"},
@@ -545,7 +553,7 @@ def run_test(test, keep):
                     f"ratio {fmt(total_ratio)}, target 1.00")
         if not keep and os.path.exists(src_raw):
             os.remove(src_raw)
-    elif test == "coarse_luma":
+    elif test in ("coarse_luma", "coarse_detail"):
         sigma, _ = measure(on, off, range(SKIP, nframes))
         ratio = float(sigma[0].mean() / max(expected[0].mean(), 1e-9))
         adaptive = [m for m in models if m["frame"] >= SKIP and m["reliable"]]
@@ -628,16 +636,24 @@ def run_test(test, keep):
         ok &= check("fine detail survives the cleaned base",
                     separation["detail_transfer_gain"] >= 0.25,
                     f"high-pass transfer {separation['detail_transfer_gain']:.3f} (baseline floor 0.25)")
-        if test == "auto_retain_detail":
-            # Ordinary edge RMSE includes the deliberately retained random
-            # grain.  Temporal mean bias isolates repeatable detail damage.
+        if test in ("auto_retain_detail", "coarse_detail"):
+            # Ordinary edge RMSE includes random grain left in the base, which
+            # is not detail damage.  auto_retain_detail retains it deliberately;
+            # coarse_detail has it because coarse grain is what the separator
+            # struggles to remove.  Either way the plain RMSE measures leftover
+            # grain, so temporal mean bias is used instead to isolate repeatable
+            # detail damage.  Both numbers are reported so the difference stays
+            # visible.
             ok &= check("systematic edge/detail distortion remains bounded",
                         separation["systematic_edge_bias_rms_8bit"] <= 1.5,
                         f"systematic edge RMSE {separation['systematic_edge_bias_rms_8bit']:.2f} "
                         "(8-bit units, limit 1.5)")
-            ok &= check("auto retention restores at-risk fine detail",
-                        separation["detail_transfer_gain"] >= 0.65,
-                        f"high-pass transfer {separation['detail_transfer_gain']:.3f} (target 0.65)")
+            print(f"  [info] plain edge RMSE including leftover grain: "
+                  f"{separation['edge_clean_rmse_8bit']:.2f}")
+            if test == "auto_retain_detail":
+                ok &= check("auto retention restores at-risk fine detail",
+                            separation["detail_transfer_gain"] >= 0.65,
+                            f"high-pass transfer {separation['detail_transfer_gain']:.3f} (target 0.65)")
         else:
             ok &= check("edge/detail distortion remains bounded",
                         separation["edge_clean_rmse_8bit"] <= 3.0,
