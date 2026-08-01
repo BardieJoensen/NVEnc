@@ -195,19 +195,45 @@ FilmGrainSolvedPlane solve_plane(const FilmGrainGpuPlaneStats& stats, const bool
     return solved;
 }
 
-double implied_luma_correlation(const std::vector<double>& coeffs, const double scale) {
-    if (coeffs.size() != FGS_AR_COEFFS || !std::isfinite(scale)) return 0.0;
+struct LumaTemplateStats {
+    double correlation;
+    double gain;
+};
+
+static LumaTemplateStats simulate_luma_template(
+    const std::vector<double>& coeffs, const double scale) {
+    if (coeffs.size() != FGS_AR_COEFFS || !std::isfinite(scale)) return { 0.0, 1.0 };
     // Match the AV1 lag-3 luma template footprint.  The fixed hash supplies a
-    // deterministic white field; only correlation is measured, so its uniform
-    // distribution does not affect the AR process's covariance.  Avoiding a
+    // deterministic white field.  Correlation is normalised and gain is
+    // measured against the exact same field before recursion.  Avoiding a
     // random library makes table decisions repeatable across runs and hosts.
     constexpr int width = 82;
     constexpr int height = 73;
+    constexpr int x0 = FGS_AR_LAG;
+    constexpr int x1 = width - FGS_AR_LAG;
+    constexpr int y0 = FGS_AR_LAG;
     std::array<double, width * height> field = {};
     for (size_t index = 0; index < field.size(); ++index) {
         const uint32_t hash = fgs_sample_hash(static_cast<uint32_t>(index) + 0x9e3779b9U);
         field[index] = (static_cast<double>(hash & 0xffffU) - 32767.5) / 32767.5;
     }
+    double whiteMean = 0.0;
+    uint64_t count = 0;
+    for (int y = y0; y < height; ++y) {
+        for (int x = x0; x < x1; ++x) {
+            whiteMean += field[y * width + x];
+            ++count;
+        }
+    }
+    whiteMean /= std::max<uint64_t>(1, count);
+    double whiteVariance = 0.0;
+    for (int y = y0; y < height; ++y) {
+        for (int x = x0; x < x1; ++x) {
+            const double value = field[y * width + x] - whiteMean;
+            whiteVariance += value * value;
+        }
+    }
+    whiteVariance /= std::max<uint64_t>(1, count);
     for (int y = FGS_AR_LAG; y < height; ++y) {
         for (int x = FGS_AR_LAG; x < width - FGS_AR_LAG; ++x) {
             double value = field[y * width + x];
@@ -220,15 +246,12 @@ double implied_luma_correlation(const std::vector<double>& coeffs, const double 
             for (int dx = -FGS_AR_LAG; dx < 0; ++dx) {
                 value += coeffs[coefficient++] * scale * field[y * width + x + dx];
             }
-            if (!std::isfinite(value) || std::abs(value) > 1e100) return 1.0;
+            if (!std::isfinite(value) || std::abs(value) > 1e100) return { 1.0, 1e100 };
             field[y * width + x] = value;
         }
     }
-    const int x0 = FGS_AR_LAG;
-    const int x1 = width - FGS_AR_LAG;
-    const int y0 = FGS_AR_LAG;
     double mean = 0.0;
-    uint64_t count = 0;
+    count = 0;
     for (int y = y0; y < height; ++y) {
         for (int x = x0; x < x1; ++x) {
             mean += field[y * width + x];
@@ -256,13 +279,21 @@ double implied_luma_correlation(const std::vector<double>& coeffs, const double 
         }
     }
     variance /= std::max<uint64_t>(1, count);
-    if (!(variance > 1e-12) || !std::isfinite(variance)) return 0.0;
+    if (!(variance > 1e-12) || !std::isfinite(variance)
+        || !(whiteVariance > 1e-12)) return { 0.0, 1.0 };
     const double h = horizontal / std::max<uint64_t>(1, horizontalCount) / variance;
     const double v = vertical / std::max<uint64_t>(1, verticalCount) / variance;
-    return std::clamp(0.5 * (h + v), -1.0, 1.0);
+    return {
+        std::clamp(0.5 * (h + v), -1.0, 1.0),
+        std::sqrt(variance / whiteVariance)
+    };
 }
 
-static double quantized_luma_correlation(const std::vector<double>& coeffs,
+double implied_luma_correlation(const std::vector<double>& coeffs, const double scale) {
+    return simulate_luma_template(coeffs, scale).correlation;
+}
+
+static LumaTemplateStats quantized_luma_stats(const std::vector<double>& coeffs,
     const double scale, const int arShift) {
     const double coefficientScale = static_cast<double>(1 << arShift);
     std::vector<double> quantized(coeffs.size(), 0.0);
@@ -271,7 +302,7 @@ static double quantized_luma_correlation(const std::vector<double>& coeffs,
             static_cast<int>(std::lround(coeffs[i] * scale * coefficientScale)),
             -128, 127) / coefficientScale;
     }
-    return implied_luma_correlation(quantized);
+    return simulate_luma_template(quantized, 1.0);
 }
 
 static int choose_ar_shift(const std::array<FilmGrainSolvedPlane, 3>& solved) {
@@ -308,15 +339,15 @@ static bool regularize_source_luma(const FilmGrainGpuPlaneStats& stats,
     // was not requested.
     if (maxCorrelation < 0.0) return true;
     diagnostics.sourceModelCorrelation = static_cast<float>(
-        quantized_luma_correlation(solved.coeffs, 1.0, arShift));
+        quantized_luma_stats(solved.coeffs, 1.0, arShift).correlation);
     if (diagnostics.sourceModelCorrelation <= maxCorrelation) return true;
 
     double low = 0.0;
     double high = 1.0;
     for (int iteration = 0; iteration < 10; ++iteration) {
         const double middle = 0.5 * (low + high);
-        if (quantized_luma_correlation(
-            solved.coeffs, middle, arShift) <= maxCorrelation) low = middle;
+        if (quantized_luma_stats(
+            solved.coeffs, middle, arShift).correlation <= maxCorrelation) low = middle;
         else high = middle;
     }
 
@@ -342,22 +373,23 @@ static bool regularize_source_luma(const FilmGrainGpuPlaneStats& stats,
                 / observations;
         }
     }
-    const double newArGain = std::max(1.0, std::sqrt(
+    const double regressionGain = std::max(1.0, std::sqrt(
         std::max(1e-6, targetVariance) / std::max(1e-6, residualVariance)));
-    const double strengthGain = solved.templateGain / newArGain;
+    const auto quantized = quantized_luma_stats(solved.coeffs, low, arShift);
+    const double strengthGain = solved.templateGain / std::max(1e-6, quantized.gain);
     diagnostics.sourceArScale = static_cast<float>(low);
     diagnostics.sourceStrengthGain = static_cast<float>(strengthGain);
-    diagnostics.sourceModelCorrelation = static_cast<float>(
-        quantized_luma_correlation(solved.coeffs, low, arShift));
-    if (!std::isfinite(newArGain) || !std::isfinite(strengthGain)
-        || newArGain > 16.0 || strengthGain > FGS_SOURCE_MAX_STRENGTH_GAIN) {
+    diagnostics.sourceModelCorrelation = static_cast<float>(quantized.correlation);
+    if (!std::isfinite(regressionGain) || !std::isfinite(quantized.gain)
+        || !std::isfinite(strengthGain) || regressionGain > 16.0
+        || quantized.gain > 16.0 || strengthGain > FGS_SOURCE_MAX_STRENGTH_GAIN) {
         diagnostics.sourceRegularizationRejected = true;
         return false;
     }
 
     solved.coeffs = std::move(regularized);
-    solved.arGain = newArGain;
-    solved.templateGain = newArGain;
+    solved.arGain = quantized.gain;
+    solved.templateGain = quantized.gain;
     for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
         solved.strength[bin] *= strengthGain;
     }
@@ -431,14 +463,34 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
         // consistent with the table that will actually be emitted.
         solveChroma();
     }
-    const int arShift = choose_ar_shift(solved);
+    const int postRegularizationArShift = choose_ar_shift(solved);
+    if (diagnostics.sourceArScale < 1.0f - 1e-6f
+        && postRegularizationArShift < provisionalArShift) {
+        // A chroma refit may theoretically require a wider shared coefficient
+        // range.  The luma decision was evaluated at the provisional shift;
+        // reject instead of silently requantizing it more coarsely.
+        diagnostics.sourceRegularizationRejected = true;
+        return false;
+    }
+    // Scaling luma down can make a finer shift possible, but changing shifts
+    // would move every coefficient onto a new quantization stair.  Keep the
+    // shift at which the bounded model and its realised gain were measured.
+    const int arShift = diagnostics.sourceArScale < 1.0f - 1e-6f
+        ? provisionalArShift : postRegularizationArShift;
     if (maxLumaCorrelation >= 0.0) {
-        diagnostics.sourceModelCorrelation = static_cast<float>(
-            quantized_luma_correlation(solved[0].coeffs, 1.0, arShift));
+        const auto quantized = quantized_luma_stats(
+            solved[0].coeffs, 1.0, arShift);
+        diagnostics.sourceModelCorrelation = static_cast<float>(quantized.correlation);
+        if (diagnostics.sourceArScale < 1.0f - 1e-6f
+            && (std::abs(quantized.gain - solved[0].templateGain)
+                    > 0.01 * std::max(1.0, solved[0].templateGain))) {
+            diagnostics.sourceRegularizationRejected = true;
+            return false;
+        }
         if (diagnostics.sourceModelCorrelation > maxLumaCorrelation + 0.005) {
-            // A shared-shift change after the chroma refit can move luma onto
-            // another quantization stair.  Holding the prior valid model is
-            // safer than emitting coefficients outside the measured bound.
+            // The quantized search is discrete.  Holding the prior valid
+            // model is safer than emitting coefficients outside its measured
+            // bound if a rounding boundary defeats the final safety check.
             diagnostics.sourceRegularizationRejected = true;
             return false;
         }

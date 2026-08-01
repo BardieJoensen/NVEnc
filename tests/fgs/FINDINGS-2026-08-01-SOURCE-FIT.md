@@ -466,3 +466,45 @@ separate perceptual blocker.  The next safe step is to validate the cap on
 every affected interval, bound its amplitude change, then implement a precise
 deterministic regulariser and rerun KAT, this corpus and the known-bad texture
 pair.  Do not flip the default or deploy the motion arm before that gate.
+
+---
+
+# C++ correlation regulariser: quantisation and gain gates, 2026-08-01
+
+The first C++ implementation (`0561bb4a`) bounded the floating-point source
+fit and recomputed gain from the regularised regression.  CPU tests and a
+pinned full build passed, but a real-film trace found that this was not the
+model AV1 actually carried.  In The Deer Hunter's frame-270 scene, the
+continuous model measured near 0.76 lag-1 while the emitted 1/64 coefficients
+formed a near-unstable recursion with about 0.97 implied lag-1.  A one-integer
+coefficient change crosses the cliff.  Pre-quantisation validation is therefore
+not a valid safety gate.
+
+`fb29d960` moved the bound onto the quantised coefficient set and kept the
+shared coefficient shift fixed at the shift used by the decision.  The pinned
+build's frame-270--279 trace stayed around 0.71--0.77 implied lag-1 instead of
+crossing the cliff, and the CPU test now reconstructs the emitted AV1 integers
+and checks those directly.
+
+Decoded synthesis exposed the second half of the same problem.  On a fixed
+motion-clean base, over seven Deer Hunter frames:
+
+| arm | amplitude / truth | lag-1 | lag-2 | amplitude SD |
+| --- | ---: | ---: | ---: | ---: |
+| unrestricted source fit | 0.902 | 0.578 | 0.142 | 0.157 |
+| offline cap | 1.053 | 0.539 | 0.050 | **0.526** |
+| quantised C++ bound | 0.829 | 0.552 | 0.077 | **0.028** |
+| source truth | 1.000 | 0.514 | 0.010 | -- |
+
+The quantised bound removes the catastrophic amplitude variability and
+improves both texture lags, but it is 17% weak on average.  At the labelled
+pathological frame 275 it changes 1.283 / 0.876 / 0.695 to
+0.775 / 0.695 / 0.238 (amplitude / lag-1 / lag-2); the offline cap instead
+exploded to 2.339 amplitude.  This candidate is safer, not yet a quality win.
+
+The cause is now explicit: the strength curve was still divided by the
+floating-point regression gain, while the decoder uses the realised gain of
+the quantised recursion.  The next candidate measures that realised template
+gain deterministically, compensates only up to 1.25x, and rejects/holds any
+fit needing more.  `modelsrc` remains default-off and none of these candidates
+has been deployed to Tdarr.
