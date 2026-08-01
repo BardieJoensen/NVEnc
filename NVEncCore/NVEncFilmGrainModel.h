@@ -74,6 +74,14 @@ constexpr int FGS_AR_COEFFS_CHROMA = 25;
 constexpr int FGS_STRENGTH_BINS = 20;
 constexpr int FGS_TRI_Y = FGS_AR_COEFFS * (FGS_AR_COEFFS + 1) / 2;
 constexpr int FGS_TRI_C = FGS_AR_COEFFS_CHROMA * (FGS_AR_COEFFS_CHROMA + 1) / 2;
+// grain_scale_shift is a 2-bit field, so 3 is the format maximum.
+constexpr int FGS_MAX_GRAIN_SCALE_SHIFT = 3;
+// How far out the decoder's grain template clip must sit, in template standard
+// deviations, before the saturation loss is negligible.  The clip lands at
+// 4 * 2^grain_scale_shift / arGain sigma, so this chooses the shift.  At 3.5
+// the measured amplitude loss on coarse_luma falls from 30% to nothing, while
+// white grain (arGain ~1) still selects shift 0 and is untouched.
+constexpr double FGS_TEMPLATE_CLIP_SIGMA = 3.5;
 
 #ifdef __CUDACC__
 #define FGS_HOST_DEVICE __host__ __device__

@@ -247,6 +247,42 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
             solved[2] = FilmGrainSolvedPlane();
         }
     }
+    // The decoder builds its grain template by running the AR recursion over
+    // innovation samples of std 2^(bitDepth-3) and clipping every output to
+    // +/-2^(bitDepth-1), so the clip sits at 4/arGain standard deviations --
+    // independent of bit depth, because both scale together.  White grain has
+    // arGain ~1 and never reaches it.  A correlated fit does: at arGain 3.4 the
+    // limit is 1.2 sigma, 13% of template samples saturate, and the realised
+    // template std falls ~30% below the value the strength curve was divided
+    // by, so the synthesised grain lands ~30% weak.  Measured on coarse_luma:
+    // predicted 3.554 against 2.490 delivered, and the shortfall matches the
+    // simulated clipping loss to within 0.02 on every arm tested.
+    //
+    // grain_scale_shift is the format's lever for exactly this.  It scales the
+    // innovation down before the recursion, giving it headroom, and the
+    // strength curve scales up by the same factor so the signalled sigma is
+    // unchanged.  Pick the smallest shift that pushes the clip out to
+    // FGS_TEMPLATE_CLIP_SIGMA; it stays 0 for white grain, which keeps
+    // fine-grain content bit-identical.
+    double maxArGain = 0.0;
+    for (const auto& plane : solved) {
+        if (plane.valid) maxArGain = std::max(maxArGain, plane.arGain);
+    }
+    int grainScaleShift = 0;
+    while (grainScaleShift < FGS_MAX_GRAIN_SCALE_SHIFT
+        && 4.0 * (1 << grainScaleShift) < FGS_TEMPLATE_CLIP_SIGMA * maxArGain) {
+        ++grainScaleShift;
+    }
+    if (grainScaleShift > 0) {
+        // strength * templateGain is the signalled sigma and must not move;
+        // only the split between curve and template changes.
+        const double scale = static_cast<double>(1 << grainScaleShift);
+        for (auto& plane : solved) {
+            if (!plane.valid) continue;
+            plane.templateGain /= scale;
+            for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) plane.strength[bin] *= scale;
+        }
+    }
     std::array<std::vector<StrengthPoint>, 3> points = {
         fit_strength_points(solved[0], bitDepth, 14),
         solved[1].valid ? fit_strength_points(solved[1], bitDepth, 10) : std::vector<StrengthPoint>(),
@@ -269,7 +305,7 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     params.clipToRestrictedRange = limitedRange ? 1 : 0;
     params.grainScalingMinus8 = scalingShift - 8;
     params.arCoeffLag = FGS_AR_LAG;
-    params.grainScaleShift = 0;
+    params.grainScaleShift = static_cast<uint32_t>(grainScaleShift);
     params.numYPoints = static_cast<uint32_t>(points[0].size());
     for (size_t i = 0; i < points[0].size(); ++i) {
         params.pointYValue[i] = static_cast<uint8_t>(std::clamp(static_cast<int>(std::lround(points[0][i].first)), 0, 255));
