@@ -332,15 +332,44 @@ and zoom, making the displacement vary across the frame so no single vector fits
 loses 0.107 --- but it has not crossed over, so **the fixtures still cannot
 reproduce the real-film result**.
 
-The property they are missing is now identifiable. Every motion this generator
-can produce is a geometric transform of one texture layer, so every pixel's
-content existed somewhere in the previous frame. Real motion **reveals content
-that was not previously visible**: foreground moving over background, objects
-entering frame, cuts. A temporal denoiser cannot predict disoccluded content by
-construction, and that is exactly where a motion-compensated one has no fallback
-while a purely spatial one is unaffected. Producing it needs layered content,
-which a single analytic texture cannot express --- so this is a generator
-limitation, not a parameter that needs turning up.
+The property they were missing is **disocclusion**. Every motion the generator
+could produce was a geometric transform of one texture layer, so every pixel's
+content existed somewhere in the previous frame and a temporal denoiser can in
+principle find all of it. Real motion reveals content that was never visible:
+foreground moving over background, objects entering frame, cuts. No temporal
+predictor can supply that, which is exactly where a motion-compensated denoiser
+has no fallback and a purely spatial one is unaffected.
+
+That needs a second layer, so `coarse_detail_occl` adds one: a field of 36
+opaque, differently-textured objects sliding over the background, alternate rows
+in opposite directions. It disoccludes 21-24% of the measured region per frame
+--- a single object at 11 px/frame manages 0.4%, which no aggregate measure can
+see, and that is why the field is needed.
+
+**It reverses the ranking.** Base-versus-ideal edge RMSE, the measure closest to
+the structural error real film showed:
+
+| fixture | bilateral | fft3d | **motion** |
+| --- | ---: | ---: | ---: |
+| `coarse_detail` (static) | 4.56 | 4.62 | **3.36** |
+| `coarse_detail_pan` | 4.56 | 4.63 | **3.52** |
+| `coarse_detail_move` (pan+rotate+zoom) | 4.49 | 4.60 | **3.66** |
+| **`coarse_detail_occl`** | 5.11 | 4.89 | **6.79** |
+
+`motion` is best on every single-layer fixture and worst as soon as content is
+uncovered. It is not leftover grain inflating that number: `motion` captures 59%
+against fft3d's 58%, so the two leave comparable residue, and the gap is 6.79
+against 4.89. It is damage.
+
+Geometric difficulty was not the variable. Rotation and zoom make the
+displacement vary across the frame and barely moved `motion` (3.36 -> 3.66);
+introducing content with no history moved it past both competitors in one step.
+
+Note that `detail_transfer_gain` still ranks `motion` first here (0.723 against
+0.684 and 0.650). It is a high-pass energy ratio, so ghosted or smeared detail
+still counts as present --- it measures whether detail survives, not whether it
+survives *in the right place*. On this fixture the edge RMSE is the measure that
+matters, and the two disagree.
 
 **What is established** is narrower than the earlier draft of this document
 claimed: fixture rankings do not transfer to real film, demonstrated twice over

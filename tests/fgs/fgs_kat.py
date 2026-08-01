@@ -22,10 +22,13 @@ synthesized grain against the injected grain:
                  picture detail with it?  (fails with FGS_KAT_DENOISER=bilateral)
   coarse_detail_pan  the same with the picture panning fractionally
   coarse_detail_move the same with fast pan + rotation + zoom, so displacement
-                 varies across the frame.  These two are the only fixtures whose
-                 content moves at all, and neither reproduces the real-film
-                 ranking of denoiser=motion: see
-                 FINDINGS-2026-08-01-SEPARATOR-WHITENING.md
+                 varies across the frame
+  coarse_detail_occl the same with a field of opaque objects sliding over the
+                 background, so 21-24% of the region per frame is content that
+                 was NOT visible in the previous frame.  Disocclusion is what
+                 separates a motion-compensated denoiser from a spatial one, and
+                 this is the only fixture that reproduces the real-film ranking
+                 of denoiser=motion: see FINDINGS-2026-08-01-SEPARATOR-WHITENING.md
   auto_retain_*  content-aware residual retention on flat and detailed inputs
   dark_luma      grain clipped at legal black; shadow strength + black level
   retain_luma    retain 60% of original luma grain in the encoded base layer
@@ -90,7 +93,8 @@ def apply_spec(spec):
     CLIP_LO, CLIP_HI = spec.get("clip", (0, MAXVAL))
 
 
-def base_luma(shift=0, detail=False, pan=(0.0, 0.0), rot=0.0, zoom=1.0):
+def base_luma(shift=0, detail=False, pan=(0.0, 0.0), rot=0.0, zoom=1.0,
+              occluders=()):
     y = np.empty((H, W), np.float64)
     for i, level in enumerate(np.roll(LEVELS, shift)):
         y[:, i * BAND_W:(i + 1) * BAND_W] = level
@@ -123,7 +127,47 @@ def base_luma(shift=0, detail=False, pan=(0.0, 0.0), rot=0.0, zoom=1.0):
                    + 4.0 * np.sin(2.0 * np.pi * (xx + yy) / 17.0)
                    + 2.0 * np.sin(2.0 * np.pi * yy / 29.0))
         y[32:top - 32, left:right] += texture
+        for ox, oy, ow, oh in occluders:
+            # Opaque foreground with its own incommensurate periods, WRITTEN
+            # OVER the background rather than added to it -- an added layer
+            # would leave the background visible underneath and there would be
+            # nothing to disocclude.
+            x0 = max(left, int(round(ox))); x1 = min(right, int(round(ox)) + ow)
+            y0 = max(32, int(round(oy)));   y1 = min(top - 32, int(round(oy)) + oh)
+            if x1 <= x0 or y1 <= y0:
+                continue
+            fy, fx = np.mgrid[y0:y1, x0:x1]
+            y[y0:y1, x0:x1] = LEVELS[BANDS // 2] + (
+                7.0 * np.sin(2.0 * np.pi * fx / 5.0)
+                + 5.0 * np.sin(2.0 * np.pi * (fx - fy) / 11.0)
+                + 3.0 * np.sin(2.0 * np.pi * fy / 23.0))
     return y
+
+
+def occluder_field(spec, n):
+    """Positions of the moving foreground objects on frame `n`.
+
+    spec["occluders"] is (w, h, speed, nx, ny): an nx-by-ny grid of w-by-h
+    objects sliding horizontally at `speed` px/frame, alternate rows travelling
+    in opposite directions so objects cross rather than moving as one rigid
+    field (a rigid field is just a pan, which the pan fixtures already cover).
+    """
+    field = spec.get("occluders")
+    if not field:
+        return ()
+    w, h, speed, nx, ny = field
+    top, left, right = H // 2, BAND_W, W - BAND_W
+    span_x = max(right - left - w, 1)
+    step_x = (right - left) / max(nx, 1)
+    step_y = (top - 64 - h) / max(ny - 1, 1) if ny > 1 else 0
+    rects = []
+    for row in range(ny):
+        direction = 1 if row % 2 == 0 else -1
+        travel = (speed * n * direction) % (2 * span_x)
+        for col in range(nx):
+            x = left + (col * step_x + travel) % span_x
+            rects.append((x, 32 + row * step_y, w, h))
+    return rects
 
 
 def sigma_map_for(spec, base):
@@ -186,11 +230,12 @@ def generate(test, spec, path, clean_path=None):
             offset = (pan[0] * n, pan[1] * n)
             rot = np.deg2rad(spec.get("rot", 0.0) * n)
             zoom = spec.get("zoom", 1.0) ** n
+            occ = occluder_field(spec, n)
             base = base_luma(spec.get("cut_roll", 6), spec.get("detail", False),
-                             offset, rot, zoom) \
+                             offset, rot, zoom, occ) \
                 + spec.get("cut_offset", 0) \
                 if test in ("cut", "cut_grainy") and n >= CUT_FRAME \
-                else base_luma(0, spec.get("detail", False), offset, rot, zoom)
+                else base_luma(0, spec.get("detail", False), offset, rot, zoom, occ)
             if grainy:
                 unit = correlated_unit_noise(rng, (H, W)) if spec["sigma_y_mode"] == "coarse" \
                     else rng.normal(0.0, 1.0, (H, W))
@@ -417,6 +462,15 @@ TESTS = {
                       "width": 3840, "height": 2160, "frames": 24},
     "coarse_luma":   {"sigma_y_mode": "coarse", "sigma_y": 6.0},
     "detail_luma":   {"sigma_y_mode": "const", "sigma_y": 6.0, "detail": True},
+    # Correlated grain over detail, with a moving OCCLUDING layer.  Every other
+    # fixture here is a single texture layer, static or geometrically
+    # transformed, so every pixel existed somewhere in the previous frame and a
+    # temporal denoiser can in principle find all of it.  Real motion uncovers
+    # content that was never visible, which no temporal predictor can supply --
+    # the case where a motion-compensated denoiser has no fallback and a purely
+    # spatial one is unaffected.  See FINDINGS-2026-08-01-SEPARATOR-WHITENING.md.
+    "coarse_detail_occl": {"sigma_y_mode": "coarse", "sigma_y": 6.0, "detail": True,
+                           "occluders": (110, 90, 26.0, 9, 4)},
     # The combination neither of the two above can test. coarse_luma is
     # correlated grain over flat bands, so nothing is at risk of being pulled
     # into the grain layer; detail_luma has white grain, so a correlation-driven
@@ -598,7 +652,7 @@ def run_test(test, keep):
         if not keep and os.path.exists(src_raw):
             os.remove(src_raw)
     elif test in ("coarse_luma", "coarse_detail", "coarse_detail_pan",
-                  "coarse_detail_move"):
+                  "coarse_detail_move", "coarse_detail_occl"):
         sigma, _ = measure(on, off, range(SKIP, nframes))
         ratio = float(sigma[0].mean() / max(expected[0].mean(), 1e-9))
         adaptive = [m for m in models if m["frame"] >= SKIP and m["reliable"]]
@@ -681,7 +735,7 @@ def run_test(test, keep):
         ok &= check("fine detail survives the cleaned base",
                     separation["detail_transfer_gain"] >= 0.25,
                     f"high-pass transfer {separation['detail_transfer_gain']:.3f} (baseline floor 0.25)")
-        if test in ("coarse_detail_pan", "coarse_detail_move"):
+        if test in ("coarse_detail_pan", "coarse_detail_move", "coarse_detail_occl"):
             # Both edge measures are unusable once the picture moves: the
             # systematic one is a temporal mean, so damage that travels with the
             # picture averages out of it, and the plain one is dominated by
@@ -709,7 +763,8 @@ def run_test(test, keep):
                 ok &= check("auto retention restores at-risk fine detail",
                             separation["detail_transfer_gain"] >= 0.65,
                             f"high-pass transfer {separation['detail_transfer_gain']:.3f} (target 0.65)")
-        elif test not in ("coarse_detail_pan", "coarse_detail_move"):
+        elif test not in ("coarse_detail_pan", "coarse_detail_move",
+                          "coarse_detail_occl"):
             # coarse_detail_pan is excluded deliberately: this guard is plain
             # edge RMSE, which coarse grain left in the base dominates, and the
             # fixture reports it as information above instead.
