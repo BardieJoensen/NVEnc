@@ -145,3 +145,90 @@ spec's 32. The recursion's autocorrelation is a property of the taps alone, but
 its clipping is not, and a gain-4.7 fit saturates the template at sigma 32 --
 which would have hidden the fit's behaviour behind the clipping bug. `clip%`
 reads 0.00 on every row above.
+
+---
+
+# Implemented as `modelsrc=on`, 2026-08-01
+
+`e0ca3d3d`. `kernel_fgs_model_stats` fits each block's mean-plus-plane on the
+source and takes its AR observations from that instead of from
+`residual_at(src, denoised)`. The block plane is fitted cooperatively by the
+same 64 threads that draw the samples, and `fgs_stratified_sample_offset`
+already keeps every AR tap inside the model block, so one plane per block
+covers every pixel it is applied to. Chroma fits a second plane on luma, so
+its co-located-luma tap comes from the same domain as the rest of the model.
+
+## The strength curve had to move with it
+
+A source fit measures the **total** grain. The base still carries whatever the
+denoiser missed, so synthesising the total on top of it over-delivers -- 1.268x
+on Taxi, measured. Subtracting the base's own detrended variance over the same
+sample positions leaves exactly the variance that is missing:
+
+    signal_variance = var(detrended source) - var(detrended base)
+
+This also disposes of the picture contamination that the sensitivity sweep
+above found in the source amplitude. Whatever structure survives the plane fit
+is present in *both* planes -- the denoiser preserves picture, that is its job
+-- so it cancels in the difference rather than inflating the curve. The 7.6%
+over-estimate needed no separate treatment.
+
+## Delivered, against the temporal ground truth
+
+Decoded with dav1d, measured on flat blocks selected once from the source and
+applied unchanged to every arm:
+
+| Taxi Driver | sigma vs truth | lag-1 | lag-2 |
+| --- | ---: | ---: | ---: |
+| source grain (truth) | 1.000 | 0.804 | 0.450 |
+| plain encode, no FGS | 0.540 | 0.856 | 0.654 |
+| `modelsrc=off` | 0.832 | 0.620 | 0.226 |
+| **`modelsrc=on`** | **1.030** | **0.768** | **0.438** |
+
+| Casino | sigma vs truth | lag-1 | lag-2 |
+| --- | ---: | ---: | ---: |
+| source grain (truth) | 1.000 | 0.772 | 0.379 |
+| plain encode, no FGS | 0.788 | 0.838 | 0.598 |
+| `modelsrc=off` | 0.815 | 0.660 | 0.395 |
+| **`modelsrc=on`** | **0.948** | **0.791** | **0.554** |
+
+Amplitude error goes from -17% to +3% on Taxi and -19% to -5% on Casino.
+Lag-1 error goes from -23% to -4% and from -15% to +2%. Casino overshoots
+lag-2 (0.554 against 0.379); its plain encode reads 0.788 amplitude and lag-1
+0.838, so a large part of what is being measured in its flat blocks at this
+rate is codec ringing rather than grain, and the number should be treated as
+softer than Taxi's.
+
+Note the `plain` row on both titles: an encode with no FGS at all keeps only
+54-79% of the grain amplitude and replaces it with something *more* correlated
+than film grain (lag-1 0.84-0.86, lag-2 0.60-0.65). That is ringing and
+blocking, not grain, and it is the reason a whole-frame high-pass estimator
+reads plain encodes as retaining more grain than they do.
+
+Bitrate cost of `modelsrc=on`: +0.8% on Taxi, +0.5% on Casino.
+
+## Interaction with the template clipping fix
+
+`grain_scale_shift` rises from 1 to 2 on Taxi on its own, because the source
+fit's variance gain is higher (3.711 against 2.648). Without `f92922c2` this
+change would have been taxed in proportion to how much correlation it
+recovered -- the exact mechanism that made every previous separator
+improvement backfire. The two fixes have to ship together.
+
+## Safety
+
+KAT is 22/22 with the flag on and with it off. The film grain table produced
+with `modelsrc=off` is **byte-identical** to the one HEAD produces, verified by
+building HEAD separately rather than by inspection.
+
+## Still open
+
+The default is `off` pending the corpus run. What is measured here is fidelity
+to the source's grain statistics, which is not the same as perceived quality,
+and full-reference metrics will get worse because the grain is now the right
+size (-392 SSIMULACRA2 points per unit of retained grain). The compression case
+is the one to press: the denoiser is no longer required to leave a faithful
+residual, so it is free to be more aggressive than `bilateral`, and that is
+where the missed 30-40% target lives. Nothing here has tested a more aggressive
+denoiser under `modelsrc=on` yet -- and that combination, not this commit
+alone, is the actual objective.
