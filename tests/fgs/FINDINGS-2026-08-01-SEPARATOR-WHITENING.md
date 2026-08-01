@@ -10,11 +10,11 @@ separator and the AR fit, and guessed at the AR fit.
 That guess was wrong. Splitting the chain stage by stage puts the entire loss in
 the separator, and the production denoiser is the worst of the three shipped.
 
-The fix already exists, unmerged and off by default. `fft3d` with per-bin noise
-PSD shaping (branch `fgs/fft3d-noise-psd`, `psd=on`) recovers lag-2 retention
-from 0.325 to **0.857** against ground truth and lifts residual capture from
-56.8% to **77.1%** --- better than any shipped denoiser, and for the reason the
-mechanism predicts.
+Of the shipped separators, `motion` is better than the production `bilateral` on
+every axis measured, including picture-detail preservation. `psd=on` on the
+unmerged branch captures more grain still, but a new fixture shows it does so by
+taking real detail --- which is the defect that kept it out of production, now
+reproducible on demand rather than suspected.
 
 ## The chain, on ground truth
 
@@ -133,6 +133,53 @@ counts encoder ringing as grain --- already documented in
 findings in one session. It is also, being a high-pass, blind to precisely the
 coarse-versus-fine distinction that separates these three denoisers. Bilateral
 and motion can read "equal retention" on it while differing 4x in lag-2.
+
+## Grain capture is not free, and `coarse_detail` prices it
+
+Capturing more grain and preserving picture detail are the same operation
+pulling in opposite directions, and no existing fixture could see the trade:
+`coarse_luma` puts correlated grain over flat bands, so there is no detail to
+lose, and `detail_luma` uses white grain, so a correlation-driven filter never
+engages. `FINDINGS-2026-07-31-WIENER-PSD.md` names this gap as its own blind
+spot and as the reason `psd=on` is not in production.
+
+The generator already supported both axes, so the missing fixture is one spec
+entry. `coarse_detail` = correlated grain over the detail pattern:
+
+| arm | capture | detail transfer | systematic edge RMSE | plain edge RMSE |
+| --- | ---: | ---: | ---: | ---: |
+| bilateral (production) | 36% | 0.531 | **1.95 FAIL** | 4.56 |
+| fft3d (NVEnc default) | 41% | 0.487 | 1.44 | 4.62 |
+| **motion** | 40% | **0.693** | **1.43** | **3.36** |
+| fft3d + `psd=on` | **48%** | 0.404 | **2.62 FAIL** | 4.23 |
+
+Read the systematic column, not the plain one. `systematic_edge_bias_rms_8bit`
+is a temporal mean bias, so random grain left in the base cancels out of it and
+what remains is damage landing in the same place every frame. Plain edge RMSE is
+dominated by leftover coarse grain --- which is exactly what a separator that
+struggles with coarse grain leaves behind --- and so fails every arm while
+saying nothing about detail. `auto_retain_detail` already made this distinction
+for the same reason; `coarse_detail` inherits it.
+
+**The production setting is the worst arm on every axis.** bilateral captures
+the least grain, retains the least correlation (lag-2 0.211 against ground
+truth), *and* does the most repeatable detail damage of the three shipped
+denoisers. It is the only shipped arm that fails the detail guard.
+
+**`psd=on` is a real gain with a real cost.** It buys the highest capture in the
+table and pays 1.44 -> 2.62 in systematic edge damage, an 82% increase. That is
+the blind spot behaving exactly as the branch's own document predicted, and it
+is a sufficient reason to keep it off by default. It is now a failing test
+rather than a caveat in prose.
+
+`detail_luma` is identical with `psd=on` and `psd=off` --- same synthesised
+per-band sigmas, same edge RMSE 1.89 --- confirming the intended no-op: white
+grain gives rho near zero, the PSD shape stays flat, and the filter behaves as
+it did before. (That was checked for the PSD arm only, not across denoisers.)
+
+Caveat on the threshold: the 1.5 limit is inherited from `auto_retain_detail`
+and fft3d clears it by 0.06, so it is provisional and should be re-derived. The
+82% relative movement is not threshold-sensitive; the pass/fail labels are.
 
 ## What this does not yet establish
 
