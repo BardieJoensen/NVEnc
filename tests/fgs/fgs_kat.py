@@ -18,6 +18,10 @@ synthesized grain against the injected grain:
   const_4k10_pq  const_luma at 4K 10-bit with PQ/BT.2020 signalling
   coarse_luma    spatially-correlated grain (35mm proxy), capture-ratio guard
   detail_luma    static fine detail plus grain; separation/detail-loss probe
+  coarse_detail  correlated grain OVER detail: does chasing coarse grain take
+                 picture detail with it?  (fails with FGS_KAT_DENOISER=bilateral)
+  coarse_detail_pan  the same with the picture panning fractionally; the only
+                 fixture here whose content moves at all
   auto_retain_*  content-aware residual retention on flat and detailed inputs
   dark_luma      grain clipped at legal black; shadow strength + black level
   retain_luma    retain 60% of original luma grain in the encoded base layer
@@ -683,7 +687,10 @@ def run_test(test, keep):
                 ok &= check("auto retention restores at-risk fine detail",
                             separation["detail_transfer_gain"] >= 0.65,
                             f"high-pass transfer {separation['detail_transfer_gain']:.3f} (target 0.65)")
-        else:
+        elif test != "coarse_detail_pan":
+            # coarse_detail_pan is excluded deliberately: this guard is plain
+            # edge RMSE, which coarse grain left in the base dominates, and the
+            # fixture reports it as information above instead.
             ok &= check("edge/detail distortion remains bounded",
                         separation["edge_clean_rmse_8bit"] <= 3.0,
                         f"edge RMSE {separation['edge_clean_rmse_8bit']:.2f} (8-bit units, limit 3.0)")
