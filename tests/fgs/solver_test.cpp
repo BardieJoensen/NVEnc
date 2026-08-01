@@ -143,6 +143,25 @@ void testSourceCorrelationRegularizer() {
         "rejected source fit is exposed in diagnostics");
 }
 
+void testSourceTemplateGain() {
+    FilmGrainGpuStats stats = {};
+    fillHorizontalPlane(stats.plane[0], 6.0, 0.55);
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 params;
+    NVEncFilmGrainDiagnostics diag;
+    expect(build_film_grain_params(
+        stats, 8, false, true, params, diag, 0.98),
+        "unclamped source fit normalizes realized template gain");
+    expectNear(diag.sourceArScale, 1.0, 1e-6,
+        "template-gain normalization does not change in-bound correlation");
+    expect(std::abs(diag.sourceStrengthGain - 1.0f) > 1e-4f,
+        "source fit exposes quantized-template strength correction");
+    expect(diag.sourceStrengthGain >= 1.0f / FGS_SOURCE_MAX_STRENGTH_GAIN
+        && diag.sourceStrengthGain <= FGS_SOURCE_MAX_STRENGTH_GAIN,
+        "source template-gain correction stays bounded");
+    expectNear(diag.noiseStdDev[0], 6.0, 0.05,
+        "source template-gain normalization preserves target sigma");
+}
+
 void testWhiteLuma() {
     FilmGrainGpuStats stats = {};
     fillWhitePlane(stats.plane[0], 6.0, false);
@@ -315,6 +334,7 @@ void testStrengthLut() {
 int main() {
     testStratifiedSampling();
     testSourceCorrelationRegularizer();
+    testSourceTemplateGain();
     testWhiteLuma();
     testRampLuma();
     testChromaCorrelationClamp();

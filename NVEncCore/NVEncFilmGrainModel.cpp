@@ -338,56 +338,42 @@ static bool regularize_source_luma(const FilmGrainGpuPlaneStats& stats,
     // remain byte-identical.  A negative ceiling means source regularisation
     // was not requested.
     if (maxCorrelation < 0.0) return true;
-    diagnostics.sourceModelCorrelation = static_cast<float>(
-        quantized_luma_stats(solved.coeffs, 1.0, arShift).correlation);
-    if (diagnostics.sourceModelCorrelation <= maxCorrelation) return true;
-
-    double low = 0.0;
-    double high = 1.0;
-    for (int iteration = 0; iteration < 10; ++iteration) {
-        const double middle = 0.5 * (low + high);
-        if (quantized_luma_stats(
-            solved.coeffs, middle, arShift).correlation <= maxCorrelation) low = middle;
-        else high = middle;
-    }
-
-    const double observations = static_cast<double>(stats.observations);
-    if (!(observations > 0.0)) return false;
-    double targetVariance = 0.0;
-    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
-        targetVariance += static_cast<double>(
-            stats.ata[tri_index(FGS_AR_COEFFS, i, i)]) / observations;
-    }
-    targetVariance /= FGS_AR_COEFFS;
-    std::vector<double> regularized = solved.coeffs;
-    for (auto& coefficient : regularized) coefficient *= low;
-    double residualVariance = targetVariance;
-    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
-        residualVariance -= 2.0 * regularized[i]
-            * static_cast<double>(stats.atb[i]) / observations;
-        for (int j = 0; j < FGS_AR_COEFFS; ++j) {
-            const int lo = std::min(i, j);
-            const int hi = std::max(i, j);
-            residualVariance += regularized[i] * regularized[j]
-                * static_cast<double>(stats.ata[tri_index(FGS_AR_COEFFS, lo, hi)])
-                / observations;
+    double coefficientScale = 1.0;
+    auto quantized = quantized_luma_stats(solved.coeffs, coefficientScale, arShift);
+    if (quantized.correlation > maxCorrelation) {
+        double low = 0.0;
+        double high = 1.0;
+        for (int iteration = 0; iteration < 10; ++iteration) {
+            const double middle = 0.5 * (low + high);
+            if (quantized_luma_stats(
+                solved.coeffs, middle, arShift).correlation <= maxCorrelation) low = middle;
+            else high = middle;
         }
+        coefficientScale = low;
+        quantized = quantized_luma_stats(solved.coeffs, coefficientScale, arShift);
     }
-    const double regressionGain = std::max(1.0, std::sqrt(
-        std::max(1e-6, targetVariance) / std::max(1e-6, residualVariance)));
-    const auto quantized = quantized_luma_stats(solved.coeffs, low, arShift);
+
+    // The regression gain describes continuous fitted coefficients over an
+    // unbounded stationary process.  The decoder receives quantized taps and
+    // realizes them over AV1's finite 82x73 template.  Use the gain of that
+    // actual template for EVERY source fit, not only fits whose correlation
+    // needed clamping; otherwise an ordinary quantization/template mismatch
+    // lands directly on the delivered grain amplitude.
     const double strengthGain = solved.templateGain / std::max(1e-6, quantized.gain);
-    diagnostics.sourceArScale = static_cast<float>(low);
+    diagnostics.sourceArScale = static_cast<float>(coefficientScale);
     diagnostics.sourceStrengthGain = static_cast<float>(strengthGain);
     diagnostics.sourceModelCorrelation = static_cast<float>(quantized.correlation);
-    if (!std::isfinite(regressionGain) || !std::isfinite(quantized.gain)
-        || !std::isfinite(strengthGain) || regressionGain > 16.0
-        || quantized.gain > 16.0 || strengthGain > FGS_SOURCE_MAX_STRENGTH_GAIN) {
+    const double minStrengthGain = 1.0 / FGS_SOURCE_MAX_STRENGTH_GAIN;
+    if (!std::isfinite(quantized.gain) || !std::isfinite(strengthGain)
+        || quantized.gain > 16.0 || strengthGain < minStrengthGain
+        || strengthGain > FGS_SOURCE_MAX_STRENGTH_GAIN) {
         diagnostics.sourceRegularizationRejected = true;
         return false;
     }
 
-    solved.coeffs = std::move(regularized);
+    if (coefficientScale < 1.0 - 1e-12) {
+        for (auto& coefficient : solved.coeffs) coefficient *= coefficientScale;
+    }
     solved.arGain = quantized.gain;
     solved.templateGain = quantized.gain;
     for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
@@ -457,15 +443,16 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     const int provisionalArShift = choose_ar_shift(solved);
     if (!regularize_source_luma(stats.plane[0], solved[0], maxLumaCorrelation,
         provisionalArShift, diagnostics)) return false;
-    if (diagnostics.sourceArScale < 1.0f - 1e-6f) {
-        // Chroma's final predictor is luma.  Refit it after changing the luma
-        // model so its normal equation and the shared coefficient shift stay
-        // consistent with the table that will actually be emitted.
+    const bool sourceTemplateAdjusted = maxLumaCorrelation >= 0.0;
+    if (sourceTemplateAdjusted) {
+        // Chroma's final predictor is luma.  Refit it after replacing luma's
+        // analytical regression gain with its realized quantized-template
+        // gain (and, when needed, changing the luma coefficients), so its
+        // normalization matches the table that will actually be emitted.
         solveChroma();
     }
     const int postRegularizationArShift = choose_ar_shift(solved);
-    if (diagnostics.sourceArScale < 1.0f - 1e-6f
-        && postRegularizationArShift < provisionalArShift) {
+    if (sourceTemplateAdjusted && postRegularizationArShift < provisionalArShift) {
         // A chroma refit may theoretically require a wider shared coefficient
         // range.  The luma decision was evaluated at the provisional shift;
         // reject instead of silently requantizing it more coarsely.
@@ -475,13 +462,13 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     // Scaling luma down can make a finer shift possible, but changing shifts
     // would move every coefficient onto a new quantization stair.  Keep the
     // shift at which the bounded model and its realised gain were measured.
-    const int arShift = diagnostics.sourceArScale < 1.0f - 1e-6f
+    const int arShift = sourceTemplateAdjusted
         ? provisionalArShift : postRegularizationArShift;
     if (maxLumaCorrelation >= 0.0) {
         const auto quantized = quantized_luma_stats(
             solved[0].coeffs, 1.0, arShift);
         diagnostics.sourceModelCorrelation = static_cast<float>(quantized.correlation);
-        if (diagnostics.sourceArScale < 1.0f - 1e-6f
+        if (sourceTemplateAdjusted
             && (std::abs(quantized.gain - solved[0].templateGain)
                     > 0.01 * std::max(1.0, solved[0].templateGain))) {
             diagnostics.sourceRegularizationRejected = true;
