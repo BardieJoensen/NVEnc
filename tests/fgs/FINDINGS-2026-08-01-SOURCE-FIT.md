@@ -221,6 +221,32 @@ KAT is 22/22 with the flag on and with it off. The film grain table produced
 with `modelsrc=off` is **byte-identical** to the one HEAD produces, verified by
 building HEAD separately rather than by inspection.
 
+## Determinism and full-fixture recheck, 2026-08-01
+
+The candidate was run three times from the same 24-frame 4K Taxi Driver source,
+with identical arguments, for both `bilateral,modelsrc=on` and
+`motion,modelsrc=on`.  This was checked below the Matroska container layer so a
+random SegmentUID cannot create a false difference:
+
+| arm | table SHA-256s | copied video-stream MD5s | byte sizes |
+| --- | --- | --- | --- |
+| bilateral + source fit | 3/3 identical | 3/3 identical | 3/3 identical |
+| motion + source fit | 3/3 identical | 3/3 identical | 3/3 identical |
+
+The exact hashes were `58698059...4164` / `3cc72761...1374` for bilateral and
+`c90be6ad...a5f6` / `3a862932...6b51` for motion.  The candidate binary SHA-256
+was `75eb0c01...ba9`.  Source fitting is therefore deterministic in both the
+model it writes and the encoded video it drives; this run gives no evidence of
+an atomic-order or temporal-state race.
+
+The complete GPU KAT was also rerun with `FGS_KAT_EXTRA=modelsrc=off` and
+`FGS_KAT_EXTRA=modelsrc=on`: **22/22 pass in both modes**.  On the known
+correlated-grain control, delivered capture moves from 60% (3.59 / 6.01) to
+101% (6.05 / 6.01).  The fine-detail, moving-detail, disocclusion, scene-cut,
+HDR, chroma, retention and clean-input checks all remain inside their existing
+bounds.  Source fit changes the model and synthesis as intended; it does not
+change the base, so this does not clear motion's separate disocclusion risk.
+
 ## Still open
 
 The default is `off` pending the corpus run. What is measured here is fidelity
