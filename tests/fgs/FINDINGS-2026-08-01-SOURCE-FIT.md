@@ -232,3 +232,70 @@ residual, so it is free to be more aggressive than `bilateral`, and that is
 where the missed 30-40% target lives. Nothing here has tested a more aggressive
 denoiser under `modelsrc=on` yet -- and that combination, not this commit
 alone, is the actual objective.
+
+---
+
+# The compression target is met: `denoiser=motion,modelsrc=on`, 2026-08-01
+
+**NOT YET VALIDATED PERCEPTUALLY. Do not ship on this alone.**
+
+The point of decoupling the model from the residual was that the denoiser stops
+having to leave a faithful residual and is free to be more aggressive. Testing
+that directly on Taxi Driver, qvbr 29 preset p4, against a 3.41 MB plain encode,
+with grain measured on 412 static flat blocks against the temporal truth
+(sigma 7.237, lag-1 0.804, lag-2 0.450):
+
+| arm | MB | vs plain | sigma | lag-1 | lag-2 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| bilateral `modelsrc=off` | 2.98 | -12.6% | 0.832 | 0.620 | 0.226 |
+| bilateral `modelsrc=on` | 3.00 | -11.9% | 1.030 | 0.768 | 0.438 |
+| fft3d `modelsrc=off` | 2.91 | -14.6% | 0.866 | 0.638 | 0.216 |
+| fft3d `modelsrc=on` | 2.93 | -14.1% | 0.971 | 0.751 | 0.398 |
+| motion `modelsrc=off` | 1.86 | -45.4% | 0.887 | 0.671 | 0.297 |
+| **motion `modelsrc=on`** | **1.89** | **-44.6%** | **1.023** | **0.753** | **0.402** |
+
+`motion` + `modelsrc=on` saves **44.6%** against the plain encode while
+delivering grain that matches the source's statistics as well as bilateral
+does. The corpus target was 30-40% on heavy grain and the general library was
+managing 17.4%.
+
+`modelsrc` costs 0.5-0.8% of bitrate on every denoiser and buys back roughly
+half the missing correlation on all three, so its benefit is independent of
+which separator is used.
+
+## The catch, and it is a real one
+
+`motion` was previously rejected for damaging the picture, and **this does not
+address that**. The model fix changes what is signalled, not what the denoiser
+does to the base. The disocclusion failure is unchanged and is structural:
+`coarse_detail_occl` still ranks motion worst by base-vs-ideal edge RMSE
+(6.79 against bilateral's 5.11), because content uncovered by a moving object
+was never in the previous frame and no temporal predictor can supply it.
+
+Detail damage in the base, on the most textured decile of Taxi's blocks chosen
+once from the source and applied unchanged to every arm:
+
+| base | detail corr | HF energy kept | RMSE vs source |
+| --- | ---: | ---: | ---: |
+| bilateral | 0.9601 | 0.9676 | 5.04 |
+| fft3d | 0.9534 | 0.9478 | 5.86 |
+| motion | 0.9621 | 0.9668 | **6.72** |
+
+Motion is **best** on detail correlation and HF energy and **worst** on RMSE.
+That combination is the signature of correctly-shaped detail in the wrong
+place -- ghosting and displacement, which correlation and energy ratios do not
+see and absolute error does. It is the same disagreement
+`detail_transfer_gain` shows on the moving fixtures, and it is why neither of
+those measures may be used alone to rank motion.
+
+So the 44.6% is real and the fidelity is real, but the damage motion does is
+also real and is not measured by anything here. **The remaining question is
+entirely perceptual and needs the playback A/B.**
+
+## Where this leaves the earlier "motion is catastrophic" result
+
+Suspended, not overturned. Motion's Butteraugli p95 of 53.86 was measured
+before `grain_scale_shift` and before `modelsrc`, under a regime that taxed
+arms in proportion to the grain correlation they preserved -- and motion
+preserved the most. It has not been re-measured since either fix. That number
+should not be quoted again until it is.
