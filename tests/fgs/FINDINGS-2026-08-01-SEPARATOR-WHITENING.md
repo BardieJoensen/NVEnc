@@ -10,11 +10,17 @@ separator and the AR fit, and guessed at the AR fit.
 That guess was wrong. Splitting the chain stage by stage puts the entire loss in
 the separator, and the production denoiser is the worst of the three shipped.
 
-Of the shipped separators, `motion` is better than the production `bilateral` on
-every axis measured, including picture-detail preservation. `psd=on` on the
-unmerged branch captures more grain still, but a new fixture shows it does so by
-taking real detail --- which is the defect that kept it out of production, now
-reproducible on demand rather than suspected.
+`psd=on` on the unmerged branch captures more grain still, but a new fixture
+shows it does so by taking real detail --- the defect that kept it out of
+production, now reproducible on demand rather than suspected.
+
+> **CORRECTION, same session.** An earlier version of this document concluded
+> from the fixtures that `motion` beats the production `bilateral` "on every
+> axis measured". Real 4K film says the opposite, decisively, and the fixture
+> conclusion was wrong. See "The fixtures are all static" below. The separator
+> localisation and the PSD strength results are unaffected --- they are
+> measured on residuals and on real film --- but no denoiser recommendation
+> survives.
 
 ## The chain, on ground truth
 
@@ -161,10 +167,10 @@ struggles with coarse grain leaves behind --- and so fails every arm while
 saying nothing about detail. `auto_retain_detail` already made this distinction
 for the same reason; `coarse_detail` inherits it.
 
-**The production setting is the worst arm on every axis.** bilateral captures
-the least grain, retains the least correlation (lag-2 0.211 against ground
-truth), *and* does the most repeatable detail damage of the three shipped
-denoisers. It is the only shipped arm that fails the detail guard.
+**On this fixture** bilateral captures the least grain, retains the least
+correlation (lag-2 0.211 against ground truth), *and* does the most repeatable
+detail damage of the three shipped denoisers. That reads as an indictment of the
+production setting. It is not one, for the reason in the next section.
 
 **`psd=on` is a real gain with a real cost.** It buys the highest capture in the
 table and pays 1.44 -> 2.62 in systematic edge damage, an 82% increase. That is
@@ -234,17 +240,68 @@ shipped `psd=on` setting is strictly dominated by a weaker one: worse on both
 axes than 0.75, and it is the setting the earlier 41% -> 45% evaluation was
 made at. Whatever else is decided, the strength is mistuned.
 
-**The comparison that matters for production is against what production already
-ships,** not against an inherited threshold. `bilateral` --- today's setting ---
-scores systematic edge **1.95**. Quarter-strength shaping scores **1.62**: less
-repeatable detail damage than the current production denoiser, with 46% capture
-against its 36% and materially better correlation. On this fixture the
-production setting is not a conservative choice.
+Quarter-strength shaping scores systematic edge **1.62** against `bilateral`'s
+**1.95** on the same fixture, with 46% capture against its 36%. That comparison
+is worth recording but must not be leaned on: it is a static-fixture number, and
+the section below shows static fixtures inverting the denoiser ranking outright.
 
-That does not make it shippable. `coarse_detail` is one synthetic fixture, the
-1.5 threshold is provisional, and the branch's own gate --- the texture report on
-real film plus a playback A/B --- has not been run. But "PSD shaping damages
-detail" is now a strength setting rather than a property of the idea.
+What the sweep does establish, and what does not depend on the fixture being
+representative, is the *shape* of the trade within the PSD arm: detail cost
+grows faster than grain benefit, and full strength is dominated by 0.75 on both
+axes. "PSD shaping damages detail" is a statement about a strength setting
+rather than about the idea. Whether any strength is worth shipping needs the
+branch's own gate --- the texture report on real film plus a playback A/B ---
+which has not been run.
+
+## The fixtures are all static, and it inverted the denoiser ranking
+
+Matched-VBR, 288 frames, 4K, all three arms scored by the same code path in one
+session. The bilateral arm reproduces `FINDINGS-2026-07-31-ROUTING.md` to two
+decimals (Casino SSIMU2 60.19 against 60.18, Taxi 18.40 against 18.39), so the
+harness is consistent and the comparison is sound:
+
+| title | arm | MB | VMAF | VMAF min | SSIMU2 | SSIMU2 p5 | Butt 2n | Butt p95 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Casino | plain | 49.9 | **97.18** | **94.69** | **63.64** | 53.10 | **1.204** | 9.09 |
+| Casino | bilateral | 44.8 | 94.92 | 92.88 | 60.19 | **55.17** | 1.489 | **7.05** |
+| Casino | motion | 44.2 | 90.61 | 78.26 | 33.34 | 2.92 | 2.393 | **40.33** |
+| Scarface | plain | 49.6 | **92.05** | 88.41 | -0.22 | -15.75 | **2.799** | 12.99 |
+| Scarface | bilateral | 49.4 | 90.82 | **90.01** | **1.63** | **-4.40** | 3.007 | **9.83** |
+| Scarface | motion | 46.1 | 89.27 | 87.02 | -14.25 | -22.42 | 3.456 | **38.15** |
+| Taxi | plain | 50.7 | **94.25** | **91.96** | **29.31** | 8.93 | **2.278** | 13.77 |
+| Taxi | bilateral | 51.0 | 89.72 | 88.27 | 18.40 | **10.94** | 2.746 | **10.88** |
+| Taxi | motion | 50.2 | 86.84 | 84.94 | -6.46 | -18.16 | 3.459 | **23.10** |
+| Shining | plain | 51.2 | **98.26** | **96.07** | **41.81** | 24.63 | **1.811** | 8.97 |
+| Shining | bilateral | 47.1 | 96.37 | 94.76 | 34.27 | **25.16** | 2.251 | **8.63** |
+| Shining | motion | 46.6 | 88.51 | 66.75 | 6.09 | -37.32 | 3.822 | **53.86** |
+
+**`motion` is far worse on real film, and the metric-bias defence does not
+apply to it.** That defence says synthesis depresses *mean* metrics through
+pixel misalignment while the *tails* improve, and it is why bilateral's mean
+losses were accepted --- bilateral does win SSIMULACRA2 p5 and Butteraugli p95
+on all four titles. `motion` loses both: Butteraugli p95 goes 7.05 -> 40.33 on
+Casino and 8.63 -> 53.86 on Shining, 4-6x worse than the arm it is supposed to
+beat. Losing the tails as well as the mean is the signature of real damage, not
+of measurement bias.
+
+**The cause is in the fixture suite, not in the measurement.** `base_luma`
+returns the identical picture for every frame; only the grain is redrawn. Apart
+from a hard cut in the `cut` fixtures, **every KAT fixture is a static image**.
+That is the best possible case for a motion-compensated denoiser --- perfect
+temporal prediction, nothing to compensate --- and it never occurs in film.
+`motion` was not measured on the thing it is worst at.
+
+This is the same class of blind spot as the one `coarse_detail` was just added
+to close, and it caught this work in the same session: the fixture ranking was
+written up as an indictment of the production setting before the real-film arm
+had finished running. The correct reading is that **`bilateral` is defensible on
+real film and the fixture evidence against it was an artifact.**
+
+It also puts a boundary on the rest of this document. Claims measured on
+residuals and on real film --- the separator localisation, the ACF chain, the
+Taxi/Casino numbers --- stand. Claims resting only on static fixtures, including
+the whole `coarse_detail` table, need a moving-content equivalent before they
+support any decision. The PSD strength sweep is in that category.
 
 ## What this does not yet establish
 
