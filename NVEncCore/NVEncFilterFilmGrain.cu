@@ -468,6 +468,15 @@ struct FilmGrainBlockPlane {
     float mean;
     float slopeX;
     float slopeY;
+    // Detrended variance over EVERY pixel of the block, not just the AR
+    // samples.  The AR solve can only afford 64 sparse observations per block
+    // -- it costs 25 predictor loads each -- but a variance costs one load, and
+    // taking it from the same 64 samples throws away 94% of the evidence for
+    // no saving.  In the independent-sample reference case, 64 samples give a
+    // variance estimate about four times noisier than all 1024.  That noise
+    // lands directly on the strength curve after subtracting the base variance
+    // and clamping the result at zero.
+    float variance;
     int x0, y0, width, height;
 };
 
@@ -476,7 +485,7 @@ __device__ inline void fit_block_plane(const uint8_t *src, const int srcPitch,
     const int x0, const int y0, const int blockW, const int blockH, const int component,
     const int tid, const int threads, float *reduce, FilmGrainBlockPlane& plane) {
     const int count = blockW * blockH;
-    float sum = 0.0f, sumX = 0.0f, sumY = 0.0f, sumXX = 0.0f, sumYY = 0.0f;
+    float sum = 0.0f, sumX = 0.0f, sumY = 0.0f, sumXX = 0.0f, sumYY = 0.0f, sumVV = 0.0f;
     for (int index = tid; index < count; index += threads) {
         const int lx = index % blockW;
         const int ly = index / blockW;
@@ -489,16 +498,18 @@ __device__ inline void fit_block_plane(const uint8_t *src, const int srcPitch,
         sumY += value * yn;
         sumXX += xn * xn;
         sumYY += yn * yn;
+        sumVV += value * value;
     }
     reduce[tid] = sum;
     reduce[threads + tid] = sumX;
     reduce[2 * threads + tid] = sumY;
     reduce[3 * threads + tid] = sumXX;
     reduce[4 * threads + tid] = sumYY;
+    reduce[5 * threads + tid] = sumVV;
     __syncthreads();
     for (int stride = threads / 2; stride > 0; stride >>= 1) {
         if (tid < stride) {
-            for (int k = 0; k < 5; ++k) {
+            for (int k = 0; k < 6; ++k) {
                 reduce[k * threads + tid] += reduce[k * threads + tid + stride];
             }
         }
@@ -507,6 +518,14 @@ __device__ inline void fit_block_plane(const uint8_t *src, const int srcPitch,
     plane.mean = reduce[0] / fmaxf(static_cast<float>(count), 1.0f);
     plane.slopeX = reduce[threads] / fmaxf(reduce[3 * threads], 1e-6f);
     plane.slopeY = reduce[2 * threads] / fmaxf(reduce[4 * threads], 1e-6f);
+    // The basis {1, xn, yn} is orthogonal over the block -- sum(xn), sum(yn)
+    // and sum(xn*yn) are all exactly zero -- so the detrended variance follows
+    // from the same accumulators without a second pass over the pixels:
+    //   E[d^2] = E[v^2] - mean^2 - slopeX^2 E[xn^2] - slopeY^2 E[yn^2]
+    const float invCount = 1.0f / fmaxf(static_cast<float>(count), 1.0f);
+    plane.variance = fmaxf(0.0f, reduce[5 * threads] * invCount - plane.mean * plane.mean
+        - plane.slopeX * plane.slopeX * reduce[3 * threads] * invCount
+        - plane.slopeY * plane.slopeY * reduce[4 * threads] * invCount);
     plane.x0 = x0;
     plane.y0 = y0;
     plane.width = blockW;
@@ -544,11 +563,10 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
     __shared__ int predictors[64][coeffCount];
     __shared__ int values[64];
     __shared__ uint8_t valid[64];
-    __shared__ float planeReduce[5 * 64];
+    __shared__ float planeReduce[6 * 64];
     __shared__ FilmGrainBlockPlane blockPlane;
     __shared__ FilmGrainBlockPlane lumaPlane;
     __shared__ FilmGrainBlockPlane basePlane;
-    __shared__ int baseValues[64];
 
     const int modelBlock = chroma ? FGS_BLOCK_SIZE / 2 : FGS_BLOCK_SIZE;
     const int x0 = bx * modelBlock;
@@ -632,9 +650,6 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
             ? detrended_at<Type, shift, components>(src, srcPitch, x, y, component, blockPlane)
             : residual_at<Type, shift, components>(
                 src, srcPitch, denoised, denoisedPitch, x, y, component);
-        baseValues[tid] = modelFromSource
-            ? detrended_at<Type, shift, components>(denoised, denoisedPitch, x, y, component, basePlane)
-            : 0;
     } else {
         // Zero an unusable sample instead of testing valid[] inside the
         // accumulation loops below.  A zero predictor contributes exactly
@@ -644,7 +659,6 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
             predictors[tid][i] = 0;
         }
         values[tid] = 0;
-        baseValues[tid] = 0;
     }
     __syncthreads();
 
@@ -689,8 +703,6 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
     if (tid == 0) {
         int64_t residualSum = 0;
         uint64_t residualSumSq = 0;
-        int64_t baseSum = 0;
-        uint64_t baseSumSq = 0;
         int64_t predSum = 0;
         uint64_t predSumSq = 0;
         unsigned int sampleCount = 0;
@@ -699,9 +711,6 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
             const int value = values[sample];
             residualSum += value;
             residualSumSq += static_cast<uint64_t>(static_cast<int64_t>(value) * value);
-            const int baseValue = baseValues[sample];
-            baseSum += baseValue;
-            baseSumSq += static_cast<uint64_t>(static_cast<int64_t>(baseValue) * baseValue);
             if (chroma) {
                 const int pred = predictors[sample][coeffCount - 1];
                 predSum += pred;
@@ -719,10 +728,13 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
         double variance = fmax(0.0,
             static_cast<double>(residualSumSq) / samples - meanResidual * meanResidual);
         if (modelFromSource) {
-            const double meanBase = static_cast<double>(baseSum) / samples;
-            const double baseVariance = fmax(0.0,
-                static_cast<double>(baseSumSq) / samples - meanBase * meanBase);
-            variance = fmax(0.0, variance - baseVariance);
+            // Strength comes from every pixel of the block, not from the 64 AR
+            // samples.  The AR fit has to stay sparse because each observation
+            // costs 25 predictor loads, but a variance costs one, so there is
+            // no reason to keep the much noisier sparse estimator for the one
+            // quantity that sets the signalled grain amplitude.
+            variance = fmax(0.0, static_cast<double>(blockPlane.variance)
+                - static_cast<double>(basePlane.variance));
         }
         const int maxValue = (1 << bitDepth) - 1;
         const int bin = min(FGS_STRENGTH_BINS - 1, max(0,
