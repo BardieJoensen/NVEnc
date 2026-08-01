@@ -362,6 +362,75 @@ Taxi/Casino numbers --- stand. Claims resting only on static fixtures, including
 the whole `coarse_detail` table, need a moving-content equivalent before they
 support any decision. The PSD strength sweep is in that category.
 
+## PSD on real film: a net loss at every strength
+
+The PSD arm had never been measured on anything but synthetic fixtures. Matched
+VBR, 288 frames, 4K, same harness as every other arm:
+
+| title | arm | MB | VMAF | SSIMU2 | SSIMU2 p5 | Butt p95 | SSIM | ret |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Casino | fft3d | 44.5 | **95.09** | **52.08** | **45.63** | **8.84** | **0.9987** | 0.930 |
+| Casino | psd 0.25 | 43.8 | 94.26 | 47.38 | 41.70 | 9.53 | 0.9982 | 0.930 |
+| Casino | psd 0.50 | 43.1 | 93.33 | 43.47 | 38.11 | 10.36 | 0.9976 | 0.930 |
+| Casino | psd 1.00 | 42.9 | 91.97 | 40.20 | 34.60 | 12.54 | 0.9970 | 0.911 |
+| Taxi | fft3d | 51.1 | **92.04** | **4.48** | **-1.26** | **12.66** | **0.9967** | 0.935 |
+| Taxi | psd 1.00 | 50.7 | 86.14 | -28.42 | -32.88 | 19.53 | 0.9895 | 0.911 |
+| Shining | fft3d | 46.1 | **97.19** | **23.41** | **17.15** | **8.98** | **0.9990** | 1.177 |
+| Shining | psd 1.00 | 43.7 | 94.29 | 8.46 | 2.24 | 12.54 | 0.9977 | 1.185 |
+
+**Every metric degrades monotonically with shaping strength, and retention does
+not improve.** Casino's retention is 0.930 at every strength; Taxi's falls.
+Bytes drop, so the base is getting cleaner --- but what is being removed is not
+turning into signalled grain.
+
+That is the opposite of the fixture result, where shaping lifted capture from
+41% to 48%, and it has a straightforward explanation. `coarse_luma` is roughly
+half flat bands, where a shape derived from flat grainy blocks is correct. Real
+film has very little genuinely flat area, so the same shape is applied almost
+everywhere to blocks that are mostly picture, and the detail damage
+`coarse_detail` isolated dominates the result.
+
+**So PSD is not the lever.** It was built on a real mechanism --- the scalar
+sigma does assert white noise, and that assertion is wrong --- but the
+implementable form of the fix costs more picture than it recovers grain on real
+content. Tuning the strength down does not rescue it: the metrics degrade
+monotonically from the first step, and `rho=0.25` is already worse than off.
+
+## A second amplitude loss, downstream of the fit
+
+Separating the two stages on `coarse_luma` shows the residual is not the only
+loss. `capture` is end-to-end synthesised sigma over injected; `residual` is what
+the separator extracted; the last column is what survives the fit and synthesis:
+
+| arm | residual / injected | capture / injected | **synth / residual** | AR variance gain |
+| --- | ---: | ---: | ---: | ---: |
+| bilateral | 0.446 | 0.36 | **0.81** | 7.3 |
+| fft3d | 0.568 | 0.41 | **0.72** | 11.5 |
+| motion | 0.649 | 0.40 | **0.62** | 11.7 |
+| libaom, ideal clean base | 1.000 | 0.463 | **0.46** | --- |
+
+Even handed a *perfect* residual --- libaom fitting the true grain against the
+true clean base --- synthesis delivers 46% of the amplitude. That is the 46.3%
+"model ceiling" recorded in `FINDINGS-2026-07-31-WIENER-PSD.md`, but read this
+way it is not obviously a format limit: it is a second loss of the same size as
+the separator's, and it is unexplained.
+
+The loss tracks the AR variance gain of the fitted model, measured by running
+the spec's recursion over the coefficients (`ar_acf.py`): gain 7.3 loses 19%,
+gain 11.5 loses 28%, gain 11.7 loses 38%, and the ideal-clean case --- the most
+correlated residual, so the highest gain --- loses 54%. Fine grain, where the AR
+gain is near 1, loses nothing: `detail_luma` synthesises at 0.98-1.02.
+
+This is the signature of a gain-normalisation error, and it is the same class as
+the 2026-07-29 fixed-lattice bug, which inflated the fitted AR gain and halved
+signalled strength. That one was found and corrected; this looks like a
+remainder of the same kind, invisible on white grain because the gain is 1 there.
+
+**Not established.** The correlation is four points and the mechanism has not
+been traced in the code. But it is a specific, testable claim --- synthesised
+amplitude should be independent of AR gain and is not --- and if it holds it is
+a larger effect than anything the separator does.
+
 ## What this does not yet establish
 
 The separator is localised; the deployment decision is not made. `motion` costs
