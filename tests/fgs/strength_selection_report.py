@@ -141,15 +141,25 @@ def block_variances(frame):
     return (residual * residual).mean(axis=(-2, -1))
 
 
-def measure(source, next_source, clean, next_clean, blocks):
+def strength_variance_fields(source, next_source, clean, next_clean):
+    """Calculate each full-frame block statistic once for all masks/bands."""
+    return {
+        "source": block_variances(source),
+        "base": block_variances(clean),
+        "truth": block_variances((source - next_source) / math.sqrt(2.0)),
+        "leak": block_variances((clean - next_clean) / math.sqrt(2.0)),
+    }
+
+
+def measure_strength_fields(fields, blocks):
     if not blocks:
         return None
-    source_var = block_variances(source)
-    base_var = block_variances(clean)
-    temporal_var = block_variances((source - next_source) / math.sqrt(2.0))
-    base_temporal_var = block_variances((clean - next_clean) / math.sqrt(2.0))
     rows = np.asarray([row for row, _col in blocks])
     cols = np.asarray([col for _row, col in blocks])
+    source_var = fields["source"]
+    base_var = fields["base"]
+    temporal_var = fields["truth"]
+    base_temporal_var = fields["leak"]
     missing = np.maximum(0.0, source_var[rows, cols] - base_var[rows, cols])
     truth = temporal_var[rows, cols]
     leak = base_temporal_var[rows, cols]
@@ -176,6 +186,11 @@ def measure(source, next_source, clean, next_clean, blocks):
     }
 
 
+def measure(source, next_source, clean, next_clean, blocks):
+    return measure_strength_fields(
+        strength_variance_fields(source, next_source, clean, next_clean), blocks)
+
+
 def aggregate(rows):
     present = [row for row in rows if row]
     missing = sum(row["missing_variance_sum"] for row in present)
@@ -195,11 +210,9 @@ def aggregate(rows):
     }
 
 
-def measure_encoded(source, next_source, encoded_on, next_encoded_on,
-                    encoded_off, next_encoded_off, blocks):
-    """Measure the post-encode variance closure on the same source mask."""
-    if not blocks:
-        return None
+def encoded_variance_fields(source, next_source, encoded_on, next_encoded_on,
+                            encoded_off, next_encoded_off):
+    """Calculate decoded block fields once for all source-selected masks."""
     # Decoder buffers are uint16 for every >8-bit format. Differences must be
     # signed: grain-on minus grain-off legitimately crosses zero, and uint16
     # wrap turns a one-code negative delta into an apparent 65535-code grain.
@@ -209,19 +222,31 @@ def measure_encoded(source, next_source, encoded_on, next_encoded_on,
     next_encoded_on = np.asarray(next_encoded_on, dtype=np.float64)
     encoded_off = np.asarray(encoded_off, dtype=np.float64)
     next_encoded_off = np.asarray(next_encoded_off, dtype=np.float64)
+    return {
+        "truth": block_variances((source - next_source) / math.sqrt(2.0)),
+        "base": block_variances(
+            (encoded_off - next_encoded_off) / math.sqrt(2.0)),
+        "synth": 0.5 * (
+            block_variances(encoded_on - encoded_off)
+            + block_variances(next_encoded_on - next_encoded_off)),
+        "total": block_variances(
+            (encoded_on - next_encoded_on) / math.sqrt(2.0)),
+    }
+
+
+def measure_encoded_fields(fields, blocks):
+    if not blocks:
+        return None
     rows = np.asarray([row for row, _col in blocks])
     cols = np.asarray([col for _row, col in blocks])
 
-    def selected_mean(field):
-        variances = block_variances(field)
-        return float(variances[rows, cols].mean())
+    def selected_mean(name):
+        return float(fields[name][rows, cols].mean())
 
-    truth_var = selected_mean((source - next_source) / math.sqrt(2.0))
-    base_var = selected_mean((encoded_off - next_encoded_off) / math.sqrt(2.0))
-    synth_var = 0.5 * (
-        selected_mean(encoded_on - encoded_off)
-        + selected_mean(next_encoded_on - next_encoded_off))
-    total_var = selected_mean((encoded_on - next_encoded_on) / math.sqrt(2.0))
+    truth_var = selected_mean("truth")
+    base_var = selected_mean("base")
+    synth_var = selected_mean("synth")
+    total_var = selected_mean("total")
     target_var = max(0.0, truth_var - base_var)
     predicted_total_var = base_var + synth_var
     ratio = lambda value: float(np.sqrt(value / truth_var)) if truth_var > 0 else None
@@ -242,6 +267,16 @@ def measure_encoded(source, next_source, encoded_on, next_encoded_on,
         "synth_variance_sum": synth_var * len(blocks),
         "total_variance_sum": total_var * len(blocks),
     }
+
+
+def measure_encoded(source, next_source, encoded_on, next_encoded_on,
+                    encoded_off, next_encoded_off, blocks):
+    """Measure the post-encode variance closure on the same source mask."""
+    return measure_encoded_fields(
+        encoded_variance_fields(
+            source, next_source, encoded_on, next_encoded_on,
+            encoded_off, next_encoded_off),
+        blocks)
 
 
 def aggregate_encoded(rows):
@@ -365,6 +400,8 @@ def main():
         label: {name: [] for name in by_mask} for label in encoded_decoded
     }
     per_frame_masks = {name: [] for name in ("top10_static", "production_static")}
+    per_frame_strength_fields = {}
+    per_frame_encoded_fields = {}
 
     print(f"{os.path.basename(args.source)}: {width}x{height} {args.bits}-bit")
     print(f"{'frame':>6} {'mask':<20}{'blocks':>8}{'src s':>9}{'base s':>9}"
@@ -374,6 +411,17 @@ def main():
         next_source = source_decoded[frame_number + 1].astype(np.float64)
         clean = clean_decoded[frame_number].astype(np.float64)
         next_clean = clean_decoded[frame_number + 1].astype(np.float64)
+        strength_fields = strength_variance_fields(
+            source, next_source, clean, next_clean)
+        per_frame_strength_fields[frame_number] = strength_fields
+        encoded_fields = {
+            label: encoded_variance_fields(
+                source, next_source,
+                decoded["on"][frame_number], decoded["on"][frame_number + 1],
+                decoded["off"][frame_number], decoded["off"][frame_number + 1])
+            for label, decoded in encoded_decoded.items()
+        }
+        per_frame_encoded_fields[frame_number] = encoded_fields
         top, _score, _sigma = select_flat(source, args.bits, args.flat_fraction)
         production, _score, _sigma = production_flat_blocks(source, args.bits)
         masks = {
@@ -387,15 +435,10 @@ def main():
             per_frame_masks[name].append(masks[name])
         frame_record = {"frame": frame_number, "masks": {}}
         for name, blocks in masks.items():
-            row = measure(source, next_source, clean, next_clean, blocks)
+            row = measure_strength_fields(strength_fields, blocks)
             encoded_rows = {}
-            for label, decoded in encoded_decoded.items():
-                encoded_rows[label] = measure_encoded(
-                    source, next_source,
-                    decoded["on"][frame_number],
-                    decoded["on"][frame_number + 1],
-                    decoded["off"][frame_number],
-                    decoded["off"][frame_number + 1], blocks)
+            for label, fields in encoded_fields.items():
+                encoded_rows[label] = measure_encoded_fields(fields, blocks)
                 encoded_by_arm[label][name].append(encoded_rows[label])
             if legacy_encoded:
                 row["encoded"] = encoded_rows["encoded"]
@@ -452,20 +495,13 @@ def main():
             for frame_number, blocks in zip(frames, frame_masks):
                 source = source_decoded[frame_number].astype(np.float64)
                 next_source = source_decoded[frame_number + 1].astype(np.float64)
-                clean = clean_decoded[frame_number].astype(np.float64)
-                next_clean = clean_decoded[frame_number + 1].astype(np.float64)
                 band = luma_bands(source, blocks, args.luma_bins, max_value)[bin_index]
                 if len(band) >= 8:
-                    measured = measure(
-                        source, next_source, clean, next_clean, band)
+                    measured = measure_strength_fields(
+                        per_frame_strength_fields[frame_number], band)
                     encoded_rows = {}
-                    for label, decoded in encoded_decoded.items():
-                        encoded_rows[label] = measure_encoded(
-                            source, next_source,
-                            decoded["on"][frame_number],
-                            decoded["on"][frame_number + 1],
-                            decoded["off"][frame_number],
-                            decoded["off"][frame_number + 1], band)
+                    for label, fields in per_frame_encoded_fields[frame_number].items():
+                        encoded_rows[label] = measure_encoded_fields(fields, band)
                     if legacy_encoded:
                         measured["encoded"] = encoded_rows["encoded"]
                     elif encoded_rows:
