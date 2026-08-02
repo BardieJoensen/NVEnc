@@ -200,6 +200,15 @@ def measure_encoded(source, next_source, encoded_on, next_encoded_on,
     """Measure the post-encode variance closure on the same source mask."""
     if not blocks:
         return None
+    # Decoder buffers are uint16 for every >8-bit format. Differences must be
+    # signed: grain-on minus grain-off legitimately crosses zero, and uint16
+    # wrap turns a one-code negative delta into an apparent 65535-code grain.
+    source = np.asarray(source, dtype=np.float64)
+    next_source = np.asarray(next_source, dtype=np.float64)
+    encoded_on = np.asarray(encoded_on, dtype=np.float64)
+    next_encoded_on = np.asarray(next_encoded_on, dtype=np.float64)
+    encoded_off = np.asarray(encoded_off, dtype=np.float64)
+    next_encoded_off = np.asarray(next_encoded_off, dtype=np.float64)
     rows = np.asarray([row for row, _col in blocks])
     cols = np.asarray([col for _row, col in blocks])
 

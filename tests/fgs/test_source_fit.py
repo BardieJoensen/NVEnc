@@ -111,8 +111,12 @@ class TemporalLeakTests(unittest.TestCase):
         next_source = picture + grain_b
         encoded_off = picture + retain * grain_a
         next_encoded_off = picture + retain * grain_b
-        encoded_on = encoded_off + synth_a
-        next_encoded_on = next_encoded_off + synth_b
+        # Exercise the decoder's unsigned storage. The values stay in range,
+        # while on-off contains both positive and negative grain deltas.
+        encoded_off = np.rint(encoded_off).astype(np.uint16)
+        next_encoded_off = np.rint(next_encoded_off).astype(np.uint16)
+        encoded_on = np.rint(encoded_off + synth_a).astype(np.uint16)
+        next_encoded_on = np.rint(next_encoded_off + synth_b).astype(np.uint16)
         blocks = [(row, col) for row in range(8) for col in range(8)]
 
         row = strength_selection_report.measure_encoded(
