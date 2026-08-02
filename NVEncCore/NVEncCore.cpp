@@ -3443,6 +3443,10 @@ RGY_ERR NVEncCore::InitFilters(const InEncodeVideoParam *inputParam) {
         param->filmGrain.analyzeChroma = inputParam->av1.filmGrainChroma;
         param->filmGrain.denoiser = inputParam->av1.filmGrainDenoiser;
         param->filmGrain.modelFromSource = inputParam->av1.filmGrainModelSource;
+        param->leakTargetQuality = (m_dev->encoder()
+            && inputParam->rcParam.rc_mode == NV_ENC_PARAMS_RC_QVBR)
+            ? inputParam->rcParam.targetQuality + inputParam->rcParam.targetQualityLSB / 256.0f
+            : -1.0f;
         param->tableOutPath = inputParam->av1.filmGrainTableOut;
         param->timebase = m_outputTimebase;
         param->filmGrain.motionRefs = inputParam->av1.filmGrainMotionRefs;

@@ -727,20 +727,26 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
         const double meanResidual = static_cast<double>(residualSum) / samples;
         double variance = fmax(0.0,
             static_cast<double>(residualSumSq) / samples - meanResidual * meanResidual);
+        bool strengthRectified = false;
         if (modelFromSource) {
             // Strength comes from every pixel of the block, not from the 64 AR
             // samples.  The AR fit has to stay sparse because each observation
             // costs 25 predictor loads, but a variance costs one, so there is
             // no reason to keep the much noisier sparse estimator for the one
             // quantity that sets the signalled grain amplitude.
-            variance = fmax(0.0, static_cast<double>(blockPlane.variance)
-                - static_cast<double>(basePlane.variance));
+            const double varianceDifference = static_cast<double>(blockPlane.variance)
+                - static_cast<double>(basePlane.variance);
+            strengthRectified = varianceDifference <= 0.0;
+            variance = fmax(0.0, varianceDifference);
         }
         const int maxValue = (1 << bitDepth) - 1;
         const int bin = min(FGS_STRENGTH_BINS - 1, max(0,
             static_cast<int>(metrics[blockIndex].mean * FGS_STRENGTH_BINS / (maxValue + 1))));
         atomic_add_f64(output->binVarSum + bin, variance);
         atomic_add_u64(output->binBlockCount + bin, 1ULL);
+        if (strengthRectified) {
+            atomic_add_u64(output->rectifiedBlockCount + bin, 1ULL);
+        }
         if (chroma) {
             const double meanPred = static_cast<double>(predSum) / samples;
             const double predVariance = fmax(0.0,
@@ -750,6 +756,112 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
         }
         atomic_add_u64(&output->observations, sampleCount);
     }
+}
+
+// Consecutive-frame differencing removes static picture content before the
+// strength fit.  This measures two quantities that a single spatial frame
+// cannot separate: total source grain and grain still moving in the clean
+// base.  Only blocks whose temporal/spatial source variance agrees are used;
+// motion and cuts fall outside the same 0.8..1.3 gate validated by the offline
+// production_static corpus.
+template<typename Type, int shift>
+__global__ void kernel_fgs_temporal_strength(
+    const uint8_t *__restrict__ source, const int sourcePitch,
+    const uint8_t *__restrict__ previousSource, const int previousSourcePitch,
+    const uint8_t *__restrict__ base, const int basePitch,
+    const uint8_t *__restrict__ previousBase, const int previousBasePitch,
+    const int width, const int height, const int blocksX, const int bitDepth,
+    const uint8_t *__restrict__ flatMask,
+    const FilmGrainBlockMetric *__restrict__ metrics,
+    FilmGrainGpuPlaneStats *__restrict__ output) {
+    const int bx = blockIdx.x;
+    const int by = blockIdx.y;
+    const int blockIndex = by * blocksX + bx;
+    if (flatMask[blockIndex] == 0) return;
+
+    const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+    const int threads = blockDim.x * blockDim.y;
+    __shared__ float reduce[10 * 64];
+    const int x0 = bx * FGS_BLOCK_SIZE;
+    const int y0 = by * FGS_BLOCK_SIZE;
+    const int blockW = min(FGS_BLOCK_SIZE, width - x0);
+    const int blockH = min(FGS_BLOCK_SIZE, height - y0);
+    const int count = blockW * blockH;
+    float sourceSum = 0.0f, sourceX = 0.0f, sourceY = 0.0f, sourceSq = 0.0f;
+    float baseSum = 0.0f, baseX = 0.0f, baseY = 0.0f, baseSq = 0.0f;
+    float sumXX = 0.0f, sumYY = 0.0f;
+    for (int index = tid; index < count; index += threads) {
+        const int lx = index % blockW;
+        const int ly = index / blockW;
+        const int x = x0 + lx;
+        const int y = y0 + ly;
+        const float xn = (2.0f * lx - (blockW - 1)) / blockW;
+        const float yn = (2.0f * ly - (blockH - 1)) / blockH;
+        const float sourceDifference = static_cast<float>(
+            load_code<Type, shift>(source, sourcePitch, x, y, 0, 1)
+            - load_code<Type, shift>(previousSource, previousSourcePitch, x, y, 0, 1));
+        const float baseDifference = static_cast<float>(
+            load_code<Type, shift>(base, basePitch, x, y, 0, 1)
+            - load_code<Type, shift>(previousBase, previousBasePitch, x, y, 0, 1));
+        sourceSum += sourceDifference;
+        sourceX += sourceDifference * xn;
+        sourceY += sourceDifference * yn;
+        sourceSq += sourceDifference * sourceDifference;
+        baseSum += baseDifference;
+        baseX += baseDifference * xn;
+        baseY += baseDifference * yn;
+        baseSq += baseDifference * baseDifference;
+        sumXX += xn * xn;
+        sumYY += yn * yn;
+    }
+    reduce[tid] = sourceSum;
+    reduce[threads + tid] = sourceX;
+    reduce[2 * threads + tid] = sourceY;
+    reduce[3 * threads + tid] = sourceSq;
+    reduce[4 * threads + tid] = baseSum;
+    reduce[5 * threads + tid] = baseX;
+    reduce[6 * threads + tid] = baseY;
+    reduce[7 * threads + tid] = baseSq;
+    reduce[8 * threads + tid] = sumXX;
+    reduce[9 * threads + tid] = sumYY;
+    __syncthreads();
+    for (int stride = threads / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            for (int item = 0; item < 10; ++item) {
+                reduce[item * threads + tid] += reduce[item * threads + tid + stride];
+            }
+        }
+        __syncthreads();
+    }
+    if (tid != 0 || count == 0) return;
+
+    const double invCount = 1.0 / static_cast<double>(count);
+    const double sourceMean = reduce[0] * invCount;
+    const double sourceSlopeX = reduce[threads] / fmax(static_cast<double>(reduce[8 * threads]), 1e-6);
+    const double sourceSlopeY = reduce[2 * threads] / fmax(static_cast<double>(reduce[9 * threads]), 1e-6);
+    const double sourceUnplanedVariance = fmax(0.0,
+        (reduce[3 * threads] * invCount - sourceMean * sourceMean) * 0.5);
+    const double sourceVariance = fmax(0.0, sourceUnplanedVariance
+        - sourceSlopeX * sourceSlopeX * reduce[8 * threads] * invCount * 0.5
+        - sourceSlopeY * sourceSlopeY * reduce[9 * threads] * invCount * 0.5);
+    const double spatialVariance = static_cast<double>(metrics[blockIndex].sigma)
+        * metrics[blockIndex].sigma;
+    const double staticRatio = sourceUnplanedVariance / fmax(spatialVariance, 1e-6);
+    if (staticRatio < 0.8 || staticRatio > 1.3 || sourceVariance <= 1e-6) return;
+
+    const double baseMean = reduce[4 * threads] * invCount;
+    const double baseSlopeX = reduce[5 * threads] / fmax(static_cast<double>(reduce[8 * threads]), 1e-6);
+    const double baseSlopeY = reduce[6 * threads] / fmax(static_cast<double>(reduce[9 * threads]), 1e-6);
+    const double baseVariance = fmax(0.0,
+        (reduce[7 * threads] * invCount - baseMean * baseMean) * 0.5
+        - baseSlopeX * baseSlopeX * reduce[8 * threads] * invCount * 0.5
+        - baseSlopeY * baseSlopeY * reduce[9 * threads] * invCount * 0.5);
+    const int maxValue = (1 << bitDepth) - 1;
+    const int bin = min(FGS_STRENGTH_BINS - 1, max(0,
+        static_cast<int>(metrics[blockIndex].mean * FGS_STRENGTH_BINS / (maxValue + 1))));
+    atomic_add_f64(output->temporalSourceVarSum + bin, sourceVariance);
+    atomic_add_f64(output->temporalBaseVarSum + bin, baseVariance);
+    atomic_add_u64(output->temporalBlockCount + bin, 1ULL);
 }
 
 } // namespace
@@ -918,6 +1030,46 @@ static RGY_ERR launch_model_stats(const RGYFrameInfo& src, const RGYFrameInfo& d
     return err_to_rgy(cudaGetLastError());
 }
 
+template<typename Type, int shift>
+static RGY_ERR launch_temporal_strength(const RGYFrameInfo& source,
+    const RGYFrameInfo& previousSource, const RGYFrameInfo& base,
+    const RGYFrameInfo& previousBase, const int blocksX, const int blocksY,
+    const int bitDepth, const uint8_t *flatMask, const FilmGrainBlockMetric *metrics,
+    FilmGrainGpuPlaneStats *stats, cudaStream_t stream) {
+    const auto sourceY = getPlane(&source, RGY_PLANE_Y);
+    const auto previousSourceY = getPlane(&previousSource, RGY_PLANE_Y);
+    const auto baseY = getPlane(&base, RGY_PLANE_Y);
+    const auto previousBaseY = getPlane(&previousBase, RGY_PLANE_Y);
+    const dim3 block(8, 8);
+    const dim3 grid(blocksX, blocksY);
+    kernel_fgs_temporal_strength<Type, shift><<<grid, block, 0, stream>>>(
+        sourceY.ptr[0], sourceY.pitch[0], previousSourceY.ptr[0], previousSourceY.pitch[0],
+        baseY.ptr[0], baseY.pitch[0], previousBaseY.ptr[0], previousBaseY.pitch[0],
+        sourceY.width, sourceY.height, blocksX, bitDepth, flatMask, metrics, stats);
+    return err_to_rgy(cudaGetLastError());
+}
+
+static RGY_ERR collect_temporal_strength(const RGYFrameInfo& source,
+    const RGYFrameInfo& previousSource, const RGYFrameInfo& base,
+    const RGYFrameInfo& previousBase, const int blocksX, const int blocksY,
+    const int bitDepth, const uint8_t *flatMask, const FilmGrainBlockMetric *metrics,
+    FilmGrainGpuPlaneStats *stats, cudaStream_t stream) {
+    switch (source.csp) {
+    case RGY_CSP_NV12:
+    case RGY_CSP_YV12:
+        return launch_temporal_strength<uint8_t, 0>(source, previousSource, base,
+            previousBase, blocksX, blocksY, bitDepth, flatMask, metrics, stats, stream);
+    case RGY_CSP_YV12_10:
+        return launch_temporal_strength<uint16_t, 0>(source, previousSource, base,
+            previousBase, blocksX, blocksY, bitDepth, flatMask, metrics, stats, stream);
+    case RGY_CSP_P010:
+        return launch_temporal_strength<uint16_t, 6>(source, previousSource, base,
+            previousBase, blocksX, blocksY, bitDepth, flatMask, metrics, stats, stream);
+    default:
+        return RGY_ERR_UNSUPPORTED;
+    }
+}
+
 } // namespace
 
 struct NVEncFilterFilmGrain::AnalyzerState {
@@ -1029,21 +1181,24 @@ void nvenc_film_grain_erase_frame_data(std::vector<std::shared_ptr<RGYFrameData>
         }), dataList.end());
 }
 
-NVEncFilterParamFilmGrain::NVEncFilterParamFilmGrain() : filmGrain() {
+NVEncFilterParamFilmGrain::NVEncFilterParamFilmGrain() : filmGrain(), leakTargetQuality(-1.0f) {
 }
 
 NVEncFilterParamFilmGrain::~NVEncFilterParamFilmGrain() {
 }
 
 tstring NVEncFilterParamFilmGrain::print() const {
-    return filmGrain.print();
+    return filmGrain.print() + (leakTargetQuality >= 0.0f
+        ? strsprintf(_T(", leak-qvbr=%.2f"), leakTargetQuality) : tstring());
 }
 
 NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
-    m_denoiseWork(), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
+    m_denoiseWork(), m_previousSource(), m_previousBase(),
+    m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWritten(false),
+    m_temporalLeakValid(false),
     m_state(std::make_unique<AnalyzerState>()), m_blocksX(0), m_blocksY(0) {
     m_name = _T("film-grain");
     m_pathThrough = FILTER_PATHTHROUGH_NONE;
@@ -1055,6 +1210,7 @@ NVEncFilterFilmGrain::~NVEncFilterFilmGrain() {
 
 void NVEncFilterFilmGrain::resetTemporalState() {
     if (m_state) m_state->clear();
+    m_temporalLeakValid = false;
     if (m_fft3d) m_fft3d->resetTemporalState();
     if (m_motionDegrain) m_motionDegrain->resetTemporalState();
 }
@@ -1204,6 +1360,11 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     config.motionRefs = clamp(config.motionRefs, 1, 2);
     config.residualRetain = config.residualRetain < 0.0f
         ? -1.0f : clamp(config.residualRetain, 0.0f, 0.9f);
+    if (!config.modelFromSource || config.residualRetain != 0.0f
+        || prm->leakTargetQuality < FGS_LEAK_QVBR_MIN
+        || prm->leakTargetQuality > FGS_LEAK_QVBR_MAX) {
+        prm->leakTargetQuality = -1.0f;
+    }
 
     auto sts = AllocFrameBuf(prm->frameOut, 2);
     if (sts != RGY_ERR_NONE) return sts;
@@ -1213,6 +1374,18 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     m_denoiseWork = std::make_unique<CUFrameBuf>(prm->frameOut);
     m_denoiseWork->releasePtr();
     if ((sts = m_denoiseWork->alloc()) != RGY_ERR_NONE) return sts;
+    if (prm->leakTargetQuality >= 0.0f) {
+        m_previousSource = std::make_unique<CUFrameBuf>(prm->frameOut);
+        m_previousBase = std::make_unique<CUFrameBuf>(prm->frameOut);
+        m_previousSource->releasePtr();
+        m_previousBase->releasePtr();
+        if ((sts = m_previousSource->alloc()) != RGY_ERR_NONE
+            || (sts = m_previousBase->alloc()) != RGY_ERR_NONE) return sts;
+    } else {
+        m_previousSource.reset();
+        m_previousBase.reset();
+    }
+    m_temporalLeakValid = false;
 
     m_blocksX = divCeil(prm->frameIn.width, FGS_BLOCK_SIZE);
     m_blocksY = divCeil(prm->frameIn.height, FGS_BLOCK_SIZE);
@@ -1501,6 +1674,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // later frames.  The next reliable region must build a fresh window.
         diagnostics.sceneReset = !m_state->history.empty();
         m_state->clear();
+        m_temporalLeakValid = false;
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=0 reset=%d flat=%d/%d window=0\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             diagnostics.sceneReset ? 1 : 0, diagnostics.flatBlocks, diagnostics.totalBlocks);
@@ -1646,9 +1820,25 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
         static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice),
         prm->filmGrain.modelFromSource, stream);
-    if (sts != RGY_ERR_NONE || (sts = m_modelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
+    if (sts != RGY_ERR_NONE) return sts;
+    const bool temporalLeakEnabled = prm->leakTargetQuality >= 0.0f
+        && m_previousSource && m_previousBase;
+    if (temporalLeakEnabled && m_temporalLeakValid) {
+        sts = collect_temporal_strength(*source, m_previousSource->frame, *output,
+            m_previousBase->frame, m_blocksX, m_blocksY, bitDepth,
+            static_cast<const uint8_t *>(m_blockMask->ptrDevice),
+            static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
+            &static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice)->plane[0], stream);
+        if (sts != RGY_ERR_NONE) return sts;
+    }
+    if (temporalLeakEnabled) {
+        if ((sts = copyFrameAsync(&m_previousSource->frame, source, stream)) != RGY_ERR_NONE
+            || (sts = copyFrameAsync(&m_previousBase->frame, output, stream)) != RGY_ERR_NONE) return sts;
+    }
+    if ((sts = m_modelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     cudaerr = cudaStreamSynchronize(stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+    if (temporalLeakEnabled) m_temporalLeakValid = true;
 
     bool sceneReset = false;
     bool motionSceneCut = false;
@@ -1683,6 +1873,18 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     }
     FilmGrainHostStats current = {};
     std::memcpy(&current.gpu, m_modelStats->ptrHost, sizeof(current.gpu));
+    if (sceneReset) {
+        // The current frame becomes the reference for the new scene, but its
+        // difference against the old scene must not enter the new model even
+        // if a pathological cut happens to pass the static-ratio gate.
+        auto& temporal = current.gpu.plane[0];
+        std::fill(std::begin(temporal.temporalSourceVarSum),
+            std::end(temporal.temporalSourceVarSum), 0.0);
+        std::fill(std::begin(temporal.temporalBaseVarSum),
+            std::end(temporal.temporalBaseVarSum), 0.0);
+        std::fill(std::begin(temporal.temporalBlockCount),
+            std::end(temporal.temporalBlockCount), uint64_t{ 0 });
+    }
     current.measuredNoise = measuredNoise;
     current.grainCorrelation = measuredGrainCorrelation;
     double detailRiskSum = 0.0;
@@ -1727,6 +1929,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     FilmGrainGpuStats combined = {};
     for (const auto& frame : m_state->history) {
         for (int plane = 0; plane < 3; ++plane) add_plane_stats(combined.plane[plane], frame.gpu.plane[plane]);
+    }
+    if (prm->filmGrain.modelFromSource) {
+        apply_luma_leak_closure(combined,
+            temporalLeakEnabled ? prm->leakTargetQuality : -1.0,
+            static_cast<uint64_t>(requiredBlocks), diagnostics);
     }
     bool modelValid = diagnostics.modelFrames >= prm->filmGrain.minModelFrames
         && build_film_grain_params(combined, bitDepth, prm->filmGrain.analyzeChroma,
@@ -1898,6 +2105,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
             _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f modelCorr=%.3f arScale=%.3f strengthGain=%.3f regReject=%d ")
+            _T("leak=%.3f>%.3f theta=%.3f temporal=%llu rectified=%llu leakClose=%d ")
             _T("scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
@@ -1907,6 +2115,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             diagnostics.detailRisk, diagnostics.residualRetain, diagnostics.grainCorrelation,
             diagnostics.sourceModelCorrelation, diagnostics.sourceArScale,
             diagnostics.sourceStrengthGain, diagnostics.sourceRegularizationRejected ? 1 : 0,
+            diagnostics.preEncodeLeak, diagnostics.predictedPostEncodeLeak,
+            diagnostics.leakDeadzone,
+            static_cast<unsigned long long>(diagnostics.temporalLeakBlocks),
+            static_cast<unsigned long long>(diagnostics.strengthRectifiedBlocks),
+            diagnostics.leakCompensated ? 1 : 0,
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,
@@ -1923,6 +2136,9 @@ void NVEncFilterFilmGrain::close() {
     m_fft3d.reset();
     m_fft3dParam.reset();
     m_fft3dSigma = -1.0f;
+    m_previousSource.reset();
+    m_previousBase.reset();
+    m_temporalLeakValid = false;
     m_frameBuf.clear();
     m_denoiseWork.reset();
     m_blockMetrics.reset();

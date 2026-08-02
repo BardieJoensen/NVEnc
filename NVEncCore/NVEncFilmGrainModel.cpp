@@ -39,6 +39,7 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <numeric>
 
 #include "NVEncFilmGrainModel.h"
 
@@ -46,7 +47,9 @@ NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     flatBlocks(0), totalBlocks(0), modelFrames(0), noiseStdDev(), observations(),
     detailRisk(0.0f), residualRetain(0.0f), grainCorrelation(0.0f),
     sourceModelCorrelation(0.0f), sourceArScale(1.0f), sourceStrengthGain(1.0f),
-    sourceRegularizationRejected(false),
+    preEncodeLeak(0.0f), predictedPostEncodeLeak(0.0f), leakDeadzone(0.0f),
+    temporalLeakBlocks(0), strengthRectifiedBlocks(0),
+    sourceRegularizationRejected(false), leakCompensated(false),
     reliable(false), sceneReset(false), modelHeld(false) {
 }
 
@@ -412,10 +415,57 @@ void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& 
     for (int i = 0; i < FGS_STRENGTH_BINS; ++i) {
         dst.binVarSum[i] += src.binVarSum[i];
         dst.binBlockCount[i] += src.binBlockCount[i];
+        dst.temporalSourceVarSum[i] += src.temporalSourceVarSum[i];
+        dst.temporalBaseVarSum[i] += src.temporalBaseVarSum[i];
+        dst.temporalBlockCount[i] += src.temporalBlockCount[i];
+        dst.rectifiedBlockCount[i] += src.rectifiedBlockCount[i];
     }
     dst.lumaPredVarSum += src.lumaPredVarSum;
     dst.lumaPredBlocks += src.lumaPredBlocks;
     dst.observations += src.observations;
+}
+
+bool apply_luma_leak_closure(FilmGrainGpuStats& stats, const double qvbr,
+    const uint64_t minTemporalBlocks, NVEncFilmGrainDiagnostics& diagnostics) {
+    const auto& measured = stats.plane[0];
+    diagnostics.strengthRectifiedBlocks = std::accumulate(
+        std::begin(measured.rectifiedBlockCount), std::end(measured.rectifiedBlockCount), uint64_t{ 0 });
+    if (!std::isfinite(qvbr) || qvbr < FGS_LEAK_QVBR_MIN || qvbr > FGS_LEAK_QVBR_MAX) return false;
+
+    double sourceVariance = 0.0;
+    double baseVariance = 0.0;
+    uint64_t temporalBlocks = 0;
+    int populatedBins = 0;
+    for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+        const auto count = measured.temporalBlockCount[bin];
+        sourceVariance += measured.temporalSourceVarSum[bin];
+        baseVariance += measured.temporalBaseVarSum[bin];
+        temporalBlocks += count;
+        populatedBins += count >= FGS_MIN_TEMPORAL_BIN_BLOCKS;
+    }
+    diagnostics.temporalLeakBlocks = temporalBlocks;
+    if (temporalBlocks < minTemporalBlocks || populatedBins < 2 || sourceVariance <= 1e-9) return false;
+
+    const double preLeak = std::sqrt(std::clamp(baseVariance / sourceVariance, 0.0, 1.0));
+    const double theta = FGS_LEAK_THETA_INTERCEPT + FGS_LEAK_THETA_QVBR_SLOPE * qvbr;
+    const double postLeak = std::max(0.0, preLeak - theta);
+    const double synthesisFraction2 = std::max(0.0, 1.0 - postLeak * postLeak);
+
+    auto& luma = stats.plane[0];
+    for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+        if (luma.temporalBlockCount[bin] >= FGS_MIN_TEMPORAL_BIN_BLOCKS) {
+            luma.binVarSum[bin] = luma.temporalSourceVarSum[bin] * synthesisFraction2;
+            luma.binBlockCount[bin] = luma.temporalBlockCount[bin];
+        } else {
+            luma.binVarSum[bin] = 0.0;
+            luma.binBlockCount[bin] = 0;
+        }
+    }
+    diagnostics.preEncodeLeak = static_cast<float>(preLeak);
+    diagnostics.predictedPostEncodeLeak = static_cast<float>(postLeak);
+    diagnostics.leakDeadzone = static_cast<float>(theta);
+    diagnostics.leakCompensated = true;
+    return true;
 }
 
 bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,

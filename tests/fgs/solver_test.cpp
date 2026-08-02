@@ -162,6 +162,43 @@ void testSourceTemplateGain() {
         "source template-gain normalization preserves target sigma");
 }
 
+void testTemporalLeakClosure() {
+    FilmGrainGpuStats stats = {};
+    auto& luma = stats.plane[0];
+    constexpr double sourceVariance = 100.0;
+    constexpr double preLeak = 0.40;
+    for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+        luma.binVarSum[bin] = 10.0; // must be replaced, not multiplied in place
+        luma.binBlockCount[bin] = 10;
+        luma.temporalSourceVarSum[bin] = 10.0 * sourceVariance;
+        luma.temporalBaseVarSum[bin] = 10.0 * sourceVariance * preLeak * preLeak;
+        luma.temporalBlockCount[bin] = 10;
+        luma.rectifiedBlockCount[bin] = 2;
+    }
+    NVEncFilmGrainDiagnostics diag;
+    expect(apply_luma_leak_closure(stats, 29.0, 100, diag),
+        "temporal leak closure accepts calibrated QVBR and coverage");
+    const double theta = FGS_LEAK_THETA_INTERCEPT + FGS_LEAK_THETA_QVBR_SLOPE * 29.0;
+    const double postLeak = preLeak - theta;
+    const double expectedVariance = sourceVariance * (1.0 - postLeak * postLeak);
+    expectNear(stats.plane[0].binVarSum[0] / stats.plane[0].binBlockCount[0],
+        expectedVariance, 1e-9, "temporal closure writes post-encode target variance");
+    expectNear(diag.preEncodeLeak, preLeak, 1e-6, "temporal closure reports pre-encode leak");
+    expectNear(diag.predictedPostEncodeLeak, postLeak, 1e-6,
+        "temporal closure reports predicted post-encode leak");
+    expectNear(diag.leakDeadzone, theta, 1e-6, "temporal closure reports deadzone");
+    expect(diag.temporalLeakBlocks == 200, "temporal closure reports coverage");
+    expect(diag.strengthRectifiedBlocks == 40, "temporal closure reports rectification");
+    expect(diag.leakCompensated, "temporal closure reports application");
+
+    FilmGrainGpuStats outOfRange = {};
+    outOfRange.plane[0] = luma;
+    NVEncFilmGrainDiagnostics gated;
+    expect(!apply_luma_leak_closure(outOfRange, 20.0, 100, gated),
+        "temporal closure does not extrapolate outside calibrated QVBR");
+    expect(!gated.leakCompensated, "gated temporal closure stays diagnostic-only");
+}
+
 void testWhiteLuma() {
     FilmGrainGpuStats stats = {};
     fillWhitePlane(stats.plane[0], 6.0, false);
@@ -335,6 +372,7 @@ int main() {
     testStratifiedSampling();
     testSourceCorrelationRegularizer();
     testSourceTemplateGain();
+    testTemporalLeakClosure();
     testWhiteLuma();
     testRampLuma();
     testChromaCorrelationClamp();

@@ -117,6 +117,8 @@ class NVEncFilterParamFilmGrain : public NVEncFilterParam {
 public:
     NVEncFilmGrainAnalyzerConfig filmGrain;
     std::pair<int, int> compute_capability;
+    float leakTargetQuality;       // requested AV1 QVBR for calibrated post-encode leak closure,
+                                   // or -1 when the rate-control path is not covered
     tstring tableOutPath;          // write measured grain as an AOM filmgrn1 table (empty = off)
     rgy_rational<int> timebase;    // timebase of the frame timestamps (for the table's 10 MHz intervals)
 
@@ -150,6 +152,8 @@ private:
     void writeTableFile();
 
     std::unique_ptr<CUFrameBuf> m_denoiseWork;
+    std::unique_ptr<CUFrameBuf> m_previousSource;
+    std::unique_ptr<CUFrameBuf> m_previousBase;
     std::unique_ptr<NVEncFilterDenoiseFFT3D> m_fft3d;
     std::shared_ptr<NVEncFilterParamDenoiseFFT3D> m_fft3dParam;
     float m_fft3dSigma;
@@ -167,6 +171,7 @@ private:
     int64_t m_tableFrameDuration10MHz;
     std::vector<NVEncFilmGrainTableEntry> m_tableEntries;
     bool m_tableWritten;
+    bool m_temporalLeakValid;
     int m_blocksX;
     int m_blocksY;
 };

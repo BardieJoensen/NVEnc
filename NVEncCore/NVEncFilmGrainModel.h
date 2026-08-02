@@ -61,7 +61,13 @@ struct NVEncFilmGrainDiagnostics {
     float sourceModelCorrelation;
     float sourceArScale;
     float sourceStrengthGain;
+    float preEncodeLeak;
+    float predictedPostEncodeLeak;
+    float leakDeadzone;
+    uint64_t temporalLeakBlocks;
+    uint64_t strengthRectifiedBlocks;
     bool sourceRegularizationRejected;
+    bool leakCompensated;
     bool reliable;
     bool sceneReset;
     bool modelHeld;
@@ -94,6 +100,15 @@ constexpr double FGS_SOURCE_CORRELATION_MARGIN = 0.05;
 // their coefficients are regularised.  Reject/hold those models rather than
 // trading a texture error for an amplitude spike.
 constexpr double FGS_SOURCE_MAX_STRENGTH_GAIN = 1.25;
+// Six-film QVBR 25/29/34/39 closure fit.  The clean base's temporal grain
+// residue follows post=max(0, pre-theta), with theta linear in requested QVBR.
+// Keep this deliberately inside the measured rate range until a wider corpus
+// establishes whether extrapolation is safe.
+constexpr double FGS_LEAK_THETA_INTERCEPT = 0.01579030304339795;
+constexpr double FGS_LEAK_THETA_QVBR_SLOPE = 0.004870139420489915;
+constexpr double FGS_LEAK_QVBR_MIN = 25.0;
+constexpr double FGS_LEAK_QVBR_MAX = 39.0;
+constexpr uint64_t FGS_MIN_TEMPORAL_BIN_BLOCKS = 4;
 
 #ifdef __CUDACC__
 #define FGS_HOST_DEVICE __host__ __device__
@@ -140,6 +155,10 @@ struct FilmGrainGpuPlaneStats {
     int64_t atb[FGS_AR_COEFFS_CHROMA];
     double binVarSum[FGS_STRENGTH_BINS];
     uint64_t binBlockCount[FGS_STRENGTH_BINS];
+    double temporalSourceVarSum[FGS_STRENGTH_BINS];
+    double temporalBaseVarSum[FGS_STRENGTH_BINS];
+    uint64_t temporalBlockCount[FGS_STRENGTH_BINS];
+    uint64_t rectifiedBlockCount[FGS_STRENGTH_BINS];
     double lumaPredVarSum;
     uint64_t lumaPredBlocks;
     uint64_t observations;
@@ -169,6 +188,8 @@ bool solve_linear_system(std::vector<double> matrix, std::vector<double> rhs, st
 FilmGrainSolvedPlane solve_plane(const FilmGrainGpuPlaneStats& stats, bool chroma, const FilmGrainSolvedPlane *lumaSolved);
 std::vector<StrengthPoint> fit_strength_points(const FilmGrainSolvedPlane& solved, int bitDepth, int maxPoints);
 void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& src);
+bool apply_luma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
+    uint64_t minTemporalBlocks, NVEncFilmGrainDiagnostics& diagnostics);
 bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,
     bool analyzeChroma, bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
     NVEncFilmGrainDiagnostics& diagnostics, double maxLumaCorrelation = -1.0);
