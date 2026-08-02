@@ -159,6 +159,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True)
     parser.add_argument("--table", required=True)
+    parser.add_argument(
+        "--expected-table", default="",
+        help="alternate table used only by the expected-seed oracle")
     parser.add_argument("--closure", required=True)
     parser.add_argument("--arm", default="q29")
     parser.add_argument("--bits", type=int, default=10, choices=(8, 10, 12))
@@ -200,6 +203,11 @@ def main():
                 if entry["apply_grain"] and entry["update_parameters"]]
     if not updating:
         raise SystemExit("grain table has no updating entry")
+    expected_entries = filmgrn.load(args.expected_table) if args.expected_table else entries
+    expected_updating = [entry for entry in expected_entries
+                         if entry["apply_grain"] and entry["update_parameters"]]
+    if not expected_updating:
+        raise SystemExit("expected table has no updating entry")
     gaussian = av1_grain.load_gaussian_sequence(args.aom_grain_source)
     with open(args.aom_grain_source, "rb") as handle:
         grain_source_sha256 = hashlib.sha256(handle.read()).hexdigest()
@@ -225,6 +233,10 @@ def main():
         table_entry = entry_for_frame(updating, frame_number, fps_num, fps_den)
         next_table_entry = entry_for_frame(
             updating, frame_number + 1, fps_num, fps_den)
+        expected_entry = entry_for_frame(
+            expected_updating, frame_number, fps_num, fps_den)
+        next_expected_entry = entry_for_frame(
+            expected_updating, frame_number + 1, fps_num, fps_den)
         entry = stream_entries[frame_number]
         next_entry = stream_entries[frame_number + 1]
         predicted_blocks = av1_grain.synthesize_selected_luma(
@@ -247,10 +259,10 @@ def main():
             for sample_number in range(args.seed_samples):
                 seed_variance_sum += 0.5 * (
                     synth_variance_for_seed(
-                        base_decoded[frame_number], blocks, entry, gaussian,
+                        base_decoded[frame_number], blocks, expected_entry, gaussian,
                         args.bits, oracle_seed(frame_number, sample_number))
                     + synth_variance_for_seed(
-                        base_decoded[frame_number + 1], blocks, next_entry,
+                        base_decoded[frame_number + 1], blocks, next_expected_entry,
                         gaussian, args.bits,
                         oracle_seed(frame_number + 1, sample_number)))
             seed_mean = seed_variance_sum / args.seed_samples
@@ -339,6 +351,8 @@ def main():
         "source": os.path.abspath(args.source),
         "encoded": os.path.abspath(encoded),
         "table": os.path.abspath(args.table),
+        "expected_table": os.path.abspath(
+            args.expected_table if args.expected_table else args.table),
         "closure": os.path.abspath(args.closure),
         "arm": args.arm,
         "bits": args.bits,

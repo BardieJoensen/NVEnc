@@ -101,6 +101,36 @@ def load(path):
         return parse(source.read())
 
 
+def dumps(entries):
+    """Serialize parsed entries in canonical filmgrn1 form."""
+    lines = ["filmgrn1"]
+    markers = (("sY", "y"), ("sCb", "cb"), ("sCr", "cr"))
+    coefficient_markers = (("cY", "y"), ("cCb", "cb"), ("cCr", "cr"))
+    for entry in entries:
+        lines.append("E {} {} {} {} {}".format(
+            entry["start"], entry["end"], int(entry["apply_grain"]),
+            entry["random_seed"], int(entry["update_parameters"])))
+        if not (entry["apply_grain"] and entry["update_parameters"]):
+            continue
+        params = entry["params"]
+        lines.append("p " + " ".join(str(params[name]) for name in PARAM_NAMES))
+        for marker, plane in markers:
+            points = entry["scaling_points"][plane]
+            values = [str(len(points))]
+            for x, y in points:
+                values.extend((str(x), str(y)))
+            lines.append(marker + " " + " ".join(values))
+        for marker, plane in coefficient_markers:
+            lines.append(marker + " " + " ".join(
+                str(value) for value in entry["ar_coeffs"][plane]))
+    return "\n".join(lines) + "\n"
+
+
+def write(path, entries):
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(dumps(entries))
+
+
 def representative(entries):
     """Select the longest entry that carries an updated grain model."""
     candidates = [entry for entry in entries

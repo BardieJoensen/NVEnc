@@ -22,31 +22,6 @@ import ar_acf  # noqa: E402
 import filmgrn  # noqa: E402
 
 
-def write_table(path, entries):
-    markers = (("sY", "y"), ("sCb", "cb"), ("sCr", "cr"))
-    coeff_markers = (("cY", "y"), ("cCb", "cb"), ("cCr", "cr"))
-    with open(path, "w", encoding="utf-8") as handle:
-        handle.write("filmgrn1\n")
-        for entry in entries:
-            handle.write("E {} {} {} {} {}\n".format(
-                entry["start"], entry["end"], int(entry["apply_grain"]),
-                entry["random_seed"], int(entry["update_parameters"])))
-            if not (entry["apply_grain"] and entry["update_parameters"]):
-                continue
-            params = entry["params"]
-            handle.write("p " + " ".join(
-                str(params[name]) for name in filmgrn.PARAM_NAMES) + "\n")
-            for marker, plane in markers:
-                points = entry["scaling_points"][plane]
-                values = [str(len(points))]
-                for x, y in points:
-                    values.extend((str(x), str(y)))
-                handle.write(marker + " " + " ".join(values) + "\n")
-            for marker, plane in coeff_markers:
-                handle.write(marker + " " + " ".join(
-                    str(value) for value in entry["ar_coeffs"][plane]) + "\n")
-
-
 def scaled_entry(entry, factor):
     candidate = copy.deepcopy(entry)
     candidate["ar_coeffs"]["y"] = [
@@ -174,7 +149,7 @@ def main():
               f"{action:>11}")
         out.append(adjusted)
 
-    write_table(args.output, out)
+    filmgrn.write(args.output, out)
     # Reparse what was written: the experimental encode must see exactly what
     # was reported, including integer quantisation and line ordering.
     filmgrn.load(args.output)

@@ -6,6 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import filmgrn
+import delivery_normalize
 
 
 NVENC_STYLE = """filmgrn1
@@ -50,6 +51,28 @@ class FilmGrainTableTest(unittest.TestCase):
     def test_rejects_coefficient_count_mismatch(self):
         with self.assertRaises(filmgrn.FilmGrainTableError):
             filmgrn.parse(NVENC_STYLE.replace("cY 1 2 3 4", "cY 1 2 3"))
+
+    def test_canonical_round_trip(self):
+        entries = filmgrn.parse(NVENC_STYLE)
+        self.assertEqual(filmgrn.parse(filmgrn.dumps(entries)), entries)
+
+    def test_luma_scaling_preserves_chroma_through_shared_shift(self):
+        entry = filmgrn.parse(NVENC_STYLE)[0]
+        entry["scaling_points"]["y"] = [[0, 200], [255, 200]]
+        entry["scaling_points"]["cb"] = [[0, 100], [255, 100]]
+        entry["scaling_points"]["cr"] = [[0, 80], [255, 80]]
+        adjusted, shift_down = delivery_normalize.scale_entry_luma(entry, 2.0)
+        self.assertEqual(shift_down, 1)
+        self.assertEqual(adjusted["params"]["scaling_shift"], 8)
+        self.assertEqual(adjusted["scaling_points"]["y"], [[0, 200], [255, 200]])
+        self.assertEqual(adjusted["scaling_points"]["cb"], [[0, 50], [255, 50]])
+        self.assertEqual(adjusted["scaling_points"]["cr"], [[0, 40], [255, 40]])
+
+    def test_target_uses_rate_dependent_deadzone(self):
+        theta, post, target = delivery_normalize.target_from_pre_leak(0.4, 29.0)
+        self.assertAlmostEqual(theta, 0.15702434623760549)
+        self.assertAlmostEqual(post, 0.24297565376239453)
+        self.assertAlmostEqual(target, (1.0 - post * post) ** 0.5)
 
 
 if __name__ == "__main__":
