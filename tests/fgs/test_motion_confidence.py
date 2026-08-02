@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 import numpy as np
 
@@ -39,6 +40,23 @@ def block(index, x, y, nearest=(0, 0), far=(0, 0), selected=1):
 
 
 class MotionConfidenceTests(unittest.TestCase):
+    def test_preload_decodes_each_source_once(self):
+        specs = [
+            {"source": "same.mkv", "source_frame": 7},
+            {"source": "same.mkv", "source_frame": 9},
+        ]
+
+        def fake_decode(path, indices):
+            frames = np.asarray(indices, dtype=np.float32).reshape(-1, 1, 1)
+            return frames, 1, 1
+
+        with mock.patch.object(
+                motion_confidence, "decode_luma", side_effect=fake_decode) as decode:
+            cache = motion_confidence.preload_source_frames(specs)
+
+        decode.assert_called_once_with("same.mkv", [6, 7, 8, 9, 10])
+        self.assertEqual(cache["same.mkv"]["frames"][9][0, 0], 9)
+
     def test_parse_requires_complete_exact_frame_trace(self):
         summary = {
             "type": "degrain_block_trace_summary", "version": 1,

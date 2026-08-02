@@ -148,6 +148,25 @@ def decode_luma(path, indices):
     return frames, width, height
 
 
+def preload_source_frames(specs):
+    """Decode every requested source frame once, grouped by source path."""
+    requested = {}
+    for spec in specs:
+        source_frame = int(spec["source_frame"])
+        requested.setdefault(spec["source"], set()).update(
+            (source_frame - 1, source_frame, source_frame + 1))
+    cache = {}
+    for path, indices in requested.items():
+        ordered = sorted(indices)
+        frames, width, height = decode_luma(path, ordered)
+        cache[path] = {
+            "frames": dict(zip(ordered, frames)),
+            "width": width,
+            "height": height,
+        }
+    return cache
+
+
 def _reference(row, side, delta):
     for reference in row["refs"]:
         if reference["side"] == side and int(reference["delta"]) == delta:
@@ -219,13 +238,23 @@ def derive_trace_features(summary, blocks):
     return output
 
 
-def collect_sample(spec, moving_threshold=64.0):
+def collect_sample(spec, moving_threshold=64.0, source_cache=None):
     source_frame = int(spec["source_frame"])
     base_frame = int(spec.get("base_frame", 2))
     summary, blocks = parse_trace(spec["trace"], source_frame)
     features = derive_trace_features(summary, blocks)
-    source, width, height = decode_luma(
-        spec["source"], [source_frame - 1, source_frame, source_frame + 1])
+    if source_cache is None:
+        source, width, height = decode_luma(
+            spec["source"],
+            [source_frame - 1, source_frame, source_frame + 1])
+    else:
+        cached = source_cache[spec["source"]]
+        source = np.stack([
+            cached["frames"][source_frame - 1],
+            cached["frames"][source_frame],
+            cached["frames"][source_frame + 1],
+        ])
+        width, height = cached["width"], cached["height"]
     base, base_width, base_height = decode_luma(spec["base"], [base_frame])
     if (base_width, base_height) != (width, height):
         raise RuntimeError(
@@ -348,7 +377,9 @@ def build_report(manifest, moving_threshold=64.0):
     specs = manifest.get("samples", [])
     if not specs:
         raise ValueError("manifest has no samples")
-    samples = [collect_sample(spec, moving_threshold) for spec in specs]
+    source_cache = preload_source_frames(specs)
+    samples = [collect_sample(spec, moving_threshold, source_cache)
+               for spec in specs]
     groups = {}
     for sample in samples:
         groups.setdefault(sample["group"], []).append(sample)
