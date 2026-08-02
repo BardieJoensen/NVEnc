@@ -396,6 +396,10 @@ def build_report(manifest, moving_threshold=64.0):
             {key: value for key, value in sample.items() if key != "arrays"}
             for sample in samples
         ],
+        "sample_results": {
+            sample["label"]: analyze_dataset(sample["arrays"])
+            for sample in samples
+        },
         "overall": analyze_dataset(_concat(samples)),
         "groups": {
             group: analyze_dataset(_concat(group_samples))
