@@ -97,6 +97,34 @@ class TemporalLeakTests(unittest.TestCase):
         finally:
             os.unlink(path)
 
+    def test_post_encode_variance_closure(self):
+        rng = np.random.default_rng(29)
+        shape = (256, 256)
+        retain = 0.30
+        target = np.sqrt(1.0 - retain * retain)
+        picture = np.full(shape, 512.0)
+        grain_a = rng.normal(0.0, 20.0, shape)
+        grain_b = rng.normal(0.0, 20.0, shape)
+        synth_a = rng.normal(0.0, 20.0 * target, shape)
+        synth_b = rng.normal(0.0, 20.0 * target, shape)
+        source = picture + grain_a
+        next_source = picture + grain_b
+        encoded_off = picture + retain * grain_a
+        next_encoded_off = picture + retain * grain_b
+        encoded_on = encoded_off + synth_a
+        next_encoded_on = next_encoded_off + synth_b
+        blocks = [(row, col) for row in range(8) for col in range(8)]
+
+        row = strength_selection_report.measure_encoded(
+            source, next_source, encoded_on, next_encoded_on,
+            encoded_off, next_encoded_off, blocks)
+
+        self.assertAlmostEqual(row["post_leak_ratio"], retain, delta=0.02)
+        self.assertAlmostEqual(row["post_target_ratio"], target, delta=0.02)
+        self.assertAlmostEqual(row["synth_ratio"], target, delta=0.02)
+        self.assertAlmostEqual(row["total_ratio"], 1.0, delta=0.03)
+        self.assertAlmostEqual(row["closure_error"], 0.0, delta=0.02)
+
 
 if __name__ == "__main__":
     unittest.main()

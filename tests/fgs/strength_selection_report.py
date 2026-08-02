@@ -106,18 +106,22 @@ def decode_y4m_selected(path, width, height, indices, bits):
     return {index: selected[index] for index in indices}
 
 
-def decode_selected(path, width, height, indices, bits):
-    if os.path.splitext(path)[1].lower() == ".y4m":
+def decode_selected(path, width, height, indices, bits, filmgrain=None):
+    if filmgrain is None and os.path.splitext(path)[1].lower() == ".y4m":
         return decode_y4m_selected(path, width, height, indices, bits)
     terms = "+".join(f"eq(n\\,{index})" for index in indices)
     pix_fmt = "gray" if bits == 8 else f"gray{bits}le"
+    cmd = [FFMPEG, "-v", "error"]
+    if filmgrain is not None:
+        cmd += ["-c:v", "libdav1d", "-filmgrain", str(filmgrain)]
+    cmd += ["-i", path, "-map", "0:v:0",
+            # extractplanes keeps the stored luma code values exact. Asking the
+            # scaler for gray10le directly expands limited-range luma, which would
+            # no longer match the direct Y4M reader.
+            "-vf", f"select='{terms}',extractplanes=y", "-fps_mode", "passthrough",
+            "-pix_fmt", pix_fmt, "-f", "rawvideo", "-"]
     result = subprocess.run(
-        [FFMPEG, "-v", "error", "-i", path, "-map", "0:v:0",
-         # extractplanes keeps the stored luma code values exact. Asking the
-         # scaler for gray10le directly expands limited-range luma, which would
-         # no longer match the direct Y4M reader.
-         "-vf", f"select='{terms}',extractplanes=y", "-fps_mode", "passthrough",
-         "-pix_fmt", pix_fmt, "-f", "rawvideo", "-"],
+        cmd,
         check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     dtype = np.uint8 if bits == 8 else np.uint16
     frame_bytes = width * height * np.dtype(dtype).itemsize
@@ -191,6 +195,68 @@ def aggregate(rows):
     }
 
 
+def measure_encoded(source, next_source, encoded_on, next_encoded_on,
+                    encoded_off, next_encoded_off, blocks):
+    """Measure the post-encode variance closure on the same source mask."""
+    if not blocks:
+        return None
+    rows = np.asarray([row for row, _col in blocks])
+    cols = np.asarray([col for _row, col in blocks])
+
+    def selected_mean(field):
+        variances = block_variances(field)
+        return float(variances[rows, cols].mean())
+
+    truth_var = selected_mean((source - next_source) / math.sqrt(2.0))
+    base_var = selected_mean((encoded_off - next_encoded_off) / math.sqrt(2.0))
+    synth_var = 0.5 * (
+        selected_mean(encoded_on - encoded_off)
+        + selected_mean(next_encoded_on - next_encoded_off))
+    total_var = selected_mean((encoded_on - next_encoded_on) / math.sqrt(2.0))
+    target_var = max(0.0, truth_var - base_var)
+    predicted_total_var = base_var + synth_var
+    ratio = lambda value: float(np.sqrt(value / truth_var)) if truth_var > 0 else None
+    return {
+        "blocks": len(blocks),
+        "post_base_sigma": float(np.sqrt(base_var)),
+        "post_leak_ratio": ratio(base_var),
+        "post_target_sigma": float(np.sqrt(target_var)),
+        "post_target_ratio": ratio(target_var),
+        "synth_sigma": float(np.sqrt(synth_var)),
+        "synth_ratio": ratio(synth_var),
+        "total_sigma": float(np.sqrt(total_var)),
+        "total_ratio": ratio(total_var),
+        "predicted_total_ratio": ratio(predicted_total_var),
+        "closure_error": ratio(total_var) - ratio(predicted_total_var),
+        "truth_variance_sum": truth_var * len(blocks),
+        "post_base_variance_sum": base_var * len(blocks),
+        "synth_variance_sum": synth_var * len(blocks),
+        "total_variance_sum": total_var * len(blocks),
+    }
+
+
+def aggregate_encoded(rows):
+    present = [row for row in rows if row]
+    blocks = sum(row["blocks"] for row in present)
+    truth = sum(row["truth_variance_sum"] for row in present)
+    base = sum(row["post_base_variance_sum"] for row in present)
+    synth = sum(row["synth_variance_sum"] for row in present)
+    total = sum(row["total_variance_sum"] for row in present)
+    target = max(0.0, truth - base)
+    ratio = lambda value: float(np.sqrt(value / truth)) if truth > 0 else None
+    predicted = ratio(base + synth)
+    actual = ratio(total)
+    return {
+        "blocks": blocks,
+        "post_leak_ratio": ratio(base),
+        "post_target_ratio": ratio(target),
+        "synth_ratio": ratio(synth),
+        "total_ratio": actual,
+        "predicted_total_ratio": predicted,
+        "closure_error": actual - predicted,
+    }
+
+
 def luma_bands(frame, blocks, count, max_value):
     grid = blockwise(frame)
     out = [[] for _ in range(count)]
@@ -204,6 +270,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True)
     parser.add_argument("--clean-base", required=True)
+    parser.add_argument("--encoded", default="",
+                        help="optional AV1 arm; adds exact libdav1d grain-on/off "
+                             "post-encode closure on the same masks")
     parser.add_argument("--frames", default="10,58,106,154,202,250,275")
     parser.add_argument("--bits", type=int, default=10, choices=(8, 10, 12, 16))
     parser.add_argument("--flat-fraction", type=float, default=0.10)
@@ -216,16 +285,27 @@ def main():
     size = probe_size(args.source)
     if probe_size(args.clean_base) != size:
         raise SystemExit("source and clean-base dimensions differ")
+    if args.encoded and probe_size(args.encoded) != size:
+        raise SystemExit("source and encoded dimensions differ")
     width, height = size
     frames = [int(value) for value in args.frames.split(",")]
     source_indices = sorted(set(frames + [frame + 1 for frame in frames]))
     source_decoded = decode_selected(args.source, width, height, source_indices, args.bits)
     clean_decoded = decode_selected(
         args.clean_base, width, height, source_indices, args.bits)
+    encoded_decoded = None
+    if args.encoded:
+        encoded_decoded = {
+            "on": decode_selected(
+                args.encoded, width, height, source_indices, args.bits, filmgrain=1),
+            "off": decode_selected(
+                args.encoded, width, height, source_indices, args.bits, filmgrain=0),
+        }
 
     report = {
         "source": os.path.abspath(args.source),
         "clean_base": os.path.abspath(args.clean_base),
+        "encoded": os.path.abspath(args.encoded) if args.encoded else None,
         "dimensions": [width, height],
         "bits": args.bits,
         "frames": frames,
@@ -234,6 +314,7 @@ def main():
         "luma_bins": [],
     }
     by_mask = {name: [] for name in ("top10_static", "production_spatial", "production_static")}
+    encoded_by_mask = ({name: [] for name in by_mask} if encoded_decoded else None)
     per_frame_masks = {name: [] for name in ("top10_static", "production_static")}
 
     print(f"{os.path.basename(args.source)}: {width}x{height} {args.bits}-bit")
@@ -258,6 +339,15 @@ def main():
         frame_record = {"frame": frame_number, "masks": {}}
         for name, blocks in masks.items():
             row = measure(source, next_source, clean, next_clean, blocks)
+            if encoded_decoded:
+                encoded = measure_encoded(
+                    source, next_source,
+                    encoded_decoded["on"][frame_number],
+                    encoded_decoded["on"][frame_number + 1],
+                    encoded_decoded["off"][frame_number],
+                    encoded_decoded["off"][frame_number + 1], blocks)
+                row["encoded"] = encoded
+                encoded_by_mask[name].append(encoded)
             by_mask[name].append(row)
             frame_record["masks"][name] = row
             print(f"{frame_number:>6} {name:<20}{row['blocks']:>8}"
@@ -268,12 +358,24 @@ def main():
         report["rows"].append(frame_record)
 
     report["aggregate"] = {name: aggregate(rows) for name, rows in by_mask.items()}
+    if encoded_by_mask:
+        report["encoded_aggregate"] = {
+            name: aggregate_encoded(rows) for name, rows in encoded_by_mask.items()
+        }
     print("\nvariance-weighted aggregate")
     for name, row in report["aggregate"].items():
         print(f"{name:<20}{row['blocks']:>8} blocks  "
               f"spatial {row['amplitude_ratio']:.3f}  "
               f"temporal leak {row['temporal_leak_ratio']:.3f}  "
               f"target {row['temporal_target_ratio']:.3f}")
+    if encoded_by_mask:
+        print("\npost-encode variance closure")
+        print(f"{'mask':<20}{'blocks':>8}{'leak':>9}{'target':>9}"
+              f"{'synth':>9}{'total':>9}{'closure':>10}")
+        for name, row in report["encoded_aggregate"].items():
+            print(f"{name:<20}{row['blocks']:>8}{row['post_leak_ratio']:>9.3f}"
+                  f"{row['post_target_ratio']:>9.3f}{row['synth_ratio']:>9.3f}"
+                  f"{row['total_ratio']:>9.3f}{row['closure_error']:>+10.3f}")
 
     max_value = (1 << args.bits) - 1
     report["luma_bins"] = {name: [] for name in per_frame_masks}
@@ -290,13 +392,24 @@ def main():
                 next_clean = clean_decoded[frame_number + 1].astype(np.float64)
                 band = luma_bands(source, blocks, args.luma_bins, max_value)[bin_index]
                 if len(band) >= 8:
-                    rows.append(measure(
-                        source, next_source, clean, next_clean, band))
+                    measured = measure(
+                        source, next_source, clean, next_clean, band)
+                    if encoded_decoded:
+                        measured["encoded"] = measure_encoded(
+                            source, next_source,
+                            encoded_decoded["on"][frame_number],
+                            encoded_decoded["on"][frame_number + 1],
+                            encoded_decoded["off"][frame_number],
+                            encoded_decoded["off"][frame_number + 1], band)
+                    rows.append(measured)
             if not rows:
                 continue
             row = aggregate(rows)
             limits = [bin_index / args.luma_bins, (bin_index + 1) / args.luma_bins]
             record = {"range": limits, **row}
+            if encoded_decoded:
+                record["encoded"] = aggregate_encoded(
+                    [measured["encoded"] for measured in rows])
             report["luma_bins"][name].append(record)
             print(f"{limits[0]:.3f}-{limits[1]:.3f} {name:<20}{row['blocks']:>8}"
                   f"{row['truth_sigma']:>10.2f}{row['amplitude_ratio']:>10.3f}"
