@@ -51,6 +51,15 @@ class EmissionAuditTests(unittest.TestCase):
         self.assertEqual(register, 3695)
         self.assertEqual(value, 14)
 
+    def test_oracle_seeds_are_repeatable_nonzero_and_spread(self):
+        first = [emission_audit.oracle_seed(10, index) for index in range(32)]
+        second = [emission_audit.oracle_seed(10, index) for index in range(32)]
+        following = [emission_audit.oracle_seed(11, index) for index in range(32)]
+        self.assertEqual(first, second)
+        self.assertNotIn(0, first)
+        self.assertGreaterEqual(len(set(first)), 31)
+        self.assertNotEqual(first, following)
+
 
 if __name__ == "__main__":
     unittest.main()

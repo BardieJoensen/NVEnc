@@ -137,6 +137,24 @@ def actual_synth_blocks(encoded_on, encoded_off, blocks):
     return difference[rows, cols]
 
 
+def oracle_seed(frame_number, sample_number):
+    """Deterministic, well-spread non-zero seed for pre-encode expectation."""
+    value = (((frame_number + 1) * 0x9E3779B1)
+             ^ ((sample_number + 1) * 0x85EBCA6B)) & 0xffffffff
+    value ^= value >> 16
+    value = (value * 0x7FEB352D) & 0xffffffff
+    value ^= value >> 15
+    seed = value & 0xffff
+    return seed if seed else 1
+
+
+def synth_variance_for_seed(base, blocks, entry, gaussian, bits, seed):
+    seeded = {**entry, "random_seed": seed}
+    predicted = av1_grain.synthesize_selected_luma(
+        base, blocks, seeded, gaussian, bits)
+    return float(selected_variances(predicted).mean())
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True)
@@ -151,6 +169,10 @@ def main():
         help="grain_synthesis.c from the pinned build_aom_reference.sh checkout")
     parser.add_argument("--static-lo", type=float, default=0.8)
     parser.add_argument("--static-hi", type=float, default=1.3)
+    parser.add_argument(
+        "--seed-samples", type=int, default=0,
+        help="also estimate pre-encode expected variance over this many "
+             "deterministic AV1 seeds (default 0)")
     parser.add_argument("--json-out", default="")
     args = parser.parse_args()
 
@@ -189,6 +211,7 @@ def main():
     direct_sum = 0.0
     delivered_sum = 0.0
     truth_sum = 0.0
+    seed_mean_sum = 0.0
     total_blocks = 0
     for frame_number in frames:
         source = source_decoded[frame_number].astype(np.float64)
@@ -218,6 +241,19 @@ def main():
         actual = 0.5 * (
             float(selected_variances(actual_blocks).mean())
             + float(selected_variances(next_actual_blocks).mean()))
+        seed_mean = None
+        if args.seed_samples > 0:
+            seed_variance_sum = 0.0
+            for sample_number in range(args.seed_samples):
+                seed_variance_sum += 0.5 * (
+                    synth_variance_for_seed(
+                        base_decoded[frame_number], blocks, entry, gaussian,
+                        args.bits, oracle_seed(frame_number, sample_number))
+                    + synth_variance_for_seed(
+                        base_decoded[frame_number + 1], blocks, next_entry,
+                        gaussian, args.bits,
+                        oracle_seed(frame_number + 1, sample_number)))
+            seed_mean = seed_variance_sum / args.seed_samples
         difference = np.concatenate((
             (predicted_blocks - actual_blocks).reshape(-1),
             (next_predicted_blocks - next_actual_blocks).reshape(-1)))
@@ -230,6 +266,8 @@ def main():
         direct_sum += actual * count
         delivered_sum += delivered_variance * count
         truth_sum += truth_variance * count
+        if seed_mean is not None:
+            seed_mean_sum += seed_mean * count
         total_blocks += count
         report_rows.append({
             "frame": frame_number,
@@ -253,6 +291,10 @@ def main():
             "direct_over_delivered": (
                 math.sqrt(actual / delivered_variance)
                 if delivered_variance > 0 else None),
+            "seed_mean_sigma": math.sqrt(seed_mean) if seed_mean is not None else None,
+            "seed_mean_over_delivered": (
+                math.sqrt(seed_mean / delivered_variance)
+                if seed_mean is not None and delivered_variance > 0 else None),
             "pixel_mismatches": int(np.count_nonzero(difference)),
             "pixel_count": int(difference.size),
             "max_abs_pixel_error": int(np.max(np.abs(difference))),
@@ -272,6 +314,16 @@ def main():
         "delivered_ratio": delivered_sigma / truth_sigma,
         "predicted_over_delivered": predicted_sigma / delivered_sigma,
         "direct_over_delivered": direct_sigma / delivered_sigma,
+        "seed_samples": args.seed_samples,
+        "seed_mean_sigma": (
+            math.sqrt(seed_mean_sum / total_blocks)
+            if args.seed_samples > 0 else None),
+        "seed_mean_ratio": (
+            math.sqrt(seed_mean_sum / truth_sum)
+            if args.seed_samples > 0 else None),
+        "seed_mean_over_delivered": (
+            math.sqrt(seed_mean_sum / delivered_sum)
+            if args.seed_samples > 0 else None),
         "pixel_mismatches": sum(row["pixel_mismatches"] for row in report_rows),
         "pixel_count": sum(row["pixel_count"] for row in report_rows),
         "max_abs_pixel_error": max(
@@ -299,19 +351,26 @@ def main():
     }
     print(f"{'frame':>6}{'blocks':>9}{'tblseed':>9}{'seed':>9}"
           f"{'predicted':>11}{'direct':>11}{'delivered':>11}"
-          f"{'pred/del':>11}{'bad px':>10}")
+          + (f"{'seed mean':>11}" if args.seed_samples > 0 else "")
+          + f"{'pred/del':>11}{'bad px':>10}")
     for row in report_rows:
+        seed_column = (f"{row['seed_mean_sigma']:>11.3f}"
+                       if args.seed_samples > 0 else "")
         print(f"{row['frame']:>6}{row['blocks']:>9}"
               f"{row['table_seed']:>9}{row['bitstream_seed']:>9}"
               f"{row['predicted_sigma']:>11.3f}"
               f"{row['direct_sigma']:>11.3f}"
               f"{row['delivered_sigma']:>11.3f}"
+              f"{seed_column}"
               f"{row['predicted_over_delivered']:>11.3f}"
               f"{row['pixel_mismatches']:>10}")
     print("\naggregate "
           f"predicted={aggregate['predicted_ratio']:.4f} "
           f"delivered={aggregate['delivered_ratio']:.4f} "
-          f"pred/del={aggregate['predicted_over_delivered']:.4f}")
+          f"pred/del={aggregate['predicted_over_delivered']:.4f}"
+          + (f" seed-mean={aggregate['seed_mean_ratio']:.4f} "
+             f"seed/del={aggregate['seed_mean_over_delivered']:.4f}"
+             if args.seed_samples > 0 else ""))
     if args.json_out:
         with open(args.json_out, "w", encoding="utf-8") as handle:
             json.dump(report, handle, indent=2)
