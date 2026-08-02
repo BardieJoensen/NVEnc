@@ -28,43 +28,80 @@ import json, subprocess, sys
 import numpy as np
 
 import os
-W, H = 1920, 1080
+from review_score import FFMPEG, aligned_frame_count
+
 BS = int(os.environ.get("GHOST_BS", "8"))
-BW, BH = W // BS, H // BS
 
 
-def frames(path, n):
+def _read_exact(stream, size):
+    chunks = []
+    remaining = size
+    while remaining:
+        chunk = stream.read(remaining)
+        if not chunk:
+            break
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    return b"".join(chunks)
+
+
+def frames(path, n, width, height):
     """Yield n luma planes as float32, decoded to 10-bit gray."""
     p = subprocess.Popen(
-        ["ffmpeg", "-v", "error", "-nostdin", "-i", path, "-frames:v", str(n),
+        [FFMPEG, "-v", "error", "-nostdin", "-i", path, "-frames:v", str(n),
          "-pix_fmt", "gray10le", "-f", "rawvideo", "-"],
-        stdout=subprocess.PIPE)
-    size = W * H * 2
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    size = width * height * 2
+    completed = False
     try:
-        for _ in range(n):
-            buf = p.stdout.read(size)
+        for index in range(n):
+            buf = _read_exact(p.stdout, size)
             if len(buf) < size:
-                return
-            yield np.frombuffer(buf, np.uint16).reshape(H, W).astype(np.float32)
-    finally:
+                stderr = p.stderr.read().decode(errors="replace")
+                p.wait()
+                raise RuntimeError(
+                    f"{path}: short decode at frame {index}/{n}: {stderr[-2000:]}")
+            yield np.frombuffer(buf, np.uint16).reshape(height, width).astype(np.float32)
         p.stdout.close()
-        p.wait()
+        stderr = p.stderr.read().decode(errors="replace")
+        status = p.wait()
+        completed = True
+        if status != 0:
+            raise RuntimeError(f"{path}: decoder exited {status}: {stderr[-2000:]}")
+    finally:
+        if not completed:
+            if p.stdout:
+                p.stdout.close()
+            p.kill()
+            p.wait()
 
 
-def box(a):
-    return a.reshape(BH, BS, BW, BS).mean(axis=(1, 3))
+def box(a, width, height):
+    return a.reshape(height // BS, BS, width // BS, BS).mean(axis=(1, 3))
 
 
 def probe(ref, base, n):
+    available, ref_info, base_info = aligned_frame_count(ref, base, limit=n)
+    if available != n:
+        raise RuntimeError(
+            f"requested {n} frames but the aligned pair contains {available}; "
+            "pass the exact count rather than allowing a silent short decode")
+    width, height = ref_info["width"], ref_info["height"]
+    if width % BS or height % BS:
+        raise RuntimeError(
+            f"{width}x{height} is not divisible by GHOST_BS={BS}")
     num = den = 0.0
     bins = [(0.0, 4.0), (4.0, 16.0), (16.0, 64.0), (64.0, 1e9)]
     bnum = [0.0] * len(bins)
     bden = [0.0] * len(bins)
     bcnt = [0] * len(bins)
-    rg, bg = frames(ref, n), frames(base, n)
+    rg = frames(ref, n, width, height)
+    bg = frames(base, n, width, height)
     prev_src = None
+    consumed = 0
     for src, bas in zip(rg, bg):
-        s, b = box(src), box(bas)
+        consumed += 1
+        s, b = box(src, width, height), box(bas, width, height)
         if prev_src is not None:
             err = b - s
             prv = prev_src - s
@@ -78,7 +115,10 @@ def probe(ref, base, n):
                     bden[i] += float((prv[m] * prv[m]).sum())
                     bcnt[i] += int(m.sum())
         prev_src = s
-    out = {"beta": num / den if den else None,
+    if consumed != n:
+        raise RuntimeError(f"decoded {consumed} paired frames, expected {n}")
+    out = {"frames": consumed, "box_size": BS,
+           "beta": num / den if den else None,
            "bins": [{"range": f"{lo:g}-{hi:g}" if hi < 1e9 else f">{lo:g}",
                      "blocks": bcnt[i],
                      "beta": (bnum[i] / bden[i]) if bden[i] else None}

@@ -16,7 +16,7 @@ must not be judged by VMAF or SSIMU2 against the source.
 
 | instrument | answers | invalidated by |
 | --- | --- | --- |
-| `temporal_drag.py` | ghosting/disocclusion: fraction of frame n-1 bled into the base | nothing known; box-size sweep is the built-in control |
+| `temporal_drag.py` | projection of base error onto the previous-frame direction; a candidate lag/ghosting signal | spatial blur on moving edges, grain without box averaging, or any frame/timeline mismatch; calibration is pending |
 | Butteraugli max p95 (FFVship) | localized artifacts the pooled metrics average away | absolute value is content-dependent; use the cross-arm gap |
 | detail decile: corr / HF kept / RMSE vs source | misplaced vs missing detail (high corr + high RMSE = displacement) | any one of the three alone; they must be read together |
 | base vs *denoised source*, same denoiser both sides | picture fidelity with grain cancelled from both sides | denoiser must be identical on both sides or it measures itself |
@@ -36,7 +36,7 @@ Reference values, `FINDINGS-2026-08-02-MOTION-METRICS.md`: bilateral drag beta
 | --- | --- | --- |
 | `temporal_grain_report.py` | amplitude vs temporal truth, lag-1, lag-2, per luma band, per plane | needs static flat blocks selected from the *source* and applied unchanged to every arm |
 | `source_fit.py` | offline oracle: what the AR fit should be, with an ideal-clean control | simulation clipping if `--sim-sigma` is left at a saturating value |
-| `ar_acf.py` / `cap_table_acf.py` | implied autocorrelation of an emitted table | table seed is not the bitstream seed -- see stage 3 |
+| `ar_acf.py` / `cap_table_acf.py` | coefficient-implied autocorrelation of an emitted table | saturating simulation/clipping or too few simulation seeds; the table seed is intentionally irrelevant to this coefficient statistic |
 
 Amplitude and texture must be reported **separately**.  HF sigma alone cannot
 tell correct grain from correctly-sized grain: 2026-07-17 measured HF 3.67
@@ -60,20 +60,29 @@ at 0.891 mean amplitude against luma's 0.959 and is the open modelling gap.
 | played-total closure | `sqrt(post_base_var + synth_var)` against source truth | needs a grain-disabled *and* grain-enabled decode of the same stream |
 | rectification counter | how often `fmax(0, V_source - V_base)` clamps and drags a bin mean down | populations differ between spatial and temporal paths; treat as an upper proxy |
 
-A grain-applying decoder is mandatory: dav1d (`-c:v libdav1d`, `-filmgrain 0|1`)
-or NVDEC, validated bit-exact against each other.
+A grain-applying decoder is mandatory.  Use dav1d explicitly
+(`-c:v libdav1d`, `-filmgrain 0|1`).  NVDEC is not an integrity validator: on
+the known corruption class it reported zero errors where dav1d reported 502.
+Even if NVDEC is compared for playback pixels on a known-good stream, it must
+never replace dav1d for delivery or safety gates.
 
 ## Stage 4 -- compression
 
 Bytes against a **plain encode at the same QVBR**, whole corpus, never a single
-title.  The plain control is also what exposes metric bias in stages 1 and 2,
-so it is not optional.
+title.  Call this same-QVBR, not matched-rate: its purpose is the production
+operating-point comparison and the files intentionally differ in size.  Add a
+separate matched-bitrate sweep when answering rate-quality questions.  The
+plain control is also what exposes metric bias in stages 1 and 2, so it is not
+optional.
 
 ## Stage 5 -- safety and invariance (gates, not diagnostics)
 
 - `fgs_kat.py`: all fixtures, with the flag on **and** off;
 - `modelsrc=off` produces a byte-identical table and elementary-stream MD5 to
   the pre-change encoder;
+- every paired measurement has the expected frame count, dimensions and
+  relative PTS timeline; decoders must exit successfully rather than silently
+  truncating at the shorter input;
 - complete `libdav1d -xerror` decode of every candidate stream;
 - the CPU test suite;
 - the labelled-negative fixture is still rejected and the shipping model still
@@ -90,10 +99,11 @@ and gross regressions.
 
 They must not be the objective.  Measured 2026-08-02
 (`FINDINGS-2026-08-02-METRIC-SENSITIVITY.md`): VMAF's response to grain
-*presence* is 2.2-6.3 points on 6 of 6 pairs, while its response to a 0.893 ->
-0.959 amplitude *correctness* improvement is -0.04 mean with +/-0.9 scatter and
-no consistent sign.  The metric cannot see the thing being optimised, and its
-multiscale VIF/ADM features additionally prefer grain finer than the source.
+*presence* is -2.2 to -6.3 points on 6 of 6 same-stream pairs.  The attempted
+amplitude-correctness comparison was not isolated and is withdrawn pending a
+fixed-base/fixed-AR replay.  The presence result alone is sufficient to show
+why VMAF cannot be the sole grain objective.  Whether VIF/ADM prefer finer
+grain at fixed energy is also an open controlled experiment, not a finding.
 
 ## The one thing none of the above replaces
 
@@ -104,8 +114,8 @@ knows what masking does.  The current set is
 ## Minimum bar for a shipping candidate
 
 1. stage 5 gates all green;
-2. stage 1: drag beta and Butteraugli max p95 within reach of the bilateral
-   reference values, on the whole corpus;
+2. stage 1: the calibrated previous/next temporal statistic and Butteraugli max
+   p95 are within reach of the bilateral reference values on the whole corpus;
 3. stage 2: amplitude and lag-1/lag-2 close on **both** planes, per luma band,
    not just whole-title;
 4. stage 3: emission exact, played total closed, rectification accounted for;

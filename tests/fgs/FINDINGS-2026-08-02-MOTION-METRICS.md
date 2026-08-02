@@ -1,9 +1,18 @@
 # Motion separator: metric review and a direct ghosting measurement, 2026-08-02
 
+> **Audit correction, 2026-08-02:** the metric tables below are reproduced by
+> their artifacts, but the original causal interpretation of `beta` was too
+> strong.  A controlled translating-edge test produces positive `beta` from a
+> purely spatial blur that never reads the previous frame.  Until positive
+> temporal-blend and negative spatial-filter controls pass, call this a
+> previous-frame-direction projection, not a literal blend fraction or vector
+> failure rate.  Motion remains a non-candidate; the correction weakens the
+> claimed mechanism, not the conservative deployment decision.
+
 Run against the blinded review set in `FINDINGS-2026-08-02-MOTION-REVIEW.md`
 because the perceptual pass could not be scheduled.  **This does not replace
-that review.**  It does answer, numerically and with a mechanism, the question
-the review was convened to settle.
+that review.**  It records a large objective arm separation, while the audit
+above reopens which mechanism produced it.
 
 Note for whoever reads the review set next: this document names which arm is
 which, so it deblinds `FINDINGS-2026-08-02-MOTION-REVIEW.md`.  Read the clips
@@ -11,7 +20,8 @@ first if a clean impression still matters.
 
 ## What was scored
 
-The 12 blinded clips (3 titles x A/B x base/finished), 288 frames each, against
+The 12 blinded clips (3 titles x A/B x base/finished), 287--288 frames each,
+using every paired frame, against
 a lossless centre crop of the original source built from the retained 4K
 `clip_*-ref288.mkv` / `clip_The_Deer_Hunter.mkv` lossless excerpts:
 
@@ -33,15 +43,16 @@ FFVship SSIMULACRA2 and Butteraugli.  Artifacts:
 /media/merged-storage/media/test-encodes/review-vmaf-20260802/
 ```
 
-## The measurement that actually answers the question
+## The temporal projection under audit
 
 Full-reference metrics cannot rank these two arms on their own.  Motion removes
 more grain than bilateral by design, FR metrics punish grain removal, and the
 project has already been burned once by a Butteraugli number produced under
 exactly that bias.  So the primary instrument here is not a quality metric.
 
-**Temporal drag.**  Ghosting means the base at frame `n` carries content from
-frame `n-1`.  Regress the base's error onto the previous-frame difference:
+**Previous-frame-direction projection.**  A temporal blend is one mechanism
+that makes the base error point in the direction of frame `n-1`.  Regress the
+base's error onto that direction:
 
 ```text
 err_n  = base_n - src_n
@@ -49,9 +60,10 @@ prev_n = src_{n-1} - src_n
 beta   = sum(err*prev) / sum(prev*prev)
 ```
 
-`beta` is directly the fraction of the previous frame bled into the base: a
-base equal to `(1-a)*src_n + a*src_{n-1}` regresses to `beta = a`.  A purely
-spatial denoiser has no mechanism to produce `beta > 0`.
+For the specific model `base_n = (1-a)*src_n + a*src_{n-1}`, `beta = a`.
+That implication does not run backwards: a moving edge processed by a spatial
+blur can project onto the same direction.  The first version incorrectly
+claimed a spatial denoiser had no mechanism to produce positive `beta`.
 
 One confound had to be killed first.  Both planes still carry grain: `err`
 contains roughly `-grain_n` and `prev` contains `grain_{n-1} - grain_n`, so
@@ -71,10 +83,11 @@ The Shining base, same data, three box sizes (16 does not divide 1080):
 | 8 | 0.1405 | 0.0015 |
 | 24 | 0.1412 | **-0.0005** |
 
-Motion's `beta` is invariant to averaging; bilateral's decays to zero.  That is
-the signature of structure versus grain residual, and it is what makes the
-number below a measurement rather than an artifact of how hard each arm
-denoises.
+Motion's `beta` is invariant to averaging; bilateral's decays to zero.  This
+successfully rejects the identified grain-removal confound.  It does not reject
+spatial smoothing or another moving-edge error, so it validates the statistic
+as a structure-correlated signal rather than validating its original causal
+label.
 
 ### Result
 
@@ -93,23 +106,24 @@ The low-`|prev|` bins are where the residual grain confound lives, which is why
 bilateral still reads 0.12-0.24 there and ~0.000-0.005 in the high-motion bin.
 The `>64` column is the one to read.
 
-**Motion's base carries 13-14% of the previous frame in moving regions.
-Bilateral carries 0.0-0.5%.**  This is the disocclusion/ghosting failure,
-quantified, on real film, without a human.
+**Motion's base error has a 13-14% projection onto the previous-frame
+difference in the highest-motion bin. Bilateral reads 0.0-0.5%.**  This is a
+large moving-structure separation.  It is not yet a literal measurement of how
+much previous-frame content survives.
 
-Interpretation matters here: where motion compensation succeeds, the
-compensated previous frame already equals the current frame and contributes no
-drag.  `beta` therefore measures the *uncompensated* fraction specifically --
-it is a direct estimate of how often the separator's vectors fail, which is
-exactly the disocclusion case the review set was built around.
+The result is consistent with uncompensated temporal blending, which is the
+disocclusion failure the review set was built around.  It is not specific to
+that mechanism.  A known-alpha temporal blend, spatial blur, translating edge
+and previous-versus-next regression are required before `beta` can be used as a
+motion-vector tuning objective.
 
 ### Synthesis does not remove it
 
 The finished clips give `beta` 0.1406 / 0.1501 / 0.1695 against the bases'
-0.1405 / 0.1486 / 0.1694.  Grain synthesis leaves the drag physically intact to
-three decimals.  This does not prove the drag is *visible* through the grain --
-masking is perceptual and this probe is not -- but it rules out the hopeful
-version, that synthesis somehow reconstructs the displaced content.
+0.1405 / 0.1486 / 0.1694.  Grain synthesis leaves the measured projection
+intact to three decimals.  This
+does not prove that the error is displaced prior-frame content or that it is
+*visible* through the grain; masking is perceptual and this probe is not.
 
 ## Full-reference metrics
 
@@ -125,12 +139,14 @@ Base pair:
 | Scarface | bilateral | 80.06 | 79.37 | 37.30 | 0.9863 | 38.07 | -5.20 | -15.26 | 3.68 | **11.18** |
 | Scarface | motion | 76.36 | 75.00 | 36.94 | 0.9807 | 37.98 | -16.63 | -26.82 | 4.05 | **35.33** |
 
-The Butteraugli max norm is the column that carries the finding.  It is the
-localized-artifact signal that mean-pooled VMAF and SSIMU2 average away, and
+The Butteraugli max norm is the strongest localized-artifact guard rail.  It is
+a localized-artifact signal that mean-pooled VMAF and SSIMU2 average away, and
 **bilateral sits at 11.18 / 11.20 / 11.22 across three completely different
 films** -- a floor -- while motion ranges 35.3 to 52.3 and varies with content.
-A uniform difference in how much grain an arm removes cannot produce that; it
-would move the mean, not blow up the tail on some films and not others.
+The pattern is consistent with localized picture damage, but the metric remains
+full-reference and is not proven independent of spatially varying grain
+removal.  It supports the conservative decision; it does not identify the
+mechanism by itself.
 
 Finished pair, motion minus bilateral:
 
@@ -147,8 +163,9 @@ essentially untouched: motion's Butteraugli max p95 moves 52.30 -> 52.91,
 ### The plain control, and why VMAF cannot carry this finding
 
 Standing rule: any comparison trading real grain for synthesised grain needs a
-plain encode at matched rate as the anchor, because FR metrics reward
-pixel-aligned grain.  The QVBR-29 plain encodes were decoded, cropped
+plain encode at the same encoder setting as an anchor, because FR metrics
+reward pixel-aligned grain.  These are same-QVBR controls, not matched-bitrate
+encodes.  The QVBR-29 plain encodes were decoded, cropped
 identically and scored:
 
 | title | arm | VMAF | VMAF NEG | PSNR-Y | SSIM | 4K bytes | vs plain |
@@ -170,10 +187,10 @@ SSIM and SSIMU2 cannot separate "this arm damaged the picture" from "this arm
 denoised harder", and the -10.8 VMAF gap between motion and bilateral must not
 be quoted as damage on its own.
 
-That is precisely why the finding rests on the drag probe -- which is immune,
-by construction and by the box-size control -- and on the Butteraugli max-norm
-floor, which bilateral holds at 11.2 on all three films despite also removing
-substantial grain.
+That is why the result cannot rest on pooled FR metrics.  The projection and
+Butteraugli tail together say the motion arm needs more investigation, but the
+projection is not immune to spatial-filter errors and must pass the controls
+listed above before it carries a causal finding.
 
 ### The suspended number is no longer suspended
 
@@ -199,32 +216,34 @@ things, and the block distribution confirms it:
 | The Deer Hunter | 35.0% | 45.5% | 15.8% | 3.6% | **19.4%** |
 | Scarface | 53.5% | 39.2% | 6.2% | 1.2% | **7.4%** |
 
-`beta` is the blend fraction where motion occurs; the metrics are whole-frame
-damage.  Scarface is a static-camera scene with moving people, so a high local
-drag touches a small share of the frame.  The two are complementary, and the
-per-title metric spread is mostly explained by how much of the frame moves.
+`beta` is weighted toward locations where inter-frame difference is large; the
+metrics are whole-frame damage.  Scarface is a static-camera scene with moving
+people, so its projection touches a small share of the frame.  With only three
+titles, the distribution is consistent with the metric spread but cannot be
+said to explain it.
 
 ## What this does and does not settle
 
-Settled:
+Supported by this run:
 
-- motion's base carries 13-17% of the previous frame in moving regions, and
-  bilateral carries essentially none;
-- the mechanism is uncompensated temporal blending, not general softness;
-- grain synthesis does not repair it;
+- motion has a much larger previous-frame-direction projection than bilateral,
+  including in the highest-motion bin;
+- grain synthesis does not materially change that projection;
 - the earlier Butteraugli result reproduces under the current fixes;
 - every full-reference metric available ranks motion worse on every title, in
   both base and finished form.
 
 Not settled:
 
+- whether the projection is temporal blending, spatial smoothing or a mixture;
+- any literal previous-frame fraction or vector-failure rate;
 - **whether it is visible in normal playback.**  None of this is perceptual.
   A 13% blend of the previous frame on a moving high-contrast edge is in the
   range where trails are usually visible, but "usually" is not a measurement,
   and grain may mask more than these metrics suggest;
 - whether a stricter motion-confidence threshold or a disocclusion fallback to
   the spatial filter recovers most of the 46.4% at a much lower `beta`.  That
-  is now a tunable with a cheap objective function, which it was not before.
+  becomes a useful tuning question only after the statistic is calibrated.
 
 ## Bearing on the project
 
@@ -236,10 +255,11 @@ is rejected: source fitting and leak closure are separator-independent and
 apply to bilateral unchanged.  What would be lost is the headline compression
 number.
 
-`beta` is cheap, needs no human, and is now the natural objective for tuning
-the separator's confidence threshold.  Recommended next step is to sweep that
-threshold against `beta` and bytes together, rather than to re-argue the
-perceptual question.
+`beta` is cheap and needs no human, but it is not yet a safe tuning objective.
+The next step is to calibrate it against known temporal blends and spatial
+moving-edge controls, including previous-versus-next asymmetry.  Only if that
+separates the mechanisms should the confidence threshold be swept against the
+corrected statistic and bytes.
 
 `modelsrc` remains default-off, motion remains a non-candidate, and nothing
 here was deployed.

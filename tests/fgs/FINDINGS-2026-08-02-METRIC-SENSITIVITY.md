@@ -1,11 +1,20 @@
 # What full-reference metrics can and cannot see about grain, 2026-08-02
 
+> **Audit correction, 2026-08-02:** the grain-present versus grain-absent
+> result remains valid because each pair is decoded from the same stream.  The
+> pre/post leak-closure comparison did **not** isolate grain correctness as
+> claimed.  Its grain-disabled bases differ, and its emitted AR sequence also
+> changes.  Retain that table only as an end-to-end comparison of two
+> candidates; withdraw the causal conclusion and the "two orders of magnitude"
+> estimate until a fixed-base, fixed-AR, fixed-seed replay is run.
+
 Prompted by a design question: if synthesised grain had the right colour, luma
 placement, size and position, would VMAF stop punishing it -- and could VMAF
 then be used as the optimisation target?
 
-The answer is measured here rather than argued.  It splits into two questions
-that behave completely differently.
+The position and grain-presence parts are measured here.  The attempted
+grain-correctness arm is retained as a failed experiment so its confounds are
+not repeated.
 
 ## Position is not a fixable parameter
 
@@ -45,14 +54,25 @@ Six of six.  Enabling the best grain the project has produced -- source-fit,
 correct lag-1/lag-2, leak-closed amplitude -- costs 2 to 6 VMAF points every
 time.
 
-## Metrics do not see grain *correctness* at all
+## The attempted grain-correctness comparison is not isolated
 
-The sharper test.  Two candidates differ in exactly one thing, leak closure:
-same rate, same separator, same selector, same AR coefficients, only the luma
-strength curve moves.  Mean synthesis amplitude against source truth goes from
-0.893 to 0.959, and corpus bias against the true post-encode target from
--0.069 to -0.004.  This is the largest single fidelity gain of the last two
-days.
+The intended test compared the pre/post leak-closure candidates at the same
+QVBR, separator and selector.  Mean synthesis amplitude against source truth
+moves from 0.893 to 0.959, and corpus bias against the true post-encode target
+from -0.069 to -0.004.
+
+The isolation premise is false.  An audit of the emitted side data finds
+different AR entries and update intervals on every title.  A direct
+grain-disabled decode also differs; for Taxi Driver:
+
+```text
+pre  SHA-256 7f7f1a3369ff58eecac67780215871ffc0caf1792930244b3ff5bc3ded3d529f
+post SHA-256 552c926dbecc45e009ee06a68efdac72f91c0c19580550334678737c448b6617
+```
+
+The bitstream seed sequence is identical, which removes one possible
+confound, but it is not enough.  The comparison mixes luma strength, AR-model
+and coded-base changes.
 
 Scored at native 4K against the lossless originals, 4K models, dav1d decode:
 
@@ -66,39 +86,40 @@ Scored at native 4K against the lossless originals, 4K models, dav1d decode:
 | The Shining | 0.892 | 0.942 | 86.035 | 86.056 | +0.021 | +0.040 | -0.259 | +0.00011 | +0.00% |
 | **mean** | | | | | **-0.042** | **-0.038** | **-0.120** | **+0.0002** | |
 
-Worse on 3/6 for VMAF and VMAF NEG, 4/6 for PSNR-Y.  **Mean change -0.042 VMAF
-with +/-0.9 scatter and no consistent sign.**
+Worse on 3/6 for VMAF and VMAF NEG, 4/6 for PSNR-Y.  The observed end-to-end
+change has signed mean -0.042 VMAF, mean absolute change 0.424, RMS change
+0.521, and a -0.796 .. +0.865 range.
 
-The pure-MSE argument predicts a small consistent *decrease* here, since the
-only change is more synthetic grain on the picture.  PSNR-Y is directionally
-consistent with that (-0.12 dB mean, 4/6 worse) but the effect is far below the
-scatter.  The honest reading is not that correct grain scores better or worse.
-**It is that the metric cannot see the difference.**
+The pure-MSE argument would predict a small consistent decrease if amplitude
+were the only change.  Because it was not, neither PSNR-Y's -0.12 dB mean nor
+the VMAF scatter can be assigned to grain correctness.  The honest reading is
+that this run does not answer the intended question.
 
 ## The decomposition that answers the question
 
 | what changed | VMAF effect | consistency |
 | --- | ---: | --- |
 | grain present vs absent | -2.2 to -6.3 | 6/6 |
-| grain amplitude 0.893 -> 0.959 toward truth | -0.04 mean, +/-0.9 | 3/6 |
+| two non-isolated candidates whose mean amplitude is 0.893 -> 0.959 | -0.042 signed mean; 0.424 mean absolute | 3/6 |
 
-The two rows use different setups (1080p crop/HD model versus 4K/4K model), so
-this is an order-of-magnitude comparison, not an exact ratio.  It is enough:
-VMAF's response to grain *presence* is roughly two orders of magnitude larger
-than its response to grain *correctness*, and only the presence term has a
-consistent sign.
+The two rows use different setups (1080p crop/HD model versus 4K/4K model), and
+the second row is not isolated.  Even as descriptive arithmetic, comparing the
+2.2--6.3 presence effect with the 0.424 mean-absolute / 0.521 RMS candidate
+change gives roughly 4--15x, not two orders of magnitude.  Only the first row
+supports a causal finding: VMAF consistently penalises adding an independent
+grain realisation.
 
-So a VMAF-driven optimiser does not converge on well-formed grain.  The
-correctness signal it would need is buried in its own noise, while the presence
-signal dominates every gradient.  It converges on less grain, and at the limit
-on no grain.
+The valid presence result is already enough to reject VMAF as the sole grain
+objective: an optimiser can improve its score by removing independent grain.
+This experiment does not quantify VMAF's sensitivity to amplitude correctness;
+that requires the controlled replay below.
 
-There is a second-order trap in the same direction.  VMAF's VIF and ADM
-features are multiscale, so grain in coarse subbands -- where picture structure
-lives -- is penalised harder than fine grain of the same energy.  At fixed
-grain energy the metric therefore prefers grain *finer* than the source.  That
-is the 2026-07-17 failure exactly: HF 3.67 against a 3.13 source looked like a
-win while acf@1 read 0.186 against the source's 0.367.
+A plausible second-order trap remains unmeasured.  VMAF's VIF and ADM features
+are multiscale, so they may penalise coarse grain differently from fine grain
+at equal energy.  The 2026-07-17 HF 3.67 / acf@1 0.186 result establishes that
+the old retention statistic preferred excess fine energy over the source's
+coarser texture; it was not a controlled VMAF fine-versus-coarse experiment.
+Do not state that VMAF prefers finer grain until that experiment exists.
 
 ## What the instinct gets right
 
@@ -125,6 +146,22 @@ open case.  This is the one region where a metric and perception agree.
   this project.  It is the one metric that might respond to grain correctness
   rather than grain quantity.
 
+## Required rerun
+
+Use one grain-disabled base and synthesize two lossless outputs while holding
+the following byte- or pixel-identical:
+
+- decoded base pixels and frame timeline;
+- AR coefficients and every non-luma-scaling parameter;
+- per-frame normative seed;
+- luma scaling-point locations, unless location is the variable explicitly
+  being tested.
+
+Change only the luma scaling values, verify those invariants automatically,
+then score VMAF/VMAF NEG, PSNR, SSIM, SSIMULACRA2, Butteraugli and exploratory
+CVVDP.  `metric_sensitivity.py` now refuses to score a pair that fails the
+fixed-base/non-scaling-field checks; the historical arms fail by design.
+
 ## Artifacts
 
 ```text
@@ -135,3 +172,5 @@ Pre-closure arm `sourcefit-corpus-20260801/<T>-motion_on.mkv`, post-closure arm
 `sourcefit-leakclose-20260802/<T>-q29.mkv`.  The 0.00-0.18% size deltas match
 the -0.02% .. +0.17% range recorded in `FINDINGS-2026-08-02-LEAK-CLOSURE.md`,
 confirming the arms are the intended pair.
+The size agreement does not establish metric isolation; that claim is
+superseded by the decoded-base and side-data audit above.
