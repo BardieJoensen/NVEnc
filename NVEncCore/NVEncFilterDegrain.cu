@@ -188,6 +188,45 @@ RGY_ERR launchNVEncDegrainBuildTemporalMixPlan(
     return launchNVEncDegrainBuildTemporalMixPlanImpl(temporalMixPlan, mv, sad, temporalMixPrior, blockCount, thsad, disableMask, refs, stream);
 }
 
+static __global__ void kernel_degrain_pair_reference_confidence_cuda(
+    const RGYDegrainMV *mv,
+    RGYDegrainSAD *sad,
+    const int blockCount,
+    const int refs) {
+    const int block = (int)blockIdx.x * blockDim.x + threadIdx.x;
+    if (block >= blockCount || refs != 2) {
+        return;
+    }
+    const int backward = block * refs;
+    const int forward = backward + 1;
+    const bool validPair = mv[backward].refdir == 0 && mv[forward].refdir == 1;
+    // A lower SAD produces a stronger render affinity.  Sharing the larger
+    // SAD admits both temporal directions only at the weaker confidence.
+    const uint32_t pairedSad = validPair
+        ? max(sad[backward].sad, sad[forward].sad)
+        : UINT32_MAX;
+    sad[backward].sad = pairedSad;
+    sad[forward].sad = pairedSad;
+}
+
+RGY_ERR launchNVEncDegrainPairReferenceConfidence(
+    const CUMemBuf &mv,
+    CUMemBuf &sad,
+    const int blockCount,
+    const int refs,
+    cudaStream_t stream) {
+    if (refs != 2 || blockCount <= 0) {
+        return RGY_ERR_INVALID_PARAM;
+    }
+    const int block = 256;
+    const int grid = divCeil(blockCount, block);
+    kernel_degrain_pair_reference_confidence_cuda<<<grid, block, 0, stream>>>(
+        reinterpret_cast<const RGYDegrainMV *>(mv.ptr),
+        reinterpret_cast<RGYDegrainSAD *>(sad.ptr),
+        blockCount, refs);
+    return err_to_rgy(cudaGetLastError());
+}
+
 static __global__ void kernel_degrain_scene_change_count_cuda(
     uint32_t *sceneChangeCounts, const RGYDegrainSAD *sad,
     const int blockCount, const int temporalDirections, const uint32_t thscd1, const uint32_t baseDisableMask) {

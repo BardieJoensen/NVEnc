@@ -344,18 +344,44 @@ metric manifests and the temporal reports are under:
 /media/merged-storage/media/test-encodes/motion-paired-20260802/
 ```
 
+## Checked-in reproducibility gate
+
+The paired prototype now has a deliberately non-public test hook on this
+branch. Setting `NVENC_FGS_TEST_MOTION_CENTERED=paired` with
+`denoiser=motion,motion-refs=1` selects one past and one future reference and
+pairs their render confidence. The hook prints a test-only warning, has no CLI
+surface, and remains inactive by default.
+
+The checked-in implementation was compared both ways on a 24-frame Shining
+clip at `thsad=640`, `modelsrc=on`:
+
+| comparison | lossless base SHA-256 | grain-table SHA-256 | result |
+|---|---|---|---|
+| pre-change binary vs hook unset | `195f0dc05225...` | `7b86330b9923...` | exact |
+| pinned paired prototype vs checked-in hook | `ba91ef6c8e30...` | `937bb4241851...` | exact |
+
+This is stronger than matching final container sizes: it proves the default
+separator did not move and that the reusable implementation is the measured
+prototype, before lossy encoding or mux metadata can obscure the comparison.
+The exact artifacts are under `motion-paired-20260802/optin-exact/`.
+
+The complete GPU KAT was then run with motion, `modelsrc=on`,
+`motion-refs=1`, and paired confidence: **22/22 pass**. It covers delayed
+warm-up and drain, clean and grainy scene cuts, 8/10-bit and HDR paths, chroma,
+retention, moving detail, and explicit disocclusion. The repository's CPU
+suite is also **79/79 pass**. This validates the test mechanism; it does not
+clear the candidate for production.
+
 ## Decision and next gate
 
-Paired centred confidence merits a default-off, test-only implementation so a
-larger corpus can be run from a reproducible branch. It does not merit a
-production default yet. The remaining gates are:
+Paired centred confidence now has the default-off, test-only implementation
+needed for a reproducible larger-corpus run. It does not merit a production
+default yet. The remaining gates are:
 
-1. prove the checked-in opt-in produces the pinned prototype's lossless base
-   and table, while opt-in off remains byte-identical;
-2. extend beyond these four films, especially Casino and Interstellar;
-3. measure throughput and lookahead memory rather than infer them from runs
+1. extend beyond these four films, especially Casino and Interstellar;
+2. measure throughput and lookahead memory rather than infer them from runs
    made alongside production work; and
-4. review high-disocclusion clips and close the independent luma-band strength
+3. review high-disocclusion clips and close the independent luma-band strength
    problem before considering a default change.
 
 If the wider corpus preserves this Pareto improvement, the next separator

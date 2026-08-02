@@ -1445,12 +1445,26 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         m_motionDegrainParam->baseFps = prm->baseFps;
         m_motionDegrainParam->bOutOverwrite = false;
         m_motionDegrainParam->attachAnalysisData = false;
-        m_motionDegrainParam->causal = true;
+        // Deliberately environment-only while the centred scheduler is under
+        // corpus evaluation; do not expose an unvalidated production option.
+        bool testCenteredPaired = false;
+        if (const auto value = std::getenv("NVENC_FGS_TEST_MOTION_CENTERED"); value && value[0] != '\0') {
+            if (strcmp(value, "paired") == 0 && config.motionRefs == 1) {
+                testCenteredPaired = true;
+                AddMessage(RGY_LOG_WARN, _T("film-grain: applying test-only centered motion with paired confidence.\n"));
+            } else {
+                AddMessage(RGY_LOG_WARN,
+                    _T("film-grain: ignoring NVENC_FGS_TEST_MOTION_CENTERED=%s (expected paired with motion-refs=1).\n"),
+                    char_to_tstring(value).c_str());
+            }
+        }
+        m_motionDegrainParam->causal = !testCenteredPaired;
+        m_motionDegrainParam->pairedTemporalConfidence = testCenteredPaired;
         auto& degrain = m_motionDegrainParam->degrain;
         degrain.enable = true;
         degrain.mode = VppDegrainMode::Degrain;
         degrain.stage = VppDegrainStage::TR1;
-        degrain.delta = config.motionRefs;
+        degrain.delta = testCenteredPaired ? 1 : config.motionRefs;
         degrain.levels = 2;
         degrain.blksize = 32;
         degrain.overlap = 16;
@@ -1482,7 +1496,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         // Keep the final encoder-surface filter one-in/one-out.  Direction 2
         // retains only already available reference frames; a later pipeline
         // stage can enable bidirectional lookahead without changing O/B/R.
-        degrain.useFlag = 2;
+        degrain.useFlag = testCenteredPaired ? 0 : 2;
         // Encoder surfaces are semi-planar.  The motion filter handles luma;
         // chroma remains in the retained source and receives the existing
         // edge-aware local denoise below before residual modelling.

@@ -46,8 +46,9 @@ public:
     bool attachAnalysisData;
     bool zeroCopyCache;
     bool causal;
+    bool pairedTemporalConfidence;
 
-    NVEncFilterParamDegrain() : degrain(), attachAnalysisData(true), zeroCopyCache(false), causal(false) {};
+    NVEncFilterParamDegrain() : degrain(), attachAnalysisData(true), zeroCopyCache(false), causal(false), pairedTemporalConfidence(false) {};
     virtual ~NVEncFilterParamDegrain() {};
     virtual tstring print() const override {
         auto str = degrain.print();
@@ -59,6 +60,9 @@ public:
         }
         if (causal) {
             str += _T(", causal");
+        }
+        if (pairedTemporalConfidence) {
+            str += _T(", paired-confidence");
         }
         return str;
     };

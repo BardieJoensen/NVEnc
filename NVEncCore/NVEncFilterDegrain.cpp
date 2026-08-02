@@ -97,6 +97,8 @@ RGY_ERR launchNVEncDegrainMotionSearchSpatialRefine(
 RGY_ERR launchNVEncDegrainBuildTemporalMixPlan(
     CUMemBuf &temporalMixPlan, const CUMemBuf &mv, const CUMemBuf &sad, const CUMemBuf &temporalMixPrior,
     int blockCount, uint32_t thsad, uint32_t disableMask, int refs, cudaStream_t stream);
+RGY_ERR launchNVEncDegrainPairReferenceConfidence(
+    const CUMemBuf &mv, CUMemBuf &sad, int blockCount, int refs, cudaStream_t stream);
 RGY_ERR launchNVEncDegrainSceneChangeMask(
     CUMemBuf &sceneChangeCounts, CUMemBuf &disableMaskBuf, const CUMemBuf &sad,
     const RGYDegrainBlockLayout &layout, uint32_t thscd1, uint32_t baseDisableMask, uint64_t thscd2, cudaStream_t stream);
@@ -2185,7 +2187,24 @@ RGY_ERR NVEncFilterDegrain::emitDegrainFrame(const RGYFilterDegrainFrameSet &fra
     }
     copyFramePropWithoutRes(ppOutputFrames[0], frames.cur);
 
-    const uint32_t disableMask = degrainDisableMask(disableRefs, analysisLayout().temporalDirections);
+    auto renderDisableRefs = disableRefs;
+    if (prm->pairedTemporalConfidence) {
+        if (analysisLayout().temporalDirections != 2) {
+            AddMessage(RGY_LOG_ERROR, _T("paired temporal confidence requires exactly two reference directions.\n"));
+            return RGY_ERR_INVALID_PARAM;
+        }
+        err = launchNVEncDegrainPairReferenceConfidence(
+            *mv, *sad, (int)analysisLayout().blockCount(), analysisLayout().temporalDirections, stream);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("failed to pair temporal reference confidence: %s.\n"), get_err_mes(err));
+            return err;
+        }
+        if (renderDisableRefs[0] || renderDisableRefs[1]) {
+            renderDisableRefs[0] = true;
+            renderDisableRefs[1] = true;
+        }
+    }
+    const uint32_t disableMask = degrainDisableMask(renderDisableRefs, analysisLayout().temporalDirections);
     const bool useOverlapRamp = analysisLayout().overlap > 0;
     const bool pixelTrace = m_debugEnv.pixelTrace;
     const int pixelTraceX = m_debugEnv.pixelTraceX;
