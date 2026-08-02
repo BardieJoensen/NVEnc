@@ -67,6 +67,19 @@ class EmissionAuditTests(unittest.TestCase):
         for key in first:
             self.assertAlmostEqual(first[key], second[key])
 
+    def test_selected_luma_band_positions_use_fixed_ranges(self):
+        source = np.zeros((64, 64), dtype=np.float64)
+        source[:32, :32] = 32
+        source[:32, 32:] = 96
+        source[32:, :32] = 160
+        source[32:, 32:] = 224
+        blocks = [(0, 0), (0, 1), (1, 0), (1, 1)]
+        ranges = [[0.0, 0.5], [0.5, 1.0]]
+        self.assertEqual(
+            emission_audit.selected_luma_band_positions(
+                source, blocks, 8, ranges),
+            [[0, 1], [2, 3]])
+
 
 if __name__ == "__main__":
     unittest.main()

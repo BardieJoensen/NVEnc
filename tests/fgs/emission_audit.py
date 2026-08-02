@@ -151,6 +151,20 @@ def average_axis(rows):
     return {key: float(np.mean([row[key] for row in present])) for key in present[0]}
 
 
+def selected_luma_band_positions(source, blocks, bit_depth, ranges):
+    """Indices into ``blocks`` for fixed normalized source-luma ranges."""
+    grid = blockwise(np.asarray(source))
+    maximum = float(1 << bit_depth)
+    result = [[] for _range in ranges]
+    for position, (row, col) in enumerate(blocks):
+        normalized = float(grid[row, col].mean()) / maximum
+        for index, (lower, upper) in enumerate(ranges):
+            if lower <= normalized < upper or (upper >= 1.0 and normalized <= upper):
+                result[index].append(position)
+                break
+    return result
+
+
 def actual_synth_blocks(encoded_on, encoded_off, blocks):
     rows = np.asarray([row for row, _col in blocks])
     cols = np.asarray([col for _row, col in blocks])
@@ -174,7 +188,8 @@ def synth_variance_for_seed(base, blocks, entry, gaussian, bits, seed):
     seeded = {**entry, "random_seed": seed}
     predicted = av1_grain.synthesize_selected_luma(
         base, blocks, seeded, gaussian, bits)
-    return float(selected_variances(predicted).mean()), selected_axis_stats(predicted)
+    variances = selected_variances(predicted)
+    return float(variances.mean()), selected_axis_stats(predicted), variances
 
 
 def main():
@@ -235,6 +250,8 @@ def main():
         grain_source_sha256 = hashlib.sha256(handle.read()).hexdigest()
     stream_entries = probe_grain_entries(encoded, max(indices) + 1)
     closure_rows = {row["frame"]: row for row in closure["rows"]}
+    closure_luma_bands = closure.get("luma_bins", {}).get("production_static", [])
+    luma_ranges = [row["range"] for row in closure_luma_bands]
 
     report_rows = []
     predicted_sum = 0.0
@@ -245,6 +262,9 @@ def main():
     reference_seed_mean_sum = 0.0
     seed_axis_sum = {key: 0.0 for key in ("h1", "v1", "h2", "v2")}
     reference_axis_sum = {key: 0.0 for key in seed_axis_sum}
+    luma_seed_variance_sum = [0.0] * len(luma_ranges)
+    luma_reference_variance_sum = [0.0] * len(luma_ranges)
+    luma_block_count = [0] * len(luma_ranges)
     total_blocks = 0
     for frame_number in frames:
         source = source_decoded[frame_number].astype(np.float64)
@@ -255,6 +275,8 @@ def main():
             lo=args.static_lo, hi=args.static_hi)
         if not blocks:
             continue
+        luma_positions = selected_luma_band_positions(
+            source, blocks, args.bits, luma_ranges)
         table_entry = entry_for_frame(updating, frame_number, fps_num, fps_den)
         next_table_entry = entry_for_frame(
             updating, frame_number + 1, fps_num, fps_den)
@@ -302,19 +324,21 @@ def main():
             for sample_number in range(args.seed_samples):
                 frame_seed = oracle_seed(frame_number, sample_number)
                 next_frame_seed = oracle_seed(frame_number + 1, sample_number)
-                first_variance, first_axis = synth_variance_for_seed(
+                first_variance, first_axis, first_block_variances = synth_variance_for_seed(
                     base_decoded[frame_number], blocks, expected_entry, gaussian,
                     args.bits, frame_seed)
-                next_variance, next_axis = synth_variance_for_seed(
+                next_variance, next_axis, next_block_variances = synth_variance_for_seed(
                     base_decoded[frame_number + 1], blocks, next_expected_entry,
                     gaussian, args.bits, next_frame_seed)
                 seed_variance_sum += 0.5 * (first_variance + next_variance)
                 seed_axes.extend((first_axis, next_axis))
                 if args.expected_table:
-                    first_reference_variance, first_reference_axis = synth_variance_for_seed(
+                    (first_reference_variance, first_reference_axis,
+                     first_reference_block_variances) = synth_variance_for_seed(
                         base_decoded[frame_number], blocks, entry, gaussian,
                         args.bits, frame_seed)
-                    next_reference_variance, next_reference_axis = synth_variance_for_seed(
+                    (next_reference_variance, next_reference_axis,
+                     next_reference_block_variances) = synth_variance_for_seed(
                         base_decoded[frame_number + 1], blocks, next_entry,
                         gaussian, args.bits, next_frame_seed)
                     reference_variance_sum += 0.5 * (
@@ -323,6 +347,17 @@ def main():
                 else:
                     reference_variance_sum += 0.5 * (first_variance + next_variance)
                     reference_axes.extend((first_axis, next_axis))
+                    first_reference_block_variances = first_block_variances
+                    next_reference_block_variances = next_block_variances
+                for band, positions in enumerate(luma_positions):
+                    if not positions:
+                        continue
+                    luma_seed_variance_sum[band] += 0.5 * (
+                        float(first_block_variances[positions].sum())
+                        + float(next_block_variances[positions].sum()))
+                    luma_reference_variance_sum[band] += 0.5 * (
+                        float(first_reference_block_variances[positions].sum())
+                        + float(next_reference_block_variances[positions].sum()))
             seed_mean = seed_variance_sum / args.seed_samples
             reference_seed_mean = reference_variance_sum / args.seed_samples
             seed_axis = average_axis(seed_axes)
@@ -345,6 +380,8 @@ def main():
             for key in seed_axis_sum:
                 seed_axis_sum[key] += seed_axis[key] * count
                 reference_axis_sum[key] += reference_seed_axis[key] * count
+            for band, positions in enumerate(luma_positions):
+                luma_block_count[band] += len(positions)
         total_blocks += count
         report_rows.append({
             "frame": frame_number,
@@ -429,6 +466,34 @@ def main():
             for row in report_rows),
         "table_seed_comparisons": len(report_rows),
     }
+    luma_bands = []
+    for index, source_band in enumerate(closure_luma_bands):
+        count = luma_block_count[index]
+        samples = args.seed_samples
+        expected_variance = (
+            luma_seed_variance_sum[index] / (count * samples)
+            if count > 0 and samples > 0 else None)
+        reference_variance = (
+            luma_reference_variance_sum[index] / (count * samples)
+            if count > 0 and samples > 0 else None)
+        truth_sigma = source_band["truth_sigma"]
+        luma_bands.append({
+            "range": source_band["range"],
+            "blocks": count,
+            "closure_blocks": source_band["blocks"],
+            "truth_sigma": truth_sigma,
+            "pre_encode_leak": source_band["temporal_leak_ratio"],
+            "seed_mean_sigma": (
+                math.sqrt(expected_variance) if expected_variance is not None else None),
+            "seed_mean_ratio": (
+                math.sqrt(expected_variance) / truth_sigma
+                if expected_variance is not None and truth_sigma > 0.0 else None),
+            "reference_seed_mean_sigma": (
+                math.sqrt(reference_variance) if reference_variance is not None else None),
+            "reference_seed_mean_ratio": (
+                math.sqrt(reference_variance) / truth_sigma
+                if reference_variance is not None and truth_sigma > 0.0 else None),
+        })
     report = {
         "source": os.path.abspath(args.source),
         "encoded": os.path.abspath(encoded),
@@ -443,6 +508,7 @@ def main():
         "aom_grain_source_sha256": grain_source_sha256,
         "mask": "production_static",
         "aggregate": aggregate,
+        "luma_bins": luma_bands,
         "rows": report_rows,
     }
     print(f"{'frame':>6}{'blocks':>9}{'tblseed':>9}{'seed':>9}"

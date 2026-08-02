@@ -38,12 +38,27 @@ def target_from_pre_leak(pre_leak, qvbr):
     return theta, post_leak, math.sqrt(max(0.0, 1.0 - post_leak * post_leak))
 
 
+def interpolate_factor(points, x):
+    if not points:
+        raise ValueError("no luma factors")
+    if x <= points[0][0]:
+        return points[0][1]
+    for left, right in zip(points, points[1:]):
+        if x <= right[0]:
+            mix = (x - left[0]) / max(right[0] - left[0], 1e-9)
+            return left[1] * (1.0 - mix) + right[1] * mix
+    return points[-1][1]
+
+
 def scale_entry_luma(entry, factor):
     """Scale effective luma amplitude while preserving effective chroma."""
     candidate = copy.deepcopy(entry)
     if not (entry["apply_grain"] and entry["update_parameters"]):
         return candidate, 0
-    desired = [[x, y * factor] for x, y in entry["scaling_points"]["y"]]
+    factor_at = factor if callable(factor) else lambda _x: factor
+    desired = [
+        [x, y * factor_at(x)] for x, y in entry["scaling_points"]["y"]
+    ]
     shift_down = 0
     while desired and max(y for _x, y in desired) > 255.0:
         if candidate["params"]["scaling_shift"] <= 8:
@@ -72,6 +87,9 @@ def main():
     parser.add_argument("--emission", required=True,
                         help="expected-seed emission audit for the candidate")
     parser.add_argument("--qvbr", type=float, required=True)
+    parser.add_argument(
+        "--per-luma", action="store_true",
+        help="derive an interpolated factor from every populated fixed luma band")
     parser.add_argument("--output", required=True)
     parser.add_argument("--json-out", default="")
     parser.add_argument("--min-factor", type=float, default=0.75)
@@ -89,17 +107,49 @@ def main():
         raise SystemExit("emission report has no positive expected-seed amplitude")
     theta, predicted_post_leak, target = target_from_pre_leak(pre_leak, args.qvbr)
     factor = target / expected
-    if not args.min_factor <= factor <= args.max_factor:
+    band_report = []
+    factor_points = []
+    if args.per_luma:
+        for band in emission.get("luma_bins", []):
+            band_expected = band["seed_mean_ratio"]
+            if not band_expected or band["blocks"] <= 0:
+                continue
+            band_theta, band_post, band_target = target_from_pre_leak(
+                band["pre_encode_leak"], args.qvbr)
+            band_factor = band_target / band_expected
+            center = 128.0 * (band["range"][0] + band["range"][1])
+            factor_points.append((center, band_factor))
+            band_report.append({
+                "range": band["range"],
+                "blocks": band["blocks"],
+                "center": center,
+                "pre_encode_leak": band["pre_encode_leak"],
+                "theta": band_theta,
+                "predicted_post_encode_leak": band_post,
+                "predicted_synthesis_target": band_target,
+                "expected_synthesis_before": band_expected,
+                "requested_luma_factor": band_factor,
+            })
+        if not factor_points:
+            raise SystemExit("emission report has no populated fixed luma bands")
+        factors = [point[1] for point in factor_points]
+    else:
+        factors = [factor]
+    if min(factors) < args.min_factor or max(factors) > args.max_factor:
         raise SystemExit(
-            f"required factor {factor:.4f} outside conservative "
-            f"[{args.min_factor:.3f}, {args.max_factor:.3f}] gate")
+            f"required factor range {min(factors):.4f}..{max(factors):.4f} "
+            f"outside conservative [{args.min_factor:.3f}, "
+            f"{args.max_factor:.3f}] gate")
+    factor_at = (
+        (lambda x: interpolate_factor(factor_points, x))
+        if args.per_luma else factor)
 
     entries = filmgrn.load(args.input)
     adjusted = []
     shifted = 0
     updated = 0
     for entry in entries:
-        candidate, shift_down = scale_entry_luma(entry, factor)
+        candidate, shift_down = scale_entry_luma(entry, factor_at)
         adjusted.append(candidate)
         if entry["apply_grain"] and entry["update_parameters"]:
             updated += 1
@@ -109,7 +159,9 @@ def main():
     filmgrn.load(args.output)
 
     report = {
-        "scope": "whole-curve aggregate prototype; requires luma-band validation",
+        "scope": ("per-luma interpolated prototype"
+                  if args.per_luma else
+                  "whole-curve aggregate prototype; requires luma-band validation"),
         "input": os.path.abspath(args.input),
         "output": os.path.abspath(args.output),
         "closure": os.path.abspath(args.closure),
@@ -121,7 +173,9 @@ def main():
         "predicted_post_encode_leak": predicted_post_leak,
         "predicted_synthesis_target": target,
         "expected_synthesis_before": expected,
-        "requested_luma_factor": factor,
+        "requested_luma_factor": factor if not args.per_luma else None,
+        "luma_factor_points": factor_points,
+        "luma_bins": band_report,
         "seed_samples": samples,
         "updated_entries": updated,
         "entries_requiring_shared_shift": shifted,

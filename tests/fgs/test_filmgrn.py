@@ -74,6 +74,12 @@ class FilmGrainTableTest(unittest.TestCase):
         self.assertAlmostEqual(post, 0.24297565376239453)
         self.assertAlmostEqual(target, (1.0 - post * post) ** 0.5)
 
+    def test_luma_factor_interpolation(self):
+        points = [(16.0, 1.1), (48.0, 0.9)]
+        self.assertAlmostEqual(delivery_normalize.interpolate_factor(points, 0), 1.1)
+        self.assertAlmostEqual(delivery_normalize.interpolate_factor(points, 32), 1.0)
+        self.assertAlmostEqual(delivery_normalize.interpolate_factor(points, 255), 0.9)
+
 
 if __name__ == "__main__":
     unittest.main()
