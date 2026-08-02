@@ -4,6 +4,7 @@ import unittest
 import numpy as np
 
 import source_fit
+import strength_selection_report
 
 
 class SourceFitFlatSelectionTests(unittest.TestCase):
@@ -35,6 +36,40 @@ class SourceFitFlatSelectionTests(unittest.TestCase):
         eligible_candidates = int(((sigma >= 2.0) & (sigma <= 200.0)
                                    & (score >= 0.5)).sum())
         self.assertGreaterEqual(len(blocks), min(score.size // 10, eligible_candidates))
+
+
+class TemporalLeakTests(unittest.TestCase):
+    def test_temporal_leak_ignores_static_base_error(self):
+        """Spatial base energy is not necessarily retained grain.
+
+        A static denoiser error is deliberately added only to the clean base.
+        Spatial subtraction must under-predict the missing grain because it
+        subtracts that error. Consecutive-frame base differencing cancels it and
+        recovers the known retained-grain fraction.
+        """
+        rng = np.random.default_rng(23)
+        shape = (64, 64)
+        retain = 0.35
+        picture = np.full(shape, 512.0)
+        y, x = np.mgrid[:shape[0], :shape[1]]
+        static_error = 12.0 * np.sin(x * 2.0 * np.pi / 9.0)
+        grain_a = rng.normal(0.0, 20.0, shape)
+        grain_b = rng.normal(0.0, 20.0, shape)
+        source = picture + grain_a
+        next_source = picture + grain_b
+        clean = picture + static_error + retain * grain_a
+        next_clean = picture + static_error + retain * grain_b
+        blocks = [(row, col) for row in range(2) for col in range(2)]
+
+        row = strength_selection_report.measure(
+            source, next_source, clean, next_clean, blocks)
+
+        self.assertAlmostEqual(row["temporal_leak_ratio"], retain, delta=0.03)
+        self.assertAlmostEqual(
+            row["temporal_target_ratio"], np.sqrt(1.0 - retain * retain),
+            delta=0.03)
+        self.assertLess(row["amplitude_ratio"],
+                        row["temporal_target_ratio"] - 0.10)
 
 
 if __name__ == "__main__":
