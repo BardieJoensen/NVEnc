@@ -239,6 +239,18 @@ def main():
             expected_updating, frame_number + 1, fps_num, fps_den)
         entry = stream_entries[frame_number]
         next_entry = stream_entries[frame_number + 1]
+        # filmgrn1 has no clip_to_restricted_range field.  A replay table
+        # inherits that property from the encode, so an alternate-table oracle
+        # must do the same.  Defaulting to full range changes measured variance
+        # near black/white and can make curve scaling appear non-linear.
+        expected_entry = {
+            **expected_entry,
+            "limit_output_range": entry["limit_output_range"],
+        }
+        next_expected_entry = {
+            **next_expected_entry,
+            "limit_output_range": next_entry["limit_output_range"],
+        }
         predicted_blocks = av1_grain.synthesize_selected_luma(
             base_decoded[frame_number], blocks, entry, gaussian, args.bits)
         next_predicted_blocks = av1_grain.synthesize_selected_luma(
