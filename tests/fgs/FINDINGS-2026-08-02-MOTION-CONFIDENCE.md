@@ -193,27 +193,110 @@ That alert is not to be ignored; it documents the canary's oracle scope. A
 separator-changing candidate needs a source-referenced arm in addition to the
 matched-binary substitution canary.
 
+## Finding 4: mean alignment removes the symptom but worsens separation
+
+The proposed local-mean alignment was tested offline at several window sizes.
+An 11x11 correction nearly eliminates the measured directional lag on the
+controls, but it does so by moving picture variation into the residual:
+
+| title | lag before | lag after | capture before | capture after |
+|---|---:|---:|---:|---:|
+| The Shining | 0.1987 | 0.0013 | 0.8270 | 0.8036 |
+| The Deer Hunter | 0.1995 | 0.0052 | 0.8844 | 0.8774 |
+| Scarface | 0.1640 | 0.0064 | 0.9391 | 0.9371 |
+
+Taxi Driver's frame 98 moves from 0.3267 to 0.1279, but leakage rises from
+0.4291 to 0.5005. Combining alignment with `thsad=800` over-corrects further.
+The lag reduction is therefore not evidence of a better separator. This
+candidate is rejected.
+
+## Finding 5: a centred window removes causal direction
+
+A pinned prototype changed the motion window from causal references to
+centred references. Five frames (two past plus two future) over-smooth all
+three controls, so matching the causal arm's reference count matters. The
+useful prototype is three frames: one past, current and one future.
+
+On Taxi Driver at `thsad=640`, the full-frame joint regression is symmetric:
+
+| coefficient | value |
+|---|---:|
+| previous-frame projection | 0.1835 |
+| next-frame projection | 0.1853 |
+| lag asymmetry | -0.0018 |
+
+The causal baseline's lag asymmetry is +0.1833. This is direct evidence that
+the centred window removes the causal direction rather than merely hiding it
+from the probe.
+
+The initial quality comparison accidentally mixed `thsad=640` and
+`thsad=800`. Re-encoding both schedulers at 640 gives the actual isolated
+effect:
+
+| title | centred byte saving | delta VMAF | delta SSIMULACRA2 | delta Butteraugli |
+|---|---:|---:|---:|---:|
+| The Shining | 4.40% | -0.247 | -1.693 | +0.035 |
+| The Deer Hunter | 8.36% | -0.392 | -0.296 | -0.003 |
+| Scarface | 4.39% | +0.219 | +0.050 | -0.014 |
+| Taxi Driver | 9.18% | +0.163 | +0.637 | -0.035 |
+
+All deltas are source-referenced and positive means better for VMAF and
+SSIMULACRA2; negative means better for Butteraugli. All outputs pass a full
+`libdav1d -xerror` decode. Centred lookahead is therefore a real compression
+gain and a clear Taxi/Scarface improvement, but not a universal quality win.
+It is not approved for production.
+
+The candidate currently over-delivers played grain on Taxi (1.136 total) and
+The Shining (1.037). Scaling the already-emitted table to close each measured
+total is useful only as an oracle: it brings Taxi to 1.006 and improves all
+three metrics over causal 640 (VMAF +1.019, SSIMULACRA2 +6.320,
+Butteraugli -0.454), while The Shining reaches 1.004 and nearly matches causal
+640 (VMAF -0.040, SSIMULACRA2 -0.180, Butteraugli -0.035). A global multiplier
+is not an implementation proposal; prior luma-band experiments show that it
+can conceal a wrong curve.
+
+Artifacts are under:
+
+```text
+/media/merged-storage/media/test-encodes/motion-bidir-controls-20260802/
+/media/merged-storage/media/test-encodes/motion-bidir-av1-20260802/
+```
+
+## Pipeline defect found while testing delayed output
+
+The centred filter exposed a generic terminal-filter drain bug. At EOF the
+pipeline tried to submit an encoder surface even when a delayed CUDA filter
+returned zero frames, and it did not repeatedly pass the null marker needed to
+drain later frames. Commit `d1ae5cd5` fixes the scheduler independently of the
+motion experiment.
+
+The fix was verified three ways:
+
+- direct centred output contains all 288 frames and decodes cleanly;
+- direct and two-stage centred encodes have identical grain tables, elementary
+  AV1 MD5 and grain-disabled decoded frame hashes; and
+- causal output before and after the scheduler fix has an identical grain
+  table and elementary AV1 MD5.
+
+This scheduler correction does not enable centred motion, `modelsrc`, or any
+production Tdarr option.
+
 ## Next falsifiable experiment
 
-Prototype two independent controls in the pinned build:
+The remaining centred-window quality loss is plausibly caused by asymmetric
+admission at disocclusions: the past and future references currently earn
+independent SAD affinities. A block can therefore retain one temporal side
+when the other side has no matching picture.
 
-1. retain the measured stricter SAD gate for structurally mismatched blocks;
-2. mean-align each *accepted* motion-compensated reference to the current block
-   before temporal mixing.
+Prototype a paired-confidence gate in the pinned build: for the one-past,
+one-future experiment, admit both references at the lower of their two raw
+affinities. This keeps the temporal estimate centred and rejects one-sided
+matches. Compare it at the same `thsad=640` against both centred-independent
+and causal baselines.
 
-The second operation should remove causal DC drag while retaining the temporal
-averaging of zero-mean grain. It is not yet known to be safe. Per-block means
-can contain object or disocclusion changes, and overlap can turn a bad
-correction into spatial modulation.
-
-The prototype must therefore pass, in order:
-
-- output-invariant default-off control;
-- Taxi plus the three existing real-film controls;
-- temporal lag and direct source-referenced VMAF/Butteraugli/SSIMULACRA2;
-- static-flat capture, played-total closure and luma-band texture;
-- output size and full `libdav1d -xerror` decode; and
-- an explicit overlap/block-boundary check.
-
-Only a rendered A/B can promote mean alignment from mechanism evidence to a
-candidate fix.
+It is promoted only if it recovers The Shining and The Deer Hunter's metric
+giveback without losing Taxi Driver's directional correction or surrendering
+the measured compression advantage. Grain delivery, luma-band texture, output
+size and complete `libdav1d -xerror` decode remain required. A failure is still
+useful: it would rule out asymmetric confidence as the cause and redirect the
+work toward overlap/motion-estimation error rather than more strength tuning.
