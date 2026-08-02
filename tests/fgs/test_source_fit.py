@@ -53,6 +53,14 @@ class TemporalLeakTests(unittest.TestCase):
             temporal_grain_report.plane_geometry(1919, 1079, "v"),
             (960, 540, 16))
 
+    def test_temporal_report_records_zero_energy_without_texture(self):
+        truth = {"sigma": 4.0, "h1": 0.2, "v1": 0.2,
+                 "h2": 0.1, "v2": 0.1}
+        self.assertIsNone(temporal_grain_report.average_acf([None, None]))
+        ratio = temporal_grain_report.ratio_rows([None], [truth])
+        self.assertEqual(ratio, {"mean": 0.0, "sd": 0.0})
+        self.assertTrue(np.isnan(temporal_grain_report.lag1(None)))
+
     def test_parse_encoded_arms(self):
         self.assertEqual(
             strength_selection_report.parse_encoded_arms(

@@ -89,15 +89,20 @@ def mean_sd(values):
 
 
 def average_acf(rows):
-    if not rows:
+    present = [row for row in rows if row is not None]
+    if not present:
         return None
-    return {key: float(np.mean([row[key] for row in rows])) for key in rows[0]}
+    return {
+        key: float(np.mean([row[key] for row in present]))
+        for key in present[0]
+    }
 
 
 def ratio_rows(rows, truth_rows):
     return mean_sd([
-        row["sigma"] / truth["sigma"]
-        for row, truth in zip(rows, truth_rows) if truth["sigma"] > 1e-9
+        (row["sigma"] if row is not None else 0.0) / truth["sigma"]
+        for row, truth in zip(rows, truth_rows)
+        if truth is not None and truth["sigma"] > 1e-9
     ])
 
 
@@ -110,6 +115,8 @@ def format_axis(row):
 
 
 def lag1(row):
+    if not row:
+        return float("nan")
     return 0.5 * (row["h1"] + row["v1"])
 
 
