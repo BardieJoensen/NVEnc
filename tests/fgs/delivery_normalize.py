@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline luma expected-delivery normalisation for a filmgrn1 table.
+"""Offline aggregate luma expected-delivery normalisation for a filmgrn1 table.
 
 This is an experiment, not an encoder option.  It closes the analyser's
 rate-dependent temporal target against the expected AV1 synthesis amplitude
@@ -10,6 +10,10 @@ post-encode result of an individual title.
 The luma curve alone is changed.  If it would overflow, the shared
 ``scaling_shift`` is reduced and chroma integer curves are requantised so their
 physical amplitude remains unchanged.
+
+This deliberately applies one factor to the whole curve.  It is useful for
+testing whether delivery is correctable, but it is not a production proposal:
+the output must pass fixed luma-band closure, not only a whole-title aggregate.
 """
 import argparse
 import copy
@@ -105,6 +109,7 @@ def main():
     filmgrn.load(args.output)
 
     report = {
+        "scope": "whole-curve aggregate prototype; requires luma-band validation",
         "input": os.path.abspath(args.input),
         "output": os.path.abspath(args.output),
         "closure": os.path.abspath(args.closure),

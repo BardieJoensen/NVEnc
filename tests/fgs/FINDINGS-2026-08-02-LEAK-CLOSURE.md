@@ -127,7 +127,7 @@ delivery, not random-seed noise.  That is a much narrower next problem: test
 an expected-delivery normalisation offline before changing the encoder.  Do
 not add a title, correlation or film-derived threshold.
 
-## Expected-delivery normalisation: offline proof succeeds
+## Expected delivery: aggregate proof succeeds, global form fails
 
 `delivery_normalize.py` closes the analyser's predicted synthesis target
 against the expected AV1 delivery from the quantized table.  It calculates one
@@ -145,12 +145,12 @@ The three deliberately different diagnostic titles require:
 | Interstellar (over) | 0.9163 | 0.9959 | 0.9201 | 0.9162 | -0.0000 |
 | The Deer Hunter (under) | 0.9827 | 0.8976 | 1.0948 | 0.9765 | -0.0062 |
 
-The same rule therefore corrects both signs, with a maximum quantized-table
-target miss of 0.0062.  Combining the adjusted expectation with each title's
-measured post-encode base residue predicts played totals 1.0004 Casino,
-1.0142 Interstellar and 1.0002 Deer Hunter.  Interstellar's residual 1.4% is
-the independent deadzone-model error; expected delivery no longer contributes
-to it.
+At whole-title aggregate, the same rule therefore corrects both signs, with a
+maximum quantized-table target miss of 0.0062.  Combining the adjusted
+expectation with each title's measured post-encode base residue predicts
+played totals 1.0004 Casino, 1.0142 Interstellar and 1.0002 Deer Hunter.
+Interstellar's residual 1.4% is the independent deadzone-model error; expected
+delivery no longer contributes to it.
 
 A matched four-seed texture audit held base pixels, blocks, seeds, range
 clipping and AR coefficients fixed.  Scaling-curve quantization changed lag-1
@@ -187,6 +187,23 @@ gives a low-grain frame the same weight as a high-grain frame.  The closure
 target and all preceding corpus results are variance- and block-weighted;
 under that same estimator the hardware result is 1.004.  This is an
 aggregation distinction, not an encode/simulator disagreement.
+
+But the mandatory luma-band decomposition rejects the global multiplier:
+
+| normalized luma | blocks | true post target | original synth | normalized synth |
+| --- | ---: | ---: | ---: | ---: |
+| 0.000--0.125 | 13,204 | 0.982 | 0.883 | **0.956** |
+| 0.125--0.250 | 4,633 | 0.981 | 0.895 | **0.980** |
+| 0.250--0.375 | 7,250 | 0.939 | 1.016 | **1.112** |
+| 0.375--0.500 | 846 | 0.931 | 1.107 | **1.212** |
+
+Deer Hunter is dominated by dark blocks, so raising every scaling point makes
+the whole-title number look correct while worsening already-overdone brighter
+grain.  This is the same luma-occupancy trap in a new form.  The global factor
+is therefore **rejected as a production design**.  What it proves is narrower
+and still useful: deterministic expected delivery can correct both amplitude
+directions without changing AR texture, but the correction must be a
+per-luma curve correction and must close every populated luma band.
 
 ## Chroma real-film baseline
 
@@ -228,13 +245,13 @@ replacement is not applied.
 The experiment is viable but incomplete:
 
 1. keep the rate-dependent leak closure behind `modelsrc=on`, default-off;
-2. the offline expected-delivery gate has passed in both directions and on one
-   hardware replay;
-3. next validate a cheap expectation from the rolling model's existing luma
-   bin weights and quantized parameters against the exact oracle on all six
-   films; do not put a normative multi-seed simulator in the hot path;
-4. implement only if that approximation predicts both signs, then repeat the
-   full six-film encode/closure corpus;
+2. reject the table-wide delivery multiplier despite its aggregate result;
+3. next measure expected versus target delivery per fixed luma band, using the
+   rolling model's existing 20-bin weights and quantized parameters, and
+   validate the cheap estimator against the exact oracle on all six films;
+4. implement only if one per-luma rule closes every populated band in both
+   directions without a normative multi-seed simulator in the hot path, then
+   repeat the full six-film encode/closure corpus;
 5. keep chroma modelling and the blinded motion perceptual review as separate
    open gates.
 
