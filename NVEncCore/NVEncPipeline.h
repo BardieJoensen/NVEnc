@@ -3603,15 +3603,6 @@ public:
                 // 出力surfaceをまだ取得していないので、そのまま残りのqueued frame / drain markerを処理する。
                 continue;
             }
-            if (filterframes.front().first.ptr[0] == nullptr) {
-                if (!outputSurfs.empty()) {
-                    // 出力を返した後も、呼び出し元が再度flushして残りのpendingを取りに来る。
-                    queueOutputSurfs();
-                    if (m_stopwatch) m_stopwatch->add(0, 3);
-                    return RGY_ERR_NONE;
-                }
-                return RGY_ERR_MORE_DATA; //最後までdrain = trueなら、drain完了
-            }
             struct CUFrameEncAutoDelete {
                 RGYQueueMPMP<CUFrameEnc *>& qEncodeBufferFree;
                 CUFrameEncAutoDelete(RGYQueueMPMP<CUFrameEnc *>& q) : qEncodeBufferFree(q) {};;
@@ -3716,6 +3707,7 @@ public:
                 }
             }
             std::shared_ptr<cudaEvent_t> cudaEvent;
+            const bool drainLastFilter = filterframes.front().first.ptr[0] == nullptr;
             {
                 NVEncCtxAutoLock(ctxlock(m_dev->vidCtxLock()));
                 // エンコードバッファのポインタを渡す
@@ -3725,7 +3717,7 @@ public:
                     PrintMes(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), lastFilter->name().c_str());
                     return sts_filter;
                 }
-                if (m_videoMetric) {
+                if (nOutFrames > 0 && m_videoMetric) {
                     //フレームを転送
                     int dummy = 0;
                     auto err = m_videoMetric->filter(&ssimTarget, nullptr, &dummy, m_streamFilter);
@@ -3753,6 +3745,31 @@ public:
                 m_frameReleaseData.addFrame(frame, cudaEvent);
             }
             filterframes.pop_front();
+
+            if (nOutFrames == 0) {
+                // A delayed terminal filter may consume an input without
+                // producing an encoder surface yet. Return the unused work
+                // surface instead of submitting its uninitialized metadata.
+                if (frameVppOut.enc()
+                    && frameVppOut.enc()->bufType() == CUFrameBufType::EncHostWrap) {
+                    frameVppOut.enc()->unmap();
+                }
+                if (drainLastFilter) {
+                    if (!outputSurfs.empty()) {
+                        queueOutputSurfs();
+                        if (m_stopwatch) m_stopwatch->add(0, 3);
+                        return RGY_ERR_NONE;
+                    }
+                    return RGY_ERR_MORE_DATA;
+                }
+                continue;
+            }
+            if (drainLastFilter) {
+                // Upstream filters are already drained. Keep flushing the
+                // terminal filter until it reports that no output remains.
+                filterframes.push_back(std::make_pair(
+                    RGYFrameInfo(), static_cast<uint32_t>(m_vpFilters.size() - 1)));
+            }
 
             frameVppOut.frame()->setDuration(frameVppOutInfo.duration);
             frameVppOut.frame()->setTimestamp(frameVppOutInfo.timestamp);
