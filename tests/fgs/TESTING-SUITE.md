@@ -101,10 +101,13 @@ and gross regressions.
 They must not be the objective.  Measured 2026-08-02
 (`FINDINGS-2026-08-02-METRIC-SENSITIVITY.md`): VMAF's response to grain
 *presence* is -2.2 to -6.3 points on 6 of 6 same-stream pairs.  The attempted
-amplitude-correctness comparison was not isolated and is withdrawn pending a
-fixed-base/fixed-AR replay.  The presence result alone is sufficient to show
-why VMAF cannot be the sole grain objective.  Whether VIF/ADM prefer finer
-grain at fixed energy is also an open controlled experiment, not a finding.
+historical amplitude comparison was not isolated and remains withdrawn.  Its
+fixed-base/fixed-AR replacement changes only luma scaling values in opposite
+directions on two films: VMAF-family means reward less grain in both cases,
+even though both candidates move toward their physical target.  Butteraugli is
+effectively flat and HDR CVVDP gets slightly worse for both corrections.  None
+is a grain-correctness objective.  Whether VIF/ADM prefer finer grain at fixed
+energy is still a separate open controlled experiment.
 
 ## The one thing none of the above replaces
 
@@ -120,7 +123,8 @@ knows what masking does.  The current set is
 3. stage 2: amplitude and lag-1/lag-2 close on **both** planes, per luma band,
    not just whole-title;
 4. stage 3: emission exact, played total closed, rectification accounted for;
-5. stage 4: corpus saving against plain at matched rate;
+5. stage 4: corpus saving against plain at the production same-QVBR operating
+   point, plus a matched-bitrate sweep before making rate-quality claims;
 6. guard rails show no new banding or colour drift;
 7. the blinded review passes.
 

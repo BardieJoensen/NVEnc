@@ -75,7 +75,8 @@ def probe_video(path):
     document = json.loads(run([
         FFPROBE, "-v", "error", "-select_streams", "v:0", "-show_packets",
         "-show_entries",
-        "stream=codec_name,width,height,avg_frame_rate:packet=pts_time",
+        "stream=codec_name,width,height,avg_frame_rate,pix_fmt,color_range,"
+        "color_space,color_transfer,color_primaries:packet=pts_time",
         "-of", "json", path], timeout=300).stdout)
     streams = document.get("streams", [])
     if len(streams) != 1:
@@ -97,6 +98,11 @@ def probe_video(path):
         "width": int(stream["width"]),
         "height": int(stream["height"]),
         "avg_frame_rate": stream.get("avg_frame_rate"),
+        "pix_fmt": stream.get("pix_fmt"),
+        "color_range": stream.get("color_range"),
+        "color_space": stream.get("color_space"),
+        "color_transfer": stream.get("color_transfer"),
+        "color_primaries": stream.get("color_primaries"),
         "timestamps": timestamps,
     }
     _PROBE_CACHE[key] = result
@@ -134,6 +140,25 @@ def aligned_frame_count(reference, distorted, limit=MAX_FRAMES,
             f"timeline mismatch: maximum relative PTS error {worst:.6f}s "
             f"exceeds {tolerance:.6f}s")
     return ref_count, ref, dist
+
+
+COLOR_FIELDS = (
+    "color_range", "color_space", "color_transfer", "color_primaries")
+
+
+def color_signature(probe):
+    return {field: probe.get(field) for field in COLOR_FIELDS}
+
+
+def require_matching_color(reference_probe, distorted_probe):
+    """Reject metadata mismatches that invalidate display-referred metrics."""
+    reference = color_signature(reference_probe)
+    distorted = color_signature(distorted_probe)
+    if reference != distorted:
+        raise RuntimeError(
+            "color metadata mismatch: "
+            f"reference={reference}, distorted={distorted}")
+    return reference
 
 
 def _file_identity(path):
@@ -252,8 +277,14 @@ fi
 
 
 def ffvship(reference, distorted, tag, metric, output_name, frames,
-            work=WORK, blind=BLIND):
+            work=WORK, display_model=None):
     """Run FFVship and reject short or stale output."""
+    available, reference_probe, distorted_probe = aligned_frame_count(
+        reference, distorted, limit=frames)
+    if available != frames:
+        raise RuntimeError(
+            f"FFVship requested {frames} frames but pair has {available}")
+    colors = require_matching_color(reference_probe, distorted_probe)
     output = os.path.join(work, output_name)
     manifest_path = f"{output}.manifest.json"
     manifest = {
@@ -262,22 +293,33 @@ def ffvship(reference, distorted, tag, metric, output_name, frames,
         "frames": frames,
         "metric": metric,
         "image": FFVSHIP_IMG,
+        "display_model": display_model,
+        "color": colors,
     }
     if not (os.path.isfile(output) and _cache_matches(manifest_path, manifest)):
         Path(output).unlink(missing_ok=True)
-        run([
+        reference = os.path.abspath(reference)
+        distorted = os.path.abspath(distorted)
+        command = [
             "docker", "run", "--rm", "--gpus", "all",
-            "-v", f"{work}:/data", "-v", f"{blind}:/blind",
+            "-v", f"{work}:/data",
+            "-v", f"{os.path.dirname(reference)}:/reference:ro",
+            "-v", f"{os.path.dirname(distorted)}:/distorted:ro",
             "--entrypoint", "FFVship", FFVSHIP_IMG,
-            "-s", f"/data/{os.path.basename(reference)}",
-            "-e", f"/blind/{os.path.basename(distorted)}",
-            "--end", str(frames), "-m", metric, "--cache-index",
-            "--json", f"/data/{output_name}"], timeout=3600)
+            "-s", f"/reference/{os.path.basename(reference)}",
+            "-e", f"/distorted/{os.path.basename(distorted)}",
+            "--end", str(frames), "-m", metric,
+            "--json", f"/data/{output_name}"]
+        if display_model:
+            command += ["--displayModel", display_model]
+        run(command, timeout=3600)
         _write_json(manifest_path, manifest)
     with open(output, encoding="utf-8") as handle:
         rows = json.load(handle)
     if len(rows) != frames:
         raise RuntimeError(f"{output}: scored {len(rows)} frames, expected {frames}")
+    if any(not isinstance(row, list) or not row or row[0] is None for row in rows):
+        raise RuntimeError(f"{output}: malformed or null {metric} score")
     return rows
 
 

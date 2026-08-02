@@ -19,6 +19,11 @@ def probe(path, count=288, width=1920, height=1080, period=1 / 24):
         "width": width,
         "height": height,
         "avg_frame_rate": "24/1",
+        "pix_fmt": "yuv420p10le",
+        "color_range": "tv",
+        "color_space": "bt2020nc",
+        "color_transfer": "smpte2084",
+        "color_primaries": "bt2020",
         "timestamps": [index * period for index in range(count)],
     }
 
@@ -61,6 +66,18 @@ class AlignmentTests(unittest.TestCase):
 
 
 class ArtifactValidationTests(unittest.TestCase):
+    def test_rejects_color_metadata_mismatch(self):
+        reference = probe("ref")
+        distorted = probe("dist")
+        distorted["color_transfer"] = None
+        with self.assertRaisesRegex(RuntimeError, "color metadata mismatch"):
+            review_score.require_matching_color(reference, distorted)
+
+    def test_accepts_matching_color_metadata(self):
+        signature = review_score.require_matching_color(
+            probe("ref"), probe("dist"))
+        self.assertEqual(signature["color_transfer"], "smpte2084")
+
     def test_rejects_short_vmaf_json(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "score.json")

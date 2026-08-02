@@ -16,7 +16,11 @@ def entry(scale, ar=(1, 2), seed=7):
         "params": {"ar_coeff_lag": 1, "scaling_shift": 9},
         "ar_coeffs": {"y": list(ar)},
         "limit_output_range": True,
-        "scaling_points": {"y": [[0, scale], [255, scale]]},
+        "scaling_points": {
+            "y": [[0, scale], [255, scale]],
+            "cb": [[0, 3], [255, 3]],
+            "cr": [[0, 4], [255, 4]],
+        },
     }
 
 
@@ -52,10 +56,33 @@ class IsolationTests(unittest.TestCase):
                 {0: entry(10), 1: entry(11)},
                 {0: entry(12), 1: entry(13, ar=(2, 3))})
 
+    def test_rejects_changed_chroma_curve(self):
+        left = {0: entry(10), 1: entry(11)}
+        right = {0: entry(12), 1: entry(13)}
+        right[1]["scaling_points"]["cb"][0][1] = 9
+        with self.assertRaisesRegex(RuntimeError, "scaling_points.cb"):
+            self.run_check(left, right)
+
+    def test_rejects_changed_luma_point_locations(self):
+        left = {0: entry(10), 1: entry(11)}
+        right = {0: entry(12), 1: entry(13)}
+        right[1]["scaling_points"]["y"][1][0] = 254
+        with self.assertRaisesRegex(RuntimeError, "scaling_points.y.locations"):
+            self.run_check(left, right)
+
     def test_rejects_no_treatment_change(self):
         same = {0: entry(10), 1: entry(11)}
         with self.assertRaisesRegex(RuntimeError, "no luma scaling curve changed"):
             self.run_check(same, same)
+
+    def test_cvvdp_uses_final_temporal_score(self):
+        self.assertEqual(
+            metric_sensitivity.cvvdp_video_score([[8.0], [7.5], [7.25]]),
+            7.25)
+
+    def test_cvvdp_rejects_empty_output(self):
+        with self.assertRaisesRegex(ValueError, "no final video score"):
+            metric_sensitivity.cvvdp_video_score([])
 
 
 if __name__ == "__main__":

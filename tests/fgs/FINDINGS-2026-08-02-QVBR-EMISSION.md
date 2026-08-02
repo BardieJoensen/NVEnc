@@ -11,7 +11,7 @@ Candidate binary:
 - source commit: `1f20fb1c`
 - binary: `/home/bardie/.cache/fgs-gate/builds/pin-1f20fb1c-1785626473/build-gate/nvencc`
 - binary SHA-256:
-  `d1195ce1715605b02c31c9f5e1eb94d477433364d09749663993a72a3b55f06d`
+  `d119abd866e0689d90c477ca43784fa8fe979c9624cf83751cc739eb0076f06d`
 
 Corpus: the retained 287-frame clips for Casino, Interstellar, Scarface, Taxi
 Driver, The Deer Hunter and The Shining, with the matching motion clean bases
@@ -131,6 +131,13 @@ film:
 - predicted and dav1d synthesis match on **98,443,264 of 98,443,264 pixels**;
 - total mismatches: **0**; maximum absolute pixel error: **0**;
 - predicted/delivered detrended amplitude: **1.0000 on all six titles**.
+
+A later audit extended the side-data parser from luma-only fields to both
+chroma planes, including scaling curves, AR coefficients and the six chroma
+multipliers/offsets.  After accounting for filmgrn1's normative unsigned
+parameter biases (`128/128/256`) versus ffprobe's synthesis-space values, the
+full table and bitstream models match on all **1,725 of 1,725** QVBR-29 frames.
+This turns the original broad sentence into a checked full-model claim.
 
 **Verdict:** there is no second amplitude defect in AV1 emission.  The decoder
 delivers the signalled model exactly.  A table-only per-title amplitude oracle

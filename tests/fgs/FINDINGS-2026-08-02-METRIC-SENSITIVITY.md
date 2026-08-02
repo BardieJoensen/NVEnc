@@ -1,12 +1,13 @@
 # What full-reference metrics can and cannot see about grain, 2026-08-02
 
-> **Audit correction, 2026-08-02:** the grain-present versus grain-absent
+> **Audit resolution, 2026-08-02:** the grain-present versus grain-absent
 > result remains valid because each pair is decoded from the same stream.  The
-> pre/post leak-closure comparison did **not** isolate grain correctness as
-> claimed.  Its grain-disabled bases differ, and its emitted AR sequence also
-> changes.  Retain that table only as an end-to-end comparison of two
-> candidates; withdraw the causal conclusion and the "two orders of magnitude"
-> estimate until a fixed-base, fixed-AR, fixed-seed replay is run.
+> historical pre/post comparison remains withdrawn because its bases and AR
+> sequence differ.  A new fixed-base, fixed-seed, fixed-luma/chroma-AR replay
+> now supplies the missing controlled result: VMAF-family means follow grain
+> quantity rather than correctness, Butteraugli is effectively insensitive,
+> and exploratory HDR CVVDP does not reward either correction.  Details and
+> automatic invariants are below.
 
 Prompted by a design question: if synthesised grain had the right colour, luma
 placement, size and position, would VMAF stop punishing it -- and could VMAF
@@ -111,8 +112,8 @@ grain realisation.
 
 The valid presence result is already enough to reject VMAF as the sole grain
 objective: an optimiser can improve its score by removing independent grain.
-This experiment does not quantify VMAF's sensitivity to amplitude correctness;
-that requires the controlled replay below.
+The controlled replay below now quantifies the same bias for isolated amplitude
+changes in both directions.
 
 A plausible second-order trap remains unmeasured.  VMAF's VIF and ADM features
 are multiscale, so they may penalise coarse grain differently from fine grain
@@ -141,15 +142,16 @@ open case.  This is the one region where a metric and perception agree.
   the same denoiser on both sides.  Grain cancels from both, and what is left
   is picture fidelity with no retention bias.  The ideal-clean machinery in
   `source_fit.py` already supports this.
-- **Untested and worth one run:** CVVDP models visual masking, and grain masks
-  itself perceptually.  It is available in FFVship and has never been run on
-  this project.  It is the one metric that might respond to grain correctness
-  rather than grain quantity.
+- **Exploratory only:** HDR CVVDP was run on the controlled replay below.  It
+  moved slightly worse for both physically better corrections, so it did not
+  recognize closer grain amplitude as better and is not a grain-correctness
+  objective.
 
-## Required rerun
+## Controlled rerun
 
-Use one grain-disabled base and synthesize two lossless outputs while holding
-the following byte- or pixel-identical:
+The required rerun used one saved grain-disabled base per title and applied two
+film-grain tables with the same pinned encoder.  The following were required to
+be byte- or value-identical on every frame before any metric ran:
 
 - decoded base pixels and frame timeline;
 - AR coefficients and every non-luma-scaling parameter;
@@ -157,10 +159,68 @@ the following byte- or pixel-identical:
 - luma scaling-point locations, unless location is the variable explicitly
   being tested.
 
-Change only the luma scaling values, verify those invariants automatically,
-then score VMAF/VMAF NEG, PSNR, SSIM, SSIMULACRA2, Butteraugli and exploratory
-CVVDP.  `metric_sensitivity.py` now refuses to score a pair that fails the
-fixed-base/non-scaling-field checks; the historical arms fail by design.
+Only luma scaling values may change.  `metric_sensitivity.py` now verifies the
+decoded base hash, packet timeline, bitstream seed, luma and chroma scaling
+locations, both planes' AR coefficients, chroma scaling curves and
+multipliers, range flags and every remaining parameter.  It refuses the old
+historical arms by design.
+
+Two opposite-direction treatments were selected:
+
+| title | baseline synth | corrected synth | physical target | direction |
+| --- | ---: | ---: | ---: | --- |
+| The Deer Hunter | 0.905 | 0.989 | about 0.983 | add missing grain |
+| Interstellar | 0.995 | 0.927 | 0.916 | remove excess grain |
+
+Ratios are against source temporal grain truth using the production-static
+population.  The Interstellar luma2 table is used rather than luma3: luma3
+needed a shared `scaling_shift` change in its final interval and the isolation
+gate correctly rejected all 25 affected frames.  Luma2 is not the final
+offline closure, but it is materially closer in every high-population band and
+changes luma scaling values only.
+
+Both pairs were replayed with pinned commit `fef5264f`, binary SHA-256
+`84fb31f1af278c8e2ddaac9e48e7f27d123b3ad2514c672a39e629d6fc23d50e`.
+The two outputs in each pair have identical byte counts.  The invariant audit
+reports:
+
+| title | frames / changed curves | common grain-off SHA-256 |
+| --- | ---: | --- |
+| The Deer Hunter | 288 / 288 | `4090b63bd4cef45060ba304ca84a171a8dbc79e82f966578ea570c7170a73c21` |
+| Interstellar | 288 / 288 | `aeb61d16f49bc2c4a8551b88a7fbf320f2a51822dac647df2e072e8fbb673fd1` |
+
+The Y4M replay had lost BT.2020/PQ container tags.  Before CVVDP, each arm was
+stream-copied with the reference's limited-range BT.2020/PQ tags; the full
+grain/base invariant was rerun after that copy.  This matters: accepting the
+untagged replay would have compared a PQ reference with an unspecified
+distorted transfer function.
+
+### Result: corrected minus baseline
+
+Higher is better except Butteraugli, where lower is better:
+
+| title | VMAF | VMAF NEG | PSNR-Y dB | SSIM | SSIMU2 mean | SSIMU2 p5 | Butter mean | Butter max p95 | HDR CVVDP |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Deer, grain raised | **-0.510** | **-0.538** | -0.453 | -0.00288 | **-1.104** | +0.014 | +0.016 | +0.020 | **-0.0080** |
+| Interstellar, grain lowered | **+0.144** | **+0.108** | +0.228 | +0.00051 | **+0.059** | -0.011 | -0.0004 | +0.0003 | **-0.0050** |
+
+The VMAF family, PSNR, SSIM and mean SSIMULACRA2 all move in the direction of
+*less independently positioned grain*: they penalise Deer when correct closure
+adds grain and reward Interstellar when correct closure removes it.  That is a
+causal result now, because the scaling values are the only treatment.
+
+Butteraugli's mean and tail changes are negligible in both directions.  It is
+useful for localized base artifacts but not for this amplitude decision.
+SSIMULACRA2 p5 is also flat at this treatment size.  HDR CVVDP moves slightly
+down for both physically better curves.  With two titles it should be called
+inconclusive about *why*, but it does answer the proposed question: it does not
+recognize closer grain amplitude as better and is not a replacement objective.
+
+This does not say the corrected synthesis looks worse.  AV1 deliberately uses
+an independent realization, so full-reference metrics cannot know that its
+amplitude distribution is closer to the source.  Continue to optimize with
+temporal amplitude, per-luma closure and lag-1/lag-2; keep these metrics as
+guard rails.
 
 ## Artifacts
 
@@ -174,3 +234,11 @@ the -0.02% .. +0.17% range recorded in `FINDINGS-2026-08-02-LEAK-CLOSURE.md`,
 confirming the arms are the intended pair.
 The size agreement does not establish metric isolation; that claim is
 superseded by the decoded-base and side-data audit above.
+
+Controlled replay reports:
+
+```text
+/media/merged-storage/media/test-encodes/correctness-vmaf-20260802/
+  deer-isolated-strength-scores.json
+  interstellar-isolated-strength-scores.json
+```

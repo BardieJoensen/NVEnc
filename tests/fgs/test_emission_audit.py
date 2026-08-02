@@ -27,17 +27,68 @@ class EmissionAuditTests(unittest.TestCase):
             "scaling_shift": 11,
             "overlap_flag": 1,
             "limit_output_range": 1,
+            "chroma_scaling_from_luma": 0,
             "components": [{
                 "y_points_value": "0 255",
                 "y_points_scaling": "4 8",
                 "ar_coeffs_y": "1 2 3 4",
+            }, {
+                "uv_points_value": "0 255",
+                "uv_points_scaling": "3 5",
+                "ar_coeffs_uv": "1 2 3 4 5",
+                "uv_mult": 7,
+                "uv_mult_luma": 8,
+                "uv_offset": 9,
+            }, {
+                "uv_points_value": "0 255",
+                "uv_points_scaling": "6 7",
+                "ar_coeffs_uv": "5 4 3 2 1",
+                "uv_mult": 10,
+                "uv_mult_luma": 11,
+                "uv_offset": 12,
             }],
         }
         entry = emission_audit.entry_from_side_data(side_data)
         self.assertEqual(entry["random_seed"], 7391)
         self.assertEqual(entry["scaling_points"]["y"], [[0, 4], [255, 8]])
+        self.assertEqual(entry["scaling_points"]["cb"], [[0, 3], [255, 5]])
+        self.assertEqual(entry["scaling_points"]["cr"], [[0, 6], [255, 7]])
         self.assertEqual(entry["ar_coeffs"]["y"], [1, 2, 3, 4])
+        self.assertEqual(entry["ar_coeffs"]["cb"], [1, 2, 3, 4, 5])
+        self.assertEqual(entry["params"]["cb_luma_mult"], 8)
+        self.assertEqual(entry["params"]["cr_offset"], 12)
         self.assertTrue(entry["limit_output_range"])
+
+    def test_table_match_accounts_for_normative_chroma_parameter_bias(self):
+        stream = emission_audit.entry_from_side_data({
+            "seed": "7391",
+            "ar_coeff_lag": 0,
+            "ar_coeff_shift": 6,
+            "grain_scale_shift": 2,
+            "scaling_shift": 11,
+            "overlap_flag": 1,
+            "limit_output_range": 1,
+            "chroma_scaling_from_luma": 0,
+            "components": [
+                {"y_points_value": "0", "y_points_scaling": "4"},
+                {"uv_points_value": "0", "uv_points_scaling": "3",
+                 "ar_coeffs_uv": "5", "uv_mult": 0,
+                 "uv_mult_luma": 64, "uv_offset": 0},
+                {"uv_points_value": "0", "uv_points_scaling": "2",
+                 "ar_coeffs_uv": "6", "uv_mult": 0,
+                 "uv_mult_luma": 64, "uv_offset": 0},
+            ],
+        })
+        table = {
+            "params": dict(stream["params"]),
+            "scaling_points": stream["scaling_points"],
+            "ar_coeffs": stream["ar_coeffs"],
+        }
+        table["params"].update({
+            "cb_mult": 128, "cb_luma_mult": 192, "cb_offset": 256,
+            "cr_mult": 128, "cr_luma_mult": 192, "cr_offset": 256,
+        })
+        self.assertTrue(emission_audit.table_matches_stream(table, stream))
 
     def test_high_bit_depth_lut_interpolates_low_bits(self):
         lut = np.arange(256, dtype=np.int64) * 4

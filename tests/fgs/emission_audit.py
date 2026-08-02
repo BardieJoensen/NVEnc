@@ -66,25 +66,53 @@ def _integers(value):
     return [int(item) for item in value.split()] if value else []
 
 
+def _scaling_points(component, value_name, scaling_name, label):
+    values = _integers(component.get(value_name, ""))
+    scales = _integers(component.get(scaling_name, ""))
+    if len(values) != len(scales):
+        raise ValueError(f"AV1 {label} scaling-point arrays differ in length")
+    return [[value, scale] for value, scale in zip(values, scales)]
+
+
 def entry_from_side_data(side_data):
     """Convert ffprobe's AV1 film-grain side data to the local table shape."""
     components = side_data.get("components", [])
     if not components:
         raise ValueError("AV1 film-grain side data has no luma component")
     luma = components[0]
-    values = _integers(luma.get("y_points_value", ""))
-    scales = _integers(luma.get("y_points_scaling", ""))
-    if len(values) != len(scales):
-        raise ValueError("AV1 luma scaling-point arrays differ in length")
+    cb = components[1] if len(components) > 1 else {}
+    cr = components[2] if len(components) > 2 else {}
     parameter_names = (
         "ar_coeff_lag", "ar_coeff_shift", "grain_scale_shift",
         "scaling_shift", "overlap_flag",
     )
+    params = {name: int(side_data[name]) for name in parameter_names}
+    params.update({
+        "chroma_scaling_from_luma": int(
+            side_data.get("chroma_scaling_from_luma", 0)),
+        "cb_mult": int(cb.get("uv_mult", 0)),
+        "cb_luma_mult": int(cb.get("uv_mult_luma", 0)),
+        "cb_offset": int(cb.get("uv_offset", 0)),
+        "cr_mult": int(cr.get("uv_mult", 0)),
+        "cr_luma_mult": int(cr.get("uv_mult_luma", 0)),
+        "cr_offset": int(cr.get("uv_offset", 0)),
+    })
     return {
         "random_seed": int(side_data["seed"]),
-        "params": {name: int(side_data[name]) for name in parameter_names},
-        "scaling_points": {"y": [[value, scale] for value, scale in zip(values, scales)]},
-        "ar_coeffs": {"y": _integers(luma.get("ar_coeffs_y", ""))},
+        "params": params,
+        "scaling_points": {
+            "y": _scaling_points(
+                luma, "y_points_value", "y_points_scaling", "luma"),
+            "cb": _scaling_points(
+                cb, "uv_points_value", "uv_points_scaling", "Cb"),
+            "cr": _scaling_points(
+                cr, "uv_points_value", "uv_points_scaling", "Cr"),
+        },
+        "ar_coeffs": {
+            "y": _integers(luma.get("ar_coeffs_y", "")),
+            "cb": _integers(cb.get("ar_coeffs_uv", "")),
+            "cr": _integers(cr.get("ar_coeffs_uv", "")),
+        },
         "limit_output_range": bool(int(side_data.get("limit_output_range", 0))),
     }
 
@@ -115,12 +143,27 @@ def probe_grain_entries(path, frame_count):
 
 def table_matches_stream(table_entry, stream_entry):
     """The seed is expected to differ; every signalled model field must match."""
+    # filmgrn1 stores the unsigned AV1 syntax values.  ffprobe exposes the
+    # signed values used by synthesis after their normative bias is removed.
+    parameter_bias = {
+        "cb_mult": 128,
+        "cb_luma_mult": 128,
+        "cb_offset": 256,
+        "cr_mult": 128,
+        "cr_luma_mult": 128,
+        "cr_offset": 256,
+    }
     names = stream_entry["params"].keys()
     return (
-        all(table_entry["params"][name] == stream_entry["params"][name]
+        all(table_entry["params"][name] - parameter_bias.get(name, 0)
+            == stream_entry["params"][name]
             for name in names)
-        and table_entry["scaling_points"]["y"] == stream_entry["scaling_points"]["y"]
-        and table_entry["ar_coeffs"]["y"] == stream_entry["ar_coeffs"]["y"]
+        and all(table_entry["scaling_points"][plane]
+                == stream_entry["scaling_points"][plane]
+                for plane in ("y", "cb", "cr"))
+        and all(table_entry["ar_coeffs"][plane]
+                == stream_entry["ar_coeffs"][plane]
+                for plane in ("y", "cb", "cr"))
     )
 
 
