@@ -21,6 +21,11 @@ Usage:
       --source clip.mkv \
       --arm bilateral=bilateral.mkv --arm motion=motion.mkv \
       --frames 10,58,106,154,202,250 --json-out report.json
+
+Use ``--plane u`` or ``--plane v`` to measure real-film chroma.  Flat/static
+selection and intensity bands always come from source luma; the selected
+32x32 luma blocks map exactly to 16x16 blocks in 4:2:0 chroma.  This keeps the
+population fixed across planes instead of letting chroma noise select itself.
 """
 import argparse
 import json
@@ -49,13 +54,16 @@ def probe_size(path):
     return tuple(int(value) for value in result.stdout.strip().split(",")[:2])
 
 
-def decode_selected(path, width, height, indices, filmgrain=None):
-    """Decode exact display-order frames as 16-bit luma, preserving code ratios."""
+def decode_selected(path, width, height, indices, filmgrain=None, plane="y"):
+    """Decode exact display-order plane frames as 16-bit samples."""
     terms = "+".join(f"eq(n\\,{index})" for index in indices)
     cmd = [FFMPEG, "-v", "error"]
     if filmgrain is not None:
         cmd += ["-c:v", "libdav1d", "-filmgrain", str(filmgrain)]
-    cmd += ["-i", path, "-map", "0:v:0", "-vf", f"select='{terms}'",
+    filters = f"select='{terms}'"
+    if plane != "y":
+        filters += f",extractplanes={plane}"
+    cmd += ["-i", path, "-map", "0:v:0", "-vf", filters,
             "-fps_mode", "passthrough", "-pix_fmt", "gray16le",
             "-f", "rawvideo", "-"]
     result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
@@ -116,11 +124,20 @@ def masks_by_luma(frame, static, count):
     return out
 
 
+def plane_geometry(width, height, plane):
+    """Return decoded dimensions and block size for a 4:2:0 plane."""
+    if plane == "y":
+        return width, height, 32
+    return (width + 1) // 2, (height + 1) // 2, 16
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True)
     parser.add_argument("--arm", action="append", default=[], required=True,
                         help="LABEL=encoded.mkv; repeatable")
+    parser.add_argument("--plane", choices=("y", "u", "v"), default="y",
+                        help="grain plane to measure; masks always come from luma")
     parser.add_argument("--frames", default="10,58,106,154,202,250",
                         help="comma-separated frame indices; n+1 is also decoded")
     parser.add_argument("--flat-fraction", type=float, default=0.10)
@@ -146,14 +163,20 @@ def main():
     for label, path in arms.items():
         if probe_size(path) != (width, height):
             raise SystemExit(f"{label}: dimensions do not match the source")
+    plane_width, plane_height, plane_block_size = plane_geometry(
+        width, height, args.plane)
 
     frames = [int(value) for value in args.frames.split(",")]
     indices = sorted(set(frames + [frame + 1 for frame in frames]))
-    source = decode_selected(args.source, width, height, indices)
+    source_luma = decode_selected(args.source, width, height, indices)
+    source = (source_luma if args.plane == "y" else decode_selected(
+        args.source, plane_width, plane_height, indices, plane=args.plane))
     decoded = {
         label: {
-            "on": decode_selected(path, width, height, indices, filmgrain=1),
-            "off": decode_selected(path, width, height, indices, filmgrain=0),
+            "on": decode_selected(path, plane_width, plane_height, indices,
+                                  filmgrain=1, plane=args.plane),
+            "off": decode_selected(path, plane_width, plane_height, indices,
+                                   filmgrain=0, plane=args.plane),
         }
         for label, path in arms.items()
     }
@@ -164,25 +187,29 @@ def main():
     selected_counts = []
     for frame in frames:
         if args.flat_selector == "production":
-            candidates, _, _ = production_flat_blocks(source[frame], 16)
+            candidates, _, _ = production_flat_blocks(source_luma[frame], 16)
         else:
-            candidates, _, _ = select_flat(source[frame], 16, args.flat_fraction)
+            candidates, _, _ = select_flat(
+                source_luma[frame], 16, args.flat_fraction)
         static = static_flat_blocks(
-            source[frame], source[frame + 1], candidates,
+            source_luma[frame], source_luma[frame + 1], candidates,
             lo=args.static_lo, hi=args.static_hi)
         if len(static) < 8:
             raise SystemExit(
                 f"frame {frame}: only {len(static)} static flat blocks; choose a quieter frame")
         masks.append(static)
-        luma_masks.append(masks_by_luma(source[frame], static, args.luma_bins))
+        luma_masks.append(masks_by_luma(
+            source_luma[frame], static, args.luma_bins))
         selected_counts.append(len(static))
         truth_rows.append(field_acf(
             (source[frame] - source[frame + 1]) / math.sqrt(2.0),
-            static, detrend=False))
+            static, detrend=False, bs=plane_block_size))
 
     report = {
         "source": os.path.abspath(args.source),
-        "dimensions": [width, height],
+        "source_dimensions": [width, height],
+        "dimensions": [plane_width, plane_height],
+        "plane": args.plane,
         "frames": frames,
         "flat_fraction": args.flat_fraction,
         "flat_selector": args.flat_selector,
@@ -193,7 +220,8 @@ def main():
         "luma_bins": [],
     }
 
-    print(f"{os.path.basename(args.source)}: {width}x{height}, frames {frames}")
+    print(f"{os.path.basename(args.source)}: plane {args.plane} "
+          f"{plane_width}x{plane_height}, frames {frames}")
     print(f"static flat blocks per frame: {selected_counts}\n")
     print(f"{'layer':<28}{'sigma':>8}{'lag-1':>8}{'lag-2':>8}{'amp/truth':>12}")
     print(f"{'source temporal truth':<28}{format_axis(report['truth'])}{1.0:>12.3f}")
@@ -208,12 +236,15 @@ def main():
                 "total": (on[frame] - on[frame + 1]) / math.sqrt(2.0),
             }
             for name, field in fields.items():
-                layer_rows[name].append(field_acf(field, static, detrend=False))
+                layer_rows[name].append(field_acf(
+                    field, static, detrend=False, bs=plane_block_size))
             # Include both independent synthesis draws without changing the
             # mask or treating a temporal difference as a single-frame field.
             layer_rows["synth"].append(average_acf([
-                field_acf(on[frame] - off[frame], static, detrend=False),
-                field_acf(on[frame + 1] - off[frame + 1], static, detrend=False),
+                field_acf(on[frame] - off[frame], static, detrend=False,
+                          bs=plane_block_size),
+                field_acf(on[frame + 1] - off[frame + 1], static,
+                          detrend=False, bs=plane_block_size),
             ]))
 
         arm_report = {}
@@ -254,7 +285,7 @@ def main():
             continue
         bin_truth = [
             field_acf((source[frame] - source[frame + 1]) / math.sqrt(2.0),
-                      band, detrend=False)
+                      band, detrend=False, bs=plane_block_size)
             for frame, band in eligible
         ]
         truth_axis = average_acf(bin_truth)
@@ -274,14 +305,16 @@ def main():
                 on, off = layers["on"], layers["off"]
                 layer_rows["base"].append(field_acf(
                     (off[frame] - off[frame + 1]) / math.sqrt(2.0),
-                    band, detrend=False))
+                    band, detrend=False, bs=plane_block_size))
                 layer_rows["synth"].append(average_acf([
-                    field_acf(on[frame] - off[frame], band, detrend=False),
-                    field_acf(on[frame + 1] - off[frame + 1], band, detrend=False),
+                    field_acf(on[frame] - off[frame], band, detrend=False,
+                              bs=plane_block_size),
+                    field_acf(on[frame + 1] - off[frame + 1], band,
+                              detrend=False, bs=plane_block_size),
                 ]))
                 layer_rows["total"].append(field_acf(
                     (on[frame] - on[frame + 1]) / math.sqrt(2.0),
-                    band, detrend=False))
+                    band, detrend=False, bs=plane_block_size))
             measured = {}
             for name, rows in layer_rows.items():
                 measured[name] = {

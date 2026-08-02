@@ -7,6 +7,7 @@ import numpy as np
 
 import source_fit
 import strength_selection_report
+import temporal_grain_report
 
 
 class SourceFitFlatSelectionTests(unittest.TestCase):
@@ -41,6 +42,17 @@ class SourceFitFlatSelectionTests(unittest.TestCase):
 
 
 class TemporalLeakTests(unittest.TestCase):
+    def test_temporal_report_plane_geometry_keeps_block_grid(self):
+        self.assertEqual(
+            temporal_grain_report.plane_geometry(3840, 2160, "y"),
+            (3840, 2160, 32))
+        self.assertEqual(
+            temporal_grain_report.plane_geometry(3840, 2160, "u"),
+            (1920, 1080, 16))
+        self.assertEqual(
+            temporal_grain_report.plane_geometry(1919, 1079, "v"),
+            (960, 540, 16))
+
     def test_parse_encoded_arms(self):
         self.assertEqual(
             strength_selection_report.parse_encoded_arms(
