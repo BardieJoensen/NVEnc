@@ -281,22 +281,84 @@ The fix was verified three ways:
 This scheduler correction does not enable centred motion, `modelsrc`, or any
 production Tdarr option.
 
-## Next falsifiable experiment
+## Finding 6: paired confidence recovers the centred-window giveback
 
-The remaining centred-window quality loss is plausibly caused by asymmetric
-admission at disocclusions: the past and future references currently earn
-independent SAD affinities. A block can therefore retain one temporal side
-when the other side has no matching picture.
+The next prototype admitted the past and future references at the lower of
+their two raw affinities. A one-sided match therefore cannot contribute to the
+centred estimate. This was a pinned-build change only.
 
-Prototype a paired-confidence gate in the pinned build: for the one-past,
-one-future experiment, admit both references at the lower of their two raw
-affinities. This keeps the temporal estimate centred and rejects one-sided
-matches. Compare it at the same `thsad=640` against both centred-independent
-and causal baselines.
+The encode harness used lossless separator bases and separately captured grain
+tables, then replayed both arms through the same binary and settings. This
+matters: Matroska bytes are not an isolation oracle, Y4M drops colour metadata,
+and NVEncC chooses an 8 Mbit/s maximum for a 1080p Y4M input unless the original
+20 Mbit/s value is repeated. The replays explicitly restored BT.2020/PQ,
+mastering metadata and MaxCLL where present. Fresh independent replays
+reproduced their established byte counts and metrics.
 
-It is promoted only if it recovers The Shining and The Deer Hunter's metric
-giveback without losing Taxi Driver's directional correction or surrendering
-the measured compression advantage. Grain delivery, luma-band texture, output
-size and complete `libdav1d -xerror` decode remain required. A failure is still
-useful: it would rule out asymmetric confidence as the cause and redirect the
-work toward overlap/motion-estimation error rather than more strength tuning.
+Against the independent-confidence centred arm, pairing improves every
+reported metric on the three controls and is neutral on Taxi Driver:
+
+| title | byte cost | delta VMAF | delta SSIMULACRA2 | delta Butteraugli |
+|---|---:|---:|---:|---:|
+| The Shining | +1.31% | +0.383 | +0.749 | -0.033 |
+| The Deer Hunter | +1.34% | +0.228 | +0.393 | -0.016 |
+| Scarface | +1.39% | +0.092 | +0.061 | -0.004 |
+| Taxi Driver | +0.45% | -0.027 | +0.027 | -0.001 |
+
+The byte cost is expected: blocks rejected from temporal averaging leave more
+picture in the base. The consistent control-title fidelity response supports
+the disocclusion-admission mechanism rather than an encoder-noise explanation.
+
+Against matched causal `thsad=640`, the paired centred arm is:
+
+| title | byte saving | delta VMAF | delta SSIMULACRA2 | delta Butteraugli |
+|---|---:|---:|---:|---:|
+| The Shining | 3.15% | +0.137 | -0.944 | +0.002 |
+| The Deer Hunter | 7.12% | -0.164 | +0.096 | -0.019 |
+| Scarface | 3.07% | +0.311 | +0.111 | -0.017 |
+| Taxi Driver | 8.78% | +0.135 | +0.664 | -0.036 |
+
+This is not strict dominance: The Shining retains a SSIMULACRA2 deficit and
+The Deer Hunter retains a small VMAF deficit. It is nevertheless a materially
+better Pareto point than independent centred confidence, and Scarface plus
+Taxi improve on every metric while using fewer bytes than causal.
+
+Taxi's full 36,936,000-block regression remains symmetric:
+
+| arm | previous | next | lag asymmetry |
+|---|---:|---:|---:|
+| causal | -- | -- | +0.1833 |
+| centred, independent | 0.1835 | 0.1853 | -0.0018 |
+| centred, paired | 0.1824 | 0.1841 | -0.0017 |
+
+The texture shape is stable. Paired and independent Taxi synthesis agree to
+about 0.002 at lag one and lag two. Played amplitude rises from 1.136 to 1.150,
+however, equal to the causal arm's overshoot. Paired admission fixes neither
+the luma-curve delivery problem nor the source-fit closure problem, and must not
+be presented as doing so.
+
+All eight fresh A/B outputs pass complete `libdav1d -xerror` decodes. Artifacts,
+metric manifests and the temporal reports are under:
+
+```text
+/media/merged-storage/media/test-encodes/motion-paired-20260802/
+```
+
+## Decision and next gate
+
+Paired centred confidence merits a default-off, test-only implementation so a
+larger corpus can be run from a reproducible branch. It does not merit a
+production default yet. The remaining gates are:
+
+1. prove the checked-in opt-in produces the pinned prototype's lossless base
+   and table, while opt-in off remains byte-identical;
+2. extend beyond these four films, especially Casino and Interstellar;
+3. measure throughput and lookahead memory rather than infer them from runs
+   made alongside production work; and
+4. review high-disocclusion clips and close the independent luma-band strength
+   problem before considering a default change.
+
+If the wider corpus preserves this Pareto improvement, the next separator
+question is forward/backward motion-vector consistency. Paired SAD confidence
+cannot reject a symmetric pair of wrong vectors; a cycle-consistency trace can
+test that mechanism without another strength lever.

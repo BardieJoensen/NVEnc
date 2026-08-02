@@ -146,9 +146,10 @@ response models all fail Taxi Driver's darkest band, so no CUDA delivery
 normalizer is approved.
 See `FINDINGS-2026-08-02-MOTION-CONFIDENCE.md` for the real-film SAD sweep,
 causal-DC diagnosis, rejected mean-alignment experiment and centred-window
-prototype. The centred arm removes Taxi Driver's directional lag and saves
-4--9% at matched settings, but is not production-cleared because two controls
-show small source-referenced quality regressions.
+prototype. Paired past/future confidence recovers most of the control-title
+quality giveback while the centred arm removes Taxi Driver's directional lag
+and saves 3--9% at matched settings. It remains test-only pending a wider
+corpus, throughput measurement, perceptual review and luma-band closure.
 See `FINDINGS-2026-07-31-WIENER-PSD.md` for the coarse-grain plan: FFT3D's
 Wiener gain uses a scalar noise power where libaom uses a per-bin PSD.
 `wiener_psd_sim.py` reproduces the current 0.366 capture offline and measures
