@@ -127,6 +127,67 @@ delivery, not random-seed noise.  That is a much narrower next problem: test
 an expected-delivery normalisation offline before changing the encoder.  Do
 not add a title, correlation or film-derived threshold.
 
+## Expected-delivery normalisation: offline proof succeeds
+
+`delivery_normalize.py` closes the analyser's predicted synthesis target
+against the expected AV1 delivery from the quantized table.  It calculates one
+factor from the pre-encode temporal leak, QVBR deadzone and normative
+multi-seed expectation; it does not fit against a title's post-encode result.
+Only luma scaling points change.  AR coefficients stay byte-identical, and if
+the curve needs a lower shared `scaling_shift`, chroma points are requantized
+to keep their physical amplitude unchanged.
+
+The three deliberately different diagnostic titles require:
+
+| title | predicted target | expected before | factor | expected after | after - target |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Casino (near) | 0.9638 | 0.9542 | 1.0100 | 0.9662 | +0.0025 |
+| Interstellar (over) | 0.9163 | 0.9959 | 0.9201 | 0.9162 | -0.0000 |
+| The Deer Hunter (under) | 0.9827 | 0.8976 | 1.0948 | 0.9765 | -0.0062 |
+
+The same rule therefore corrects both signs, with a maximum quantized-table
+target miss of 0.0062.  Combining the adjusted expectation with each title's
+measured post-encode base residue predicts played totals 1.0004 Casino,
+1.0142 Interstellar and 1.0002 Deer Hunter.  Interstellar's residual 1.4% is
+the independent deadzone-model error; expected delivery no longer contributes
+to it.
+
+A matched four-seed texture audit held base pixels, blocks, seeds, range
+clipping and AR coefficients fixed.  Scaling-curve quantization changed lag-1
+by at most 0.00068 and lag-2 by at most 0.00022:
+
+| title | old lag-1 | new lag-1 | delta | old lag-2 | new lag-2 | delta |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Casino | 0.74825 | 0.74829 | +0.00004 | 0.33984 | 0.33986 | +0.00003 |
+| Interstellar | 0.77131 | 0.77089 | -0.00041 | 0.44856 | 0.44834 | -0.00022 |
+| The Deer Hunter | 0.52819 | 0.52751 | -0.00068 | 0.05353 | 0.05333 | -0.00020 |
+
+One harness defect was found and fixed during this test.  `filmgrn1` does not
+carry AV1's restricted-output-range flag.  The first alternate-table oracle
+therefore synthesized full-range output and made upward curve changes appear
+superlinear on dark/bright blocks.  The corrected oracle inherits the flag
+from decoded stream side data.  Commit `28fa523f` fixes this; none of the
+numbers above use the invalid full-range run.
+
+### Hardware replay
+
+The harder upward case was replayed through the pinned NVEncC binary and
+dav1d, using original and normalized tables against the exact same saved
+motion-clean Deer Hunter base.
+
+- both streams pass a complete `libdav1d -xerror` decode;
+- their grain-disabled frame-MD5 stream SHA-256 values are identical:
+  `6a4c0552bbba32a139f398daf8db187d1d7d2c950b24a8ae4b5a084b963f2f8f`;
+- variance-weighted production-static synthesis moves 0.905 -> 0.984;
+- played total moves 0.927 -> 1.004;
+- decoded synthesis lag-1 moves only 0.540 -> 0.539.
+
+The equal-frame temporal summary reads 1.041 after normalization because it
+gives a low-grain frame the same weight as a high-grain frame.  The closure
+target and all preceding corpus results are variance- and block-weighted;
+under that same estimator the hardware result is 1.004.  This is an
+aggregation distinction, not an encode/simulator disagreement.
+
 ## Chroma real-film baseline
 
 `temporal_grain_report.py` now measures U or V using the same fixed source-luma
@@ -167,11 +228,13 @@ replacement is not applied.
 The experiment is viable but incomplete:
 
 1. keep the rate-dependent leak closure behind `modelsrc=on`, default-off;
-2. prototype expected-delivery normalisation offline on Casino (near target),
-   Interstellar (over) and The Deer Hunter (under);
-3. require one mechanism to correct both signs without changing AR texture;
-4. only then consider a cheap production implementation and repeat the full
-   six-film corpus;
+2. the offline expected-delivery gate has passed in both directions and on one
+   hardware replay;
+3. next validate a cheap expectation from the rolling model's existing luma
+   bin weights and quantized parameters against the exact oracle on all six
+   films; do not put a normative multi-seed simulator in the hot path;
+4. implement only if that approximation predicts both signs, then repeat the
+   full six-film encode/closure corpus;
 5. keep chroma modelling and the blinded motion perceptual review as separate
    open gates.
 
