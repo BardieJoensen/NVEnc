@@ -275,6 +275,23 @@ def luma_bands(frame, blocks, count, max_value):
     return out
 
 
+def parse_encoded_arms(specs):
+    """Parse repeatable LABEL=PATH encoded-arm arguments."""
+    arms = {}
+    for spec in specs:
+        if "=" not in spec:
+            raise ValueError(f"encoded arm must be LABEL=PATH, got: {spec}")
+        label, path = spec.split("=", 1)
+        label = label.strip()
+        path = path.strip()
+        if not label or not path:
+            raise ValueError(f"encoded arm must be LABEL=PATH, got: {spec}")
+        if label in arms:
+            raise ValueError(f"duplicate encoded-arm label: {label}")
+        arms[label] = path
+    return arms
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True)
@@ -282,6 +299,10 @@ def main():
     parser.add_argument("--encoded", default="",
                         help="optional AV1 arm; adds exact libdav1d grain-on/off "
                              "post-encode closure on the same masks")
+    parser.add_argument(
+        "--encoded-arm", action="append", default=[], metavar="LABEL=PATH",
+        help="repeatable labelled AV1 arms measured against one source/base "
+             "analysis; cannot be combined with --encoded")
     parser.add_argument("--frames", default="10,58,106,154,202,250,275")
     parser.add_argument("--bits", type=int, default=10, choices=(8, 10, 12, 16))
     parser.add_argument("--flat-fraction", type=float, default=0.10)
@@ -291,25 +312,38 @@ def main():
     parser.add_argument("--json-out", default="")
     args = parser.parse_args()
 
+    if args.encoded and args.encoded_arm:
+        parser.error("--encoded and --encoded-arm cannot be combined")
+    try:
+        encoded_paths = (
+            {"encoded": args.encoded} if args.encoded
+            else parse_encoded_arms(args.encoded_arm)
+        )
+    except ValueError as error:
+        parser.error(str(error))
+    legacy_encoded = bool(args.encoded)
+
     size = probe_size(args.source)
     if probe_size(args.clean_base) != size:
         raise SystemExit("source and clean-base dimensions differ")
-    if args.encoded and probe_size(args.encoded) != size:
-        raise SystemExit("source and encoded dimensions differ")
+    for label, path in encoded_paths.items():
+        if probe_size(path) != size:
+            raise SystemExit(f"source and encoded arm {label} dimensions differ")
     width, height = size
     frames = [int(value) for value in args.frames.split(",")]
     source_indices = sorted(set(frames + [frame + 1 for frame in frames]))
     source_decoded = decode_selected(args.source, width, height, source_indices, args.bits)
     clean_decoded = decode_selected(
         args.clean_base, width, height, source_indices, args.bits)
-    encoded_decoded = None
-    if args.encoded:
-        encoded_decoded = {
+    encoded_decoded = {
+        label: {
             "on": decode_selected(
-                args.encoded, width, height, source_indices, args.bits, filmgrain=1),
+                path, width, height, source_indices, args.bits, filmgrain=1),
             "off": decode_selected(
-                args.encoded, width, height, source_indices, args.bits, filmgrain=0),
+                path, width, height, source_indices, args.bits, filmgrain=0),
         }
+        for label, path in encoded_paths.items()
+    }
 
     report = {
         "source": os.path.abspath(args.source),
@@ -322,8 +356,14 @@ def main():
         "rows": [],
         "luma_bins": [],
     }
+    if args.encoded_arm:
+        report["encoded_arms"] = {
+            label: os.path.abspath(path) for label, path in encoded_paths.items()
+        }
     by_mask = {name: [] for name in ("top10_static", "production_spatial", "production_static")}
-    encoded_by_mask = ({name: [] for name in by_mask} if encoded_decoded else None)
+    encoded_by_arm = {
+        label: {name: [] for name in by_mask} for label in encoded_decoded
+    }
     per_frame_masks = {name: [] for name in ("top10_static", "production_static")}
 
     print(f"{os.path.basename(args.source)}: {width}x{height} {args.bits}-bit")
@@ -348,15 +388,19 @@ def main():
         frame_record = {"frame": frame_number, "masks": {}}
         for name, blocks in masks.items():
             row = measure(source, next_source, clean, next_clean, blocks)
-            if encoded_decoded:
-                encoded = measure_encoded(
+            encoded_rows = {}
+            for label, decoded in encoded_decoded.items():
+                encoded_rows[label] = measure_encoded(
                     source, next_source,
-                    encoded_decoded["on"][frame_number],
-                    encoded_decoded["on"][frame_number + 1],
-                    encoded_decoded["off"][frame_number],
-                    encoded_decoded["off"][frame_number + 1], blocks)
-                row["encoded"] = encoded
-                encoded_by_mask[name].append(encoded)
+                    decoded["on"][frame_number],
+                    decoded["on"][frame_number + 1],
+                    decoded["off"][frame_number],
+                    decoded["off"][frame_number + 1], blocks)
+                encoded_by_arm[label][name].append(encoded_rows[label])
+            if legacy_encoded:
+                row["encoded"] = encoded_rows["encoded"]
+            elif encoded_rows:
+                row["encoded_arms"] = encoded_rows
             by_mask[name].append(row)
             frame_record["masks"][name] = row
             print(f"{frame_number:>6} {name:<20}{row['blocks']:>8}"
@@ -367,9 +411,15 @@ def main():
         report["rows"].append(frame_record)
 
     report["aggregate"] = {name: aggregate(rows) for name, rows in by_mask.items()}
-    if encoded_by_mask:
+    if legacy_encoded:
         report["encoded_aggregate"] = {
-            name: aggregate_encoded(rows) for name, rows in encoded_by_mask.items()
+            name: aggregate_encoded(rows)
+            for name, rows in encoded_by_arm["encoded"].items()
+        }
+    elif encoded_by_arm:
+        report["encoded_aggregates"] = {
+            label: {name: aggregate_encoded(rows) for name, rows in by_mask_rows.items()}
+            for label, by_mask_rows in encoded_by_arm.items()
         }
     print("\nvariance-weighted aggregate")
     for name, row in report["aggregate"].items():
@@ -377,11 +427,16 @@ def main():
               f"spatial {row['amplitude_ratio']:.3f}  "
               f"temporal leak {row['temporal_leak_ratio']:.3f}  "
               f"target {row['temporal_target_ratio']:.3f}")
-    if encoded_by_mask:
-        print("\npost-encode variance closure")
+    encoded_aggregates = (
+        {"encoded": report["encoded_aggregate"]} if legacy_encoded
+        else report.get("encoded_aggregates", {})
+    )
+    for label, aggregates in encoded_aggregates.items():
+        heading = "post-encode variance closure"
+        print(f"\n{heading}" if legacy_encoded else f"\n{heading}: {label}")
         print(f"{'mask':<20}{'blocks':>8}{'leak':>9}{'target':>9}"
               f"{'synth':>9}{'total':>9}{'closure':>10}")
-        for name, row in report["encoded_aggregate"].items():
+        for name, row in aggregates.items():
             print(f"{name:<20}{row['blocks']:>8}{row['post_leak_ratio']:>9.3f}"
                   f"{row['post_target_ratio']:>9.3f}{row['synth_ratio']:>9.3f}"
                   f"{row['total_ratio']:>9.3f}{row['closure_error']:>+10.3f}")
@@ -403,22 +458,33 @@ def main():
                 if len(band) >= 8:
                     measured = measure(
                         source, next_source, clean, next_clean, band)
-                    if encoded_decoded:
-                        measured["encoded"] = measure_encoded(
+                    encoded_rows = {}
+                    for label, decoded in encoded_decoded.items():
+                        encoded_rows[label] = measure_encoded(
                             source, next_source,
-                            encoded_decoded["on"][frame_number],
-                            encoded_decoded["on"][frame_number + 1],
-                            encoded_decoded["off"][frame_number],
-                            encoded_decoded["off"][frame_number + 1], band)
+                            decoded["on"][frame_number],
+                            decoded["on"][frame_number + 1],
+                            decoded["off"][frame_number],
+                            decoded["off"][frame_number + 1], band)
+                    if legacy_encoded:
+                        measured["encoded"] = encoded_rows["encoded"]
+                    elif encoded_rows:
+                        measured["encoded_arms"] = encoded_rows
                     rows.append(measured)
             if not rows:
                 continue
             row = aggregate(rows)
             limits = [bin_index / args.luma_bins, (bin_index + 1) / args.luma_bins]
             record = {"range": limits, **row}
-            if encoded_decoded:
+            if legacy_encoded:
                 record["encoded"] = aggregate_encoded(
                     [measured["encoded"] for measured in rows])
+            elif encoded_decoded:
+                record["encoded_arms"] = {
+                    label: aggregate_encoded(
+                        [measured["encoded_arms"][label] for measured in rows])
+                    for label in encoded_decoded
+                }
             report["luma_bins"][name].append(record)
             print(f"{limits[0]:.3f}-{limits[1]:.3f} {name:<20}{row['blocks']:>8}"
                   f"{row['truth_sigma']:>10.2f}{row['amplitude_ratio']:>10.3f}"

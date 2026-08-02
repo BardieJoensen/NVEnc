@@ -41,6 +41,17 @@ class SourceFitFlatSelectionTests(unittest.TestCase):
 
 
 class TemporalLeakTests(unittest.TestCase):
+    def test_parse_encoded_arms(self):
+        self.assertEqual(
+            strength_selection_report.parse_encoded_arms(
+                ["q25=/tmp/q25.mkv", "q34=/tmp/arm=34.mkv"]),
+            {"q25": "/tmp/q25.mkv", "q34": "/tmp/arm=34.mkv"})
+        with self.assertRaises(ValueError):
+            strength_selection_report.parse_encoded_arms(["missing-label"])
+        with self.assertRaises(ValueError):
+            strength_selection_report.parse_encoded_arms(
+                ["q29=/tmp/a.mkv", "q29=/tmp/b.mkv"])
+
     def test_temporal_leak_ignores_static_base_error(self):
         """Spatial base energy is not necessarily retained grain.
 
