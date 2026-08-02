@@ -171,17 +171,23 @@ def measure_arrays(source_frames, base_frames, block_size=BS):
         bases.append(box(base, width, height, block_size))
     overall = ProjectionAccumulator()
     binned = [ProjectionAccumulator() for _ in BINS]
+    per_frame = []
     for index in range(1, len(sources) - 1):
         _add_triplet(overall, binned, sources[index - 1], sources[index],
                      sources[index + 1], bases[index])
-    return _format_result(len(sources), block_size, overall, binned)
+        frame_accumulator = ProjectionAccumulator()
+        _add_triplet(frame_accumulator, [], sources[index - 1], sources[index],
+                     sources[index + 1], bases[index])
+        per_frame.append({"frame": index, **frame_accumulator.result()})
+    return _format_result(
+        len(sources), block_size, overall, binned, per_frame=per_frame)
 
 
 def _format_range(low, high):
     return f"{low:g}-{high:g}" if np.isfinite(high) else f">{low:g}"
 
 
-def _format_result(frame_count, block_size, overall, binned):
+def _format_result(frame_count, block_size, overall, binned, per_frame=None):
     projection = overall.result()
     motion_bins = []
     for accumulator, (low, high) in zip(binned, BINS):
@@ -189,7 +195,7 @@ def _format_result(frame_count, block_size, overall, binned):
         motion_bins.append(row)
     # beta/bins retain the old JSON fields for readers that only display the
     # univariate previous projection.  New decisions must use projection.
-    return {
+    result = {
         "frames": frame_count,
         "evaluated_frames": frame_count - 2,
         "box_size": block_size,
@@ -201,6 +207,9 @@ def _format_result(frame_count, block_size, overall, binned):
         "projection": projection,
         "motion_bins": motion_bins,
     }
+    if per_frame is not None:
+        result["per_frame"] = per_frame
+    return result
 
 
 def probe(ref, base, n):
@@ -217,6 +226,7 @@ def probe(ref, base, n):
     bg = frames(base, n, width, height)
     overall = ProjectionAccumulator()
     binned = [ProjectionAccumulator() for _ in BINS]
+    per_frame = []
     window = []
     for index in range(n):
         try:
@@ -227,6 +237,13 @@ def probe(ref, base, n):
         if len(window) == 3:
             _add_triplet(overall, binned, window[0][0], window[1][0],
                          window[2][0], window[1][1])
+            frame_accumulator = ProjectionAccumulator()
+            _add_triplet(frame_accumulator, [], window[0][0], window[1][0],
+                         window[2][0], window[1][1])
+            per_frame.append({
+                "frame": index - 1,
+                **frame_accumulator.result(),
+            })
             window.pop(0)
     for iterator, label in ((rg, ref), (bg, base)):
         try:
@@ -235,7 +252,7 @@ def probe(ref, base, n):
             pass
         else:
             raise RuntimeError(f"{label}: decoder produced more than {n} frames")
-    return _format_result(n, BS, overall, binned)
+    return _format_result(n, BS, overall, binned, per_frame=per_frame)
 
 
 def main():

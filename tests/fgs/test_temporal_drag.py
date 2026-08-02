@@ -37,11 +37,17 @@ def blur_horizontal(frame, radius):
 class TemporalProjectionTests(unittest.TestCase):
     def test_recovers_exact_previous_frame_blend(self):
         source = random_frames()
-        result = temporal_drag.measure_arrays(
-            source, previous_blend(source, 0.15), BLOCK)["projection"]
+        report = temporal_drag.measure_arrays(
+            source, previous_blend(source, 0.15), BLOCK)
+        result = report["projection"]
         self.assertAlmostEqual(result["joint_previous"], 0.15, places=10)
         self.assertAlmostEqual(result["joint_next"], 0.0, places=10)
         self.assertAlmostEqual(result["lag_asymmetry"], 0.15, places=10)
+        self.assertEqual(
+            [row["frame"] for row in report["per_frame"]],
+            list(range(1, len(source) - 1)))
+        for row in report["per_frame"]:
+            self.assertAlmostEqual(row["lag_asymmetry"], 0.15, places=10)
 
     def test_unchanged_base_has_zero_projection(self):
         source = random_frames()
