@@ -243,6 +243,9 @@ protected:
     struct DebugEnv {
         bool applyTrace;
         int applyTraceBlock;
+        bool blockTrace;
+        int blockTraceFrame;
+        int blockTraceStride;
         bool forceDegrainCopy;
         bool pixelTrace;
         int pixelTraceX;
@@ -252,6 +255,9 @@ protected:
         DebugEnv() :
             applyTrace(false),
             applyTraceBlock(-1),
+            blockTrace(false),
+            blockTraceFrame(-1),
+            blockTraceStride(1),
             forceDegrainCopy(false),
             pixelTrace(false),
             pixelTraceX(0),

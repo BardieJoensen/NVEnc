@@ -3656,6 +3656,14 @@ RGY_ERR NVEncFilterDegrain::resolveSceneChange(const std::shared_ptr<NVEncFilter
 void NVEncFilterDegrain::loadDebugEnv() {
     m_debugEnv.applyTrace = degrainTraceEnvEnabled("NVENC_DEGRAIN_APPLY_TRACE");
     m_debugEnv.applyTraceBlock = degrainTraceEnvInt("NVENC_DEGRAIN_APPLY_TRACE_BLOCK", -1);
+    m_debugEnv.blockTrace = degrainTraceEnvEnabled("NVENC_DEGRAIN_BLOCK_TRACE");
+    m_debugEnv.blockTraceFrame = degrainTraceEnvInt("NVENC_DEGRAIN_BLOCK_TRACE_FRAME", -1);
+    m_debugEnv.blockTraceStride = std::max(1, degrainTraceEnvInt("NVENC_DEGRAIN_BLOCK_TRACE_STRIDE", 1));
+    if (m_debugEnv.blockTrace && m_debugEnv.blockTraceFrame < 0) {
+        AddMessage(RGY_LOG_WARN,
+            _T("NVENC_DEGRAIN_BLOCK_TRACE requires an exact NVENC_DEGRAIN_BLOCK_TRACE_FRAME; block trace disabled.\n"));
+        m_debugEnv.blockTrace = false;
+    }
     m_debugEnv.forceDegrainCopy = degrainTraceEnvEnabled("NVENC_DEGRAIN_DEGRAIN_COPY");
     m_debugEnv.pixelTrace = degrainTraceEnvEnabled("NVENC_DEGRAIN_PIXEL_TRACE");
     m_debugEnv.pixelTraceX = degrainTraceEnvInt("NVENC_DEGRAIN_PIXEL_TRACE_X", 0);
@@ -4041,7 +4049,7 @@ void NVEncFilterDegrain::clearFrameAnalysisData() {
 
 bool NVEncFilterDegrain::degrainApplyTraceEnabled() const {
     auto prm = std::dynamic_pointer_cast<NVEncFilterParamDegrain>(m_param);
-    return m_debugEnv.applyTrace
+    return (m_debugEnv.applyTrace || m_debugEnv.blockTrace)
         && prm
         && prm->degrain.mode == VppDegrainMode::Degrain
         && (prm->degrain.stage == VppDegrainStage::TR1 || prm->degrain.stage == VppDegrainStage::TR2);
@@ -4057,6 +4065,11 @@ void NVEncFilterDegrain::logApplyTrace(const std::shared_ptr<NVEncFilterParamDeg
     const auto &layout = analysisLayout();
     const auto *cur = frames.render.cur ? frames.render.cur : frames.analysis.cur;
     if (!mv || !sad || !cur || layout.blockCount() == 0 || layout.temporalDirections <= 0) {
+        return;
+    }
+    const bool emitBlockTrace = m_debugEnv.blockTrace
+        && cur->inputFrameId == m_debugEnv.blockTraceFrame;
+    if (!m_debugEnv.applyTrace && !emitBlockTrace) {
         return;
     }
     const auto entryCount = layout.blockCount() * (size_t)layout.temporalDirections;
@@ -4112,73 +4125,143 @@ void NVEncFilterDegrain::logApplyTrace(const std::shared_ptr<NVEncFilterParamDeg
     const int refDirectionCount = std::min(layout.temporalDirections, RGY_DEGRAIN_MAX_TEMPORAL_DIRECTIONS);
     const TCHAR *stageName = get_cx_desc(list_vpp_degrain_stage, (int)prm->degrain.stage);
 
-    std::array<size_t, 4> sampleBlocks = {
-        0,
-        layout.blockCount() / 2,
-        layout.blockCount() - 1,
-        layout.blockCount()
-    };
-    static const TCHAR *sampleNames[] = { _T("first"), _T("mid"), _T("last"), _T("target") };
-    const int targetBlock = m_debugEnv.applyTraceBlock;
-    if (targetBlock >= 0 && (size_t)targetBlock < layout.blockCount()) {
-        sampleBlocks[3] = (size_t)targetBlock;
-    }
-    for (int sample = 0; sample < (int)sampleBlocks.size(); sample++) {
-        const size_t block = sampleBlocks[sample];
-        if (block >= layout.blockCount()
-            || (sample > 0 && block == sampleBlocks[sample - 1])
-            || (sample > 1 && block == sampleBlocks[sample - 2])) {
-            continue;
+    if (m_debugEnv.applyTrace) {
+        std::array<size_t, 4> sampleBlocks = {
+            0,
+            layout.blockCount() / 2,
+            layout.blockCount() - 1,
+            layout.blockCount()
+        };
+        static const TCHAR *sampleNames[] = { _T("first"), _T("mid"), _T("last"), _T("target") };
+        const int targetBlock = m_debugEnv.applyTraceBlock;
+        if (targetBlock >= 0 && (size_t)targetBlock < layout.blockCount()) {
+            sampleBlocks[3] = (size_t)targetBlock;
         }
-        std::array<float, RGY_DEGRAIN_MAX_TEMPORAL_DIRECTIONS> referenceConfidenceRaw = {};
-        float confidenceSum = sourceConfidenceRaw;
-        float referenceMixTotal = 0.0f;
-        for (int refDirection = 0; refDirection < refDirectionCount; refDirection++) {
-            const size_t entry = block * (size_t)layout.temporalDirections + (size_t)refDirection;
-            const auto &mvValue = mvValues[entry];
-            const auto &sadValue = sadValues[entry];
-            const bool directionDisabled = disableRefs[refDirection];
-            const bool validMotion = (int)mvValue.refdir == refDirection;
-            const bool underThSad = sadValue.sad < scaledThSad;
-            if (!directionDisabled && validMotion && underThSad) {
-                referenceConfidenceRaw[refDirection] = degrainTraceReferenceAffinityFromSad((int)scaledThSad, (int)sadValue.sad)
-                    * temporalMixPrior[1 + refDirection];
-                confidenceSum += referenceConfidenceRaw[refDirection];
+        for (int sample = 0; sample < (int)sampleBlocks.size(); sample++) {
+            const size_t block = sampleBlocks[sample];
+            if (block >= layout.blockCount()
+                || (sample > 0 && block == sampleBlocks[sample - 1])
+                || (sample > 1 && block == sampleBlocks[sample - 2])) {
+                continue;
+            }
+            std::array<float, RGY_DEGRAIN_MAX_TEMPORAL_DIRECTIONS> referenceConfidenceRaw = {};
+            float confidenceSum = sourceConfidenceRaw;
+            float referenceMixTotal = 0.0f;
+            for (int refDirection = 0; refDirection < refDirectionCount; refDirection++) {
+                const size_t entry = block * (size_t)layout.temporalDirections + (size_t)refDirection;
+                const auto &mvValue = mvValues[entry];
+                const auto &sadValue = sadValues[entry];
+                const bool directionDisabled = disableRefs[refDirection];
+                const bool validMotion = (int)mvValue.refdir == refDirection;
+                const bool underThSad = sadValue.sad < scaledThSad;
+                if (!directionDisabled && validMotion && underThSad) {
+                    referenceConfidenceRaw[refDirection] = degrainTraceReferenceAffinityFromSad((int)scaledThSad, (int)sadValue.sad)
+                        * temporalMixPrior[1 + refDirection];
+                    confidenceSum += referenceConfidenceRaw[refDirection];
+                }
+            }
+            const float invWeightSum = (confidenceSum > 0.0f) ? (1.0f / confidenceSum) : 0.0f;
+            for (int refDirection = 0; refDirection < refDirectionCount; refDirection++) {
+                referenceMixTotal += (referenceConfidenceRaw[refDirection] > 0.0f) ? (referenceConfidenceRaw[refDirection] * invWeightSum) : 0.0f;
+            }
+            const float sourceMixNorm = sourceConfidenceRaw * invWeightSum;
+
+            const int blockX = (layout.blocksX > 0) ? (int)(block % (size_t)layout.blocksX) : 0;
+            const int blockY = (layout.blocksX > 0) ? (int)(block / (size_t)layout.blocksX) : 0;
+            for (int refDirection = 0; refDirection < refDirectionCount; refDirection++) {
+                const size_t entry = block * (size_t)layout.temporalDirections + (size_t)refDirection;
+                const auto &mvValue = mvValues[entry];
+                const auto &sadValue = sadValues[entry];
+                const int delta = rgy_degrain_delta_from_ref_index(refDirection);
+                const bool forward = rgy_degrain_ref_index_is_forward(refDirection);
+                const bool availabilityDisabled = availabilityDisableRefs[refDirection];
+                const bool useFlagDisabled = useFlagDisableRefs[refDirection] && !availabilityDisabled;
+                const bool sceneChangeDisabled = disableRefs[refDirection] && !availabilityDisabled && !useFlagDisabled;
+                const bool validMotion = (int)mvValue.refdir == refDirection;
+                const bool underThSad = sadValue.sad < scaledThSad;
+                const float referenceMixNorm = (referenceConfidenceRaw[refDirection] > 0.0f) ? (referenceConfidenceRaw[refDirection] * invWeightSum) : 0.0f;
+                AddMessage(RGY_LOG_INFO,
+                    _T("{\"type\":\"degrain_mix_trace\",\"frame\":%d,\"pts\":%lld,\"dur\":%lld,\"stage\":\"%s\",\"request_delta\":%d,\"delta\":%d,\"ref_slot\":%d,\"temporal_side\":\"%s\",\"sample\":\"%s\",\"block\":%llu,\"block_x\":%d,\"block_y\":%d,\"entry\":%llu,\"motion\":{\"dx\":%d,\"dy\":%d,\"sad\":%u,\"ref_slot\":%u},\"sad_stats\":{\"sad\":%u,\"src_avg\":%u,\"ref_avg\":%u},\"sad_limit\":%u,\"reference_policy\":%d,\"disable\":{\"mask\":%u,\"availability\":%d,\"policy\":%d,\"scene\":%d,\"final\":%d},\"valid\":{\"motion\":%d,\"sad\":%d},\"selected\":%d,\"mix\":{\"confidence_raw\":%.9g,\"reference_norm\":%.9g,\"source_norm\":%.9g,\"reference_norm_sum\":%.9g,\"confidence_sum\":%.9g,\"source_raw\":%.9g},\"layout\":{\"blocks\":%llu,\"blocks_x\":%d,\"blocks_y\":%d,\"directions\":%d,\"block_size\":%d,\"overlap\":%d,\"step\":%d}}\n"),
+                    cur->inputFrameId, (long long)cur->timestamp, (long long)cur->duration,
+                    stageName, requestedDelta(), delta, refDirection, forward ? _T("prev") : _T("next"),
+                    sampleNames[sample],
+                    (unsigned long long)block, blockX, blockY, (unsigned long long)entry,
+                    (int)mvValue.dx, (int)mvValue.dy, (unsigned int)mvValue.sad, (unsigned int)mvValue.refdir,
+                    (unsigned int)sadValue.sad, (unsigned int)sadValue.srcAvg, (unsigned int)sadValue.refAvg,
+                    (unsigned int)scaledThSad, prm->degrain.useFlag,
+                    (unsigned int)disableMask, availabilityDisabled ? 1 : 0, useFlagDisabled ? 1 : 0, sceneChangeDisabled ? 1 : 0, disableRefs[refDirection] ? 1 : 0,
+                    validMotion ? 1 : 0, underThSad ? 1 : 0, referenceMixNorm > 0.0f ? 1 : 0,
+                    (double)referenceConfidenceRaw[refDirection], (double)referenceMixNorm, (double)sourceMixNorm, (double)referenceMixTotal, (double)confidenceSum, (double)sourceConfidenceRaw,
+                    (unsigned long long)layout.blockCount(), layout.blocksX, layout.blocksY, layout.temporalDirections, layout.blockSize, layout.overlap, layout.step);
             }
         }
-        const float invWeightSum = (confidenceSum > 0.0f) ? (1.0f / confidenceSum) : 0.0f;
-        for (int refDirection = 0; refDirection < refDirectionCount; refDirection++) {
-            referenceMixTotal += (referenceConfidenceRaw[refDirection] > 0.0f) ? (referenceConfidenceRaw[refDirection] * invWeightSum) : 0.0f;
-        }
-        const float sourceMixNorm = sourceConfidenceRaw * invWeightSum;
+    }
 
-        const int blockX = (layout.blocksX > 0) ? (int)(block % (size_t)layout.blocksX) : 0;
-        const int blockY = (layout.blocksX > 0) ? (int)(block / (size_t)layout.blocksX) : 0;
-        for (int refDirection = 0; refDirection < refDirectionCount; refDirection++) {
-            const size_t entry = block * (size_t)layout.temporalDirections + (size_t)refDirection;
-            const auto &mvValue = mvValues[entry];
-            const auto &sadValue = sadValues[entry];
-            const int delta = rgy_degrain_delta_from_ref_index(refDirection);
-            const bool forward = rgy_degrain_ref_index_is_forward(refDirection);
-            const bool availabilityDisabled = availabilityDisableRefs[refDirection];
-            const bool useFlagDisabled = useFlagDisableRefs[refDirection] && !availabilityDisabled;
-            const bool sceneChangeDisabled = disableRefs[refDirection] && !availabilityDisabled && !useFlagDisabled;
-            const bool validMotion = (int)mvValue.refdir == refDirection;
-            const bool underThSad = sadValue.sad < scaledThSad;
-            const float referenceMixNorm = (referenceConfidenceRaw[refDirection] > 0.0f) ? (referenceConfidenceRaw[refDirection] * invWeightSum) : 0.0f;
-            AddMessage(RGY_LOG_INFO,
-                _T("{\"type\":\"degrain_mix_trace\",\"frame\":%d,\"pts\":%lld,\"dur\":%lld,\"stage\":\"%s\",\"request_delta\":%d,\"delta\":%d,\"ref_slot\":%d,\"temporal_side\":\"%s\",\"sample\":\"%s\",\"block\":%llu,\"block_x\":%d,\"block_y\":%d,\"entry\":%llu,\"motion\":{\"dx\":%d,\"dy\":%d,\"sad\":%u,\"ref_slot\":%u},\"sad_stats\":{\"sad\":%u,\"src_avg\":%u,\"ref_avg\":%u},\"sad_limit\":%u,\"reference_policy\":%d,\"disable\":{\"mask\":%u,\"availability\":%d,\"policy\":%d,\"scene\":%d,\"final\":%d},\"valid\":{\"motion\":%d,\"sad\":%d},\"selected\":%d,\"mix\":{\"confidence_raw\":%.9g,\"reference_norm\":%.9g,\"source_norm\":%.9g,\"reference_norm_sum\":%.9g,\"confidence_sum\":%.9g,\"source_raw\":%.9g},\"layout\":{\"blocks\":%llu,\"blocks_x\":%d,\"blocks_y\":%d,\"directions\":%d,\"block_size\":%d,\"overlap\":%d,\"step\":%d}}\n"),
-                cur->inputFrameId, (long long)cur->timestamp, (long long)cur->duration,
-                stageName, requestedDelta(), delta, refDirection, forward ? _T("prev") : _T("next"),
-                sampleNames[sample],
-                (unsigned long long)block, blockX, blockY, (unsigned long long)entry,
-                (int)mvValue.dx, (int)mvValue.dy, (unsigned int)mvValue.sad, (unsigned int)mvValue.refdir,
-                (unsigned int)sadValue.sad, (unsigned int)sadValue.srcAvg, (unsigned int)sadValue.refAvg,
-                (unsigned int)scaledThSad, prm->degrain.useFlag,
-                (unsigned int)disableMask, availabilityDisabled ? 1 : 0, useFlagDisabled ? 1 : 0, sceneChangeDisabled ? 1 : 0, disableRefs[refDirection] ? 1 : 0,
-                validMotion ? 1 : 0, underThSad ? 1 : 0, referenceMixNorm > 0.0f ? 1 : 0,
-                (double)referenceConfidenceRaw[refDirection], (double)referenceMixNorm, (double)sourceMixNorm, (double)referenceMixTotal, (double)confidenceSum, (double)sourceConfidenceRaw,
-                (unsigned long long)layout.blockCount(), layout.blocksX, layout.blocksY, layout.temporalDirections, layout.blockSize, layout.overlap, layout.step);
+    if (emitBlockTrace) {
+        AddMessage(RGY_LOG_INFO,
+            _T("{\"type\":\"degrain_block_trace_summary\",\"version\":1,\"frame\":%d,\"pts\":%lld,\"dur\":%lld,\"sad_limit\":%u,\"reference_policy\":%d,\"disable_mask\":%u,\"stride\":%d,\"layout\":{\"blocks\":%llu,\"blocks_x\":%d,\"blocks_y\":%d,\"directions\":%d,\"block_size\":%d,\"overlap\":%d,\"step\":%d,\"pel\":%d}}\n"),
+            cur->inputFrameId, (long long)cur->timestamp, (long long)cur->duration,
+            (unsigned int)scaledThSad, prm->degrain.useFlag, (unsigned int)disableMask,
+            m_debugEnv.blockTraceStride,
+            (unsigned long long)layout.blockCount(), layout.blocksX, layout.blocksY,
+            layout.temporalDirections, layout.blockSize, layout.overlap, layout.step,
+            prm->degrain.pel);
+        for (size_t block = 0; block < layout.blockCount(); block += (size_t)m_debugEnv.blockTraceStride) {
+            std::array<float, RGY_DEGRAIN_MAX_TEMPORAL_DIRECTIONS> referenceConfidenceRaw = {};
+            float confidenceSum = sourceConfidenceRaw;
+            for (int refDirection = 0; refDirection < refDirectionCount; refDirection++) {
+                const size_t entry = block * (size_t)layout.temporalDirections + (size_t)refDirection;
+                const auto &mvValue = mvValues[entry];
+                const auto &sadValue = sadValues[entry];
+                if (!disableRefs[refDirection]
+                    && (int)mvValue.refdir == refDirection
+                    && sadValue.sad < scaledThSad) {
+                    referenceConfidenceRaw[refDirection] = degrainTraceReferenceAffinityFromSad(
+                        (int)scaledThSad, (int)sadValue.sad) * temporalMixPrior[1 + refDirection];
+                    confidenceSum += referenceConfidenceRaw[refDirection];
+                }
+            }
+            const float invWeightSum = (confidenceSum > 0.0f) ? (1.0f / confidenceSum) : 0.0f;
+            float referenceMixTotal = 0.0f;
+            for (int refDirection = 0; refDirection < refDirectionCount; refDirection++) {
+                referenceMixTotal += referenceConfidenceRaw[refDirection] * invWeightSum;
+            }
+            const float sourceMixNorm = sourceConfidenceRaw * invWeightSum;
+            const int blockX = (layout.blocksX > 0) ? (int)(block % (size_t)layout.blocksX) : 0;
+            const int blockY = (layout.blocksX > 0) ? (int)(block / (size_t)layout.blocksX) : 0;
+            std::ostringstream line;
+            line << "{\"type\":\"degrain_block_trace\",\"version\":1"
+                << ",\"frame\":" << cur->inputFrameId
+                << ",\"block\":" << (unsigned long long)block
+                << ",\"block_x\":" << blockX
+                << ",\"block_y\":" << blockY
+                << ",\"source_mix\":" << sourceMixNorm
+                << ",\"reference_mix\":" << referenceMixTotal
+                << ",\"refs\":[";
+            for (int refDirection = 0; refDirection < refDirectionCount; refDirection++) {
+                if (refDirection > 0) line << ',';
+                const size_t entry = block * (size_t)layout.temporalDirections + (size_t)refDirection;
+                const auto &mvValue = mvValues[entry];
+                const auto &sadValue = sadValues[entry];
+                const bool validMotion = (int)mvValue.refdir == refDirection;
+                const bool underThSad = sadValue.sad < scaledThSad;
+                const float referenceMixNorm = referenceConfidenceRaw[refDirection] * invWeightSum;
+                line << "{\"slot\":" << refDirection
+                    << ",\"delta\":" << rgy_degrain_delta_from_ref_index(refDirection)
+                    << ",\"side\":\"" << (rgy_degrain_ref_index_is_forward(refDirection) ? "prev" : "next") << '\"'
+                    << ",\"dx\":" << (int)mvValue.dx
+                    << ",\"dy\":" << (int)mvValue.dy
+                    << ",\"sad\":" << (unsigned int)sadValue.sad
+                    << ",\"src_avg\":" << (unsigned int)sadValue.srcAvg
+                    << ",\"ref_avg\":" << (unsigned int)sadValue.refAvg
+                    << ",\"disabled\":" << (disableRefs[refDirection] ? 1 : 0)
+                    << ",\"valid_motion\":" << (validMotion ? 1 : 0)
+                    << ",\"under_sad\":" << (underThSad ? 1 : 0)
+                    << ",\"selected\":" << (referenceMixNorm > 0.0f ? 1 : 0)
+                    << ",\"mix\":" << referenceMixNorm << '}';
+            }
+            line << "]}";
+            AddMessage(RGY_LOG_INFO, _T("%s\n"), char_to_tstring(line.str()).c_str());
         }
     }
 }
