@@ -21,3 +21,5 @@ python3 tests/fgs/test_quality_metrics.py
 python3 tests/fgs/test_texture_metrics.py
 python3 tests/fgs/test_model_gate.py
 python3 tests/fgs/test_source_fit.py
+python3 tests/fgs/test_emission_audit.py
+python3 tests/fgs/test_qvbr_leak_fit.py
