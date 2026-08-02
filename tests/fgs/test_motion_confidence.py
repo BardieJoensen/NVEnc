@@ -54,7 +54,7 @@ class MotionConfidenceTests(unittest.TestCase):
                 motion_confidence, "decode_luma", side_effect=fake_decode) as decode:
             cache = motion_confidence.preload_source_frames(specs)
 
-        decode.assert_called_once_with("same.mkv", [6, 7, 8, 9, 10])
+        decode.assert_called_once_with("same.mkv", [5, 6, 7, 8, 9, 10, 11])
         self.assertEqual(cache["same.mkv"]["frames"][9][0, 0], 9)
 
     def test_parse_requires_complete_exact_frame_trace(self):
@@ -95,6 +95,41 @@ class MotionConfidenceTests(unittest.TestCase):
         self.assertAlmostEqual(features["spatial_vector_error"], 10.0)
         self.assertAlmostEqual(features["nearest_sad_ratio"], 0.1)
         self.assertAlmostEqual(features["neighbor_invalid_fraction"], 0.0)
+
+    def test_derives_selected_reference_dc_prediction(self):
+        summary = {
+            "layout": {"block_size": 4, "step": 4, "pel": 1},
+        }
+        row = block(0, 0, 0)
+        row["refs"][1]["mix"] = 0.3
+        row["refs"][3]["mix"] = 0.1
+        frames = {
+            5: np.full((4, 4), 6.0, dtype=np.float32),
+            6: np.full((4, 4), 14.0, dtype=np.float32),
+            7: np.full((4, 4), 10.0, dtype=np.float32),
+        }
+        features = motion_confidence.derive_reference_dc_features(
+            summary, {0: row}, frames, 7, 4, 4)[0]
+        self.assertAlmostEqual(features["nearest_dc_mismatch"], 4.0)
+        self.assertAlmostEqual(features["mixed_dc_mismatch"], 0.8)
+        self.assertAlmostEqual(features["reference_dc_prediction"], 0.8)
+
+    def test_dc_prediction_report_separates_explained_lag(self):
+        previous = np.asarray([-4.0, -2.0, 2.0, 4.0])
+        following = np.asarray([3.0, -3.0, 3.0, -3.0])
+        prediction = 0.25 * previous
+        data = {
+            "error": prediction.copy(),
+            "previous": previous,
+            "following": following,
+            "reference_dc_prediction": prediction,
+        }
+        report = motion_confidence._dc_prediction_report(data)
+        self.assertAlmostEqual(report["correlation"], 1.0)
+        self.assertAlmostEqual(report["zero_intercept_gain"], 1.0)
+        self.assertAlmostEqual(report["residual_rmse"], 0.0)
+        self.assertAlmostEqual(
+            report["residual_projection"]["lag_asymmetry"], 0.0)
 
     def test_risk_curve_separates_labelled_previous_blend(self):
         rng = np.random.default_rng(4)

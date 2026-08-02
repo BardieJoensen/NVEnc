@@ -8,8 +8,9 @@ motion separator already has before rendering:
 * SAD relative to the render threshold;
 * the normalised temporal-reference mix;
 * nearest-reference motion magnitude;
-* disagreement between the one- and two-frame vectors; and
-* disagreement with neighbouring motion vectors.
+* disagreement between the one- and two-frame vectors;
+* disagreement with neighbouring motion vectors; and
+* the DC change implied by the selected, motion-compensated references.
 
 The input trace is opt-in and output-invariant.  Build NVEncC with the trace
 support, then run a short raw-output window whose centre is SOURCE_FRAME:
@@ -51,7 +52,7 @@ from temporal_drag import ProjectionAccumulator
 
 TRACE_SUMMARY = '{"type":"degrain_block_trace_summary"'
 TRACE_BLOCK = '{"type":"degrain_block_trace"'
-RISK_FEATURES = (
+TRACE_FEATURES = (
     "reference_mix",
     "nearest_sad_ratio",
     "far_sad_ratio",
@@ -59,8 +60,17 @@ RISK_FEATURES = (
     "temporal_vector_error",
     "spatial_vector_error",
     "neighbor_invalid_fraction",
+)
+DC_RISK_FEATURES = (
+    "nearest_dc_mismatch",
+    "mixed_dc_mismatch",
+)
+RISK_FEATURES = (
+    *TRACE_FEATURES,
+    *DC_RISK_FEATURES,
     "screen_motion",
 )
+AUX_FEATURES = ("reference_dc_prediction",)
 
 
 def _json_from_log_line(line, marker):
@@ -154,7 +164,7 @@ def preload_source_frames(specs):
     for spec in specs:
         source_frame = int(spec["source_frame"])
         requested.setdefault(spec["source"], set()).update(
-            (source_frame - 1, source_frame, source_frame + 1))
+            range(source_frame - 2, source_frame + 3))
     cache = {}
     for path, indices in requested.items():
         ordered = sorted(indices)
@@ -238,23 +248,100 @@ def derive_trace_features(summary, blocks):
     return output
 
 
+def _mirror_coordinates(start, count, size):
+    """Match degrainMirrorCoord for one block-sized boundary excursion."""
+    coordinates = np.arange(start, start + count, dtype=np.int64)
+    coordinates = np.maximum(coordinates, -coordinates - 1)
+    coordinates = np.minimum(coordinates, 2 * size - 1 - coordinates)
+    return np.clip(coordinates, 0, size - 1)
+
+
+def _region_mean(frame, x, y, width, height):
+    ys = _mirror_coordinates(y, height, frame.shape[0])
+    xs = _mirror_coordinates(x, width, frame.shape[1])
+    return float(frame[np.ix_(ys, xs)].mean())
+
+
+def derive_reference_dc_features(summary, blocks, source_frames,
+                                 source_frame, width, height):
+    """Estimate the block-mean change caused by selected references.
+
+    The diagnostic uses the central non-overlap-sized region measured by the
+    temporal projection. Production FGS currently uses integer-pel motion;
+    fail explicitly if a future experiment changes that rather than silently
+    approximating its configured interpolation filter.
+    """
+    layout = summary["layout"]
+    pel = int(layout["pel"])
+    if pel != 1:
+        raise RuntimeError(
+            "reference DC diagnostic requires pel=1; the trace does not "
+            "record enough interpolation state for an exact subpel result")
+    block_size = int(layout["block_size"])
+    step = int(layout["step"])
+    margin = max(0, (block_size - step) // 2)
+    current_frame = source_frames[source_frame]
+    output = {}
+    for block, row in blocks.items():
+        x0 = int(row["block_x"]) * step + margin
+        y0 = int(row["block_y"]) * step + margin
+        region_width = min(width, x0 + step) - x0
+        region_height = min(height, y0 + step) - y0
+        if region_width <= 0 or region_height <= 0:
+            continue
+        current_mean = _region_mean(
+            current_frame, x0, y0, region_width, region_height)
+        prediction = 0.0
+        nearest_delta = float("nan")
+        for reference in row["refs"]:
+            if not bool(reference["selected"]):
+                continue
+            delta = int(reference["delta"])
+            frame_index = (source_frame - delta
+                           if reference["side"] == "prev"
+                           else source_frame + delta)
+            if frame_index not in source_frames:
+                raise RuntimeError(
+                    f"source frame {frame_index} required by trace is missing")
+            reference_mean = _region_mean(
+                source_frames[frame_index],
+                x0 + int(reference["dx"]),
+                y0 + int(reference["dy"]),
+                region_width, region_height)
+            mean_delta = reference_mean - current_mean
+            prediction += float(reference["mix"]) * mean_delta
+            if reference["side"] == "prev" and delta == 1:
+                nearest_delta = mean_delta
+        output[block] = {
+            "nearest_dc_mismatch": abs(nearest_delta),
+            "mixed_dc_mismatch": abs(prediction),
+            "reference_dc_prediction": prediction,
+        }
+    return output
+
+
 def collect_sample(spec, moving_threshold=64.0, source_cache=None):
     source_frame = int(spec["source_frame"])
     base_frame = int(spec.get("base_frame", 2))
     summary, blocks = parse_trace(spec["trace"], source_frame)
     features = derive_trace_features(summary, blocks)
     if source_cache is None:
-        source, width, height = decode_luma(
-            spec["source"],
-            [source_frame - 1, source_frame, source_frame + 1])
+        indices = list(range(source_frame - 2, source_frame + 3))
+        decoded, width, height = decode_luma(spec["source"], indices)
+        source_frames = dict(zip(indices, decoded))
     else:
         cached = source_cache[spec["source"]]
-        source = np.stack([
-            cached["frames"][source_frame - 1],
-            cached["frames"][source_frame],
-            cached["frames"][source_frame + 1],
-        ])
+        source_frames = cached["frames"]
         width, height = cached["width"], cached["height"]
+    source = np.stack([
+        source_frames[source_frame - 1],
+        source_frames[source_frame],
+        source_frames[source_frame + 1],
+    ])
+    dc_features = derive_reference_dc_features(
+        summary, blocks, source_frames, source_frame, width, height)
+    for block, values in dc_features.items():
+        features[block].update(values)
     base, base_width, base_height = decode_luma(spec["base"], [base_frame])
     if (base_width, base_height) != (width, height):
         raise RuntimeError(
@@ -264,10 +351,10 @@ def collect_sample(spec, moving_threshold=64.0, source_cache=None):
     layout = summary["layout"]
     block_size = int(layout["block_size"])
     step = int(layout["step"])
-    overlap = int(layout["overlap"])
     margin = max(0, (block_size - step) // 2)
     arrays = {name: [] for name in (
-        "error", "previous", "following", "screen_motion", *RISK_FEATURES[:-1])}
+        "error", "previous", "following", "screen_motion",
+        *TRACE_FEATURES, *DC_RISK_FEATURES, *AUX_FEATURES)}
     for block in sorted(blocks):
         row = blocks[block]
         x0 = int(row["block_x"]) * step + margin
@@ -311,6 +398,51 @@ def _projection(data, mask=None):
         accumulator.add(data["error"], data["previous"],
                         data["following"], mask)
     return accumulator.result()
+
+
+def _projection_with_error(data, error, mask=None):
+    replacement = dict(data)
+    replacement["error"] = error
+    return _projection(replacement, mask)
+
+
+def _dc_prediction_report(data, mask=None):
+    if mask is None:
+        mask = np.ones(len(data["error"]), dtype=bool)
+    finite = (mask & np.isfinite(data["reference_dc_prediction"])
+              & np.isfinite(data["error"]))
+    count = int(np.count_nonzero(finite))
+    report = {
+        "coverage": count,
+        "coverage_fraction": count / max(1, int(np.count_nonzero(mask))),
+    }
+    if count < 2:
+        return report
+    actual = data["error"]
+    prediction = data["reference_dc_prediction"]
+    residual = actual - prediction
+    selected_actual = actual[finite]
+    selected_prediction = prediction[finite]
+    actual_std = float(selected_actual.std())
+    prediction_std = float(selected_prediction.std())
+    prediction_energy = float(np.dot(
+        selected_prediction, selected_prediction))
+    report.update({
+        "correlation": (
+            float(np.corrcoef(selected_actual, selected_prediction)[0, 1])
+            if actual_std > 0.0 and prediction_std > 0.0 else None),
+        "zero_intercept_gain": (
+            float(np.dot(selected_actual, selected_prediction)
+                  / prediction_energy)
+            if prediction_energy > 0.0 else None),
+        "actual_rmse": float(np.sqrt(np.mean(selected_actual ** 2))),
+        "residual_rmse": float(np.sqrt(np.mean(residual[finite] ** 2))),
+        "actual_projection": _projection_with_error(data, actual, finite),
+        "predicted_projection": _projection_with_error(
+            data, prediction, finite),
+        "residual_projection": _projection_with_error(data, residual, finite),
+    })
+    return report
 
 
 def _concat(samples):
@@ -366,6 +498,8 @@ def analyze_dataset(data):
         "moving_blocks": int(np.count_nonzero(moving)),
         "projection_all": _projection(data),
         "projection_moving": _projection(data, moving),
+        "reference_dc_prediction_all": _dc_prediction_report(data),
+        "reference_dc_prediction_moving": _dc_prediction_report(data, moving),
         "features_on_moving_blocks": {
             name: _feature_report(data, name, moving)
             for name in RISK_FEATURES
@@ -386,7 +520,9 @@ def build_report(manifest, moving_threshold=64.0):
     return {
         "question": (
             "Does directional temporal lag concentrate in motion blocks that "
-            "the existing render-time signals identify as low confidence?"),
+            "the existing render-time signals identify as low confidence, "
+            "and does the selected references' DC change explain the "
+            "low-motion remainder?"),
         "falsifiable_prediction": (
             "A usable fallback signal must put materially more lag in its "
             "rejected high-risk blocks than in the kept low-risk blocks, in "
@@ -408,7 +544,10 @@ def build_report(manifest, moving_threshold=64.0):
         "interpretation_limit": (
             "Safest-fraction rows classify existing motion-base blocks; they "
             "do not predict the pixels or bitrate of an overlap-aware spatial "
-            "fallback. A behavior change requires a rendered A/B."),
+            "fallback. The DC prediction uses each traced block's central "
+            "region, while production overlap-blends neighbouring blocks and "
+            "then spatially filters the result. A behavior change requires a "
+            "rendered A/B."),
     }
 
 
