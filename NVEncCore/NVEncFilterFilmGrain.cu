@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <limits>
@@ -1457,6 +1458,19 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         // (thsad=640).  Grain extraction needs the temporally random component
         // to participate in the blend, so the render threshold is raised.
         degrain.thsad = 4000;
+        // Test-only threshold sweep.  This is intentionally not a public
+        // option: once the real-film response is measured, replace the fixed
+        // policy in code and remove the override before production.
+        if (const auto value = std::getenv("NVENC_FGS_TEST_MOTION_THSAD"); value && value[0] != '\0') {
+            char *end = nullptr;
+            const auto parsed = std::strtol(value, &end, 10);
+            if (end && end[0] == '\0' && parsed > 0 && parsed <= 65535) {
+                degrain.thsad = static_cast<int>(parsed);
+                AddMessage(RGY_LOG_WARN, _T("film-grain: applying test-only motion thsad=%d override.\n"), degrain.thsad);
+            } else {
+                AddMessage(RGY_LOG_WARN, _T("film-grain: ignoring invalid NVENC_FGS_TEST_MOTION_THSAD=%s.\n"), char_to_tstring(value).c_str());
+            }
+        }
         // The scene-change threshold must stay SEPARATE and far lower: reusing
         // the render value here disabled scene gating entirely and blended
         // straight across hard cuts (the Taxi Driver f388 ghost).  It cannot
