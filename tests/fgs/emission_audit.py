@@ -129,6 +129,28 @@ def selected_variances(blocks):
     return (residual * residual).mean(axis=(-2, -1))
 
 
+def selected_axis_stats(blocks):
+    """Lag statistics of selected synthesis blocks, matching texture reports."""
+    values = np.asarray(blocks, dtype=np.float64)
+    values -= values.mean(axis=(-2, -1), keepdims=True)
+    variance = float((values * values).mean())
+    if variance <= 0.0:
+        return None
+    return {
+        "h1": float((values[:, :, 1:] * values[:, :, :-1]).mean() / variance),
+        "v1": float((values[:, 1:, :] * values[:, :-1, :]).mean() / variance),
+        "h2": float((values[:, :, 2:] * values[:, :, :-2]).mean() / variance),
+        "v2": float((values[:, 2:, :] * values[:, :-2, :]).mean() / variance),
+    }
+
+
+def average_axis(rows):
+    present = [row for row in rows if row is not None]
+    if not present:
+        return None
+    return {key: float(np.mean([row[key] for row in present])) for key in present[0]}
+
+
 def actual_synth_blocks(encoded_on, encoded_off, blocks):
     rows = np.asarray([row for row, _col in blocks])
     cols = np.asarray([col for _row, col in blocks])
@@ -152,7 +174,7 @@ def synth_variance_for_seed(base, blocks, entry, gaussian, bits, seed):
     seeded = {**entry, "random_seed": seed}
     predicted = av1_grain.synthesize_selected_luma(
         base, blocks, seeded, gaussian, bits)
-    return float(selected_variances(predicted).mean())
+    return float(selected_variances(predicted).mean()), selected_axis_stats(predicted)
 
 
 def main():
@@ -220,6 +242,9 @@ def main():
     delivered_sum = 0.0
     truth_sum = 0.0
     seed_mean_sum = 0.0
+    reference_seed_mean_sum = 0.0
+    seed_axis_sum = {key: 0.0 for key in ("h1", "v1", "h2", "v2")}
+    reference_axis_sum = {key: 0.0 for key in seed_axis_sum}
     total_blocks = 0
     for frame_number in frames:
         source = source_decoded[frame_number].astype(np.float64)
@@ -266,18 +291,42 @@ def main():
             float(selected_variances(actual_blocks).mean())
             + float(selected_variances(next_actual_blocks).mean()))
         seed_mean = None
+        reference_seed_mean = None
+        seed_axis = None
+        reference_seed_axis = None
         if args.seed_samples > 0:
             seed_variance_sum = 0.0
+            reference_variance_sum = 0.0
+            seed_axes = []
+            reference_axes = []
             for sample_number in range(args.seed_samples):
-                seed_variance_sum += 0.5 * (
-                    synth_variance_for_seed(
-                        base_decoded[frame_number], blocks, expected_entry, gaussian,
-                        args.bits, oracle_seed(frame_number, sample_number))
-                    + synth_variance_for_seed(
-                        base_decoded[frame_number + 1], blocks, next_expected_entry,
-                        gaussian, args.bits,
-                        oracle_seed(frame_number + 1, sample_number)))
+                frame_seed = oracle_seed(frame_number, sample_number)
+                next_frame_seed = oracle_seed(frame_number + 1, sample_number)
+                first_variance, first_axis = synth_variance_for_seed(
+                    base_decoded[frame_number], blocks, expected_entry, gaussian,
+                    args.bits, frame_seed)
+                next_variance, next_axis = synth_variance_for_seed(
+                    base_decoded[frame_number + 1], blocks, next_expected_entry,
+                    gaussian, args.bits, next_frame_seed)
+                seed_variance_sum += 0.5 * (first_variance + next_variance)
+                seed_axes.extend((first_axis, next_axis))
+                if args.expected_table:
+                    first_reference_variance, first_reference_axis = synth_variance_for_seed(
+                        base_decoded[frame_number], blocks, entry, gaussian,
+                        args.bits, frame_seed)
+                    next_reference_variance, next_reference_axis = synth_variance_for_seed(
+                        base_decoded[frame_number + 1], blocks, next_entry,
+                        gaussian, args.bits, next_frame_seed)
+                    reference_variance_sum += 0.5 * (
+                        first_reference_variance + next_reference_variance)
+                    reference_axes.extend((first_reference_axis, next_reference_axis))
+                else:
+                    reference_variance_sum += 0.5 * (first_variance + next_variance)
+                    reference_axes.extend((first_axis, next_axis))
             seed_mean = seed_variance_sum / args.seed_samples
+            reference_seed_mean = reference_variance_sum / args.seed_samples
+            seed_axis = average_axis(seed_axes)
+            reference_seed_axis = average_axis(reference_axes)
         difference = np.concatenate((
             (predicted_blocks - actual_blocks).reshape(-1),
             (next_predicted_blocks - next_actual_blocks).reshape(-1)))
@@ -292,6 +341,10 @@ def main():
         truth_sum += truth_variance * count
         if seed_mean is not None:
             seed_mean_sum += seed_mean * count
+            reference_seed_mean_sum += reference_seed_mean * count
+            for key in seed_axis_sum:
+                seed_axis_sum[key] += seed_axis[key] * count
+                reference_axis_sum[key] += reference_seed_axis[key] * count
         total_blocks += count
         report_rows.append({
             "frame": frame_number,
@@ -316,6 +369,11 @@ def main():
                 math.sqrt(actual / delivered_variance)
                 if delivered_variance > 0 else None),
             "seed_mean_sigma": math.sqrt(seed_mean) if seed_mean is not None else None,
+            "seed_mean_axis": seed_axis,
+            "reference_seed_mean_sigma": (
+                math.sqrt(reference_seed_mean)
+                if reference_seed_mean is not None else None),
+            "reference_seed_mean_axis": reference_seed_axis,
             "seed_mean_over_delivered": (
                 math.sqrt(seed_mean / delivered_variance)
                 if seed_mean is not None and delivered_variance > 0 else None),
@@ -347,6 +405,18 @@ def main():
             if args.seed_samples > 0 else None),
         "seed_mean_over_delivered": (
             math.sqrt(seed_mean_sum / delivered_sum)
+            if args.seed_samples > 0 else None),
+        "seed_mean_axis": (
+            {key: value / total_blocks for key, value in seed_axis_sum.items()}
+            if args.seed_samples > 0 else None),
+        "reference_seed_mean_sigma": (
+            math.sqrt(reference_seed_mean_sum / total_blocks)
+            if args.seed_samples > 0 else None),
+        "reference_seed_mean_ratio": (
+            math.sqrt(reference_seed_mean_sum / truth_sum)
+            if args.seed_samples > 0 else None),
+        "reference_seed_mean_axis": (
+            {key: value / total_blocks for key, value in reference_axis_sum.items()}
             if args.seed_samples > 0 else None),
         "pixel_mismatches": sum(row["pixel_mismatches"] for row in report_rows),
         "pixel_count": sum(row["pixel_count"] for row in report_rows),

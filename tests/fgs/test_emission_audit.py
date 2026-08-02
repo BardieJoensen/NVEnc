@@ -60,6 +60,13 @@ class EmissionAuditTests(unittest.TestCase):
         self.assertGreaterEqual(len(set(first)), 31)
         self.assertNotEqual(first, following)
 
+    def test_axis_stats_are_amplitude_invariant(self):
+        blocks = np.arange(2 * 32 * 32, dtype=np.float64).reshape(2, 32, 32)
+        first = emission_audit.selected_axis_stats(blocks)
+        second = emission_audit.selected_axis_stats(blocks * 7.0)
+        for key in first:
+            self.assertAlmostEqual(first[key], second[key])
+
 
 if __name__ == "__main__":
     unittest.main()
