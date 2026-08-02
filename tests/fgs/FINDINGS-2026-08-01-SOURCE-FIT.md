@@ -701,6 +701,15 @@ Consequently the temporal target is low on every film by 0.023--0.073.  A
 single attenuation constant or post-hoc multiplier would encode a corpus
 average, not the physical quantity wanted.
 
+Luma separation does not collapse that spread.  Across populated bands the
+post/pre ratio ranges from 0.187 (Scarface, 0.500--0.625) to 0.843
+(Interstellar, 0.125--0.250), and it changes materially inside each of those
+titles.  A leave-one-title-out weighted linear fit from pre-encode to
+post-encode leak predicts five title-level closure targets within 0.012, but
+misses Interstellar by 0.055.  That is useful evidence for a codec transfer
+function, not enough evidence to put one in the analyzer: the calibration has
+only one QVBR and fails worst on the held-out title with the weakest grain.
+
 The emitted synthesis also cannot be inferred from the spatial curve alone.
 It essentially equals the spatial prediction on Taxi and Scarface, exceeds it
 on The Shining and Interstellar, and trails it by about 0.10 on Casino and 0.07
