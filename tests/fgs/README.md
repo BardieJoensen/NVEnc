@@ -132,6 +132,11 @@ longer holds: run it with `routing_check.py`.
 See `FINDINGS-2026-07-31-MODEL-STATS.md` for the model-stats and flat-metrics
 speed-ups, the setup/accumulation timing method, seven measured CUDA variants
 (five rejected), and why fusing the two bilateral passes is not worth doing.
+See `FINDINGS-2026-08-01-SOURCE-FIT.md` for the experimental two-operator
+analyzer, the six-film 46.4% motion compression result, source-derived AR
+regularisation, dense strength work and the six-film pre/post-encode leakage
+closure. `modelsrc` remains default-off; the final section explains why the
+temporal leak estimate is not yet safe to use as an encoder input.
 See `FINDINGS-2026-07-31-WIENER-PSD.md` for the coarse-grain plan: FFT3D's
 Wiener gain uses a scalar noise power where libaom uses a per-bin PSD.
 `wiener_psd_sim.py` reproduces the current 0.366 capture offline and measures

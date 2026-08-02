@@ -665,3 +665,74 @@ Artifacts:
 - `sourcefit-gain-all-20260801/Deer-gain-all-temporal.json`
 - `sourcefit-gain-all-20260801/Deer-gain-all-temporal-production-mask.json`
 - `sourcefit-gain-all-20260801/{Taxi,Shining,Interstellar}-strength-selection.json`
+
+## Six-film temporal-leak closure: useful measurement, unsafe encoder input
+
+The proposed temporal leakage measurement was extended across all six corpus
+films and joined to the actual decoded AV1 output from pinned candidate
+`1f20fb1c`.  Every comparison uses the same seven source-selected frames
+(`10,58,106,154,202,250,275`), the production spatial selector followed by its
+temporal-static subset, and fixed source masks for every arm.  dav1d decodes
+the encoded arm twice: with grain disabled to measure the base that NVENC
+actually delivered, and with grain enabled to measure synthesis and total
+playback energy.
+
+| title | spatial target | pre-encode leak | temporal target | post-encode leak | post/pre leak | true post target | delivered synth | played total |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Casino | 0.905 | 0.438 | 0.899 | 0.270 | 0.616 | 0.963 | 0.809 | 0.852 |
+| Interstellar | 0.810 | 0.563 | 0.827 | 0.436 | 0.775 | 0.900 | 0.887 | 0.987 |
+| Scarface | 0.964 | 0.221 | 0.975 | 0.067 | 0.301 | 0.998 | 0.959 | 0.961 |
+| Taxi Driver | 0.861 | 0.376 | 0.926 | 0.202 | 0.536 | 0.979 | 0.862 | 0.883 |
+| The Deer Hunter | 0.911 | 0.342 | 0.940 | 0.206 | 0.601 | 0.979 | 0.840 | 0.863 |
+| The Shining | 0.884 | 0.421 | 0.907 | 0.225 | 0.535 | 0.974 | 0.925 | 0.953 |
+
+Ratios are amplitudes relative to the source temporal truth.  `spatial target`
+is the current dense `sqrt(Vsource_spatial - Vbase_spatial)` estimate;
+`temporal target` substitutes the clean base's consecutive-frame residue;
+`true post target` uses the grain-disabled AV1 base; and `played total` is the
+normal decoded AV1.  These are deliberately separate questions rather than a
+combined retention score.
+
+The temporal estimate is directionally better: its mean absolute error against
+the true post-encode target is 0.053, against 0.076 for spatial subtraction.
+It is not yet a valid strength input.  NVENC preserves between **30.1% and
+77.5%** of the pre-encode temporal base residue, a 2.57x title-to-title spread.
+Consequently the temporal target is low on every film by 0.023--0.073.  A
+single attenuation constant or post-hoc multiplier would encode a corpus
+average, not the physical quantity wanted.
+
+The emitted synthesis also cannot be inferred from the spatial curve alone.
+It essentially equals the spatial prediction on Taxi and Scarface, exceeds it
+on The Shining and Interstellar, and trails it by about 0.10 on Casino and 0.07
+on The Deer Hunter.  Luma-curve population and the realised correlated grain
+model remain material after variance estimation.
+
+The measurement itself passes a strong internal control.  For each title,
+`sqrt(post_base_variance + synth_variance)` predicts the measured played
+total to within 0.0021 amplitude.  All six experimental AV1 files also pass a
+complete `libdav1d -xerror` decode.  The six-film played-total range is
+0.852--0.987 (mean 0.916), so the remaining loss is real rather than arithmetic
+or decoder noise.
+
+### Decision
+
+Do **not** put temporal leakage compensation into the CUDA analyzer yet.  This
+experiment rejects both the existing spatial base-energy subtraction as a
+complete account and the tempting fixed temporal correction.  The next code
+candidate needs a content-sensitive prediction of what clean-base residue
+survives NVENC, validated out of sample and separately within luma bands.  It
+must predict both post-encode base leakage and delivered synthesis; fitting a
+single title-level gain to these six points would repeat the fixture-threshold
+mistake.
+
+The independent motion-denoiser gate is now perceptual rather than numerical.
+Blinded lossless base and finished clips for The Shining, The Deer Hunter and
+Scarface are documented in `FINDINGS-2026-08-02-MOTION-REVIEW.md`.  Review the
+grain-disabled base first for disocclusion trails and misplaced texture, then
+the finished arm.  Until that review passes, `modelsrc` stays default-off and
+the motion arm is not a production candidate.
+
+Artifacts (not committed because they derive from copyrighted media):
+
+- `sourcefit-review-20260802/{Taxi_Driver,Casino,The_Shining,Scarface,The_Deer_Hunter,Interstellar}-closure.json`
+- `sourcefit-review-20260802/{Taxi_Driver,Casino,The_Shining,Scarface,The_Deer_Hunter,Interstellar}-motion.mkv`
