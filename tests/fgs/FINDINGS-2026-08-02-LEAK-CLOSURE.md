@@ -205,6 +205,61 @@ and still useful: deterministic expected delivery can correct both amplitude
 directions without changing AR texture, but the correction must be a
 per-luma curve correction and must close every populated luma band.
 
+## Per-luma successor: corpus proof succeeds
+
+Commit `1e93b24a` extends the exact expected-seed oracle to the closure
+harness's fixed source-luma bands and makes `delivery_normalize.py --per-luma`
+interpolate a smooth factor curve through their centers.  The target in every
+band is still calculated from pre-encode temporal leak and the QVBR deadzone;
+no post-encode answer is used to set it.
+
+Because changing one scaling point affects neighboring ranges and restricted
+range clipping is nonlinear near black, the offline oracle applies the
+residual correction a second time.  Interstellar's darkest band needed a third
+pass to distinguish convergence from a range/format limit.  This is an
+offline existence test, not a proposal to run a multi-seed iterative solver in
+the encoder.
+
+Five films use two deterministic seeds over all 24 frame pairs; Deer Hunter
+uses the denser four-seed run.  Reference and adjusted tables use identical
+seeds inside each comparison.
+
+| title | bands | old max error | old MAE | corrected max | corrected MAE | bands improved |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Casino | 4 | 0.0529 | 0.0246 | **0.0141** | **0.0084** | 3/4 |
+| Interstellar | 4 | 0.2542 | 0.0740 | **0.0442** | **0.0210** | 2/4 |
+| Scarface | 5 | 0.1058 | 0.0401 | **0.0209** | **0.0091** | 3/5 |
+| Taxi Driver | 4 | 0.0766 | 0.0443 | **0.0199** | **0.0119** | 4/4 |
+| The Deer Hunter | 4 | 0.1844 | 0.1138 | **0.0150** | **0.0062** | 4/4 |
+| The Shining | 5 | 0.0433 | 0.0260 | **0.0169** | **0.0100** | 5/5 |
+| **all 26 bands** | **26** | **0.2542** | **0.0522** | **0.0442** | **0.0110** | **21/26** |
+
+All 26 populated bands finish within 0.045 of their own predicted target.  The
+five bands that do not improve were already small errors; none is traded for a
+whole-title aggregate failure.  Interstellar's darkest band converges
+monotonically 0.254 -> 0.112 -> 0.069 -> 0.044, so its slow response is the
+expected one-sided clipping near the legal luma floor, not an AV1
+expressiveness limit.
+
+The final Deer Hunter curve was also replayed through NVEncC and dav1d:
+
+- complete `libdav1d -xerror` decode passes;
+- grain-disabled frame-MD5 SHA-256 remains
+  `6a4c0552bbba32a139f398daf8db187d1d7d2c950b24a8ae4b5a084b963f2f8f`;
+- production-static synthesis/total move 0.905/0.927 -> 0.989/1.009;
+- per-band synthesis lands 0.992, 0.993, 0.971 and 0.926 against true
+  post targets 0.982, 0.981, 0.939 and 0.931.
+
+This clears the question of viability: a luma-shaped delivery correction can
+close fine/coarse and dark/bright content without changing the coded base or
+AR texture.  It does **not** clear an implementation.  The exact oracle has
+decoded base pixels and several normative seeds; the hot path has the rolling
+20-bin strength sums, block counts and quantized parameters.  The next gate is
+whether a fixed-seed/uniform-bin response model built from those existing
+quantities predicts the exact correction closely enough.  If not, adding
+runtime complexity would be fitting the test harness rather than fixing the
+analyser.
+
 ## Chroma real-film baseline
 
 `temporal_grain_report.py` now measures U or V using the same fixed source-luma
