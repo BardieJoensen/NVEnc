@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import os
+import tempfile
 import unittest
 
 import numpy as np
@@ -70,6 +72,30 @@ class TemporalLeakTests(unittest.TestCase):
             delta=0.03)
         self.assertLess(row["amplitude_ratio"],
                         row["temporal_target_ratio"] - 0.10)
+
+    def test_y4m_selected_reader_seeks_over_unselected_payloads(self):
+        width, height, bits = 4, 2, 10
+        frames = [
+            (np.arange(width * height, dtype=np.uint16) + index * 100)
+            .reshape(height, width)
+            for index in range(4)
+        ]
+        chroma = np.zeros(width * height // 2, dtype=np.uint16)
+        with tempfile.NamedTemporaryFile(suffix=".y4m", delete=False) as handle:
+            path = handle.name
+            handle.write(b"YUV4MPEG2 W4 H2 F24:1 Ip A1:1 C420p10\n")
+            for index, frame in enumerate(frames):
+                handle.write(f"FRAME Xindex={index}\n".encode("ascii"))
+                handle.write(frame.astype("<u2").tobytes())
+                handle.write(chroma.astype("<u2").tobytes())
+        try:
+            selected = strength_selection_report.decode_y4m_selected(
+                path, width, height, [1, 3], bits)
+            np.testing.assert_array_equal(selected[1], frames[1])
+            np.testing.assert_array_equal(selected[3], frames[3])
+            self.assertEqual(list(selected), [1, 3])
+        finally:
+            os.unlink(path)
 
 
 if __name__ == "__main__":

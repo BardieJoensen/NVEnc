@@ -26,6 +26,7 @@ import argparse
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 
@@ -50,12 +51,72 @@ def probe_size(path):
     return tuple(int(value) for value in result.stdout.strip().split(",")[:2])
 
 
+def decode_y4m_selected(path, width, height, indices, bits):
+    """Read selected Y4M luma planes without streaming every skipped payload.
+
+    The clean-base corpus uses multi-gigabyte uncompressed Y4M files. FFmpeg's
+    select filter still reads all intervening pixels; Y4M is seekable at the
+    frame-payload level once each small, potentially variable-length `FRAME`
+    header has been consumed.
+    """
+    wanted = set(indices)
+    selected = {}
+    dtype = np.uint8 if bits == 8 else np.dtype("<u2")
+    itemsize = np.dtype(dtype).itemsize
+    with open(path, "rb") as handle:
+        header = handle.readline().decode("ascii", errors="strict").strip()
+        if not header.startswith("YUV4MPEG2 "):
+            raise RuntimeError(f"{path}: invalid Y4M header")
+        width_match = re.search(r"(?:^| )W(\d+)(?: |$)", header)
+        height_match = re.search(r"(?:^| )H(\d+)(?: |$)", header)
+        chroma_match = re.search(r"(?:^| )C([^ ]+)(?: |$)", header)
+        if not width_match or not height_match or not chroma_match:
+            raise RuntimeError(f"{path}: incomplete Y4M header")
+        file_size = (int(width_match.group(1)), int(height_match.group(1)))
+        if file_size != (width, height):
+            raise RuntimeError(f"{path}: Y4M dimensions {file_size} do not match probe")
+        chroma = chroma_match.group(1).lower()
+        if not chroma.startswith("420"):
+            raise RuntimeError(f"{path}: only 4:2:0 Y4M is supported, got C{chroma}")
+        header_bits_match = re.search(r"p(\d+)", chroma)
+        header_bits = int(header_bits_match.group(1)) if header_bits_match else 8
+        if header_bits != bits:
+            raise RuntimeError(
+                f"{path}: Y4M is {header_bits}-bit, requested {bits}-bit")
+
+        luma_bytes = width * height * itemsize
+        frame_bytes = width * height * 3 // 2 * itemsize
+        for frame_number in range(max(indices) + 1):
+            frame_header = handle.readline()
+            if not frame_header.startswith(b"FRAME"):
+                raise RuntimeError(
+                    f"{path}: missing FRAME header at index {frame_number}")
+            if frame_number in wanted:
+                raw = handle.read(luma_bytes)
+                if len(raw) != luma_bytes:
+                    raise RuntimeError(f"{path}: truncated frame {frame_number}")
+                selected[frame_number] = np.frombuffer(
+                    raw, dtype, count=width * height).reshape(height, width)
+                handle.seek(frame_bytes - luma_bytes, os.SEEK_CUR)
+            else:
+                handle.seek(frame_bytes, os.SEEK_CUR)
+    if selected.keys() != wanted:
+        missing = sorted(wanted.difference(selected))
+        raise RuntimeError(f"{path}: selected frames missing: {missing}")
+    return {index: selected[index] for index in indices}
+
+
 def decode_selected(path, width, height, indices, bits):
+    if os.path.splitext(path)[1].lower() == ".y4m":
+        return decode_y4m_selected(path, width, height, indices, bits)
     terms = "+".join(f"eq(n\\,{index})" for index in indices)
     pix_fmt = "gray" if bits == 8 else f"gray{bits}le"
     result = subprocess.run(
         [FFMPEG, "-v", "error", "-i", path, "-map", "0:v:0",
-         "-vf", f"select='{terms}'", "-fps_mode", "passthrough",
+         # extractplanes keeps the stored luma code values exact. Asking the
+         # scaler for gray10le directly expands limited-range luma, which would
+         # no longer match the direct Y4M reader.
+         "-vf", f"select='{terms}',extractplanes=y", "-fps_mode", "passthrough",
          "-pix_fmt", pix_fmt, "-f", "rawvideo", "-"],
         check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     dtype = np.uint8 if bits == 8 else np.uint16
