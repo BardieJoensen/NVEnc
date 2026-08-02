@@ -58,6 +58,7 @@ at 0.891 mean amplitude against luma's 0.959 and is the open modelling gap.
 | instrument | answers | invalidated by |
 | --- | --- | --- |
 | `emission_audit.py` | exact normative synthesis vs dav1d, pixel for pixel | using the table's seed: NVENC picks its own, 0 of 42 matched |
+| `delivery_response.py` | whether an analyzer-feasible response summary can replace the exact per-luma oracle | counts/means/histograms lose the spatial clipping term near black; Taxi remains the labelled failure |
 | played-total closure | `sqrt(post_base_var + synth_var)` against source truth | needs a grain-disabled *and* grain-enabled decode of the same stream |
 | rectification counter | how often `fmax(0, V_source - V_base)` clamps and drags a bin mean down | populations differ between spatial and temporal paths; treat as an upper proxy |
 
@@ -66,6 +67,13 @@ A grain-applying decoder is mandatory.  Use dav1d explicitly
 the known corruption class it reported zero errors where dav1d reported 502.
 Even if NVDEC is compared for playback pixels on a known-good stream, it must
 never replace dav1d for delivery or safety gates.
+
+The current delivery-response implementation gate is closed **negative**:
+20-bin occupancy predicts 23/26 real-film bands within 5%, but misses Taxi's
+darkest band by 27.7%.  A clean-block mean and a full luma histogram still leave
+post-correction target errors of -0.070 and -0.060.  Do not turn the exact
+multi-seed oracle into an analyzer normalizer; see
+`FINDINGS-2026-08-02-DELIVERY-RESPONSE.md`.
 
 ## Stage 4 -- compression
 

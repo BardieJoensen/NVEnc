@@ -311,3 +311,12 @@ The experiment is viable but incomplete:
    open gates.
 
 Nothing in this checkpoint is approved for Tdarr production.
+
+## Later implementation-gate result
+
+`FINDINGS-2026-08-02-DELIVERY-RESPONSE.md` tests the proposed cheap per-luma
+response model.  The existing 20-bin estimator passes 23 of 26 bands but misses
+Taxi Driver's darkest band by 27.7%; a clean-base mean reduces that to 7.8% and
+even a complete luma histogram only reaches 6.6%.  Only a pixel-aware synthesis
+pass closes it.  The cheap-estimator gate therefore fails and no CUDA delivery
+normalizer should be implemented.  `modelsrc` remains default-off.
