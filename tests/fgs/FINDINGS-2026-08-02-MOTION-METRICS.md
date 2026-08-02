@@ -1,13 +1,14 @@
 # Motion separator: metric review and a direct ghosting measurement, 2026-08-02
 
-> **Audit correction, 2026-08-02:** the metric tables below are reproduced by
-> their artifacts, but the original causal interpretation of `beta` was too
-> strong.  A controlled translating-edge test produces positive `beta` from a
-> purely spatial blur that never reads the previous frame.  Until positive
-> temporal-blend and negative spatial-filter controls pass, call this a
-> previous-frame-direction projection, not a literal blend fraction or vector
-> failure rate.  Motion remains a non-candidate; the correction weakens the
-> claimed mechanism, not the conservative deployment decision.
+> **Audit resolution, 2026-08-02:** the original `beta` tables below reproduce,
+> but `beta` is not specific to temporal drag.  The replacement jointly fits
+> the previous- and next-frame directions and uses their asymmetry.  It exactly
+> recovers labelled temporal blends and rejects the translating-edge spatial
+> blur that fooled `beta`.  Across the three real films, motion reads
+> 0.118--0.141 and bilateral 0.00010--0.00036.  See
+> `FINDINGS-2026-08-02-TEMPORAL-CALIBRATION.md`.  This is a calibrated lag
+> signal, not a literal blend fraction, visibility score or vector-failure
+> rate.  The old tables remain below as the historical measurement they audit.
 
 Run against the blinded review set in `FINDINGS-2026-08-02-MOTION-REVIEW.md`
 because the perceptual pass could not be scheduled.  **This does not replace
@@ -255,11 +256,11 @@ is rejected: source fitting and leak closure are separator-independent and
 apply to bilateral unchanged.  What would be lost is the headline compression
 number.
 
-`beta` is cheap and needs no human, but it is not yet a safe tuning objective.
-The next step is to calibrate it against known temporal blends and spatial
-moving-edge controls, including previous-versus-next asymmetry.  Only if that
-separates the mechanisms should the confidence threshold be swept against the
-corrected statistic and bytes.
+The replacement previous/next statistic has now passed those labelled controls
+and separates the existing motion and bilateral arms by more than two orders of
+magnitude.  It is suitable as an objective tuning signal alongside bytes and
+the localized-artifact guard rail.  It still does not answer whether the drag
+is visible in normal playback; that remains the purpose of the blinded review.
 
 `modelsrc` remains default-off, motion remains a non-candidate, and nothing
 here was deployed.

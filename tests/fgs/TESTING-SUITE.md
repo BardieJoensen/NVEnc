@@ -16,7 +16,7 @@ must not be judged by VMAF or SSIMU2 against the source.
 
 | instrument | answers | invalidated by |
 | --- | --- | --- |
-| `temporal_drag.py` | projection of base error onto the previous-frame direction; a candidate lag/ghosting signal | spatial blur on moving edges, grain without box averaging, or any frame/timeline mismatch; calibration is pending |
+| `temporal_drag.py` | joint previous/next projection of base error; their asymmetry detects directional temporal lag while rejecting the labelled symmetric spatial-blur control | asymmetric exposure/state lag, an unmatched timeline, or treating the coefficient as visibility or a literal vector-failure rate |
 | Butteraugli max p95 (FFVship) | localized artifacts the pooled metrics average away | absolute value is content-dependent; use the cross-arm gap |
 | detail decile: corr / HF kept / RMSE vs source | misplaced vs missing detail (high corr + high RMSE = displacement) | any one of the three alone; they must be read together |
 | base vs *denoised source*, same denoiser both sides | picture fidelity with grain cancelled from both sides | denoiser must be identical on both sides or it measures itself |
@@ -26,9 +26,10 @@ must not be judged by VMAF or SSIMU2 against the source.
 to 2.2x the largest file, so the FR ranking is the exact inverse of the
 compression ranking.
 
-Reference values, `FINDINGS-2026-08-02-MOTION-METRICS.md`: bilateral drag beta
-0.002-0.025 and Butteraugli max p95 11.18-11.22 across three films; motion
-0.141-0.169 and 35.3-52.3.
+Reference values, `FINDINGS-2026-08-02-TEMPORAL-CALIBRATION.md`: bilateral
+lag asymmetry 0.00010-0.00036 and motion 0.118-0.141 across three film bases;
+the separation survives grain synthesis.  Butteraugli max p95 is 11.18-11.22
+for bilateral and 35.3-52.3 for motion.
 
 ## Stage 2 -- grain model fidelity (is the signalled grain right?)
 

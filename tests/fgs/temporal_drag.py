@@ -1,36 +1,35 @@
 #!/usr/bin/env python3
-"""Measure temporal drag (ghosting) in a separator's base, without a human.
+"""Measure directional temporal lag in a separator's base.
 
-Ghosting means the base at frame n carries content from frame n-1.  Regress
-the base's error onto the previous-frame difference:
+The first version regressed base error only onto the previous-frame direction.
+That coefficient equals a literal blend fraction for the assumed model
 
-    err_n  = base_n - src_n
-    prev_n = src_{n-1} - src_n
-    beta   = sum(err*prev) / sum(prev*prev)
+    base_n = (1-a)*src_n + a*src_{n-1}
 
-beta is directly the fraction of the previous frame bled into the base: a
-base that equals (1-a)*src_n + a*src_{n-1} regresses to beta = a.  A purely
-spatial denoiser has no mechanism to produce beta > 0.
+but a spatial blur on a translating edge can produce the same projection.  The
+calibrated instrument jointly fits both temporal directions:
 
-The one confound that must be killed: both planes still carry grain.  err
-contains roughly -grain_n and prev contains grain_{n-1} - grain_n, so
-E[err*prev] picks up +E[grain_n^2] for ANY denoiser, in proportion to how
-much grain it removes -- which would hand motion a spurious positive beta
-precisely because it denoises harder.  Both fields are therefore box-averaged
-8x8 first: temporally independent grain drops ~64x in variance while
-displaced structure survives, so what is left is structure, not grain
-removal.
+    err_n = b_prev*(src_{n-1}-src_n) + b_next*(src_{n+1}-src_n) + residual
 
-beta is also reported in bins of |prev| (motion magnitude).  Real ghosting
-concentrates where things move; a global offset would show up flat.
+A one-sided lag loads b_prev; a centred spatial/temporal blur loads both.  The
+primary diagnostic is lag_asymmetry = b_prev - b_next.  This remains a temporal
+lag detector, not a motion-vector failure counter: exposure/flicker lag and
+other directionally asymmetric processing can also trigger it.
+
+All fields are box-averaged first.  Without that control, removing temporally
+independent grain creates a spurious positive previous-frame projection.
 """
-import json, subprocess, sys
+import argparse
+import json
+import os
+import subprocess
+
 import numpy as np
 
-import os
 from review_score import FFMPEG, aligned_frame_count
 
 BS = int(os.environ.get("GHOST_BS", "8"))
+BINS = ((0.0, 4.0), (4.0, 16.0), (16.0, 64.0), (64.0, float("inf")))
 
 
 def _read_exact(stream, size):
@@ -76,8 +75,132 @@ def frames(path, n, width, height):
             p.wait()
 
 
-def box(a, width, height):
-    return a.reshape(height // BS, BS, width // BS, BS).mean(axis=(1, 3))
+def box(a, width, height, block_size=BS):
+    return a.reshape(
+        height // block_size, block_size,
+        width // block_size, block_size).mean(axis=(1, 3))
+
+
+class ProjectionAccumulator:
+    """Sufficient statistics for simple and joint previous/next regressions."""
+    def __init__(self):
+        self.previous2 = 0.0
+        self.next2 = 0.0
+        self.previous_next = 0.0
+        self.error_previous = 0.0
+        self.error_next = 0.0
+        self.blocks = 0
+
+    def add(self, error, previous, following, mask=None):
+        if mask is not None:
+            error, previous, following = error[mask], previous[mask], following[mask]
+        error = np.asarray(error, dtype=np.float64)
+        previous = np.asarray(previous, dtype=np.float64)
+        following = np.asarray(following, dtype=np.float64)
+        self.previous2 += float((previous * previous).sum())
+        self.next2 += float((following * following).sum())
+        self.previous_next += float((previous * following).sum())
+        self.error_previous += float((error * previous).sum())
+        self.error_next += float((error * following).sum())
+        self.blocks += int(error.size)
+
+    def result(self):
+        previous_beta = (self.error_previous / self.previous2
+                         if self.previous2 else None)
+        next_beta = self.error_next / self.next2 if self.next2 else None
+        normalizer = self.previous2 * self.next2
+        determinant = normalizer - self.previous_next * self.previous_next
+        condition = determinant / normalizer if normalizer else 0.0
+        direction_correlation = (
+            self.previous_next / np.sqrt(normalizer) if normalizer else None)
+        joint_previous = joint_next = lag_asymmetry = symmetric = None
+        if determinant > max(normalizer * 1e-9, 1e-12):
+            joint_previous = (
+                self.error_previous * self.next2
+                - self.error_next * self.previous_next) / determinant
+            joint_next = (
+                self.error_next * self.previous2
+                - self.error_previous * self.previous_next) / determinant
+            lag_asymmetry = joint_previous - joint_next
+            symmetric = 0.5 * (joint_previous + joint_next)
+        return {
+            "blocks": self.blocks,
+            "previous_beta": previous_beta,
+            "next_beta": next_beta,
+            "joint_previous": joint_previous,
+            "joint_next": joint_next,
+            "lag_asymmetry": lag_asymmetry,
+            "symmetric_projection": symmetric,
+            "direction_correlation": direction_correlation,
+            "joint_condition": condition,
+        }
+
+
+def _add_triplet(overall, binned, previous_source, source, next_source, base):
+    error = base - source
+    previous = previous_source - source
+    following = next_source - source
+    overall.add(error, previous, following)
+    magnitude = np.maximum(np.abs(previous), np.abs(following))
+    for accumulator, (low, high) in zip(binned, BINS):
+        mask = (magnitude >= low) & (magnitude < high)
+        if mask.any():
+            accumulator.add(error, previous, following, mask)
+
+
+def measure_arrays(source_frames, base_frames, block_size=BS):
+    """Array entry point used by labelled controls and unit tests."""
+    if len(source_frames) != len(base_frames):
+        raise ValueError("source/base frame counts differ")
+    if len(source_frames) < 3:
+        raise ValueError("at least three frames are required")
+    shape = np.asarray(source_frames[0]).shape
+    if len(shape) != 2:
+        raise ValueError("luma frames must be two-dimensional")
+    height, width = shape
+    if width % block_size or height % block_size:
+        raise ValueError(
+            f"{width}x{height} is not divisible by block size {block_size}")
+    sources = []
+    bases = []
+    for index, (source, base) in enumerate(zip(source_frames, base_frames)):
+        source, base = np.asarray(source), np.asarray(base)
+        if source.shape != shape or base.shape != shape:
+            raise ValueError(f"frame {index} shape differs from {shape}")
+        sources.append(box(source, width, height, block_size))
+        bases.append(box(base, width, height, block_size))
+    overall = ProjectionAccumulator()
+    binned = [ProjectionAccumulator() for _ in BINS]
+    for index in range(1, len(sources) - 1):
+        _add_triplet(overall, binned, sources[index - 1], sources[index],
+                     sources[index + 1], bases[index])
+    return _format_result(len(sources), block_size, overall, binned)
+
+
+def _format_range(low, high):
+    return f"{low:g}-{high:g}" if np.isfinite(high) else f">{low:g}"
+
+
+def _format_result(frame_count, block_size, overall, binned):
+    projection = overall.result()
+    motion_bins = []
+    for accumulator, (low, high) in zip(binned, BINS):
+        row = {"range": _format_range(low, high), **accumulator.result()}
+        motion_bins.append(row)
+    # beta/bins retain the old JSON fields for readers that only display the
+    # univariate previous projection.  New decisions must use projection.
+    return {
+        "frames": frame_count,
+        "evaluated_frames": frame_count - 2,
+        "box_size": block_size,
+        "beta": projection["previous_beta"],
+        "bins": [
+            {"range": row["range"], "blocks": row["blocks"],
+             "beta": row["previous_beta"]}
+            for row in motion_bins],
+        "projection": projection,
+        "motion_bins": motion_bins,
+    }
 
 
 def probe(ref, base, n):
@@ -90,42 +213,48 @@ def probe(ref, base, n):
     if width % BS or height % BS:
         raise RuntimeError(
             f"{width}x{height} is not divisible by GHOST_BS={BS}")
-    num = den = 0.0
-    bins = [(0.0, 4.0), (4.0, 16.0), (16.0, 64.0), (64.0, 1e9)]
-    bnum = [0.0] * len(bins)
-    bden = [0.0] * len(bins)
-    bcnt = [0] * len(bins)
     rg = frames(ref, n, width, height)
     bg = frames(base, n, width, height)
-    prev_src = None
-    consumed = 0
-    for src, bas in zip(rg, bg):
-        consumed += 1
-        s, b = box(src, width, height), box(bas, width, height)
-        if prev_src is not None:
-            err = b - s
-            prv = prev_src - s
-            num += float((err * prv).sum())
-            den += float((prv * prv).sum())
-            mag = np.abs(prv)
-            for i, (lo, hi) in enumerate(bins):
-                m = (mag >= lo) & (mag < hi)
-                if m.any():
-                    bnum[i] += float((err[m] * prv[m]).sum())
-                    bden[i] += float((prv[m] * prv[m]).sum())
-                    bcnt[i] += int(m.sum())
-        prev_src = s
-    if consumed != n:
-        raise RuntimeError(f"decoded {consumed} paired frames, expected {n}")
-    out = {"frames": consumed, "box_size": BS,
-           "beta": num / den if den else None,
-           "bins": [{"range": f"{lo:g}-{hi:g}" if hi < 1e9 else f">{lo:g}",
-                     "blocks": bcnt[i],
-                     "beta": (bnum[i] / bden[i]) if bden[i] else None}
-                    for i, (lo, hi) in enumerate(bins)]}
-    return out
+    overall = ProjectionAccumulator()
+    binned = [ProjectionAccumulator() for _ in BINS]
+    window = []
+    for index in range(n):
+        try:
+            source, base_frame = next(rg), next(bg)
+        except StopIteration as error:
+            raise RuntimeError(f"decoder stopped before frame {index}/{n}") from error
+        window.append((box(source, width, height), box(base_frame, width, height)))
+        if len(window) == 3:
+            _add_triplet(overall, binned, window[0][0], window[1][0],
+                         window[2][0], window[1][1])
+            window.pop(0)
+    for iterator, label in ((rg, ref), (bg, base)):
+        try:
+            next(iterator)
+        except StopIteration:
+            pass
+        else:
+            raise RuntimeError(f"{label}: decoder produced more than {n} frames")
+    return _format_result(n, BS, overall, binned)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("reference")
+    parser.add_argument("base")
+    parser.add_argument("frames", type=int)
+    parser.add_argument("--output", default="")
+    args = parser.parse_args()
+    result = probe(args.reference, args.base, args.frames)
+    rendered = json.dumps(result, indent=2, sort_keys=True)
+    if args.output:
+        temporary = f"{args.output}.tmp"
+        with open(temporary, "w", encoding="utf-8") as handle:
+            handle.write(rendered)
+            handle.write("\n")
+        os.replace(temporary, args.output)
+    print(rendered)
 
 
 if __name__ == "__main__":
-    ref, base, n = sys.argv[1], sys.argv[2], int(sys.argv[3])
-    print(json.dumps(probe(ref, base, n)))
+    main()
