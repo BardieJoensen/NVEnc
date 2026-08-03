@@ -322,6 +322,10 @@ def decoded_pixel_hash(path: Path, ffmpeg: Path) -> str:
     return line[len(prefix):]
 
 
+def rounded(value: float | None, digits: int) -> float | None:
+    return None if value is None else round(value, digits)
+
+
 def score_pair(
     reference: Path,
     distorted: Path,
@@ -347,13 +351,16 @@ def score_pair(
         "arm": arm,
         "kind": kind,
         "frames": frames,
-        "bytes": distorted.stat().st_size,
+        "decoded_artifact_bytes": distorted.stat().st_size,
         "vmaf": round(pooled["vmaf"]["mean"], 4),
         "vmaf_p1": round(review_score.pct(vmaf_frames, 1), 4),
         "vmaf_neg": round(pooled["vmaf_neg"]["mean"], 4),
         "psnr_y": round(pooled["psnr_y"]["mean"], 4),
         "ssim": round(pooled["float_ssim"]["mean"], 7),
-        "ciede2000": round(pooled["ciede2000"]["mean"], 4),
+        # CIEDE can produce one non-finite value on a pixel-identical frame;
+        # libvmaf then serializes the pooled mean as null.  Keep that absence
+        # explicit rather than failing an otherwise valid base comparison.
+        "ciede2000": rounded(pooled["ciede2000"]["mean"], 4),
     }
     if not full:
         return row
@@ -424,17 +431,40 @@ def main() -> int:
     review_score.FFMPEG = str(ffmpeg)
     review_score.FFPROBE = str(ffprobe)
 
-    run_manifest = {
-        "purpose": "general-content safety and routing evidence for bilateral source fitting",
-        "frames": args.frames,
-        "production_binary": identity(production, include_hash=True),
-        "candidate_binary": identity(candidate, include_hash=True),
-        "titles": {},
-    }
+    manifest_path = work / "manifest.json"
+    if args.score_only:
+        if not manifest_path.is_file():
+            raise RuntimeError("--score-only requires an existing manifest")
+        run_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if run_manifest.get("frames") != args.frames:
+            raise RuntimeError(
+                f"manifest has {run_manifest.get('frames')} frames, "
+                f"but --frames is {args.frames}")
+    else:
+        run_manifest = {
+            "purpose": "general-content safety and routing evidence for bilateral source fitting",
+            "frames": args.frames,
+            "production_binary": identity(production, include_hash=True),
+            "candidate_binary": identity(candidate, include_hash=True),
+            "titles": {},
+        }
     decoded: dict[tuple[str, str, str], Path] = {}
 
     for name in selected:
         title = catalog[name]
+        if args.score_only:
+            clip = clip_dir / f"{name}.mkv"
+            if not clip.is_file():
+                raise RuntimeError(f"missing prepared clip: {clip}")
+            title_dir = work / name
+            for arm in ARMS:
+                kinds = ("finished",) if arm == "plain" else ("base", "finished")
+                for kind in kinds:
+                    path = title_dir / f"{arm}-{kind}.mkv"
+                    if not path.is_file():
+                        raise RuntimeError(f"missing decoded output: {path}")
+                    decoded[(name, arm, kind)] = path
+            continue
         source = Path(title.source)
         if not source.is_file():
             raise RuntimeError(f"{name}: missing original source: {source}")
@@ -544,21 +574,6 @@ def main() -> int:
     # Score after every title has passed full dav1d decode.  This keeps a
     # malformed candidate from producing a partial quality table that looks
     # like a successful corpus run.
-    if args.score_only:
-        manifest_path = work / "manifest.json"
-        if not manifest_path.is_file():
-            raise RuntimeError("--score-only requires an existing manifest")
-        run_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        for name in selected:
-            title_dir = work / name
-            for arm in ARMS:
-                kinds = ("finished",) if arm == "plain" else ("base", "finished")
-                for kind in kinds:
-                    path = title_dir / f"{arm}-{kind}.mkv"
-                    if not path.is_file():
-                        raise RuntimeError(f"missing decoded output: {path}")
-                    decoded[(name, arm, kind)] = path
-
     rows = []
     for name in selected:
         reference = clip_dir / f"{name}.mkv"
@@ -569,6 +584,8 @@ def main() -> int:
                 row = score_pair(
                     reference, decoded[(name, arm, kind)], name, arm, kind,
                     metric_dir, full=not args.vmaf_only)
+                row["encoded_bytes"] = run_manifest["titles"][name]["arms"][arm][
+                    "encoded"]["size"]
                 rows.append(row)
                 print(json.dumps(row, sort_keys=True), flush=True)
                 write_json(metric_dir / "scores.json", rows)

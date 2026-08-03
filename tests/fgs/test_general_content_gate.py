@@ -48,6 +48,10 @@ class GeneralContentGateTest(unittest.TestCase):
             "color_primaries": None,
         }), ["-color_range", "tv", "-colorspace", "bt709"])
 
+    def test_nullable_metric_rounding_preserves_absence(self):
+        self.assertIsNone(gate.rounded(None, 4))
+        self.assertEqual(gate.rounded(1.23456, 4), 1.2346)
+
     def test_table_summary_distinguishes_no_grain_and_grain(self):
         entry = {
             "start": 0,
