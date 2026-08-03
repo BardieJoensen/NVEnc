@@ -143,8 +143,9 @@ knows what masking does.  The current set is
 8. a general-content gate compares plain, production FGS and the candidate on
    genuinely clean, low-grain digital, animation and hard-edged studio/reality
    material, including the labelled Drag Race and Stormester failures. The
-   synthetic `clean` KAT proves zero-grain invariance; it does not prove that a
-   separator will leave real clean-looking texture and sharpening untouched.
+   synthetic `clean` KAT proves zero-grain signalling suppression; it does not
+   prove that a separator will leave real clean-looking texture and sharpening
+   untouched.
 
 Whole-title aggregates hide opposite per-title and per-band errors -- this has
 already happened twice (the global delivery multiplier, and the luma-occupancy
