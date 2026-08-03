@@ -33,7 +33,8 @@ from integrated_architecture import (
 )
 
 
-ARMS = ("plain", "production", "causal", "paired")
+ARMS = ("plain", "production", "causal", "paired", "balanced")
+DEFAULT_ARMS = ("plain", "production", "causal", "paired")
 CROP = "crop=1920:1080:960:540"
 COLOR = (
     "-color_range", "tv",
@@ -150,7 +151,7 @@ def main() -> int:
     parser.add_argument("--ffmpeg", default="/usr/local/bin/ffmpeg")
     parser.add_argument("--ffprobe", default="/usr/local/bin/ffprobe")
     parser.add_argument("--titles", default=",".join(TITLES))
-    parser.add_argument("--arms", default=",".join(ARMS))
+    parser.add_argument("--arms", default=",".join(DEFAULT_ARMS))
     parser.add_argument("--prepare-only", action="store_true")
     parser.add_argument("--score-only", action="store_true")
     args = parser.parse_args()

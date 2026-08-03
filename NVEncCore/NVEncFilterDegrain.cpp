@@ -3741,7 +3741,19 @@ RGY_ERR NVEncFilterDegrain::allocAnalysisBuffers(const std::shared_ptr<NVEncFilt
     const bool binomial = (prm->degrain.binomial < 0)
         ? (prm->degrain.stage != VppDegrainStage::TR2)
         : (prm->degrain.binomial != 0);
-    const auto temporalMixPrior = degrainBuildTemporalMixPriorTable(m_analysis.layout.temporalDirections, binomial);
+    auto temporalMixPrior = degrainBuildTemporalMixPriorTable(m_analysis.layout.temporalDirections, binomial);
+    if (prm->matchedTemporalExposure) {
+        if (!prm->pairedTemporalConfidence || m_analysis.layout.temporalDirections != 2) {
+            AddMessage(RGY_LOG_ERROR, _T("matched temporal exposure requires paired two-direction confidence.\n"));
+            return RGY_ERR_INVALID_PARAM;
+        }
+        // The ordinary centred prior is [current=2, previous=1, next=1], so
+        // perfect matches give temporal references half the output.  Causal
+        // motion with one available reference is [2, 1], or one third.  Raise
+        // only the current prior to 4 so centring changes direction, not the
+        // total temporal exposure: [4, 1, 1] also gives one third to refs.
+        temporalMixPrior[0] *= 2.0f;
+    }
     const auto temporalMixPriorBytes = temporalMixPrior.size() * sizeof(temporalMixPrior[0]);
     if (!m_analysis.temporalMixPrior || m_analysis.temporalMixPrior->nSize != temporalMixPriorBytes) {
         m_analysis.temporalMixPrior = std::make_unique<CUMemBuf>(temporalMixPriorBytes, "degrain temporal mix prior");
@@ -4139,7 +4151,10 @@ void NVEncFilterDegrain::logApplyTrace(const std::shared_ptr<NVEncFilterParamDeg
     const uint32_t scaledThSad = rgy_degrain_scale_sad_threshold(prm->degrain, prm->frameOut, prm->degrain.thsad, analysisSADIncludesChroma(prm));
     const uint32_t disableMask = degrainDisableMask(disableRefs, layout.temporalDirections);
     const bool binomial = prm->degrain.stage != VppDegrainStage::TR2;
-    const auto temporalMixPrior = degrainBuildTemporalMixPriorTable(layout.temporalDirections, binomial);
+    auto temporalMixPrior = degrainBuildTemporalMixPriorTable(layout.temporalDirections, binomial);
+    if (prm->matchedTemporalExposure) {
+        temporalMixPrior[0] *= 2.0f;
+    }
     const float sourceConfidenceRaw = temporalMixPrior[0];
     const int refDirectionCount = std::min(layout.temporalDirections, RGY_DEGRAIN_MAX_TEMPORAL_DIRECTIONS);
     const TCHAR *stageName = get_cx_desc(list_vpp_degrain_stage, (int)prm->degrain.stage);

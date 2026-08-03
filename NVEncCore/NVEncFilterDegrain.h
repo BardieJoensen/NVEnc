@@ -47,8 +47,9 @@ public:
     bool zeroCopyCache;
     bool causal;
     bool pairedTemporalConfidence;
+    bool matchedTemporalExposure;
 
-    NVEncFilterParamDegrain() : degrain(), attachAnalysisData(true), zeroCopyCache(false), causal(false), pairedTemporalConfidence(false) {};
+    NVEncFilterParamDegrain() : degrain(), attachAnalysisData(true), zeroCopyCache(false), causal(false), pairedTemporalConfidence(false), matchedTemporalExposure(false) {};
     virtual ~NVEncFilterParamDegrain() {};
     virtual tstring print() const override {
         auto str = degrain.print();
@@ -63,6 +64,9 @@ public:
         }
         if (pairedTemporalConfidence) {
             str += _T(", paired-confidence");
+        }
+        if (matchedTemporalExposure) {
+            str += _T(", matched-temporal-exposure");
         }
         return str;
     };

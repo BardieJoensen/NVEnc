@@ -1448,18 +1448,24 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         // Deliberately environment-only while the centred scheduler is under
         // corpus evaluation; do not expose an unvalidated production option.
         bool testCenteredPaired = false;
+        bool testMatchedTemporalExposure = false;
         if (const auto value = std::getenv("NVENC_FGS_TEST_MOTION_CENTERED"); value && value[0] != '\0') {
-            if (strcmp(value, "paired") == 0 && config.motionRefs == 1) {
+            if ((strcmp(value, "paired") == 0 || strcmp(value, "paired-balanced") == 0)
+                && config.motionRefs == 1) {
                 testCenteredPaired = true;
-                AddMessage(RGY_LOG_WARN, _T("film-grain: applying test-only centered motion with paired confidence.\n"));
+                testMatchedTemporalExposure = strcmp(value, "paired-balanced") == 0;
+                AddMessage(RGY_LOG_WARN, testMatchedTemporalExposure
+                    ? _T("film-grain: applying test-only centered motion with paired confidence and causal-matched temporal exposure.\n")
+                    : _T("film-grain: applying test-only centered motion with paired confidence.\n"));
             } else {
                 AddMessage(RGY_LOG_WARN,
-                    _T("film-grain: ignoring NVENC_FGS_TEST_MOTION_CENTERED=%s (expected paired with motion-refs=1).\n"),
+                    _T("film-grain: ignoring NVENC_FGS_TEST_MOTION_CENTERED=%s (expected paired or paired-balanced with motion-refs=1).\n"),
                     char_to_tstring(value).c_str());
             }
         }
         m_motionDegrainParam->causal = !testCenteredPaired;
         m_motionDegrainParam->pairedTemporalConfidence = testCenteredPaired;
+        m_motionDegrainParam->matchedTemporalExposure = testMatchedTemporalExposure;
         auto& degrain = m_motionDegrainParam->degrain;
         degrain.enable = true;
         degrain.mode = VppDegrainMode::Degrain;

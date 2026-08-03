@@ -42,6 +42,20 @@ class IntegratedArchitectureHarnessTests(unittest.TestCase):
         self.assertNotIn("NVENC_FGS_TEST_MOTION_CENTERED", causal)
         self.assertEqual(paired["NVENC_FGS_TEST_MOTION_CENTERED"], "paired")
 
+    def test_balanced_arm_keeps_paired_motion_test_only(self):
+        paired = arm_environment("paired")
+        balanced = arm_environment("balanced")
+        self.assertEqual(
+            balanced["NVENC_FGS_TEST_MOTION_THSAD"],
+            paired["NVENC_FGS_TEST_MOTION_THSAD"])
+        self.assertEqual(
+            balanced["NVENC_FGS_TEST_MOTION_CENTERED"], "paired-balanced")
+        command = build_clean_command(
+            Path("candidate"), Path("source.mkv"), Path("clean.y4m"),
+            Path("raw.tbl"), "balanced")
+        self.assertIn(
+            "denoiser=motion,motion-refs=1,modelsrc=on", " ".join(command))
+
     def test_plain_arm_has_no_film_grain_options_or_table(self):
         command = build_encode_command(
             Path("prod"), Path("source.mkv"), Path("plain.mkv"), None,
