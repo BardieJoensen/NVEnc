@@ -76,6 +76,22 @@ class IntegratedArchitectureHarnessTests(unittest.TestCase):
         self.assertIn(
             "denoiser=motion,motion-refs=1,modelsrc=on", " ".join(command))
 
+    def test_robust_median_arm_is_explicit_and_detail_aware(self):
+        balanced = arm_environment("balanced-detail")
+        robust = arm_environment("balanced-median-detail")
+        self.assertEqual(
+            robust["NVENC_FGS_TEST_MOTION_CENTERED"],
+            "paired-balanced-median")
+        self.assertEqual(robust["NVENC_FGS_TEST_MOTION_FINISH"], "detail")
+        self.assertEqual(
+            robust["NVENC_FGS_TEST_MOTION_THSAD"],
+            balanced["NVENC_FGS_TEST_MOTION_THSAD"])
+        command = build_clean_command(
+            Path("candidate"), Path("source.mkv"), Path("clean.y4m"),
+            Path("raw.tbl"), "balanced-median-detail")
+        self.assertIn(
+            "denoiser=motion,motion-refs=1,modelsrc=on", " ".join(command))
+
     def test_plain_arm_has_no_film_grain_options_or_table(self):
         command = build_encode_command(
             Path("prod"), Path("source.mkv"), Path("plain.mkv"), None,

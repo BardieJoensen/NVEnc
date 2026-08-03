@@ -48,8 +48,9 @@ public:
     bool causal;
     bool pairedTemporalConfidence;
     bool matchedTemporalExposure;
+    bool robustTemporalMedian;
 
-    NVEncFilterParamDegrain() : degrain(), attachAnalysisData(true), zeroCopyCache(false), causal(false), pairedTemporalConfidence(false), matchedTemporalExposure(false) {};
+    NVEncFilterParamDegrain() : degrain(), attachAnalysisData(true), zeroCopyCache(false), causal(false), pairedTemporalConfidence(false), matchedTemporalExposure(false), robustTemporalMedian(false) {};
     virtual ~NVEncFilterParamDegrain() {};
     virtual tstring print() const override {
         auto str = degrain.print();
@@ -67,6 +68,9 @@ public:
         }
         if (matchedTemporalExposure) {
             str += _T(", matched-temporal-exposure");
+        }
+        if (robustTemporalMedian) {
+            str += _T(", robust-temporal-median");
         }
         return str;
     };

@@ -338,12 +338,13 @@ RGY_ERR launchNVEncDegrainDegrainOverlapPlane(
     const int coveredWidth, const int coveredHeight,
     const int planeScaleX, const int planeScaleY,
     const uint32_t thsad, const uint32_t disableMask,
+    const bool robustTemporalMedian,
     const int refs, const int pel, const int subpelInterp, cudaStream_t stream) {
     return launchNVEncDegrainDegrainOverlapPlaneImpl(dst, dstPitch, pixelBytes, cur, curPitch,
         refBackward1, refForward1, refBackward2, refForward2, refBackward3, refForward3,
         refBackward4, refForward4, refBackward5, refForward5, width, height, mv, sad, temporalMixPrior,
         layout, coveredWidth, coveredHeight, planeScaleX, planeScaleY, thsad, disableMask,
-        refs, pel, subpelInterp, stream);
+        robustTemporalMedian, refs, pel, subpelInterp, stream);
 }
 
 RGY_ERR launchNVEncDegrainDegrainOverlapPlanePreweightedRamp(
@@ -383,12 +384,13 @@ RGY_ERR launchNVEncDegrainDegrainOverlapPlaneRamp(
     const int planeScaleX, const int planeScaleY,
     const CUMemBuf &windowRamp,
     const uint32_t thsad, const uint32_t disableMask,
+    const bool robustTemporalMedian,
     const int refs, const int pel, const int subpelInterp, cudaStream_t stream) {
     return launchNVEncDegrainDegrainOverlapPlaneRampImpl(dst, dstPitch, pixelBytes, cur, curPitch,
         refBackward1, refForward1, refBackward2, refForward2, refBackward3, refForward3,
         refBackward4, refForward4, refBackward5, refForward5, width, height, mv, sad, temporalMixPrior,
         layout, coveredWidth, coveredHeight, planeScaleX, planeScaleY, windowRamp,
-        thsad, disableMask, refs, pel, subpelInterp, stream);
+        thsad, disableMask, robustTemporalMedian, refs, pel, subpelInterp, stream);
 }
 
 RGY_ERR launchNVEncDegrainPixelTrace(

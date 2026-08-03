@@ -145,6 +145,7 @@ RGY_ERR launchNVEncDegrainDegrainOverlapPlane(
     int coveredWidth, int coveredHeight,
     int planeScaleX, int planeScaleY,
     uint32_t thsad, uint32_t disableMask,
+    bool robustTemporalMedian,
     int refs, int pel, int subpelInterp, cudaStream_t stream);
 RGY_ERR launchNVEncDegrainDegrainOverlapPlanePreweightedRamp(
     uint8_t *dst, int dstPitch, int pixelBytes,
@@ -176,6 +177,7 @@ RGY_ERR launchNVEncDegrainDegrainOverlapPlaneRamp(
     int planeScaleX, int planeScaleY,
     const CUMemBuf &windowRamp,
     uint32_t thsad, uint32_t disableMask,
+    bool robustTemporalMedian,
     int refs, int pel, int subpelInterp, cudaStream_t stream);
 RGY_ERR launchNVEncDegrainPixelTrace(
     const uint8_t *cur, int curPitch, int pixelBytes,
@@ -2346,6 +2348,7 @@ RGY_ERR NVEncFilterDegrain::emitDegrainFrame(const RGYFilterDegrainFrameSet &fra
                 *windowRamp,
                 scaledThSad,
                 disableMask,
+                prm->robustTemporalMedian,
                 analysisLayout().temporalDirections, prm->degrain.pel, prm->degrain.subpelInterp, stream);
         }
         return launchNVEncDegrainDegrainOverlapPlane(
@@ -2370,6 +2373,7 @@ RGY_ERR NVEncFilterDegrain::emitDegrainFrame(const RGYFilterDegrainFrameSet &fra
             planeScaleY,
             scaledThSad,
             disableMask,
+            prm->robustTemporalMedian,
             analysisLayout().temporalDirections, prm->degrain.pel, prm->degrain.subpelInterp, stream);
     };
 
@@ -3753,6 +3757,12 @@ RGY_ERR NVEncFilterDegrain::allocAnalysisBuffers(const std::shared_ptr<NVEncFilt
         // only the current prior to 4 so centring changes direction, not the
         // total temporal exposure: [4, 1, 1] also gives one third to refs.
         temporalMixPrior[0] *= 2.0f;
+    }
+    if (prm->robustTemporalMedian
+        && (!prm->pairedTemporalConfidence || !prm->matchedTemporalExposure
+            || m_analysis.layout.temporalDirections != 2)) {
+        AddMessage(RGY_LOG_ERROR, _T("robust temporal median requires paired, exposure-matched two-direction confidence.\n"));
+        return RGY_ERR_INVALID_PARAM;
     }
     const auto temporalMixPriorBytes = temporalMixPrior.size() * sizeof(temporalMixPrior[0]);
     if (!m_analysis.temporalMixPrior || m_analysis.temporalMixPrior->nSize != temporalMixPriorBytes) {

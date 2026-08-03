@@ -13,6 +13,8 @@ This harness deliberately separates four questions:
 * ``balanced-detail`` and ``balanced-nofinish`` isolate the luma spatial
   finishing pass after that temporal operator.  They remain environment-only
   research arms and always retain the ordinary chroma finish.
+* ``balanced-median-detail`` keeps the detail-aware finish but replaces the
+  admitted previous/next average with a robust three-sample temporal median.
 
 The source-fit arms use the QVBR-29/P4/no-AQ regime on which the temporal leak
 transfer was calibrated.  A later production-settings transfer test must not be
@@ -58,6 +60,7 @@ MOTION_ARMS = (
     "balanced",
     "balanced-detail",
     "balanced-nofinish",
+    "balanced-median-detail",
 )
 
 CONTROLLED_ENCODE = (
@@ -169,7 +172,11 @@ def arm_environment(arm: str) -> dict[str, str]:
         env["NVENC_FGS_TEST_MOTION_CENTERED"] = "paired"
     if arm in ("balanced", "balanced-detail", "balanced-nofinish"):
         env["NVENC_FGS_TEST_MOTION_CENTERED"] = "paired-balanced"
+    if arm == "balanced-median-detail":
+        env["NVENC_FGS_TEST_MOTION_CENTERED"] = "paired-balanced-median"
     if arm == "balanced-detail":
+        env["NVENC_FGS_TEST_MOTION_FINISH"] = "detail"
+    if arm == "balanced-median-detail":
         env["NVENC_FGS_TEST_MOTION_FINISH"] = "detail"
     if arm == "balanced-nofinish":
         env["NVENC_FGS_TEST_MOTION_FINISH"] = "off"
@@ -227,7 +234,7 @@ def main() -> int:
     parser.add_argument(
         "--arms", default="plain,production,causal,paired",
         help=("comma-separated subset of plain,production,causal,paired,balanced,"
-              "balanced-detail,balanced-nofinish"))
+              "balanced-detail,balanced-nofinish,balanced-median-detail"))
     parser.add_argument("--skip-clean", action="store_true")
     parser.add_argument("--skip-decode", action="store_true")
     args = parser.parse_args()

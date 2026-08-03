@@ -1224,6 +1224,7 @@ __device__ __forceinline__ int degrainDegrainBlockSample(
     const uint32_t thsad,
     const uint32_t disableMask,
     const float *temporalMixPrior,
+    const bool robustTemporalMedian,
     const int planeScaleX,
     const int planeScaleY,
     const int x,
@@ -1242,6 +1243,31 @@ __device__ __forceinline__ int degrainDegrainBlockSample(
         confidenceTotal += referenceConfidenceRaw[referenceDirection];
     }
     const float invTotal = (confidenceTotal > 0.0f) ? (1.0f / confidenceTotal) : 0.0f;
+    if (robustTemporalMedian && refs == 2
+        && referenceConfidenceRaw[0] > 0.0f && referenceConfidenceRaw[1] > 0.0f) {
+        int referenceSamples[2];
+        for (int referenceDirection = 0; referenceDirection < 2; referenceDirection++) {
+            const uint8_t *referencePlane = degrainRefPlanePtrSamePitch(
+                refBackward1, refForward1,
+                refBackward2, refForward2,
+                refBackward3, refForward3,
+                refBackward4, refForward4,
+                refBackward5, refForward5,
+                referenceDirection);
+            referenceSamples[referenceDirection] = degrainCompensatedSample<TypePixel>(
+                referencePlane, pitch, width, height, mv, block, referenceDirection,
+                planeScaleX, planeScaleY, x, y, refs, pel, subpelInterp);
+        }
+        const int currentRefLow = min(currentSample, referenceSamples[0]);
+        const int currentRefHigh = max(currentSample, referenceSamples[0]);
+        const int medianSample = max(currentRefLow, min(currentRefHigh, referenceSamples[1]));
+        const float referenceConfidenceTotal = referenceConfidenceRaw[0] + referenceConfidenceRaw[1];
+        const float mixedValue = __fmaf_rn(
+            (float)medianSample,
+            referenceConfidenceTotal * invTotal,
+            (float)currentSample * (sourceConfidenceRaw * invTotal));
+        return degrainClampPixel<TypePixel>(degrainRoundFloatToInt(mixedValue));
+    }
     float mixedValue = (float)currentSample * (sourceConfidenceRaw * invTotal);
     for (int referenceDirection = 0; referenceDirection < refs; referenceDirection++) {
         if (referenceConfidenceRaw[referenceDirection] <= 0.0f) {
@@ -2599,6 +2625,7 @@ static __global__ void kernel_degrain_overlap_plane_cuda(
                     block, thsad,
                     disableMask,
                     temporalMixPrior,
+                    false,
                     planeScaleX, planeScaleY,
                     x, y,
                     refs, pel, subpelInterp);
@@ -3005,6 +3032,7 @@ static __global__ void kernel_degrain_degrain_overlap_plane_cuda(
     const int planeScaleY,
     const uint32_t thsad,
     const uint32_t disableMask,
+    const bool robustTemporalMedian,
     const int refs,
     const int pel,
     const int subpelInterp) {
@@ -3081,6 +3109,7 @@ static __global__ void kernel_degrain_degrain_overlap_plane_cuda(
                 block, thsad,
                 disableMask,
                 temporalMixPrior,
+                robustTemporalMedian,
                 planeScaleX, planeScaleY,
                 x, y,
                 refs, pel, subpelInterp);
@@ -3322,6 +3351,7 @@ static RGY_ERR launchNVEncDegrainDegrainOverlapPlaneImpl(
     const int coveredWidth, const int coveredHeight,
     const int planeScaleX, const int planeScaleY,
     const uint32_t thsad, const uint32_t disableMask,
+    const bool robustTemporalMedian,
     const int refs, const int pel, const int subpelInterp, cudaStream_t stream) {
     const dim3 block(32, 8);
     const dim3 grid(divCeil(width, (int)block.x), divCeil(height, (int)block.y));
@@ -3340,7 +3370,7 @@ static RGY_ERR launchNVEncDegrainDegrainOverlapPlaneImpl(
             reinterpret_cast<const float *>(temporalMixPrior.ptr),
             layout.blocksX, layout.blocksY, layout.blockSize, layout.overlap, layout.step,
             coveredWidth, coveredHeight, planeScaleX, planeScaleY,
-            thsad, disableMask, refs, pel, subpelInterp);
+            thsad, disableMask, robustTemporalMedian, refs, pel, subpelInterp);
     } else {
         kernel_degrain_degrain_overlap_plane_cuda<uint8_t><<<grid, block, 0, stream>>>(
             reinterpret_cast<uint8_t *>(dst), dstPitch,
@@ -3356,7 +3386,7 @@ static RGY_ERR launchNVEncDegrainDegrainOverlapPlaneImpl(
             reinterpret_cast<const float *>(temporalMixPrior.ptr),
             layout.blocksX, layout.blocksY, layout.blockSize, layout.overlap, layout.step,
             coveredWidth, coveredHeight, planeScaleX, planeScaleY,
-            thsad, disableMask, refs, pel, subpelInterp);
+            thsad, disableMask, robustTemporalMedian, refs, pel, subpelInterp);
     }
     return err_to_rgy(cudaGetLastError());
 }
@@ -3447,6 +3477,7 @@ __device__ __forceinline__ void degrainDegrainOverlapPlaneRampGeneric(
     const float *temporalMixPrior,
     const uint32_t thsad,
     const uint32_t disableMask,
+    const bool robustTemporalMedian,
     const int originX,
     const int originY,
     const int compactTopLeftBorder,
@@ -3568,6 +3599,7 @@ __device__ __forceinline__ void degrainDegrainOverlapPlaneRampGeneric(
                 width, height,
                 mv, sad, block, thsad, disableMask,
                 temporalMixPrior,
+                robustTemporalMedian,
                 planeScaleX, planeScaleY,
                 x, y,
                 refs, pel, subpelInterp);
@@ -3612,6 +3644,7 @@ static __global__ void kernel_degrain_degrain_overlap_plane_ramp_cuda(
     const float *temporalMixPrior,
     const uint32_t thsad,
     const uint32_t disableMask,
+    const bool robustTemporalMedian,
     const int pel,
     const int subpelInterp) {
     const int globalX = (int)blockIdx.x * blockDim.x + threadIdx.x;
@@ -3631,6 +3664,7 @@ static __global__ void kernel_degrain_degrain_overlap_plane_ramp_cuda(
         coveredWidth, coveredHeight,
         planeScaleX, planeScaleY,
         windowRamp, sad, temporalMixPrior, thsad, disableMask,
+        robustTemporalMedian,
         0, 0, 0,
         globalX, globalY,
         pel, subpelInterp);
@@ -3651,6 +3685,7 @@ static RGY_ERR launchNVEncDegrainDegrainOverlapPlaneRampImpl(
     const int planeScaleX, const int planeScaleY,
     const CUMemBuf &windowRamp,
     const uint32_t thsad, const uint32_t disableMask,
+    const bool robustTemporalMedian,
     const int refs, const int pel, const int subpelInterp, cudaStream_t stream) {
     const dim3 block(32, 8);
     const dim3 grid(divCeil(width, (int)block.x), divCeil(height, (int)block.y));
@@ -3671,6 +3706,7 @@ static RGY_ERR launchNVEncDegrainDegrainOverlapPlaneRampImpl(
         reinterpret_cast<const RGYDegrainSAD *>(sad.ptr), \
         reinterpret_cast<const float *>(temporalMixPrior.ptr), \
         thsad, disableMask, \
+        robustTemporalMedian, \
         pel, subpelInterp); \
 } while (0)
 #define SWITCH_DEGRAIN_RAMP(TYPE) \
