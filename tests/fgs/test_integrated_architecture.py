@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+import unittest
+from pathlib import Path
+
+from integrated_architecture import (
+    arm_environment,
+    build_clean_command,
+    build_encode_command,
+    partial_path,
+)
+
+
+class IntegratedArchitectureHarnessTests(unittest.TestCase):
+    def test_partial_path_preserves_media_suffix(self):
+        self.assertEqual(
+            partial_path(Path("paired.mkv")), Path("paired.partial.mkv"))
+        self.assertEqual(
+            partial_path(Path("paired-clean.y4m")),
+            Path("paired-clean.partial.y4m"))
+
+    def test_production_arm_is_deployed_bilateral_configuration(self):
+        command = build_encode_command(
+            Path("prod"), Path("source.mkv"), Path("out.mkv"),
+            Path("out.tbl"), "production")
+        self.assertIn("denoise=auto,chroma=auto,denoiser=bilateral", command)
+        self.assertNotIn("modelsrc=on", " ".join(command))
+
+    def test_candidate_arm_uses_source_fit_and_one_reference(self):
+        command = build_clean_command(
+            Path("candidate"), Path("source.mkv"), Path("clean.y4m"),
+            Path("raw.tbl"), "causal")
+        joined = " ".join(command)
+        self.assertIn("denoiser=motion,motion-refs=1,modelsrc=on", joined)
+        self.assertIn("--codec raw", joined)
+
+    def test_paired_and_causal_differ_only_by_paired_environment(self):
+        causal = arm_environment("causal")
+        paired = arm_environment("paired")
+        self.assertEqual(causal["NVENC_FGS_TEST_MOTION_THSAD"], "640")
+        self.assertEqual(paired["NVENC_FGS_TEST_MOTION_THSAD"], "640")
+        self.assertNotIn("NVENC_FGS_TEST_MOTION_CENTERED", causal)
+        self.assertEqual(paired["NVENC_FGS_TEST_MOTION_CENTERED"], "paired")
+
+    def test_plain_arm_has_no_film_grain_options_or_table(self):
+        command = build_encode_command(
+            Path("prod"), Path("source.mkv"), Path("plain.mkv"), None,
+            "plain")
+        self.assertNotIn("--av1-film-grain", command)
+        self.assertNotIn("--film-grain-table-out", command)
+
+
+if __name__ == "__main__":
+    unittest.main()
