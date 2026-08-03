@@ -190,6 +190,15 @@ class TemporalLeakTests(unittest.TestCase):
         finally:
             os.unlink(path)
 
+    def test_sparse_frame_expression_coalesces_adjacent_pairs(self):
+        expression = strength_selection_report.selection_expression(
+            [0, 1, 2, 8, 10, 11])
+        self.assertEqual(
+            expression,
+            "between(n\\,0\\,2)+eq(n\\,8)+between(n\\,10\\,11)")
+        with self.assertRaisesRegex(ValueError, "sorted and unique"):
+            strength_selection_report.selection_expression([1, 0])
+
     def test_post_encode_variance_closure(self):
         rng = np.random.default_rng(29)
         shape = (256, 256)

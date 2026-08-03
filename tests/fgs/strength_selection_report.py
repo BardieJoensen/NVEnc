@@ -128,11 +128,39 @@ def decode_y4m_selected(path, width, height, indices, bits, plane="y"):
     return {index: selected[index] for index in indices}
 
 
+def selection_expression(indices):
+    """Compact sorted frame indices into an FFmpeg select expression.
+
+    One ``eq`` term per frame exhausts FFmpeg's expression parser around a
+    hundred sparse selections.  Measurement reports naturally request adjacent
+    n/n+1 pairs, so coalescing runs into ``between`` terms is both smaller and
+    semantically exact.
+    """
+    ordered = list(indices)
+    if not ordered:
+        raise ValueError("at least one frame index is required")
+    if ordered != sorted(set(ordered)):
+        raise ValueError("frame indices must be sorted and unique")
+    runs = []
+    start = previous = ordered[0]
+    for index in ordered[1:]:
+        if index == previous + 1:
+            previous = index
+            continue
+        runs.append((start, previous))
+        start = previous = index
+    runs.append((start, previous))
+    return "+".join(
+        f"eq(n\\,{start})" if start == end
+        else f"between(n\\,{start}\\,{end})"
+        for start, end in runs)
+
+
 def decode_selected(path, width, height, indices, bits, filmgrain=None, plane="y"):
     if filmgrain is None and os.path.splitext(path)[1].lower() == ".y4m":
         return decode_y4m_selected(
             path, width, height, indices, bits, plane=plane)
-    terms = "+".join(f"eq(n\\,{index})" for index in indices)
+    terms = selection_expression(indices)
     pix_fmt = "gray" if bits == 8 else f"gray{bits}le"
     plane_width, plane_height, _block_size = plane_geometry(
         width, height, plane)
