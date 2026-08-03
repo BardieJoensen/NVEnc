@@ -765,35 +765,211 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
 // base.  Only blocks whose temporal/spatial source variance agrees are used;
 // motion and cuts fall outside the same 0.8..1.3 gate validated by the offline
 // production_static corpus.
-template<typename Type, int shift, int components, bool lumaGate>
+template<typename Type, int shift>
 __global__ void kernel_fgs_temporal_strength(
+    const uint8_t *__restrict__ source, const int sourcePitch,
+    const uint8_t *__restrict__ previousSource, const int previousSourcePitch,
+    const uint8_t *__restrict__ base, const int basePitch,
+    const uint8_t *__restrict__ previousBase, const int previousBasePitch,
+    const int width, const int height, const int blocksX, const int bitDepth,
+    const uint8_t *__restrict__ flatMask,
+    const FilmGrainBlockMetric *__restrict__ metrics,
+    FilmGrainGpuPlaneStats *__restrict__ output) {
+    const int bx = blockIdx.x;
+    const int by = blockIdx.y;
+    const int blockIndex = by * blocksX + bx;
+    if (flatMask[blockIndex] == 0) return;
+
+    const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+    const int threads = blockDim.x * blockDim.y;
+    __shared__ float reduce[10 * 64];
+    const int x0 = bx * FGS_BLOCK_SIZE;
+    const int y0 = by * FGS_BLOCK_SIZE;
+    const int blockW = min(FGS_BLOCK_SIZE, width - x0);
+    const int blockH = min(FGS_BLOCK_SIZE, height - y0);
+    const int count = blockW * blockH;
+    float sourceSum = 0.0f, sourceX = 0.0f, sourceY = 0.0f, sourceSq = 0.0f;
+    float baseSum = 0.0f, baseX = 0.0f, baseY = 0.0f, baseSq = 0.0f;
+    float sumXX = 0.0f, sumYY = 0.0f;
+    for (int index = tid; index < count; index += threads) {
+        const int lx = index % blockW;
+        const int ly = index / blockW;
+        const int x = x0 + lx;
+        const int y = y0 + ly;
+        const float xn = (2.0f * lx - (blockW - 1)) / blockW;
+        const float yn = (2.0f * ly - (blockH - 1)) / blockH;
+        const float sourceDifference = static_cast<float>(
+            load_code<Type, shift>(source, sourcePitch, x, y, 0, 1)
+            - load_code<Type, shift>(previousSource, previousSourcePitch, x, y, 0, 1));
+        const float baseDifference = static_cast<float>(
+            load_code<Type, shift>(base, basePitch, x, y, 0, 1)
+            - load_code<Type, shift>(previousBase, previousBasePitch, x, y, 0, 1));
+        sourceSum += sourceDifference;
+        sourceX += sourceDifference * xn;
+        sourceY += sourceDifference * yn;
+        sourceSq += sourceDifference * sourceDifference;
+        baseSum += baseDifference;
+        baseX += baseDifference * xn;
+        baseY += baseDifference * yn;
+        baseSq += baseDifference * baseDifference;
+        sumXX += xn * xn;
+        sumYY += yn * yn;
+    }
+    reduce[tid] = sourceSum;
+    reduce[threads + tid] = sourceX;
+    reduce[2 * threads + tid] = sourceY;
+    reduce[3 * threads + tid] = sourceSq;
+    reduce[4 * threads + tid] = baseSum;
+    reduce[5 * threads + tid] = baseX;
+    reduce[6 * threads + tid] = baseY;
+    reduce[7 * threads + tid] = baseSq;
+    reduce[8 * threads + tid] = sumXX;
+    reduce[9 * threads + tid] = sumYY;
+    __syncthreads();
+    for (int stride = threads / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            for (int item = 0; item < 10; ++item) {
+                reduce[item * threads + tid] += reduce[item * threads + tid + stride];
+            }
+        }
+        __syncthreads();
+    }
+    if (tid != 0 || count == 0) return;
+
+    const double invCount = 1.0 / static_cast<double>(count);
+    const double sourceMean = reduce[0] * invCount;
+    const double sourceSlopeX = reduce[threads] / fmax(static_cast<double>(reduce[8 * threads]), 1e-6);
+    const double sourceSlopeY = reduce[2 * threads] / fmax(static_cast<double>(reduce[9 * threads]), 1e-6);
+    const double sourceUnplanedVariance = fmax(0.0,
+        (reduce[3 * threads] * invCount - sourceMean * sourceMean) * 0.5);
+    const double sourceVariance = fmax(0.0, sourceUnplanedVariance
+        - sourceSlopeX * sourceSlopeX * reduce[8 * threads] * invCount * 0.5
+        - sourceSlopeY * sourceSlopeY * reduce[9 * threads] * invCount * 0.5);
+    const double spatialVariance = static_cast<double>(metrics[blockIndex].sigma)
+        * metrics[blockIndex].sigma;
+    const double staticRatio = sourceUnplanedVariance / fmax(spatialVariance, 1e-6);
+    if (staticRatio < 0.8 || staticRatio > 1.3 || sourceVariance <= 1e-6) return;
+
+    const double baseMean = reduce[4 * threads] * invCount;
+    const double baseSlopeX = reduce[5 * threads] / fmax(static_cast<double>(reduce[8 * threads]), 1e-6);
+    const double baseSlopeY = reduce[6 * threads] / fmax(static_cast<double>(reduce[9 * threads]), 1e-6);
+    const double baseVariance = fmax(0.0,
+        (reduce[7 * threads] * invCount - baseMean * baseMean) * 0.5
+        - baseSlopeX * baseSlopeX * reduce[8 * threads] * invCount * 0.5
+        - baseSlopeY * baseSlopeY * reduce[9 * threads] * invCount * 0.5);
+    const int maxValue = (1 << bitDepth) - 1;
+    const int bin = min(FGS_STRENGTH_BINS - 1, max(0,
+        static_cast<int>(metrics[blockIndex].mean * FGS_STRENGTH_BINS / (maxValue + 1))));
+    atomic_add_f64(output->temporalSourceVarSum + bin, sourceVariance);
+    atomic_add_f64(output->temporalBaseVarSum + bin, baseVariance);
+    atomic_add_u64(output->temporalBlockCount + bin, 1ULL);
+}
+
+// Chroma closure is test-only and must not perturb the established luma
+// kernel above.  Build its luma-static population in a separate launch, then
+// measure the corresponding 16x16 U/V blocks.  Keeping the original luma
+// launch byte-for-byte intact is important: its FP64 atomics can otherwise
+// cross a strength quantization boundary solely from a scheduling change.
+template<typename Type, int shift>
+__global__ void kernel_fgs_temporal_chroma_mask(
+    const uint8_t *__restrict__ source, const int sourcePitch,
+    const uint8_t *__restrict__ previousSource, const int previousSourcePitch,
+    const int width, const int height, const int blocksX,
+    const uint8_t *__restrict__ flatMask,
+    const FilmGrainBlockMetric *__restrict__ metrics,
+    uint8_t *__restrict__ temporalMask) {
+    const int bx = blockIdx.x;
+    const int by = blockIdx.y;
+    const int blockIndex = by * blocksX + bx;
+    if (flatMask[blockIndex] == 0) return;
+
+    const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+    const int threads = blockDim.x * blockDim.y;
+    __shared__ float reduce[6 * 64];
+    const int x0 = bx * FGS_BLOCK_SIZE;
+    const int y0 = by * FGS_BLOCK_SIZE;
+    const int blockW = min(FGS_BLOCK_SIZE, width - x0);
+    const int blockH = min(FGS_BLOCK_SIZE, height - y0);
+    const int count = blockW * blockH;
+    float sourceSum = 0.0f, sourceX = 0.0f, sourceY = 0.0f, sourceSq = 0.0f;
+    float sumXX = 0.0f, sumYY = 0.0f;
+    for (int index = tid; index < count; index += threads) {
+        const int lx = index % blockW;
+        const int ly = index / blockW;
+        const int x = x0 + lx;
+        const int y = y0 + ly;
+        const float xn = (2.0f * lx - (blockW - 1)) / blockW;
+        const float yn = (2.0f * ly - (blockH - 1)) / blockH;
+        const float sourceDifference = static_cast<float>(
+            load_code<Type, shift>(source, sourcePitch, x, y, 0, 1)
+            - load_code<Type, shift>(previousSource, previousSourcePitch, x, y, 0, 1));
+        sourceSum += sourceDifference;
+        sourceX += sourceDifference * xn;
+        sourceY += sourceDifference * yn;
+        sourceSq += sourceDifference * sourceDifference;
+        sumXX += xn * xn;
+        sumYY += yn * yn;
+    }
+    reduce[tid] = sourceSum;
+    reduce[threads + tid] = sourceX;
+    reduce[2 * threads + tid] = sourceY;
+    reduce[3 * threads + tid] = sourceSq;
+    reduce[4 * threads + tid] = sumXX;
+    reduce[5 * threads + tid] = sumYY;
+    __syncthreads();
+    for (int stride = threads / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            for (int item = 0; item < 6; ++item) {
+                reduce[item * threads + tid] += reduce[item * threads + tid + stride];
+            }
+        }
+        __syncthreads();
+    }
+    if (tid != 0 || count == 0) return;
+
+    const double invCount = 1.0 / static_cast<double>(count);
+    const double sourceMean = reduce[0] * invCount;
+    const double sourceSlopeX = reduce[threads]
+        / fmax(static_cast<double>(reduce[4 * threads]), 1e-6);
+    const double sourceSlopeY = reduce[2 * threads]
+        / fmax(static_cast<double>(reduce[5 * threads]), 1e-6);
+    const double sourceUnplanedVariance = fmax(0.0,
+        (reduce[3 * threads] * invCount - sourceMean * sourceMean) * 0.5);
+    const double sourceVariance = fmax(0.0, sourceUnplanedVariance
+        - sourceSlopeX * sourceSlopeX * reduce[4 * threads] * invCount * 0.5
+        - sourceSlopeY * sourceSlopeY * reduce[5 * threads] * invCount * 0.5);
+    const double spatialVariance = static_cast<double>(metrics[blockIndex].sigma)
+        * metrics[blockIndex].sigma;
+    const double staticRatio = sourceUnplanedVariance / fmax(spatialVariance, 1e-6);
+    if (staticRatio >= 0.8 && staticRatio <= 1.3 && sourceVariance > 1e-6) {
+        temporalMask[blockIndex] = 1;
+    }
+}
+
+template<typename Type, int shift, int components>
+__global__ void kernel_fgs_temporal_chroma_strength(
     const uint8_t *__restrict__ source, const int sourcePitch,
     const uint8_t *__restrict__ previousSource, const int previousSourcePitch,
     const uint8_t *__restrict__ base, const int basePitch,
     const uint8_t *__restrict__ previousBase, const int previousBasePitch,
     const int width, const int height, const int component,
     const int blocksX, const int bitDepth,
-    const uint8_t *__restrict__ flatMask,
-    uint8_t *__restrict__ temporalMask,
+    const uint8_t *__restrict__ temporalMask,
     const FilmGrainBlockMetric *__restrict__ metrics,
     FilmGrainGpuPlaneStats *__restrict__ output) {
     const int bx = blockIdx.x;
     const int by = blockIdx.y;
     const int blockIndex = by * blocksX + bx;
-    if (lumaGate) {
-        if (flatMask[blockIndex] == 0) return;
-    } else if (temporalMask[blockIndex] == 0) {
-        return;
-    }
+    if (temporalMask[blockIndex] == 0) return;
 
     const int tid = threadIdx.y * blockDim.x + threadIdx.x;
     const int threads = blockDim.x * blockDim.y;
     __shared__ float reduce[10 * 64];
-    constexpr int temporalBlock = lumaGate ? FGS_BLOCK_SIZE : FGS_BLOCK_SIZE / 2;
-    const int x0 = bx * temporalBlock;
-    const int y0 = by * temporalBlock;
-    const int blockW = min(temporalBlock, width - x0);
-    const int blockH = min(temporalBlock, height - y0);
+    constexpr int chromaBlock = FGS_BLOCK_SIZE / 2;
+    const int x0 = bx * chromaBlock;
+    const int y0 = by * chromaBlock;
+    const int blockW = min(chromaBlock, width - x0);
+    const int blockH = min(chromaBlock, height - y0);
     const int count = blockW * blockH;
     float sourceSum = 0.0f, sourceX = 0.0f, sourceY = 0.0f, sourceSq = 0.0f;
     float baseSum = 0.0f, baseX = 0.0f, baseY = 0.0f, baseSq = 0.0f;
@@ -847,26 +1023,21 @@ __global__ void kernel_fgs_temporal_strength(
 
     const double invCount = 1.0 / static_cast<double>(count);
     const double sourceMean = reduce[0] * invCount;
-    const double sourceSlopeX = reduce[threads] / fmax(static_cast<double>(reduce[8 * threads]), 1e-6);
-    const double sourceSlopeY = reduce[2 * threads] / fmax(static_cast<double>(reduce[9 * threads]), 1e-6);
-    const double sourceUnplanedVariance = fmax(0.0,
-        (reduce[3 * threads] * invCount - sourceMean * sourceMean) * 0.5);
-    const double sourceVariance = fmax(0.0, sourceUnplanedVariance
+    const double sourceSlopeX = reduce[threads]
+        / fmax(static_cast<double>(reduce[8 * threads]), 1e-6);
+    const double sourceSlopeY = reduce[2 * threads]
+        / fmax(static_cast<double>(reduce[9 * threads]), 1e-6);
+    const double sourceVariance = fmax(0.0,
+        (reduce[3 * threads] * invCount - sourceMean * sourceMean) * 0.5
         - sourceSlopeX * sourceSlopeX * reduce[8 * threads] * invCount * 0.5
         - sourceSlopeY * sourceSlopeY * reduce[9 * threads] * invCount * 0.5);
-    if (lumaGate) {
-        const double spatialVariance = static_cast<double>(metrics[blockIndex].sigma)
-            * metrics[blockIndex].sigma;
-        const double staticRatio = sourceUnplanedVariance / fmax(spatialVariance, 1e-6);
-        if (staticRatio < 0.8 || staticRatio > 1.3 || sourceVariance <= 1e-6) return;
-        if (temporalMask != nullptr) temporalMask[blockIndex] = 1;
-    } else if (sourceVariance <= 1e-6) {
-        return;
-    }
+    if (sourceVariance <= 1e-6) return;
 
     const double baseMean = reduce[4 * threads] * invCount;
-    const double baseSlopeX = reduce[5 * threads] / fmax(static_cast<double>(reduce[8 * threads]), 1e-6);
-    const double baseSlopeY = reduce[6 * threads] / fmax(static_cast<double>(reduce[9 * threads]), 1e-6);
+    const double baseSlopeX = reduce[5 * threads]
+        / fmax(static_cast<double>(reduce[8 * threads]), 1e-6);
+    const double baseSlopeY = reduce[6 * threads]
+        / fmax(static_cast<double>(reduce[9 * threads]), 1e-6);
     const double baseVariance = fmax(0.0,
         (reduce[7 * threads] * invCount - baseMean * baseMean) * 0.5
         - baseSlopeX * baseSlopeX * reduce[8 * threads] * invCount * 0.5
@@ -1045,47 +1216,82 @@ static RGY_ERR launch_model_stats(const RGYFrameInfo& src, const RGYFrameInfo& d
     return err_to_rgy(cudaGetLastError());
 }
 
-template<typename Type, int shift, int components, bool lumaGate>
-static RGY_ERR launch_temporal_plane(const RGYFrameInfo& source,
-    const RGYFrameInfo& previousSource, const RGYFrameInfo& base,
-    const RGYFrameInfo& previousBase, const int width, const int height,
-    const int component, const int blocksX, const int blocksY, const int bitDepth,
-    const uint8_t *flatMask, uint8_t *temporalMask,
-    const FilmGrainBlockMetric *metrics, FilmGrainGpuPlaneStats *stats,
-    cudaStream_t stream) {
-    const dim3 block(8, 8);
-    const dim3 grid(blocksX, blocksY);
-    kernel_fgs_temporal_strength<Type, shift, components, lumaGate><<<grid, block, 0, stream>>>(
-        source.ptr[0], source.pitch[0], previousSource.ptr[0], previousSource.pitch[0],
-        base.ptr[0], base.pitch[0], previousBase.ptr[0], previousBase.pitch[0],
-        width, height, component, blocksX, bitDepth, flatMask, temporalMask, metrics, stats);
-    return err_to_rgy(cudaGetLastError());
-}
-
 template<typename Type, int shift>
 static RGY_ERR launch_temporal_strength(const RGYFrameInfo& source,
     const RGYFrameInfo& previousSource, const RGYFrameInfo& base,
-    const RGYFrameInfo& previousBase, const bool chroma,
-    const int blocksX, const int blocksY, const int bitDepth,
-    const uint8_t *flatMask, uint8_t *temporalMask,
-    const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats,
-    cudaStream_t stream) {
-    if (chroma) {
-        const auto cudaerr = cudaMemsetAsync(
-            temporalMask, 0, static_cast<size_t>(blocksX) * blocksY, stream);
-        if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
-    } else {
-        temporalMask = nullptr;
-    }
+    const RGYFrameInfo& previousBase, const int blocksX, const int blocksY,
+    const int bitDepth, const uint8_t *flatMask, const FilmGrainBlockMetric *metrics,
+    FilmGrainGpuPlaneStats *stats, cudaStream_t stream) {
     const auto sourceY = getPlane(&source, RGY_PLANE_Y);
     const auto previousSourceY = getPlane(&previousSource, RGY_PLANE_Y);
     const auto baseY = getPlane(&base, RGY_PLANE_Y);
     const auto previousBaseY = getPlane(&previousBase, RGY_PLANE_Y);
-    auto sts = launch_temporal_plane<Type, shift, 1, true>(
-        sourceY, previousSourceY, baseY, previousBaseY,
-        sourceY.width, sourceY.height, 0, blocksX, blocksY, bitDepth,
-        flatMask, temporalMask, metrics, &stats->plane[0], stream);
-    if (sts != RGY_ERR_NONE || !chroma) return sts;
+    const dim3 block(8, 8);
+    const dim3 grid(blocksX, blocksY);
+    kernel_fgs_temporal_strength<Type, shift><<<grid, block, 0, stream>>>(
+        sourceY.ptr[0], sourceY.pitch[0], previousSourceY.ptr[0], previousSourceY.pitch[0],
+        baseY.ptr[0], baseY.pitch[0], previousBaseY.ptr[0], previousBaseY.pitch[0],
+        sourceY.width, sourceY.height, blocksX, bitDepth, flatMask, metrics, stats);
+    return err_to_rgy(cudaGetLastError());
+}
+
+static RGY_ERR collect_temporal_strength(const RGYFrameInfo& source,
+    const RGYFrameInfo& previousSource, const RGYFrameInfo& base,
+    const RGYFrameInfo& previousBase, const int blocksX, const int blocksY,
+    const int bitDepth, const uint8_t *flatMask, const FilmGrainBlockMetric *metrics,
+    FilmGrainGpuPlaneStats *stats, cudaStream_t stream) {
+    switch (source.csp) {
+    case RGY_CSP_NV12:
+    case RGY_CSP_YV12:
+        return launch_temporal_strength<uint8_t, 0>(source, previousSource, base,
+            previousBase, blocksX, blocksY, bitDepth, flatMask, metrics, stats, stream);
+    case RGY_CSP_YV12_10:
+        return launch_temporal_strength<uint16_t, 0>(source, previousSource, base,
+            previousBase, blocksX, blocksY, bitDepth, flatMask, metrics, stats, stream);
+    case RGY_CSP_P010:
+        return launch_temporal_strength<uint16_t, 6>(source, previousSource, base,
+            previousBase, blocksX, blocksY, bitDepth, flatMask, metrics, stats, stream);
+    default:
+        return RGY_ERR_UNSUPPORTED;
+    }
+}
+
+template<typename Type, int shift, int components>
+static RGY_ERR launch_temporal_chroma_plane(const RGYFrameInfo& source,
+    const RGYFrameInfo& previousSource, const RGYFrameInfo& base,
+    const RGYFrameInfo& previousBase, const int width, const int height,
+    const int component, const int blocksX, const int blocksY, const int bitDepth,
+    const uint8_t *temporalMask, const FilmGrainBlockMetric *metrics,
+    FilmGrainGpuPlaneStats *stats, cudaStream_t stream) {
+    const dim3 block(8, 8);
+    const dim3 grid(blocksX, blocksY);
+    kernel_fgs_temporal_chroma_strength<Type, shift, components><<<grid, block, 0, stream>>>(
+        source.ptr[0], source.pitch[0], previousSource.ptr[0], previousSource.pitch[0],
+        base.ptr[0], base.pitch[0], previousBase.ptr[0], previousBase.pitch[0],
+        width, height, component, blocksX, bitDepth, temporalMask, metrics, stats);
+    return err_to_rgy(cudaGetLastError());
+}
+
+template<typename Type, int shift>
+static RGY_ERR launch_temporal_chroma_strength(const RGYFrameInfo& source,
+    const RGYFrameInfo& previousSource, const RGYFrameInfo& base,
+    const RGYFrameInfo& previousBase, const int blocksX, const int blocksY,
+    const int bitDepth, const uint8_t *flatMask, uint8_t *temporalMask,
+    const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats,
+    cudaStream_t stream) {
+    auto cudaerr = cudaMemsetAsync(
+        temporalMask, 0, static_cast<size_t>(blocksX) * blocksY, stream);
+    if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+
+    const auto sourceY = getPlane(&source, RGY_PLANE_Y);
+    const auto previousSourceY = getPlane(&previousSource, RGY_PLANE_Y);
+    const dim3 block(8, 8);
+    const dim3 grid(blocksX, blocksY);
+    kernel_fgs_temporal_chroma_mask<Type, shift><<<grid, block, 0, stream>>>(
+        sourceY.ptr[0], sourceY.pitch[0], previousSourceY.ptr[0], previousSourceY.pitch[0],
+        sourceY.width, sourceY.height, blocksX, flatMask, metrics, temporalMask);
+    auto sts = err_to_rgy(cudaGetLastError());
+    if (sts != RGY_ERR_NONE) return sts;
 
     const bool semiPlanar = source.csp == RGY_CSP_NV12 || source.csp == RGY_CSP_P010;
     if (semiPlanar) {
@@ -1094,10 +1300,10 @@ static RGY_ERR launch_temporal_strength(const RGYFrameInfo& source,
         const auto baseUV = getPlane(&base, RGY_PLANE_U);
         const auto previousBaseUV = getPlane(&previousBase, RGY_PLANE_U);
         for (int component = 0; component < 2; ++component) {
-            sts = launch_temporal_plane<Type, shift, 2, false>(
+            sts = launch_temporal_chroma_plane<Type, shift, 2>(
                 sourceUV, previousSourceUV, baseUV, previousBaseUV,
                 source.width / 2, source.height / 2, component,
-                blocksX, blocksY, bitDepth, flatMask, temporalMask, metrics,
+                blocksX, blocksY, bitDepth, temporalMask, metrics,
                 &stats->plane[component + 1], stream);
             if (sts != RGY_ERR_NONE) return sts;
         }
@@ -1109,36 +1315,35 @@ static RGY_ERR launch_temporal_strength(const RGYFrameInfo& source,
             const auto baseC = getPlane(&base, static_cast<RGY_PLANE>(plane));
             const auto previousBaseC = getPlane(
                 &previousBase, static_cast<RGY_PLANE>(plane));
-            sts = launch_temporal_plane<Type, shift, 1, false>(
+            sts = launch_temporal_chroma_plane<Type, shift, 1>(
                 sourceC, previousSourceC, baseC, previousBaseC,
                 sourceC.width, sourceC.height, 0, blocksX, blocksY, bitDepth,
-                flatMask, temporalMask, metrics, &stats->plane[plane], stream);
+                temporalMask, metrics, &stats->plane[plane], stream);
             if (sts != RGY_ERR_NONE) return sts;
         }
     }
     return RGY_ERR_NONE;
 }
 
-static RGY_ERR collect_temporal_strength(const RGYFrameInfo& source,
+static RGY_ERR collect_temporal_chroma_strength(const RGYFrameInfo& source,
     const RGYFrameInfo& previousSource, const RGYFrameInfo& base,
-    const RGYFrameInfo& previousBase, const bool chroma,
-    const int blocksX, const int blocksY, const int bitDepth,
+    const RGYFrameInfo& previousBase, const int blocksX, const int blocksY, const int bitDepth,
     const uint8_t *flatMask, uint8_t *temporalMask,
     const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats,
     cudaStream_t stream) {
     switch (source.csp) {
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
-        return launch_temporal_strength<uint8_t, 0>(source, previousSource, base,
-            previousBase, chroma, blocksX, blocksY, bitDepth, flatMask,
+        return launch_temporal_chroma_strength<uint8_t, 0>(source, previousSource, base,
+            previousBase, blocksX, blocksY, bitDepth, flatMask,
             temporalMask, metrics, stats, stream);
     case RGY_CSP_YV12_10:
-        return launch_temporal_strength<uint16_t, 0>(source, previousSource, base,
-            previousBase, chroma, blocksX, blocksY, bitDepth, flatMask,
+        return launch_temporal_chroma_strength<uint16_t, 0>(source, previousSource, base,
+            previousBase, blocksX, blocksY, bitDepth, flatMask,
             temporalMask, metrics, stats, stream);
     case RGY_CSP_P010:
-        return launch_temporal_strength<uint16_t, 6>(source, previousSource, base,
-            previousBase, chroma, blocksX, blocksY, bitDepth, flatMask,
+        return launch_temporal_chroma_strength<uint16_t, 6>(source, previousSource, base,
+            previousBase, blocksX, blocksY, bitDepth, flatMask,
             temporalMask, metrics, stats, stream);
     default:
         return RGY_ERR_UNSUPPORTED;
@@ -1987,18 +2192,24 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     const bool temporalLeakEnabled = prm->leakTargetQuality >= 0.0f
         && m_previousSource && m_previousBase;
     if (temporalLeakEnabled && m_temporalLeakValid) {
-        // Denoising has already consumed the adaptive sigma map. Reuse its
-        // device storage as a one-byte-per-luma-block temporal-static mask so
-        // U/V are measured on exactly the luma population which passed the
-        // established motion/cut rejection gate.
         sts = collect_temporal_strength(*source, m_previousSource->frame, *output,
-            m_previousBase->frame, m_chromaLeakMode != ChromaLeakMode::Off,
-            m_blocksX, m_blocksY, bitDepth,
+            m_previousBase->frame, m_blocksX, m_blocksY, bitDepth,
             static_cast<const uint8_t *>(m_blockMask->ptrDevice),
-            static_cast<uint8_t *>(m_sigmaMap->ptrDevice),
             static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
-            static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice), stream);
+            &static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice)->plane[0], stream);
         if (sts != RGY_ERR_NONE) return sts;
+        if (m_chromaLeakMode != ChromaLeakMode::Off) {
+            // Denoising has already consumed the adaptive sigma map. Reuse its
+            // device storage as a one-byte-per-luma-block temporal-static mask
+            // for the opt-in U/V measurement.
+            sts = collect_temporal_chroma_strength(*source, m_previousSource->frame, *output,
+                m_previousBase->frame, m_blocksX, m_blocksY, bitDepth,
+                static_cast<const uint8_t *>(m_blockMask->ptrDevice),
+                static_cast<uint8_t *>(m_sigmaMap->ptrDevice),
+                static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
+                static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice), stream);
+            if (sts != RGY_ERR_NONE) return sts;
+        }
     }
     if (temporalLeakEnabled) {
         if ((sts = copyFrameAsync(&m_previousSource->frame, source, stream)) != RGY_ERR_NONE
