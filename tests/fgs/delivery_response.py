@@ -111,7 +111,12 @@ def uniform_bin_response(response, legal_codes):
 
 
 def correction_residual(target_ratio, exact_sigma, predicted_sigma):
-    """Residual target-ratio error after scaling by target/prediction."""
+    """Linearized residual after scaling by target/prediction.
+
+    This is exact only when delivered amplitude is locally proportional to the
+    curve. Restricted-range clipping near black can make the replayed result
+    materially different, so a corrected table still requires exact audit.
+    """
     if predicted_sigma <= 0.0:
         return None
     return target_ratio * (exact_sigma / predicted_sigma - 1.0)
@@ -164,7 +169,7 @@ def summarize_band(band, sums, count, qvbr):
             "predicted_sigma": predicted,
             "predicted_over_exact": (
                 predicted / exact if predicted is not None and exact else None),
-            "post_correction_target_error": (
+            "linearized_post_correction_target_error": (
                 correction_residual(target, exact, predicted)
                 if predicted is not None else None),
         }
@@ -203,7 +208,7 @@ def summarize_sparse(reference_bands, variance_sums, counts, qvbr,
                 "maximum": float(np.max(predicted)),
                 "values": [float(value) for value in predicted],
             },
-            "post_correction_target_error": {
+            "linearized_post_correction_target_error": {
                 "mean": float(np.mean(errors)),
                 "minimum": float(np.min(errors)),
                 "maximum": float(np.max(errors)),
@@ -220,7 +225,7 @@ def summarize_sparse(reference_bands, variance_sums, counts, qvbr,
         "selected_block_pairs": total_blocks,
         "sampled_fraction": sampled_blocks / total_blocks,
         "evaluated_clean_pixels_per_repeat": sampled_blocks * 2 * 32 * 32,
-        "error_summary": {
+        "linearized_error_summary": {
             "mean_abs": float(np.mean(absolute)),
             "p95_abs": float(np.percentile(absolute, 95)),
             "max_abs": float(np.max(absolute)),

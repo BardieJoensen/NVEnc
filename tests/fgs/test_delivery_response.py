@@ -53,7 +53,8 @@ class DeliveryResponseTests(unittest.TestCase):
             summary["bands"][0]["predicted_sigma"]["values"],
             [2.0, 3.0])
         self.assertEqual(len(summary["bands"][0]
-                             ["post_correction_target_error"]["values"]), 2)
+                             ["linearized_post_correction_target_error"]
+                             ["values"]), 2)
 
     def test_analyzer_bin_matches_twenty_equal_native_ranges(self):
         self.assertEqual(delivery_response.analyzer_bin_from_native(0, 10), 0)
