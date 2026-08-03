@@ -14,8 +14,9 @@ Four arms keep build drift and model-source effects separate:
 * ``bilateral-source``: the same candidate binary with ``modelsrc=on``.
 
 The corpus includes the labelled Drag Race and Stormester failures, studio
-detail, clean digital video, animation, and a grain-positive Silo control.
-Every source is an original H.264 download rather than a library AV1 encode.
+detail, clean digital video, clean animation, textured Blu-ray animation, and
+a grain-positive Silo control.  Every source is an original H.264 download
+rather than a library AV1 encode.
 Clips are cut losslessly at one-third duration.  The flow's actual operating
 point is reproduced: QVBR 29 for ordinary content and QVBR 34 for animation,
 with quality/HQ, AQ and temporal AQ enabled.
@@ -107,6 +108,26 @@ TITLES = (
         "WEB-DL.DDP5.1.H.264-NTb.mkv",
         "2D animation",
         "clean-edge and QVBR-34 transfer control",
+        qvbr=34,
+    ),
+    Title(
+        "Phineas_and_Ferb",
+        "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/"
+        "Phineas.and.Ferb.S01.1080p.DSNP.WEB-DL.AAC2.0.H.264-PHOENiX/"
+        "Phineas.and.Ferb.S01E01-E02.Rollercoaster.&.Candace.Loses.Her.Head."
+        "1080p.DSNP.WEB-DL.AAC2.0.H.264-PHOENiX.mkv",
+        "clean 2D animation / bright flat fills",
+        "held-out clean-animation routing control",
+        qvbr=34,
+    ),
+    Title(
+        "Legend_of_Korra",
+        "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/"
+        "The Legend of Korra S03 1080p Blu-ray Remux AVC DTS-HD MA "
+        "5.1-BluPanther/The Legend of Korra S03E01 1080p Blu-ray Remux AVC "
+        "DTS-HD MA 5.1-BluPanther.mkv",
+        "textured 2D animation / Blu-ray source",
+        "held-out grain-bearing animation boundary control",
         qvbr=34,
     ),
     Title(

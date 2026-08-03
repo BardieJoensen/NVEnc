@@ -40,6 +40,13 @@ class GeneralContentGateTest(unittest.TestCase):
         self.assertNotIn("--av1-film-grain", command)
         self.assertNotIn("--film-grain-table-out", command)
 
+    def test_animation_controls_use_flow_qvbr(self):
+        catalog = gate.title_map()
+        for name in ("Rick_and_Morty", "Phineas_and_Ferb", "Legend_of_Korra"):
+            with self.subTest(name=name):
+                self.assertEqual(catalog[name].qvbr, 34)
+                self.assertIn("/downloads/", catalog[name].source)
+
     def test_color_args_ignore_unknown_fields(self):
         self.assertEqual(gate.color_args({
             "color_range": "tv",
