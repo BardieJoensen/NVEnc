@@ -23,6 +23,7 @@ import statistics
 
 import review_score
 from integrated_architecture import (
+    MOTION_ARMS,
     TITLES,
     complete_task,
     identity,
@@ -33,7 +34,7 @@ from integrated_architecture import (
 )
 
 
-ARMS = ("plain", "production", "causal", "paired", "balanced")
+ARMS = ("plain", "production", *MOTION_ARMS)
 DEFAULT_ARMS = ("plain", "production", "causal", "paired")
 CROP = "crop=1920:1080:960:540"
 COLOR = (
