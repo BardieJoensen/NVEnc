@@ -41,6 +41,20 @@ class DeliveryResponseTests(unittest.TestCase):
         self.assertAlmostEqual(response[7], 22.0)
         self.assertTrue(np.isnan(response[0]))
 
+    def test_sparse_summary_retains_each_selection_for_table_replay(self):
+        references = [{
+            "range": [0.0, 0.5], "seed_mean_sigma": 2.0,
+            "pre_encode_leak": 0.0,
+        }]
+        summary = delivery_response.summarize_sparse(
+            references, np.asarray([[4.0], [9.0]]), np.asarray([1]),
+            qvbr=29.0, sample_limit=4, sampled_blocks=1)
+        self.assertEqual(
+            summary["bands"][0]["predicted_sigma"]["values"],
+            [2.0, 3.0])
+        self.assertEqual(len(summary["bands"][0]
+                             ["post_correction_target_error"]["values"]), 2)
+
     def test_analyzer_bin_matches_twenty_equal_native_ranges(self):
         self.assertEqual(delivery_response.analyzer_bin_from_native(0, 10), 0)
         self.assertEqual(delivery_response.analyzer_bin_from_native(511, 10), 9)

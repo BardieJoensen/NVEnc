@@ -11,6 +11,8 @@ tests progressively richer substitutes:
 * ``clean_pixel_histogram`` uses the clean pixels' 8-bit luma histogram;
 * ``fixed_seed_clean_pixels`` (optional and deliberately expensive) runs one
   normative seed over the actual clean blocks as an upper-bound diagnostic.
+* ``sparse_clean_pixels`` bounds that last method per frame and analyser luma
+  bin, then repeats deterministic spatial selections to expose sampling risk.
 
 All response curves use the quantized table model and one deterministic seed
 per measured frame.  The reference values come from an existing
@@ -199,12 +201,14 @@ def summarize_sparse(reference_bands, variance_sums, counts, qvbr,
                 "mean": float(np.mean(predicted)),
                 "minimum": float(np.min(predicted)),
                 "maximum": float(np.max(predicted)),
+                "values": [float(value) for value in predicted],
             },
             "post_correction_target_error": {
                 "mean": float(np.mean(errors)),
                 "minimum": float(np.min(errors)),
                 "maximum": float(np.max(errors)),
                 "max_abs": float(np.max(np.abs(errors))),
+                "values": [float(value) for value in errors],
             },
         })
     absolute = np.asarray(all_errors, dtype=np.float64)

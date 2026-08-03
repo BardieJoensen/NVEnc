@@ -79,6 +79,38 @@ def scale_entry_luma(entry, factor):
     return candidate, shift_down
 
 
+def sparse_expected_by_range(response, emission, blocks_per_bin, repeat):
+    """Return synthesis/truth ratios from one realizable sparse selection."""
+    models = response.get("sparse_clean_pixels", {}).get("models", [])
+    matches = [
+        model for model in models
+        if model["blocks_per_frame_bin"] == blocks_per_bin
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            f"sparse response has no unique {blocks_per_bin}-block model")
+    model = matches[0]
+    if repeat < 0 or repeat >= model["selection_repeats"]:
+        raise ValueError(
+            f"sparse repeat {repeat} outside 0..{model['selection_repeats'] - 1}")
+    reference = emission.get("luma_bins", [])
+    bands = model.get("bands", [])
+    if len(bands) != len(reference):
+        raise ValueError("sparse response and emission luma-band counts differ")
+    expected = {}
+    for response_band, reference_band in zip(bands, reference):
+        if response_band["range"] != reference_band["range"]:
+            raise ValueError("sparse response and emission luma ranges differ")
+        values = response_band.get("predicted_sigma", {}).get("values", [])
+        if repeat >= len(values):
+            raise ValueError("sparse response does not retain per-repeat values")
+        truth = reference_band["truth_sigma"]
+        if truth <= 0.0:
+            raise ValueError("emission luma band has non-positive truth sigma")
+        expected[tuple(reference_band["range"])] = values[repeat] / truth
+    return expected, model
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="candidate filmgrn1 table")
@@ -90,6 +122,16 @@ def main():
     parser.add_argument(
         "--per-luma", action="store_true",
         help="derive an interpolated factor from every populated fixed luma band")
+    parser.add_argument(
+        "--sparse-response", default="",
+        help="delivery_response.py JSON used instead of the exact multi-seed "
+             "expectation to derive per-luma factors")
+    parser.add_argument(
+        "--sparse-blocks-per-bin", type=int, default=0,
+        help="sample limit to select from --sparse-response")
+    parser.add_argument(
+        "--sparse-repeat", type=int, default=0,
+        help="deterministic selection index from --sparse-response")
     parser.add_argument("--output", required=True)
     parser.add_argument("--json-out", default="")
     parser.add_argument("--min-factor", type=float, default=0.75)
@@ -100,6 +142,25 @@ def main():
         closure = json.load(handle)
     with open(args.emission, encoding="utf-8") as handle:
         emission = json.load(handle)
+    sparse_expected = None
+    sparse_model = None
+    if args.sparse_response:
+        if not args.per_luma:
+            parser.error("--sparse-response requires --per-luma")
+        if args.sparse_blocks_per_bin <= 0:
+            parser.error(
+                "--sparse-response requires positive --sparse-blocks-per-bin")
+        with open(args.sparse_response, encoding="utf-8") as handle:
+            response = json.load(handle)
+        if os.path.realpath(response.get("emission", "")) != os.path.realpath(
+                args.emission):
+            parser.error("sparse response was not derived from --emission")
+        try:
+            sparse_expected, sparse_model = sparse_expected_by_range(
+                response, emission, args.sparse_blocks_per_bin,
+                args.sparse_repeat)
+        except ValueError as error:
+            parser.error(str(error))
     pre_leak = closure["aggregate"][MASK]["temporal_leak_ratio"]
     expected = emission["aggregate"]["seed_mean_ratio"]
     samples = emission["aggregate"]["seed_samples"]
@@ -111,7 +172,9 @@ def main():
     factor_points = []
     if args.per_luma:
         for band in emission.get("luma_bins", []):
-            band_expected = band["seed_mean_ratio"]
+            band_expected = (
+                sparse_expected[tuple(band["range"])]
+                if sparse_expected is not None else band["seed_mean_ratio"])
             if not band_expected or band["blocks"] <= 0:
                 continue
             band_theta, band_post, band_target = target_from_pre_leak(
@@ -159,9 +222,11 @@ def main():
     filmgrn.load(args.output)
 
     report = {
-        "scope": ("per-luma interpolated prototype"
-                  if args.per_luma else
-                  "whole-curve aggregate prototype; requires luma-band validation"),
+        "scope": (
+            "per-luma sparse actual-clean-pixel prototype"
+            if sparse_expected is not None else
+            "per-luma interpolated prototype" if args.per_luma else
+            "whole-curve aggregate prototype; requires luma-band validation"),
         "input": os.path.abspath(args.input),
         "output": os.path.abspath(args.output),
         "closure": os.path.abspath(args.closure),
@@ -177,6 +242,15 @@ def main():
         "luma_factor_points": factor_points,
         "luma_bins": band_report,
         "seed_samples": samples,
+        "sparse_response": (
+            os.path.abspath(args.sparse_response)
+            if args.sparse_response else None),
+        "sparse_blocks_per_frame_bin": (
+            args.sparse_blocks_per_bin if sparse_model is not None else None),
+        "sparse_selection_repeat": (
+            args.sparse_repeat if sparse_model is not None else None),
+        "sparse_sampled_fraction": (
+            sparse_model["sampled_fraction"] if sparse_model is not None else None),
         "updated_entries": updated,
         "entries_requiring_shared_shift": shifted,
     }

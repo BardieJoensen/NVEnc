@@ -80,6 +80,27 @@ class FilmGrainTableTest(unittest.TestCase):
         self.assertAlmostEqual(delivery_normalize.interpolate_factor(points, 32), 1.0)
         self.assertAlmostEqual(delivery_normalize.interpolate_factor(points, 255), 0.9)
 
+    def test_sparse_response_selects_one_repeat_and_normalizes_by_truth(self):
+        emission = {"luma_bins": [
+            {"range": [0.0, 0.5], "truth_sigma": 4.0},
+            {"range": [0.5, 1.0], "truth_sigma": 8.0},
+        ]}
+        response = {"sparse_clean_pixels": {"models": [{
+            "blocks_per_frame_bin": 16,
+            "selection_repeats": 2,
+            "bands": [
+                {"range": [0.0, 0.5],
+                 "predicted_sigma": {"values": [3.0, 3.2]}},
+                {"range": [0.5, 1.0],
+                 "predicted_sigma": {"values": [7.0, 7.2]}},
+            ],
+        }]}}
+        expected, model = delivery_normalize.sparse_expected_by_range(
+            response, emission, 16, 1)
+        self.assertAlmostEqual(expected[(0.0, 0.5)], 0.8)
+        self.assertAlmostEqual(expected[(0.5, 1.0)], 0.9)
+        self.assertEqual(model["blocks_per_frame_bin"], 16)
+
 
 if __name__ == "__main__":
     unittest.main()
