@@ -8,6 +8,31 @@ import emission_audit
 
 
 class EmissionAuditTests(unittest.TestCase):
+    def test_encoded_path_supports_labelled_and_single_stream_reports(self):
+        self.assertEqual(
+            emission_audit.encoded_path_for_arm(
+                {"encoded_arms": {"q29": "/tmp/q29.mkv"}}, "q29"),
+            "/tmp/q29.mkv")
+        self.assertEqual(
+            emission_audit.encoded_path_for_arm(
+                {"encoded": "/tmp/paired.mkv"}, "encoded"),
+            "/tmp/paired.mkv")
+        with self.assertRaises(ValueError):
+            emission_audit.encoded_path_for_arm(
+                {"encoded": "/tmp/paired.mkv"}, "paired")
+
+    def test_delivered_row_supports_both_closure_layouts(self):
+        labelled = {"encoded_arms": {"q29": {"synth_ratio": 0.9}}}
+        legacy = {"encoded": {"synth_ratio": 0.8}}
+        self.assertIs(
+            emission_audit.delivered_for_arm(labelled, "q29"),
+            labelled["encoded_arms"]["q29"])
+        self.assertIs(
+            emission_audit.delivered_for_arm(legacy, "encoded"),
+            legacy["encoded"])
+        with self.assertRaises(ValueError):
+            emission_audit.delivered_for_arm(legacy, "q29")
+
     def test_entry_for_frame_uses_table_timebase(self):
         entries = [
             {"start": 0, "end": 1_000_000},

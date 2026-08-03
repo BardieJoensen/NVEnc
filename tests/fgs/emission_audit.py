@@ -141,6 +141,37 @@ def probe_grain_entries(path, frame_count):
     return entries
 
 
+def encoded_path_for_arm(closure, arm):
+    """Resolve old single-stream and new labelled closure report layouts."""
+    encoded_arms = closure.get("encoded_arms", {})
+    if encoded_arms:
+        if arm not in encoded_arms:
+            raise ValueError(f"closure report has no encoded arm {arm}")
+        return encoded_arms[arm]
+    encoded = closure.get("encoded")
+    if encoded:
+        if arm != "encoded":
+            raise ValueError(
+                "single-stream closure report requires --arm encoded")
+        return encoded
+    raise ValueError("closure report has no encoded stream")
+
+
+def delivered_for_arm(measured, arm):
+    """Resolve a measured row from either closure report layout."""
+    encoded_arms = measured.get("encoded_arms", {})
+    if encoded_arms:
+        if arm not in encoded_arms:
+            raise ValueError(f"closure row has no encoded arm {arm}")
+        return encoded_arms[arm]
+    if "encoded" in measured:
+        if arm != "encoded":
+            raise ValueError(
+                "single-stream closure row requires --arm encoded")
+        return measured["encoded"]
+    raise ValueError("closure row has no encoded measurement")
+
+
 def table_matches_stream(table_entry, stream_entry):
     """The seed is expected to differ; every signalled model field must match."""
     # filmgrn1 stores the unsigned AV1 syntax values.  ffprobe exposes the
@@ -261,10 +292,10 @@ def main():
 
     with open(args.closure, encoding="utf-8") as handle:
         closure = json.load(handle)
-    encoded_paths = closure.get("encoded_arms", {})
-    if args.arm not in encoded_paths:
-        raise SystemExit(f"closure report has no encoded arm {args.arm}")
-    encoded = encoded_paths[args.arm]
+    try:
+        encoded = encoded_path_for_arm(closure, args.arm)
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
     frames = closure["frames"]
     indices = sorted(set(frames + [frame + 1 for frame in frames]))
     width, height = probe_size(args.source)
@@ -409,7 +440,11 @@ def main():
             (predicted_blocks - actual_blocks).reshape(-1),
             (next_predicted_blocks - next_actual_blocks).reshape(-1)))
         measured = closure_rows[frame_number]["masks"]["production_static"]
-        delivered = measured["encoded_arms"][args.arm]
+        try:
+            delivered = delivered_for_arm(measured, args.arm)
+        except ValueError as error:
+            raise SystemExit(
+                f"frame {frame_number}: {error}") from error
         delivered_variance = delivered["synth_variance_sum"] / delivered["blocks"]
         truth_variance = delivered["truth_variance_sum"] / delivered["blocks"]
         count = delivered["blocks"]
