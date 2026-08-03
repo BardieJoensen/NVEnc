@@ -410,17 +410,20 @@ def main():
     print(f"{'range':<15}{'blocks':>8}{'truth':>9}{'target':>9}"
           f"{'synth':>9}{'played':>9}{'s/tgt':>9}{'noY/act':>10}"
           f"{'white/act':>11}{'curve':>9}{'nz':>8}")
+    def number(value, width):
+        return f"{value:>{width}.3f}" if value is not None else f"{'n/a':>{width}}"
+
     for row in luma_bins:
         low, high = row["range"]
         sigma = row["sigma"]
         print(f"{low:.3f}-{high:.3f} {row['blocks']:>7}"
-              f"{sigma['truth']:>9.3f}{sigma['target']:>9.3f}"
-              f"{sigma['actual']:>9.3f}{sigma['played']:>9.3f}"
-              f"{row['synth_over_target']['actual']:>9.3f}"
-              f"{row['counterfactual_over_actual']['no_luma']:>10.3f}"
-              f"{row['counterfactual_over_actual']['white']:>11.3f}"
-              f"{row['curve_scale_rms']:>9.2f}"
-              f"{row['nonzero_delta_fraction']:>8.3f}")
+              f"{number(sigma['truth'], 9)}{number(sigma['target'], 9)}"
+              f"{number(sigma['actual'], 9)}{number(sigma['played'], 9)}"
+              f"{number(row['synth_over_target']['actual'], 9)}"
+              f"{number(row['counterfactual_over_actual']['no_luma'], 10)}"
+              f"{number(row['counterfactual_over_actual']['white'], 11)}"
+              f"{number(row['curve_scale_rms'], 9)}"
+              f"{number(row['nonzero_delta_fraction'], 8)}")
     print("aggregate "
           f"truth={aggregate['sigma']['truth']:.3f} "
           f"target={aggregate['sigma']['target']:.3f} "
