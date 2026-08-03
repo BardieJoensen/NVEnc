@@ -147,6 +147,11 @@ protected:
 
 private:
     struct AnalyzerState;
+    enum class MotionFinishMode {
+        Uniform,
+        DetailAware,
+        ChromaOnly,
+    };
 
     void recordTableEntry(int64_t timestamp, int64_t duration, const NV_ENC_FILM_GRAIN_PARAMS_AV1& params);
     void writeTableFile();
@@ -159,6 +164,7 @@ private:
     float m_fft3dSigma;
     std::unique_ptr<NVEncFilterDegrain> m_motionDegrain;
     std::shared_ptr<NVEncFilterParamDegrain> m_motionDegrainParam;
+    MotionFinishMode m_motionFinishMode;
     std::unique_ptr<CUMemBufPair> m_blockMetrics;
     std::unique_ptr<CUMemBufPair> m_blockMask;
     std::unique_ptr<CUMemBufPair> m_sigmaMap;

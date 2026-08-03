@@ -1196,7 +1196,7 @@ tstring NVEncFilterParamFilmGrain::print() const {
 NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_denoiseWork(), m_previousSource(), m_previousBase(),
     m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
-    m_motionDegrain(), m_motionDegrainParam(),
+    m_motionDegrain(), m_motionDegrainParam(), m_motionFinishMode(MotionFinishMode::Uniform),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWritten(false),
     m_temporalLeakValid(false),
@@ -1407,6 +1407,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         return sts;
     }
     config.fft3dTemporal = clamp(config.fft3dTemporal, 1, 2);
+    m_motionFinishMode = MotionFinishMode::Uniform;
     if (config.denoiser == FGS_DENOISE_FFT3D) {
         m_motionDegrain.reset();
         m_motionDegrainParam.reset();
@@ -1445,6 +1446,25 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         m_motionDegrainParam->baseFps = prm->baseFps;
         m_motionDegrainParam->bOutOverwrite = false;
         m_motionDegrainParam->attachAnalysisData = false;
+        // Test-only isolation of the spatial luma pass which follows motion
+        // compensation.  Keep chroma on in every arm: the motion child only
+        // handles luma, so disabling the whole pass would change two
+        // independent questions at once.  The default remains byte-stable.
+        if (const auto value = std::getenv("NVENC_FGS_TEST_MOTION_FINISH"); value && value[0] != '\0') {
+            if (strcmp(value, "detail") == 0) {
+                m_motionFinishMode = MotionFinishMode::DetailAware;
+                AddMessage(RGY_LOG_WARN,
+                    _T("film-grain: applying test-only detail-aware motion luma finish.\n"));
+            } else if (strcmp(value, "off") == 0) {
+                m_motionFinishMode = MotionFinishMode::ChromaOnly;
+                AddMessage(RGY_LOG_WARN,
+                    _T("film-grain: applying test-only chroma-only motion finish.\n"));
+            } else {
+                AddMessage(RGY_LOG_WARN,
+                    _T("film-grain: ignoring invalid NVENC_FGS_TEST_MOTION_FINISH=%s (expected detail or off).\n"),
+                    char_to_tstring(value).c_str());
+            }
+        }
         // Deliberately environment-only while the centred scheduler is under
         // corpus evaluation; do not expose an unvalidated production option.
         bool testCenteredPaired = false;
@@ -1831,11 +1851,15 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // also handles semi-planar chroma which the motion child leaves raw.
         sts = copyFrameAsync(&m_denoiseWork->frame, output, stream);
         if (sts != RGY_ERR_NONE) return sts;
+        const bool finishLuma = m_motionFinishMode != MotionFinishMode::ChromaOnly;
+        const auto detailMetrics = m_motionFinishMode == MotionFinishMode::DetailAware
+            ? static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice)
+            : nullptr;
         sts = denoise_frame(output, &m_denoiseWork->frame, &m_denoiseWork->frame,
-            prm->filmGrain.analyzeChroma, true,
+            prm->filmGrain.analyzeChroma, finishLuma,
             1, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
-            nullptr,
+            detailMetrics,
             m_blocksX, m_blocksY, stream);
         if (sts != RGY_ERR_NONE) return sts;
     } else {

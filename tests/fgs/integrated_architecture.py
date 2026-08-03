@@ -10,6 +10,9 @@ This harness deliberately separates four questions:
   render confidence is paired at the weaker SAD.
 * ``balanced`` is the same centred pair with total temporal exposure matched
   to the causal arm, so direction changes without doubling reference weight.
+* ``balanced-detail`` and ``balanced-nofinish`` isolate the luma spatial
+  finishing pass after that temporal operator.  They remain environment-only
+  research arms and always retain the ordinary chroma finish.
 
 The source-fit arms use the QVBR-29/P4/no-AQ regime on which the temporal leak
 transfer was calibrated.  A later production-settings transfer test must not be
@@ -47,6 +50,14 @@ TITLES = (
     "Taxi_Driver",
     "The_Deer_Hunter",
     "The_Shining",
+)
+
+MOTION_ARMS = (
+    "causal",
+    "paired",
+    "balanced",
+    "balanced-detail",
+    "balanced-nofinish",
 )
 
 CONTROLLED_ENCODE = (
@@ -104,6 +115,7 @@ def run_logged(command: list[str], env: dict[str, str], log: Path) -> float:
         selected = {
             key: env[key] for key in (
                 "NVENC_FGS_TEST_MOTION_CENTERED",
+                "NVENC_FGS_TEST_MOTION_FINISH",
                 "NVENC_FGS_TEST_MOTION_THSAD",
             ) if key in env
         }
@@ -144,19 +156,23 @@ def publish_outputs(partials: list[Path], outputs: list[Path]) -> None:
 def fgs_options(arm: str) -> str:
     if arm == "production":
         return "denoise=auto,chroma=auto,denoiser=bilateral"
-    if arm in ("causal", "paired", "balanced"):
+    if arm in MOTION_ARMS:
         return "denoise=auto,chroma=auto,denoiser=motion,motion-refs=1,modelsrc=on"
     raise ValueError(arm)
 
 
 def arm_environment(arm: str) -> dict[str, str]:
     env = os.environ.copy()
-    if arm in ("causal", "paired", "balanced"):
+    if arm in MOTION_ARMS:
         env["NVENC_FGS_TEST_MOTION_THSAD"] = "640"
     if arm == "paired":
         env["NVENC_FGS_TEST_MOTION_CENTERED"] = "paired"
-    if arm == "balanced":
+    if arm in ("balanced", "balanced-detail", "balanced-nofinish"):
         env["NVENC_FGS_TEST_MOTION_CENTERED"] = "paired-balanced"
+    if arm == "balanced-detail":
+        env["NVENC_FGS_TEST_MOTION_FINISH"] = "detail"
+    if arm == "balanced-nofinish":
+        env["NVENC_FGS_TEST_MOTION_FINISH"] = "off"
     return env
 
 
@@ -210,7 +226,8 @@ def main() -> int:
     parser.add_argument("--titles", default=",".join(TITLES))
     parser.add_argument(
         "--arms", default="plain,production,causal,paired",
-        help="comma-separated subset of plain,production,causal,paired,balanced")
+        help=("comma-separated subset of plain,production,causal,paired,balanced,"
+              "balanced-detail,balanced-nofinish"))
     parser.add_argument("--skip-clean", action="store_true")
     parser.add_argument("--skip-decode", action="store_true")
     args = parser.parse_args()
@@ -231,7 +248,7 @@ def main() -> int:
         parser.error(f"unknown titles: {', '.join(unknown_titles)}")
     arms = [value.strip() for value in args.arms.split(",") if value.strip()]
     unknown_arms = sorted(set(arms).difference(
-        ("plain", "production", "causal", "paired", "balanced")))
+        ("plain", "production", *MOTION_ARMS)))
     if unknown_arms:
         parser.error(f"unknown arms: {', '.join(unknown_arms)}")
 
@@ -282,6 +299,7 @@ def main() -> int:
                 "environment": {
                     key: env[key] for key in (
                         "NVENC_FGS_TEST_MOTION_CENTERED",
+                        "NVENC_FGS_TEST_MOTION_FINISH",
                         "NVENC_FGS_TEST_MOTION_THSAD",
                     ) if key in env
                 },
