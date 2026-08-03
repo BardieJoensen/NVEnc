@@ -21,7 +21,8 @@ import time
 
 
 DEFAULT_TITLES = (
-    "Casino", "Taxi_Driver", "The_Deer_Hunter", "The_Shining",
+    "Casino", "Interstellar", "Taxi_Driver", "The_Deer_Hunter",
+    "The_Shining",
 )
 ARMS = ("production bilateral/residual", "bilateral/source-fit")
 
@@ -128,8 +129,9 @@ review copies.
    for any real-detail or black-level difference rather than motion ghosting.
 2. Watch the finished pair at normal speed. Judge grain *scale* first: coarse
    film grain should not turn into fine electronic noise.
-3. Judge strength separately, especially dark weak-grain regions. Look for
-   crawling colour noise, chroma blotches, dark-band lift, pumping or obvious
+3. Judge strength separately. Inspect bright flat regions first -- skies,
+   walls and faces in key light -- then dark weak-grain regions. Look for
+   crawling colour noise, chroma blotches, lift, pumping or obvious
    under/over-graining.
 4. Record title, A/B, timestamp and observation before opening the reveal.
 
@@ -137,9 +139,18 @@ Independent AV1 grain fields occupy different pixel positions. Do not score a
 paused-frame grain-pattern mismatch; judge texture, strength, stability and
 interaction with picture detail.
 
-Taxi Driver is the coarse-grain and dark-chroma stress case. Deer Hunter has
-the strongest measured luma-shape slope. Casino previously exposed detail
-substitution, and The Shining checks correlated grain and amplitude.
+The strength report already flags the brightest populated luma band
+(`0.375--0.500`) on Taxi Driver (low), Interstellar (high) and Deer Hunter
+(high). Treat visible bright-band errors as confirmation of that known risk,
+not a new result. Chroma V also changes from title-mean under-delivery in the
+production arm to over-delivery in the source-fit arm; Deer Hunter U is the
+largest U outlier. Note any visible colour crawl or blotches, but do not let
+that replace the grain-texture judgement.
+
+Taxi Driver is the coarse-grain and dark-chroma stress case. Interstellar is
+the whole-title and thin bright-band over-delivery stress case. Deer Hunter
+has the strongest measured bright-band error. Casino previously exposed
+detail substitution, and The Shining checks correlated grain and amplitude.
 """
 
 

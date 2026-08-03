@@ -8,8 +8,8 @@
 ## Question
 
 The integrated source-fit campaign established that fitting the AV1 AR model
-from source flat blocks fixes the residual fit's systematically over-fine
-grain, but its large compression result used an experimental motion separator
+from source flat blocks fixes the residual fit's incorrect spatial grain
+structure, but its large compression result used an experimental motion separator
 that has not cleared perceptual disocclusion review. This experiment isolates
 the architectural grain-model change from that separator risk:
 
@@ -85,6 +85,15 @@ Per-title values make the change concrete:
 This is the primary quality result. The source-fit architecture fixes the
 fine-versus-coarse grain problem without requiring the motion separator.
 
+Production lag-2 is negative on four of six titles. On Casino, Deer Hunter and
+The Shining it has the wrong sign relative to a positive source; on Scarface it
+turns an effectively zero source (`-0.002`) into a material negative
+correlation (`-0.094`). Calling production merely "over-fine" understates the
+failure: it often synthesizes a spurious anti-correlated distance-2 structure.
+That is a plausible mechanism for grain that reads as electronic noise rather
+than film texture, and makes source fitting a structural correction rather
+than a tuning preference.
+
 ## Luma strength: corpus closure is good; shape is still open
 
 Equal-frame amplitude means overweight low-grain frames. The decision uses
@@ -105,8 +114,8 @@ Measured base-plus-synthesis variance predicts played total within 0.009 on
 every candidate title. This independently agrees with the exact Taxi emission
 audit.
 
-The corpus aggregate does not close the per-luma question. Populated candidate
-bands include:
+The corpus aggregate does not close the per-luma question. All three flagged
+candidate bands are the brightest populated `0.375--0.500` band:
 
 | title/band | blocks | played total | direction |
 | --- | ---: | ---: | --- |
@@ -139,6 +148,10 @@ real open issue:
 | V | bilateral-source | 1.120 | 0.126 | Taxi 1.173, Deer 1.234, Shining 1.245 |
 
 Texture improves by roughly an order of magnitude, but V amplitude does not.
+Its mean actually inverts from production under-delivery (`0.895`) to
+candidate over-delivery (`1.120`), with three titles above `1.17`; the slightly
+smaller MAE hides that directional change. U genuinely improves overall, but
+its worst title, Deer Hunter, worsens from `1.139` to `1.286`.
 The existing temporal leak closure intentionally rewrites only the luma
 strength statistics. Chroma still uses the spatial source-minus-base estimate,
 so it is now the most direct analyser-quality gap. Do not hide this with a
@@ -209,8 +222,9 @@ written.
    masks, then test a per-plane temporal source/base strength estimate offline.
    Implement chroma temporal closure only if it closes all six films without a
    fixed corpus multiplier.
-5. Prepare a blind production-versus-bilateral-source playback comparison for
-   Taxi Driver, Deer Hunter, Casino and The Shining after the strength report
-   is trustworthy. Judge grain scale, dark-band lift, chroma crawling and real
-   detail independently.
-
+5. Run the blind production-versus-bilateral-source playback comparison for
+   Taxi Driver, Interstellar, Deer Hunter, Casino and The Shining. Judge grain
+   scale and real detail first; explicitly inspect bright flat regions,
+   dark-band lift and chroma crawling. Because per-luma and chroma strength are
+   still open, observations in those known failure regions confirm the
+   measurement gaps rather than deciding the architecture alone.

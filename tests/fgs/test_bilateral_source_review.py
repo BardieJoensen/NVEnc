@@ -6,6 +6,9 @@ import bilateral_source_review
 
 
 class BilateralSourceReviewTests(unittest.TestCase):
+    def test_default_review_includes_known_strength_outlier(self):
+        self.assertIn("Interstellar", bilateral_source_review.DEFAULT_TITLES)
+
     def test_assignment_is_stable_and_complete(self):
         first = bilateral_source_review.assignment("Taxi_Driver")
         second = bilateral_source_review.assignment("Taxi_Driver")
@@ -34,6 +37,12 @@ class BilateralSourceReviewTests(unittest.TestCase):
             bilateral_source_review.input_for(
                 "bilateral/source-fit", "Casino", integrated, bilateral),
             Path("/bilateral/Casino/bilateral-source.mkv"))
+
+    def test_readme_points_review_at_measured_failure_regions(self):
+        readme = bilateral_source_review.render_readme()
+        self.assertIn("bright flat regions", readme)
+        self.assertIn("Interstellar", readme)
+        self.assertIn("Chroma V", readme)
 
 
 if __name__ == "__main__":
