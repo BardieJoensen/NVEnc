@@ -41,6 +41,15 @@ from strength_selection_report import decode_selected, probe_size  # noqa: E402
 FGS_STRENGTH_BINS = 20
 
 
+def parse_positive_ints(value):
+    if not value:
+        return []
+    values = sorted(set(int(item) for item in value.split(",")))
+    if any(item <= 0 for item in values):
+        raise ValueError("sample counts must be positive")
+    return values
+
+
 def analyzer_bin_from_native(value, bits):
     return min(FGS_STRENGTH_BINS - 1, max(
         0, int(value * FGS_STRENGTH_BINS / (1 << bits))))
@@ -106,6 +115,42 @@ def correction_residual(target_ratio, exact_sigma, predicted_sigma):
     return target_ratio * (exact_sigma / predicted_sigma - 1.0)
 
 
+def deterministic_sample_positions(positions, blocks, frame, limit, salt):
+    """Choose a repeatable spatially mixed subset without Python hash state."""
+    positions = [int(position) for position in positions]
+    if len(positions) <= limit:
+        return np.asarray(positions, dtype=np.int64)
+
+    def rank(position):
+        row, col = blocks[position]
+        value = ((frame + 1) * 0x9E3779B1
+                 ^ (row + 1) * 0x85EBCA6B
+                 ^ (col + 1) * 0xC2B2AE35
+                 ^ (salt + 1) * 0x27D4EB2F) & 0xffffffff
+        value ^= value >> 16
+        value = (value * 0x7FEB352D) & 0xffffffff
+        value ^= value >> 15
+        return value, position
+
+    return np.asarray(sorted(positions, key=rank)[:limit], dtype=np.int64)
+
+
+def sampled_bin_responses(pair_variances, block_bins, blocks,
+                          frame, limit, salt):
+    """Estimate each populated analyser-bin response from selected blocks."""
+    responses = np.full(FGS_STRENGTH_BINS, np.nan, dtype=np.float64)
+    samples = 0
+    for bin_index in range(FGS_STRENGTH_BINS):
+        positions = np.flatnonzero(block_bins == bin_index)
+        if not len(positions):
+            continue
+        selected = deterministic_sample_positions(
+            positions, blocks, frame, limit, salt)
+        responses[bin_index] = float(np.mean(pair_variances[selected]))
+        samples += len(selected)
+    return responses, samples
+
+
 def summarize_band(band, sums, count, qvbr):
     _theta, _post_leak, target = target_from_pre_leak(
         band["pre_encode_leak"], qvbr)
@@ -132,6 +177,54 @@ def summarize_band(band, sums, count, qvbr):
     }
 
 
+def summarize_sparse(reference_bands, variance_sums, counts, qvbr,
+                     sample_limit, sampled_blocks):
+    """Summarize deterministic selection sensitivity for one sample limit."""
+    repeats = variance_sums.shape[0]
+    band_rows = []
+    all_errors = []
+    for band_index, band in enumerate(reference_bands):
+        exact = band["seed_mean_sigma"]
+        _theta, _post_leak, target = target_from_pre_leak(
+            band["pre_encode_leak"], qvbr)
+        predicted = np.sqrt(variance_sums[:, band_index] / counts[band_index])
+        errors = np.asarray([
+            correction_residual(target, exact, value) for value in predicted
+        ], dtype=np.float64)
+        all_errors.extend(np.abs(errors).tolist())
+        band_rows.append({
+            "range": band["range"],
+            "blocks": int(counts[band_index]),
+            "predicted_sigma": {
+                "mean": float(np.mean(predicted)),
+                "minimum": float(np.min(predicted)),
+                "maximum": float(np.max(predicted)),
+            },
+            "post_correction_target_error": {
+                "mean": float(np.mean(errors)),
+                "minimum": float(np.min(errors)),
+                "maximum": float(np.max(errors)),
+                "max_abs": float(np.max(np.abs(errors))),
+            },
+        })
+    absolute = np.asarray(all_errors, dtype=np.float64)
+    total_blocks = int(np.sum(counts))
+    return {
+        "blocks_per_frame_bin": sample_limit,
+        "selection_repeats": repeats,
+        "sampled_block_pairs_per_repeat": sampled_blocks,
+        "selected_block_pairs": total_blocks,
+        "sampled_fraction": sampled_blocks / total_blocks,
+        "evaluated_clean_pixels_per_repeat": sampled_blocks * 2 * 32 * 32,
+        "error_summary": {
+            "mean_abs": float(np.mean(absolute)),
+            "p95_abs": float(np.percentile(absolute, 95)),
+            "max_abs": float(np.max(absolute)),
+        },
+        "bands": band_rows,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -144,11 +237,23 @@ def main():
         "--fixed-seed-clean-pixels", action="store_true",
         help="also run the expensive one-seed actual-clean-pixel upper bound")
     parser.add_argument(
+        "--sparse-blocks-per-bin", default="",
+        help="comma-separated actual-clean block limits per frame/luma bin")
+    parser.add_argument(
+        "--sparse-repeats", type=int, default=8,
+        help="deterministic spatial selections per sparse limit (default 8)")
+    parser.add_argument(
         "--aom-grain-source",
         default=os.environ.get(
             "AOM_GRAIN_SOURCE", "/tmp/aomref/src/av1/decoder/grain_synthesis.c"))
     parser.add_argument("--json-out", default="")
     args = parser.parse_args()
+    try:
+        sparse_limits = parse_positive_ints(args.sparse_blocks_per_bin)
+    except ValueError as error:
+        parser.error(str(error))
+    if args.sparse_repeats <= 0:
+        parser.error("--sparse-repeats must be positive")
 
     with open(args.emission, encoding="utf-8") as handle:
         emission = json.load(handle)
@@ -182,6 +287,12 @@ def main():
         for name in method_names
     }
     counts = np.zeros(len(luma_ranges), dtype=np.int64)
+    sparse_sums = {
+        limit: np.zeros(
+            (args.sparse_repeats, len(luma_ranges)), dtype=np.float64)
+        for limit in sparse_limits
+    }
+    sparse_sampled_blocks = {limit: 0 for limit in sparse_limits}
 
     for frame in frames:
         current_source = np.asarray(source[frame], dtype=np.float64)
@@ -212,10 +323,23 @@ def main():
                 fixture_codes, fixture_base, fixture_blocks)
             responses.append(response)
             uniform.append(uniform_bin_response(response, fixture_codes))
-            if args.fixed_seed_clean_pixels:
+            if args.fixed_seed_clean_pixels or sparse_limits:
                 exact_clean.append(selected_variances(
                     av1_grain.synthesize_selected_luma(
                         clean[frame_number], blocks, seeded, gaussian, bits)))
+
+        sparse_responses = {}
+        if sparse_limits:
+            pair_variances = 0.5 * (exact_clean[0] + exact_clean[1])
+            for limit in sparse_limits:
+                sparse_responses[limit] = []
+                for repeat in range(args.sparse_repeats):
+                    responses_by_bin, sample_count = sampled_bin_responses(
+                        pair_variances, block_bins, blocks,
+                        frame, limit, repeat)
+                    sparse_responses[limit].append(responses_by_bin)
+                    if repeat == 0:
+                        sparse_sampled_blocks[limit] += sample_count
 
         for band, selected_positions in enumerate(positions):
             for position in selected_positions:
@@ -241,6 +365,10 @@ def main():
                 if args.fixed_seed_clean_pixels:
                     sums["fixed_seed_clean_pixels"][band] += 0.5 * (
                         exact_clean[0][position] + exact_clean[1][position])
+                for limit, repeated in sparse_responses.items():
+                    for repeat, responses_by_bin in enumerate(repeated):
+                        sparse_sums[limit][repeat, band] += responses_by_bin[
+                            source_bin]
                 counts[band] += 1
 
     bands = []
@@ -263,6 +391,18 @@ def main():
         "fixed_response_seed_samples_per_frame": 1,
         "bands": bands,
     }
+    if sparse_limits:
+        report["sparse_clean_pixels"] = {
+            "sampling": (
+                "bounded deterministic blocks per frame pair and analyser "
+                "source-luma bin; one normative seed on actual clean pixels"),
+            "models": [
+                summarize_sparse(
+                    emission["luma_bins"], sparse_sums[limit], counts,
+                    args.qvbr, limit, sparse_sampled_blocks[limit])
+                for limit in sparse_limits
+            ],
+        }
     print(json.dumps(report, indent=2))
     if args.json_out:
         with open(args.json_out, "w", encoding="utf-8") as handle:

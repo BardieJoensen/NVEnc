@@ -16,10 +16,4 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
     tests/fgs/parser_test.cpp NVEncCore/NVEncFilmGrain.cpp -o "$OUT/fgs_parser_test"
 "$OUT/fgs_solver_test"
 "$OUT/fgs_parser_test"
-python3 tests/fgs/test_filmgrn.py
-python3 tests/fgs/test_quality_metrics.py
-python3 tests/fgs/test_texture_metrics.py
-python3 tests/fgs/test_model_gate.py
-python3 tests/fgs/test_source_fit.py
-python3 tests/fgs/test_emission_audit.py
-python3 tests/fgs/test_qvbr_leak_fit.py
+python3 -m unittest discover -s tests/fgs -p 'test_*.py'

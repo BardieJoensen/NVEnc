@@ -11,6 +11,36 @@ import delivery_response  # noqa: E402
 
 
 class DeliveryResponseTests(unittest.TestCase):
+    def test_parse_positive_ints_sorts_deduplicates_and_rejects_zero(self):
+        self.assertEqual(
+            delivery_response.parse_positive_ints("16,4,16,8"),
+            [4, 8, 16])
+        self.assertEqual(delivery_response.parse_positive_ints(""), [])
+        with self.assertRaises(ValueError):
+            delivery_response.parse_positive_ints("0,8")
+
+    def test_deterministic_sampling_is_repeatable_and_bounded(self):
+        blocks = [(row, col) for row in range(4) for col in range(4)]
+        positions = np.arange(len(blocks))
+        first = delivery_response.deterministic_sample_positions(
+            positions, blocks, 10, 5, 3)
+        second = delivery_response.deterministic_sample_positions(
+            positions, blocks, 10, 5, 3)
+        np.testing.assert_array_equal(first, second)
+        self.assertEqual(len(first), 5)
+        self.assertEqual(len(set(first.tolist())), 5)
+
+    def test_sampled_bin_response_uses_only_matching_positions(self):
+        variances = np.asarray([1.0, 3.0, 20.0, 24.0])
+        bins = np.asarray([2, 2, 7, 7])
+        blocks = [(0, index) for index in range(4)]
+        response, samples = delivery_response.sampled_bin_responses(
+            variances, bins, blocks, frame=0, limit=8, salt=0)
+        self.assertEqual(samples, 4)
+        self.assertAlmostEqual(response[2], 2.0)
+        self.assertAlmostEqual(response[7], 22.0)
+        self.assertTrue(np.isnan(response[0]))
+
     def test_analyzer_bin_matches_twenty_equal_native_ranges(self):
         self.assertEqual(delivery_response.analyzer_bin_from_native(0, 10), 0)
         self.assertEqual(delivery_response.analyzer_bin_from_native(511, 10), 9)
