@@ -39,6 +39,7 @@ for bilateral and 35.3-52.3 for motion.
 | `source_fit.py` | offline oracle: what the AR fit should be, with an ideal-clean control | simulation clipping if `--sim-sigma` is left at a saturating value |
 | `ar_acf.py` / `cap_table_acf.py` | coefficient-implied autocorrelation of an emitted table | saturating simulation/clipping or too few simulation seeds; the table seed is intentionally irrelevant to this coefficient statistic |
 | `amplitude_matched_texture.py` | metric response to fine versus coarse grain with base, seed, luma placement and delivered energy controlled | a single static model does not reproduce rolling per-luma delivery or decide perceptual quality |
+| `sourcefit_admission_report.py` | per-table-entry temporal texture evidence, AV1 model fidelity, luma-band coverage and confidence as separate axes | it intentionally emits no routing verdict; a scalar or post-hoc corpus threshold overfits |
 
 Amplitude and texture must be reported **separately**.  HF sigma alone cannot
 tell correct grain from correctly-sized grain: 2026-07-17 measured HF 3.67
@@ -84,6 +85,13 @@ operating-point comparison and the files intentionally differ in size.  Add a
 separate matched-bitrate sweep when answering rate-quality questions.  The
 plain control is also what exposes metric bias in stages 1 and 2, so it is not
 optional.
+
+When a model option unexpectedly changes bytes, use
+`sourcefit_transfer_isolation.py`: it encodes the full clean-base x grain-table
+factorial and runs complete dav1d validation. This distinguishes changed base
+complexity from table/encoder interaction. On Silo it localized the entire
++26.3% source-fit movement to the base, then same-arm repeats and debug traces
+identified the original-frame safety fallback after persistent model rejection.
 
 ## Stage 5 -- safety and invariance (gates, not diagnostics)
 

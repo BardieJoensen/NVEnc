@@ -4,6 +4,13 @@
 > Tdarr remains on r4069 with bilateral separation and residual model fitting;
 > `modelsrc` remains default-off and the flow routing is unchanged.
 
+> **Follow-up correction:** the Silo base delta is not merely strength-driven
+> luma level compensation. Persistent source-model rejection restores 300/600
+> original frames, including chroma. The raw-base factorial and held-out
+> animation extension are documented in
+> `FINDINGS-2026-08-03-SOURCEFIT-ADMISSION-FALLBACK.md` and supersede the Silo
+> mechanism and next-step interpretation below.
+
 ## Decision
 
 **Do not enable `modelsrc=on` for every existing FGS route.** The six-film
@@ -91,11 +98,12 @@ base quality as follows:
 | Rick and Morty | +0.0356 | -0.0093 | +0.0007 |
 | Silo | **+1.0095** | **+1.7872** | -0.0395 |
 
-Five titles are effectively flat and Silo improves. This agrees with the code
-architecture: `modelsrc` changes model/strength estimation, while bilateral
-continues to produce the base. The decoded bases are not pixel-identical
-because the signalled strength LUT drives the intentional one-code luma level
-compensation before encoding.
+Five titles are effectively flat and Silo improves. The original interpretation
+was that this agreed with a strictly separator-independent architecture. The
+follow-up raw-base factorial disproved that interpretation for persistent model
+failure: source fitting is independent while valid, but after the bounded hold
+expires the quality fallback restores the original frame. Ordinary decoded-base
+differences also include the intentional luma level compensation.
 
 The candidate-control arm was necessary. Only Silo is pixel-identical to
 deployed r4069; later candidate commits move the other five streams slightly.
@@ -165,10 +173,11 @@ their direction to a perceptual ranking. A blind playback comparison remains
 required before assigning perceptual meaning to the direction.
 
 The Silo size movement is different and cannot be dismissed as metric bias.
-The same separator/source clip grows from 5.797 MB to 7.311 MB while the other
-five source-fit arms remain within 0.4% of control. Its source-fit base gains
-1.01 VMAF, so the next localisation is the raw pre-encode base and the
-strength-driven luma level compensation, not rate-control tuning.
+The same source clip grows from 5.797 MB to 7.311 MB while the other five
+source-fit arms remain within 0.4% of control. The completed localization shows
+that the base accounts for +26.36--26.39% and table choice for less than 0.03%:
+300 source-fit frames exhaust the safe model hold and restore the original
+frame. This is not a rate-control or level-compensation effect.
 
 ## What this says about the deployed blanket FGS route
 
@@ -200,13 +209,12 @@ live flow from a single episode.
    model fidelity to temporal texture, evidence that the texture is film-like
    rather than codec/graphics residue, and coverage/confidence. Do not collapse
    them into one fixture-derived threshold.
-4. Expand the plain/deployed base gate to at least three original-source
-   animation titles and three clean/studio titles. If animation repeats Rick
-   and Morty's base loss and weak saving, bypass FGS for the existing Animation
-   NFO route independently of `modelsrc`.
-5. Isolate Silo's +26.13% transfer by comparing raw pre-encode bases with and
-   without source fitting, then encoding those fixed bases. This distinguishes
-   level compensation from model-dependent rate-control behaviour.
+4. The animation gate now contains Rick and Morty, Phineas and Ferb, and Legend
+   of Korra. Their savings span 3.9--13.6%, so do not implement a blanket
+   Animation-NFO bypass.
+5. The Silo transfer is isolated: persistent source-model rejection restores
+   the original frame and accounts for the size movement. Prototype a residual
+   model fallback behind `modelsrc=on`; keep the source copy as the last resort.
 6. Keep the five-film blind playback review. On general content, explicitly
    judge whether source-fit texture looks like restored camera grain or newly
    synthesized compression/raster noise.
