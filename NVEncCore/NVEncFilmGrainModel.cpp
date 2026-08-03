@@ -49,7 +49,7 @@ NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     sourceModelCorrelation(0.0f), sourceArScale(1.0f), sourceStrengthGain(1.0f),
     preEncodeLeak(0.0f), predictedPostEncodeLeak(0.0f), leakDeadzone(0.0f),
     temporalLeakBlocks(0), strengthRectifiedBlocks(0),
-    sourceRegularizationRejected(false), leakCompensated(false),
+    sourceRegularizationRejected(false), sourceModelFallback(false), leakCompensated(false),
     reliable(false), sceneReset(false), modelHeld(false) {
 }
 
@@ -708,6 +708,31 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
         diagnostics.noiseStdDev[c] = total > 0
             ? static_cast<float>(std::sqrt(weightedVariance / total) * solved[c].templateGain) : 0.0f;
     }
+    return true;
+}
+
+bool build_source_film_grain_params_with_residual_fallback(
+    const FilmGrainGpuStats& sourceStats, const FilmGrainGpuStats& residualStats,
+    const int bitDepth, const bool analyzeChroma, const bool limitedRange,
+    NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
+    NVEncFilmGrainDiagnostics& diagnostics, const double maxLumaCorrelation) {
+    diagnostics.sourceModelFallback = false;
+    if (build_film_grain_params(sourceStats, bitDepth, analyzeChroma,
+        limitedRange, params, diagnostics, maxLumaCorrelation)) {
+        return true;
+    }
+
+    // Preserve the rejected source fit's diagnostic fields. The residual
+    // model is a conservative output choice, not evidence that the preferred
+    // source model passed its representability checks.
+    NVEncFilmGrainDiagnostics fallbackDiagnostics = diagnostics;
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 fallbackParams = {};
+    if (!build_film_grain_params(residualStats, bitDepth, analyzeChroma,
+        limitedRange, fallbackParams, fallbackDiagnostics, -1.0)) {
+        return false;
+    }
+    params = fallbackParams;
+    diagnostics.sourceModelFallback = true;
     return true;
 }
 

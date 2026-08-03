@@ -162,6 +162,36 @@ void testSourceTemplateGain() {
         "source template-gain normalization preserves target sigma");
 }
 
+void testSourceModelResidualFallback() {
+    FilmGrainGpuStats unstableSource = {};
+    fillHorizontalPlane(unstableSource.plane[0], 6.0, 0.90);
+    FilmGrainGpuStats stableResidual = {};
+    fillHorizontalPlane(stableResidual.plane[0], 6.0, 0.15);
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 params;
+    NVEncFilmGrainDiagnostics diagnostics;
+    expect(build_source_film_grain_params_with_residual_fallback(
+        unstableSource, stableResidual, 8, false, true,
+        params, diagnostics, 0.20),
+        "residual model keeps synthesis available after source rejection");
+    expect(diagnostics.sourceRegularizationRejected,
+        "fallback preserves the source rejection diagnostic");
+    expect(diagnostics.sourceModelFallback,
+        "fallback selection is exposed in diagnostics");
+    expect(params.applyGrain != 0,
+        "residual fallback emits grain instead of a denoised-only base");
+
+    FilmGrainGpuStats emptyResidual = {};
+    NVEncFilmGrainDiagnostics failed;
+    expect(!build_source_film_grain_params_with_residual_fallback(
+        unstableSource, emptyResidual, 8, false, true,
+        params, failed, 0.20),
+        "source fallback still fails closed when neither model is solvable");
+    expect(failed.sourceRegularizationRejected,
+        "double failure preserves the source rejection diagnostic");
+    expect(!failed.sourceModelFallback,
+        "failed residual solve is not reported as a selected fallback");
+}
+
 void testTemporalLeakClosure() {
     FilmGrainGpuStats stats = {};
     auto& luma = stats.plane[0];
@@ -429,6 +459,7 @@ int main() {
     testStratifiedSampling();
     testSourceCorrelationRegularizer();
     testSourceTemplateGain();
+    testSourceModelResidualFallback();
     testTemporalLeakClosure();
     testChromaTemporalLeakClosure();
     testWhiteLuma();

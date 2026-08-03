@@ -67,6 +67,7 @@ struct NVEncFilmGrainDiagnostics {
     uint64_t temporalLeakBlocks;
     uint64_t strengthRectifiedBlocks;
     bool sourceRegularizationRejected;
+    bool sourceModelFallback;
     bool leakCompensated;
     bool reliable;
     bool sceneReset;
@@ -195,6 +196,11 @@ bool apply_chroma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
 bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,
     bool analyzeChroma, bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
     NVEncFilmGrainDiagnostics& diagnostics, double maxLumaCorrelation = -1.0);
+bool build_source_film_grain_params_with_residual_fallback(
+    const FilmGrainGpuStats& sourceStats, const FilmGrainGpuStats& residualStats,
+    int bitDepth, bool analyzeChroma, bool limitedRange,
+    NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
+    NVEncFilmGrainDiagnostics& diagnostics, double maxLumaCorrelation);
 double implied_luma_correlation(const std::vector<double>& coeffs, double scale = 1.0);
 double eval_scaling_curve(const uint8_t *values, const uint8_t *scalings, uint32_t count, double x);
 bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC_FILM_GRAIN_PARAMS_AV1& b,

@@ -1056,6 +1056,7 @@ namespace {
 
 struct FilmGrainHostStats {
     FilmGrainGpuStats gpu;
+    FilmGrainGpuStats fallbackGpu;
     float measuredNoise;
     float detailRisk;
     float grainCorrelation;
@@ -1361,7 +1362,9 @@ struct NVEncFilterFilmGrain::AnalyzerState {
     NV_ENC_FILM_GRAIN_PARAMS_AV1 lastParams;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 pendingParams;
     bool lastParamsValid;
+    bool lastParamsFallback;
     bool pendingParamsValid;
+    bool pendingParamsFallback;
     bool modelWindowSettled;
     int pendingStreak;
     int framesSinceModelUpdate;
@@ -1369,7 +1372,8 @@ struct NVEncFilterFilmGrain::AnalyzerState {
 
     AnalyzerState() : history(), previousBlockMeans(), stableNoise(0.0f), autoRetain(0.0f),
         lastTimestamp(std::numeric_limits<int64_t>::min()), lastParams(), pendingParams(),
-        lastParamsValid(false), pendingParamsValid(false), modelWindowSettled(false),
+        lastParamsValid(false), lastParamsFallback(false),
+        pendingParamsValid(false), pendingParamsFallback(false), modelWindowSettled(false),
         pendingStreak(0), framesSinceModelUpdate(0), heldStreak(0) {}
     void advanceModelAge() {
         if (framesSinceModelUpdate < std::numeric_limits<int>::max()) ++framesSinceModelUpdate;
@@ -1383,7 +1387,9 @@ struct NVEncFilterFilmGrain::AnalyzerState {
         std::memset(&lastParams, 0, sizeof(lastParams));
         std::memset(&pendingParams, 0, sizeof(pendingParams));
         lastParamsValid = false;
+        lastParamsFallback = false;
         pendingParamsValid = false;
+        pendingParamsFallback = false;
         modelWindowSettled = false;
         pendingStreak = 0;
         framesSinceModelUpdate = 0;
@@ -1478,6 +1484,7 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_motionDegrain(), m_motionDegrainParam(), m_motionFinishMode(MotionFinishMode::Uniform),
     m_chromaLeakMode(ChromaLeakMode::Off),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
+    m_fallbackModelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWritten(false),
     m_temporalLeakValid(false),
     m_state(std::make_unique<AnalyzerState>()), m_blocksX(0), m_blocksY(0) {
@@ -1697,6 +1704,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     m_strengthLut = std::make_unique<CUMemBufPair>(FGS_STRENGTH_LUT_SIZE * sizeof(float));
     m_sceneCounts = std::make_unique<CUMemBufPair>(8 * sizeof(uint32_t));
     m_modelStats = std::make_unique<CUMemBufPair>(sizeof(FilmGrainGpuStats));
+    m_fallbackModelStats.reset();
     if ((sts = m_blockMetrics->alloc()) != RGY_ERR_NONE
         || (sts = m_blockMask->alloc()) != RGY_ERR_NONE
         || (sts = m_sigmaMap->alloc()) != RGY_ERR_NONE
@@ -1705,6 +1713,13 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         || (sts = m_modelStats->alloc()) != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("Failed to allocate film-grain analysis buffers: %s.\n"), get_err_mes(sts));
         return sts;
+    }
+    if (config.modelFromSource) {
+        m_fallbackModelStats = std::make_unique<CUMemBufPair>(sizeof(FilmGrainGpuStats));
+        if ((sts = m_fallbackModelStats->alloc()) != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("Failed to allocate film-grain fallback statistics: %s.\n"), get_err_mes(sts));
+            return sts;
+        }
     }
     config.fft3dTemporal = clamp(config.fft3dTemporal, 1, 2);
     m_motionFinishMode = MotionFinishMode::Uniform;
@@ -2189,6 +2204,24 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice),
         prm->filmGrain.modelFromSource, stream);
     if (sts != RGY_ERR_NONE) return sts;
+    if (prm->filmGrain.modelFromSource) {
+        // A source-derived model can be rejected after quantization when AV1's
+        // finite AR template would need an unsafe strength correction. Keep a
+        // residual fit over the exact same bilateral base as a conservative
+        // fallback. This leaves the separator independent of model success;
+        // restoring the original frame remains the last resort only when both
+        // models are unsolvable.
+        cudaerr = cudaMemsetAsync(
+            m_fallbackModelStats->ptrDevice, 0, m_fallbackModelStats->nSize, stream);
+        if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+        sts = collect_model_stats(source, output, prm->filmGrain.analyzeChroma,
+            m_blocksX, m_blocksY, bitDepth,
+            static_cast<const uint8_t *>(m_blockMask->ptrDevice),
+            static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
+            static_cast<FilmGrainGpuStats *>(m_fallbackModelStats->ptrDevice),
+            false, stream);
+        if (sts != RGY_ERR_NONE) return sts;
+    }
     const bool temporalLeakEnabled = prm->leakTargetQuality >= 0.0f
         && m_previousSource && m_previousBase;
     if (temporalLeakEnabled && m_temporalLeakValid) {
@@ -2216,6 +2249,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             || (sts = copyFrameAsync(&m_previousBase->frame, output, stream)) != RGY_ERR_NONE) return sts;
     }
     if ((sts = m_modelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
+    if (prm->filmGrain.modelFromSource
+        && (sts = m_fallbackModelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     cudaerr = cudaStreamSynchronize(stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
     if (temporalLeakEnabled) m_temporalLeakValid = true;
@@ -2253,6 +2288,10 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     }
     FilmGrainHostStats current = {};
     std::memcpy(&current.gpu, m_modelStats->ptrHost, sizeof(current.gpu));
+    if (prm->filmGrain.modelFromSource) {
+        std::memcpy(&current.fallbackGpu,
+            m_fallbackModelStats->ptrHost, sizeof(current.fallbackGpu));
+    }
     if (sceneReset) {
         // The current frame becomes the reference for the new scene, but its
         // difference against the old scene must not enter the new model even
@@ -2308,8 +2347,15 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     diagnostics.sceneReset = sceneReset;
 
     FilmGrainGpuStats combined = {};
+    FilmGrainGpuStats fallbackCombined = {};
     for (const auto& frame : m_state->history) {
-        for (int plane = 0; plane < 3; ++plane) add_plane_stats(combined.plane[plane], frame.gpu.plane[plane]);
+        for (int plane = 0; plane < 3; ++plane) {
+            add_plane_stats(combined.plane[plane], frame.gpu.plane[plane]);
+            if (prm->filmGrain.modelFromSource) {
+                add_plane_stats(
+                    fallbackCombined.plane[plane], frame.fallbackGpu.plane[plane]);
+            }
+        }
     }
     bool chromaLeakCompensated = false;
     if (prm->filmGrain.modelFromSource) {
@@ -2323,18 +2369,25 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 m_chromaLeakMode == ChromaLeakMode::Local);
         }
     }
-    bool modelValid = diagnostics.modelFrames >= prm->filmGrain.minModelFrames
-        && build_film_grain_params(combined, bitDepth, prm->filmGrain.analyzeChroma,
-            prm->filmGrain.clipToRestrictedRange, params, diagnostics,
-            prm->filmGrain.modelFromSource
-                ? std::min(0.98, static_cast<double>(diagnostics.grainCorrelation)
-                    + FGS_SOURCE_CORRELATION_MARGIN)
-                : -1.0);
+    bool modelValid = false;
+    if (diagnostics.modelFrames >= prm->filmGrain.minModelFrames) {
+        modelValid = prm->filmGrain.modelFromSource
+            ? build_source_film_grain_params_with_residual_fallback(
+                combined, fallbackCombined, bitDepth,
+                prm->filmGrain.analyzeChroma,
+                prm->filmGrain.clipToRestrictedRange, params, diagnostics,
+                std::min(0.98, static_cast<double>(diagnostics.grainCorrelation)
+                    + FGS_SOURCE_CORRELATION_MARGIN))
+            : build_film_grain_params(
+                combined, bitDepth, prm->filmGrain.analyzeChroma,
+                prm->filmGrain.clipToRestrictedRange, params, diagnostics, -1.0);
+    }
     if (modelValid) {
         const double modelTolerance = prm->filmGrain.denoiser == FGS_DENOISE_MOTION ? 0.10 : 0.05;
         if (!m_state->lastParamsValid) {
             m_state->lastParams = params;
             m_state->lastParamsValid = true;
+            m_state->lastParamsFallback = diagnostics.sourceModelFallback;
             m_state->pendingParamsValid = false;
             m_state->modelWindowSettled = diagnostics.modelFrames >= prm->filmGrain.modelWindow;
             m_state->pendingStreak = 0;
@@ -2352,10 +2405,12 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             if (film_grain_params_close(
                 params, m_state->lastParams, modelTolerance, modelTolerance)) {
                 params = m_state->lastParams;
+                diagnostics.sourceModelFallback = m_state->lastParamsFallback;
                 diagnostics.modelHeld = true;
                 m_state->advanceModelAge();
             } else {
                 m_state->lastParams = params;
+                m_state->lastParamsFallback = diagnostics.sourceModelFallback;
                 m_state->framesSinceModelUpdate = 0;
             }
         } else if (film_grain_params_close(
@@ -2364,6 +2419,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             // jitters around it; requantizing every frame makes the grain
             // character twinkle.  NVENC still varies the grain seed per frame.
             params = m_state->lastParams;
+            diagnostics.sourceModelFallback = m_state->lastParamsFallback;
             diagnostics.modelHeld = true;
             m_state->pendingParamsValid = false;
             m_state->pendingStreak = 0;
@@ -2378,21 +2434,26 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             if (m_state->pendingParamsValid && film_grain_params_close(
                 params, m_state->pendingParams, candidateTolerance, candidateTolerance)) {
                 m_state->pendingParams = params;
+                m_state->pendingParamsFallback = diagnostics.sourceModelFallback;
                 ++m_state->pendingStreak;
             } else {
                 m_state->pendingParams = params;
                 m_state->pendingParamsValid = true;
+                m_state->pendingParamsFallback = diagnostics.sourceModelFallback;
                 m_state->pendingStreak = 1;
             }
             if (m_state->pendingStreak >= FGS_MODEL_CANDIDATE_FRAMES
                 && m_state->framesSinceModelUpdate >= FGS_MODEL_MIN_UPDATE_FRAMES) {
                 params = m_state->pendingParams;
                 m_state->lastParams = params;
+                m_state->lastParamsFallback = m_state->pendingParamsFallback;
+                diagnostics.sourceModelFallback = m_state->lastParamsFallback;
                 m_state->pendingParamsValid = false;
                 m_state->pendingStreak = 0;
                 m_state->framesSinceModelUpdate = 0;
             } else {
                 params = m_state->lastParams;
+                diagnostics.sourceModelFallback = m_state->lastParamsFallback;
                 diagnostics.modelHeld = true;
                 m_state->advanceModelAge();
             }
@@ -2403,6 +2464,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // dropping grain for a single frame; bounded so a persistent failure
         // cannot pin a stale model.
         params = m_state->lastParams;
+        diagnostics.sourceModelFallback = m_state->lastParamsFallback;
         diagnostics.modelHeld = true;
         modelValid = true;
         m_state->pendingParamsValid = false;
@@ -2411,6 +2473,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         ++m_state->heldStreak;
     } else {
         std::memset(&params, 0, sizeof(params));
+        diagnostics.sourceModelFallback = false;
         sts = copyFrameAsync(output, source, stream);
         if (sts != RGY_ERR_NONE) return sts;
     }
@@ -2492,7 +2555,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             pointsCr += strsprintf(_T(" %d:%d"), params.pointCrValue[i], params.pointCrScaling[i]);
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
-            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f modelCorr=%.3f arScale=%.3f strengthGain=%.3f regReject=%d ")
+            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f modelCorr=%.3f arScale=%.3f strengthGain=%.3f regReject=%d fallback=%d ")
             _T("leak=%.3f>%.3f theta=%.3f temporal=%llu rectified=%llu leakClose=%d chromaLeak=%d:%d ")
             _T("scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
@@ -2503,6 +2566,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             diagnostics.detailRisk, diagnostics.residualRetain, diagnostics.grainCorrelation,
             diagnostics.sourceModelCorrelation, diagnostics.sourceArScale,
             diagnostics.sourceStrengthGain, diagnostics.sourceRegularizationRejected ? 1 : 0,
+            diagnostics.sourceModelFallback ? 1 : 0,
             diagnostics.preEncodeLeak, diagnostics.predictedPostEncodeLeak,
             diagnostics.leakDeadzone,
             static_cast<unsigned long long>(diagnostics.temporalLeakBlocks),
@@ -2536,6 +2600,7 @@ void NVEncFilterFilmGrain::close() {
     m_strengthLut.reset();
     m_sceneCounts.reset();
     m_modelStats.reset();
+    m_fallbackModelStats.reset();
     if (m_state) m_state->clear();
     m_blocksX = 0;
     m_blocksY = 0;

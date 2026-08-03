@@ -177,6 +177,7 @@ private:
     std::unique_ptr<CUMemBufPair> m_strengthLut;
     std::unique_ptr<CUMemBufPair> m_sceneCounts;
     std::unique_ptr<CUMemBufPair> m_modelStats;
+    std::unique_ptr<CUMemBufPair> m_fallbackModelStats;
     std::unique_ptr<AnalyzerState> m_state;
     tstring m_tableOutPath;
     rgy_rational<int> m_tableTimebase;
