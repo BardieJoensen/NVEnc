@@ -241,3 +241,9 @@ written.
    with plain, production and bilateral/source-fit arms. Include clean digital,
    animation and the known Drag Race/Stormester separator failures. Passing the
    synthetic clean KAT is necessary but does not establish real-content safety.
+
+   **Completed later on 2026-08-03:** the gate does not clear a universal
+   default. See `FINDINGS-2026-08-03-GENERAL-SOURCEFIT-GATE.md`. Source fitting
+   remains the leading real-film architecture, but every tested content class
+   produced a grain model and the general-content guard rails worsened. Keep
+   `modelsrc` default-off while a semantic admission layer is investigated.

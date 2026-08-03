@@ -147,6 +147,11 @@ knows what masking does.  The current set is
    prove that a separator will leave real clean-looking texture and sharpening
    untouched.
 
+   The first gate is complete and **failed universal promotion**; see
+   `FINDINGS-2026-08-03-GENERAL-SOURCEFIT-GATE.md`. It also found a separate
+   animation/base-routing concern. Do not convert its six titles into fixed
+   routing thresholds; expand each class and build an admission measurement.
+
 Whole-title aggregates hide opposite per-title and per-band errors -- this has
 already happened twice (the global delivery multiplier, and the luma-occupancy
 trap it repeated).  Always decompose before believing a mean.
