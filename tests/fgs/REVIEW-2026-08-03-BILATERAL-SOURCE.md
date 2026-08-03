@@ -19,17 +19,18 @@ isolates the architectural change in how AV1 grain texture is measured.
 
 ## Integrity
 
-The package contains base and finished lossless 1920x1080 10-bit FFV1 A/B
-centre crops for five titles. Every file:
+The package contains 20 lossless 1920x1080 10-bit FFV1 centre crops: base and
+finished A/B pairs for five titles. Every file:
 
 - was decoded with `libdav1d`, never NVDEC;
 - preserves limited-range BT.2020/PQ metadata;
 - passed a complete `ffmpeg -xerror` software decode; and
 - was generated resumably from an input/command manifest.
 
-The exact file count and package size are recorded after the new Interstellar
-pair is generated. File sizes are not a comparison metric because the review
-copies are lossless and independently grained.
+The package occupies 5.7 GiB. The four Interstellar files have distinct
+SHA-256 hashes and passed complete software decoding after generation. File
+sizes are not a comparison metric because the review copies are lossless and
+independently grained.
 
 ## Why this is the next gate
 
