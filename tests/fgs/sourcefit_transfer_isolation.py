@@ -136,7 +136,10 @@ def _histogram_quantile(histogram: np.ndarray, fraction: float) -> int | None:
     return int(np.searchsorted(np.cumsum(histogram), target))
 
 
-def compare_y4m_bases(left: Path, right: Path, frames: int) -> dict:
+def compare_y4m_bases(
+    left: Path, right: Path, frames: int,
+    direction: str = "source-fit base minus residual-fit base",
+) -> dict:
     """Stream a sample-exact raw-base comparison without retaining frames."""
     changed_luma = 0
     luma_samples_total = 0
@@ -208,7 +211,7 @@ def compare_y4m_bases(left: Path, right: Path, frames: int) -> dict:
             raise RuntimeError(f"Y4M streams contain more than {frames} frames")
 
     return {
-        "direction": "source-fit base minus residual-fit base",
+        "direction": direction,
         "frames": frames,
         "luma": {
             "samples": luma_samples_total,
@@ -259,6 +262,9 @@ def main() -> int:
     parser.add_argument("--ffprobe", default="/usr/local/bin/ffprobe")
     parser.add_argument("--frames", type=int, default=600)
     parser.add_argument("--qvbr", type=int, default=29)
+    parser.add_argument(
+        "--analysis-repeats", type=int, default=1,
+        help="raw analysis runs per arm; use 2 to distinguish arm effects from nondeterminism")
     args = parser.parse_args()
 
     source = Path(args.source).resolve()
@@ -271,6 +277,8 @@ def main() -> int:
             parser.error(f"missing input: {path}")
     if args.frames < 2:
         parser.error("--frames must be at least 2")
+    if args.analysis_repeats < 1:
+        parser.error("--analysis-repeats must be at least 1")
 
     task_dir = work / "tasks"
     task_dir.mkdir(parents=True, exist_ok=True)
@@ -286,6 +294,7 @@ def main() -> int:
         "frames": args.frames,
         "qvbr": args.qvbr,
         "analysis": {},
+        "analysis_repeats": {},
         "encodes": {},
     }
 
@@ -321,6 +330,39 @@ def main() -> int:
         bases["residual"], bases["source"], args.frames)
     records["base_luma_delta"] = base_delta
     write_json(work / "manifest.json", records)
+
+    repeat_deltas = {}
+    for base in BASES:
+        records["analysis_repeats"][base] = []
+        for repeat in range(2, args.analysis_repeats + 1):
+            output = work / f"{base}-repeat-{repeat}-base.y4m"
+            table = work / f"{base}-repeat-{repeat}.tbl"
+            output_partial = partial_path(output)
+            table_partial = partial_path(table)
+            command = analysis_command(
+                binary, source, output_partial, table_partial, base)
+            expected = {
+                "command": command,
+                "source": identity(source),
+                "binary": binary_identity,
+            }
+            record = gate.run_task(
+                f"{base}-analysis-repeat-{repeat}", command, expected,
+                [output_partial, table_partial], [output, table],
+                task_dir / f"{base}-analysis-repeat-{repeat}.task.json",
+                task_dir / f"{base}-analysis-repeat-{repeat}.log")
+            gate.require_frames(output, args.frames)
+            delta = compare_y4m_bases(
+                bases[base], output, args.frames,
+                direction=f"{base} repeat {repeat} minus repeat 1")
+            repeat_deltas[f"{base}-repeat-{repeat}"] = delta
+            records["analysis_repeats"][base].append({
+                "task": record,
+                "base": identity(output),
+                "table": {**identity(table), "sha256": sha256(table)},
+                "delta_from_repeat_1": delta,
+            })
+            write_json(work / "manifest.json", records)
 
     sizes: dict[str, int] = {}
     for base in BASES:
@@ -363,6 +405,7 @@ def main() -> int:
         "encoded_bytes": sizes,
         "decomposition": size_decomposition(sizes),
         "base_luma_delta": base_delta,
+        "analysis_repeat_deltas": repeat_deltas,
     }
     write_json(work / "result.json", result)
     print(json.dumps(result, indent=2, sort_keys=True))

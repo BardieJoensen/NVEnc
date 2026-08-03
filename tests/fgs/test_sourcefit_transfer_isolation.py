@@ -82,6 +82,21 @@ class SourceFitTransferIsolationTest(unittest.TestCase):
         self.assertAlmostEqual(result["luma"]["signed_mean_10bit_codes"], 1 / 16)
         self.assertEqual(result["chroma"]["changed_samples"], 0)
 
+    def test_raw_base_comparison_labels_same_arm_repeat(self):
+        with tempfile.TemporaryDirectory() as directory:
+            left = Path(directory) / "left.y4m"
+            right = Path(directory) / "right.y4m"
+            payload = np.zeros(12, dtype="<u2").tobytes()
+            for path in (left, right):
+                with path.open("wb") as handle:
+                    handle.write(b"YUV4MPEG2 W4 H2 F24:1 Ip A1:1 C420p10\n")
+                    handle.write(b"FRAME\n")
+                    handle.write(payload)
+            result = isolate.compare_y4m_bases(
+                left, right, 1, direction="repeat 2 minus repeat 1")
+        self.assertEqual(result["direction"], "repeat 2 minus repeat 1")
+        self.assertEqual(result["luma"]["changed_samples"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
