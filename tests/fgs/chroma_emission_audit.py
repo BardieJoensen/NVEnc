@@ -16,6 +16,16 @@ The counterfactuals change only the offline normative model:
 They are not alternate encodes and are never candidates for production. They
 separate the realised template response from the emitted strength curve.
 
+``centered`` moves only the selected chroma curve's endpoint-grid coordinates
+to the centres of the hard intensity bins that produced its observations.  It
+is likewise an offline counterfactual: amplitudes, AR coefficients and the
+decoded clean base stay fixed.
+
+``unsmoothed`` approximately reverses the analyser's unconditional 1-2-1
+three-bin smoothing on the emitted curve, then applies the same ten-point
+greedy reduction.  It tests whether smoothing a real discontinuity is the
+source of a band error without changing the separator or AR texture.
+
 Usage:
   python3 tests/fgs/chroma_emission_audit.py \
       --source clip_Taxi_Driver.mkv --encoded bilateral-source.mkv \
@@ -36,6 +46,7 @@ sys.path.insert(0, HERE)
 import av1_grain  # noqa: E402
 import emission_audit  # noqa: E402
 import filmgrn  # noqa: E402
+import strength_grid_replay  # noqa: E402
 from source_fit import (  # noqa: E402
     blockwise, production_flat_blocks, static_flat_blocks,
 )
@@ -44,7 +55,7 @@ from strength_selection_report import decode_selected, probe_size  # noqa: E402
 
 VARIANCE_FIELDS = (
     "truth", "base", "target", "actual", "predicted", "played",
-    "no_luma", "no_spatial", "white", "template",
+    "no_luma", "no_spatial", "white", "centered", "unsmoothed", "template",
 )
 
 
@@ -69,6 +80,75 @@ def counterfactual_entry(entry, plane, mode):
         coefficients[:spatial_count] = [0] * spatial_count
     if mode in ("no_luma", "white") and len(coefficients) > spatial_count:
         coefficients[spatial_count] = 0
+    return changed
+
+
+def centered_curve_entry(entry, plane):
+    """Move one chroma curve from endpoint coordinates to hard-bin centres."""
+    if plane not in ("cb", "cr"):
+        raise ValueError(f"chroma plane must be cb or cr, got {plane}")
+    changed = copy.deepcopy(entry)
+    changed["scaling_points"][plane] = [
+        [strength_grid_replay.interval_center_from_endpoint(value), scaling]
+        for value, scaling in changed["scaling_points"][plane]
+    ]
+    return changed
+
+
+def evaluate_points(points, position):
+    if not points:
+        return 0.0
+    if position <= points[0][0]:
+        return float(points[0][1])
+    for left, right in zip(points, points[1:]):
+        if position <= right[0]:
+            mix = (position - left[0]) / max(1e-9, right[0] - left[0])
+            return left[1] * (1.0 - mix) + right[1] * mix
+    return float(points[-1][1])
+
+
+def reduce_points(points, max_points):
+    """Match ``fit_strength_points``'s area-weighted greedy reduction."""
+    reduced = [list(point) for point in points]
+    while len(reduced) > max_points:
+        remove = 1
+        least_error = math.inf
+        for index in range(1, len(reduced) - 1):
+            left, current, right = reduced[index - 1:index + 2]
+            mix = (current[0] - left[0]) / max(1e-9, right[0] - left[0])
+            estimate = left[1] * (1.0 - mix) + right[1] * mix
+            error = abs(current[1] - estimate) * (right[0] - left[0])
+            if error < least_error:
+                least_error = error
+                remove = index
+        reduced.pop(remove)
+    return reduced
+
+
+def unsmoothed_curve_entry(entry, plane, bins=20, max_points=10):
+    """Approximately undo the analyser's 1-2-1 strength smoothing."""
+    if plane not in ("cb", "cr"):
+        raise ValueError(f"chroma plane must be cb or cr, got {plane}")
+    changed = copy.deepcopy(entry)
+    emitted = changed["scaling_points"][plane]
+    positions = np.linspace(0.0, 255.0, bins)
+    smoothed = np.asarray(
+        [evaluate_points(emitted, position) for position in positions],
+        dtype=np.float64)
+    system = np.zeros((bins, bins), dtype=np.float64)
+    system[0, 0] = 1.0
+    system[-1, -1] = 1.0
+    for index in range(1, bins - 1):
+        system[index, index - 1:index + 2] = (0.25, 0.5, 0.25)
+    raw = np.maximum(0.0, np.linalg.solve(system, smoothed))
+    reduced = reduce_points(
+        [[float(position), float(value)]
+         for position, value in zip(positions, raw)], max_points)
+    changed["scaling_points"][plane] = [
+        [min(255, max(0, int(round(position)))),
+         min(255, max(0, int(round(value))))]
+        for position, value in reduced
+    ]
     return changed
 
 
@@ -129,6 +209,26 @@ def frame_fields(
         fields[mode] = 0.5 * (
             block_variances(changed_delta)
             + block_variances(next_changed_delta))
+
+    centered = centered_curve_entry(entry, plane)
+    next_centered = centered_curve_entry(next_entry, plane)
+    centered_delta = av1_grain.synthesize_selected_chroma(
+        base_luma, base, blocks, centered, gaussian, bits, plane)
+    next_centered_delta = av1_grain.synthesize_selected_chroma(
+        next_base_luma, next_base, blocks, next_centered, gaussian, bits, plane)
+    fields["centered"] = 0.5 * (
+        block_variances(centered_delta)
+        + block_variances(next_centered_delta))
+
+    unsmoothed = unsmoothed_curve_entry(entry, plane)
+    next_unsmoothed = unsmoothed_curve_entry(next_entry, plane)
+    unsmoothed_delta = av1_grain.synthesize_selected_chroma(
+        base_luma, base, blocks, unsmoothed, gaussian, bits, plane)
+    next_unsmoothed_delta = av1_grain.synthesize_selected_chroma(
+        next_base_luma, next_base, blocks, next_unsmoothed, gaussian, bits, plane)
+    fields["unsmoothed"] = 0.5 * (
+        block_variances(unsmoothed_delta)
+        + block_variances(next_unsmoothed_delta))
 
     difference = np.concatenate((
         (predicted - actual).reshape(len(blocks), -1),
@@ -251,11 +351,14 @@ def finalize(record, bits):
         },
         "synth_over_target": {
             name: ratio(sigmas[name], target)
-            for name in ("actual", "predicted", "no_luma", "no_spatial", "white")
+            for name in (
+                "actual", "predicted", "no_luma", "no_spatial", "white",
+                "centered", "unsmoothed")
         },
         "counterfactual_over_actual": {
             name: ratio(sigmas[name], sigmas["actual"])
-            for name in ("no_luma", "no_spatial", "white")
+            for name in (
+                "no_luma", "no_spatial", "white", "centered", "unsmoothed")
         },
         "curve_scale_rms": curve_scale_rms,
         "block_mean_curve_scale_rms": block_mean_curve_scale_rms,
@@ -409,7 +512,7 @@ def main():
           f"{aggregate['pixel_mismatches']}/{aggregate['pixel_count']}")
     print(f"{'range':<15}{'blocks':>8}{'truth':>9}{'target':>9}"
           f"{'synth':>9}{'played':>9}{'s/tgt':>9}{'noY/act':>10}"
-          f"{'white/act':>11}{'curve':>9}{'nz':>8}")
+          f"{'white/act':>11}{'ctr/tgt':>9}{'raw/tgt':>9}{'curve':>9}{'nz':>8}")
     def number(value, width):
         return f"{value:>{width}.3f}" if value is not None else f"{'n/a':>{width}}"
 
@@ -422,6 +525,8 @@ def main():
               f"{number(row['synth_over_target']['actual'], 9)}"
               f"{number(row['counterfactual_over_actual']['no_luma'], 10)}"
               f"{number(row['counterfactual_over_actual']['white'], 11)}"
+              f"{number(row['synth_over_target']['centered'], 9)}"
+              f"{number(row['synth_over_target']['unsmoothed'], 9)}"
               f"{number(row['curve_scale_rms'], 9)}"
               f"{number(row['nonzero_delta_fraction'], 8)}")
     print("aggregate "

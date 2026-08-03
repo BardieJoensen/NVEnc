@@ -49,6 +49,52 @@ class ChromaEmissionAuditTests(unittest.TestCase):
         self.assertEqual(combined["blocks"], count)
         self.assertEqual(combined["pixel_count"], count * 8)
 
+    def test_centered_curve_moves_only_selected_chroma_coordinates(self):
+        entry = {
+            "scaling_points": {
+                "y": [[0, 10], [255, 20]],
+                "cb": [[0, 30], [134, 40], [255, 50]],
+                "cr": [[0, 60], [255, 70]],
+            },
+            "ar_coeffs": {"y": [1], "cb": [2], "cr": [3]},
+        }
+        changed = chroma_emission_audit.centered_curve_entry(entry, "cb")
+        self.assertEqual(
+            changed["scaling_points"]["cb"],
+            [[6, 30], [134, 40], [250, 50]])
+        self.assertEqual(changed["scaling_points"]["y"], entry["scaling_points"]["y"])
+        self.assertEqual(changed["scaling_points"]["cr"], entry["scaling_points"]["cr"])
+        self.assertEqual(changed["ar_coeffs"], entry["ar_coeffs"])
+        self.assertEqual(entry["scaling_points"]["cb"][0][0], 0)
+
+    def test_unsmoothing_reverses_exact_three_point_filter(self):
+        raw = np.asarray([4.0, 20.0, 8.0])
+        smoothed = np.asarray([
+            raw[0], (raw[0] + 2.0 * raw[1] + raw[2]) / 4.0, raw[-1]
+        ])
+        entry = {
+            "scaling_points": {
+                "y": [[0, 1]],
+                "cb": [[0, int(smoothed[0])], [128, int(smoothed[1])],
+                       [255, int(smoothed[2])]],
+                "cr": [[0, 1]],
+            },
+            "ar_coeffs": {"y": [], "cb": [], "cr": []},
+        }
+        changed = chroma_emission_audit.unsmoothed_curve_entry(
+            entry, "cb", bins=3, max_points=3)
+        self.assertEqual(changed["scaling_points"]["cb"], [
+            [0, 4], [128, 20], [255, 8]
+        ])
+        self.assertEqual(changed["scaling_points"]["cr"], [[0, 1]])
+
+    def test_point_reduction_preserves_endpoints(self):
+        points = [[float(index), float(index * index)] for index in range(7)]
+        reduced = chroma_emission_audit.reduce_points(points, 4)
+        self.assertEqual(len(reduced), 4)
+        self.assertEqual(reduced[0], points[0])
+        self.assertEqual(reduced[-1], points[-1])
+
 
 if __name__ == "__main__":
     unittest.main()
