@@ -39,7 +39,8 @@ scale internally.
 
 Usage:  python3 fgs_kat.py [--tests const_luma,clean] [--keep]
 Environment: NVENCC (encoder binary), FGS_KAT_DIR (work dir),
-FGS_KAT_DENOISER (fft3d, bilateral, or motion; default fft3d).
+FGS_KAT_DENOISER (fft3d, bilateral, or motion; default fft3d), and
+FGS_KAT_QVBR (optional QVBR value; default is the established CQP 20 gate).
 """
 import argparse
 import contextlib
@@ -74,6 +75,13 @@ if FGS_DENOISER not in ("fft3d", "bilateral", "motion"):
 # Extra --av1-film-grain sub-options, so an analyzer change can be run against
 # the whole suite before it is considered for a default (e.g. FGS_KAT_EXTRA=psd=on).
 FGS_EXTRA = os.environ.get("FGS_KAT_EXTRA", "").strip()
+FGS_QVBR = os.environ.get("FGS_KAT_QVBR", "").strip()
+if FGS_QVBR:
+    try:
+        if float(FGS_QVBR) <= 0:
+            raise ValueError
+    except ValueError:
+        sys.exit(f"invalid FGS_KAT_QVBR: {FGS_QVBR}")
 
 
 def apply_spec(spec):
@@ -302,9 +310,13 @@ def encode(src, out, spec):
         fgs_opts += "," + FGS_EXTRA
     if "retain" in spec:
         fgs_opts += f",retain={spec['retain']}"
-    cmd = [NVENCC, "--codec", "av1", "--cqp", "20",
-           "--av1-film-grain", fgs_opts,
-           "--log-level", "debug"]
+    cmd = [NVENCC, "--codec", "av1"]
+    if FGS_QVBR:
+        cmd += ["--qvbr", FGS_QVBR, "--max-bitrate", "20000",
+                "--preset", "p4", "--tune", "hq"]
+    else:
+        cmd += ["--cqp", "20"]
+    cmd += ["--av1-film-grain", fgs_opts, "--log-level", "debug"]
     if BITS == 10:
         cmd += ["--output-depth", "10"]
     cmd += COLOR_ARGS.get(spec.get("color"), [])
