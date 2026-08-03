@@ -2,6 +2,7 @@
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 import numpy as np
 
@@ -39,6 +40,48 @@ class SourceFitFlatSelectionTests(unittest.TestCase):
         eligible_candidates = int(((sigma >= 2.0) & (sigma <= 200.0)
                                    & (score >= 0.5)).sum())
         self.assertGreaterEqual(len(blocks), min(score.size // 10, eligible_candidates))
+
+    def test_temporal_selection_builds_a_mask_for_every_frame_pair(self):
+        frames = [np.full((64, 160), value, dtype=np.float64)
+                  for value in (10.0, 20.0)]
+        nextframes = [frame + 1.0 for frame in frames]
+        candidates = [(row, col) for row in range(2) for col in range(5)]
+        masks = [candidates[:8], candidates[2:]]
+        score = np.arange(10, dtype=np.float64).reshape(2, 5)
+        sigma = np.full((2, 5), 4.0)
+
+        with mock.patch.object(
+                source_fit, "select_flat",
+                side_effect=[(candidates, score, sigma)] * 2) as select, \
+             mock.patch.object(
+                 source_fit, "static_flat_blocks",
+                 side_effect=masks) as static:
+            selected, diagnostics = source_fit.temporal_block_masks(
+                frames, nextframes, bits=10)
+
+        self.assertEqual(selected, masks)
+        self.assertEqual(select.call_count, 2)
+        self.assertEqual(static.call_count, 2)
+        np.testing.assert_array_equal(select.call_args_list[0].args[0], frames[0])
+        np.testing.assert_array_equal(select.call_args_list[1].args[0], frames[1])
+        np.testing.assert_array_equal(static.call_args_list[0].args[1], nextframes[0])
+        np.testing.assert_array_equal(static.call_args_list[1].args[1], nextframes[1])
+        self.assertEqual([row["static_count"] for row in diagnostics], [8, 8])
+
+    def test_temporal_selection_rejects_a_sparse_later_pair(self):
+        frames = [np.zeros((64, 160)), np.ones((64, 160))]
+        candidates = [(row, col) for row in range(2) for col in range(5)]
+        score = np.ones((2, 5))
+        sigma = np.ones((2, 5))
+        with mock.patch.object(
+                source_fit, "select_flat",
+                side_effect=[(candidates, score, sigma)] * 2), \
+             mock.patch.object(
+                 source_fit, "static_flat_blocks",
+                 side_effect=[candidates[:8], candidates[:7]]):
+            with self.assertRaisesRegex(SystemExit, "sample pair 1"):
+                source_fit.temporal_block_masks(
+                    frames, [frame.copy() for frame in frames], bits=10)
 
 
 class TemporalLeakTests(unittest.TestCase):

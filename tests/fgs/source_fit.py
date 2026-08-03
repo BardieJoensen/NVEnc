@@ -229,6 +229,41 @@ def static_flat_blocks(frame, nextframe, blocks, bs=BS, lo=0.8, hi=1.3):
     return keep
 
 
+def temporal_block_masks(src_p, nxt_p, bits, fraction=0.10, bs=BS,
+                         minimum=8):
+    """Select one source-derived static-flat mask per temporal frame pair.
+
+    Reusing the first pair's coordinates is only valid for a static fixture.
+    On real content a later cut or moving edge can occupy those coordinates and
+    be misread as grain.  Each pair therefore gets its own spatial and temporal
+    selection, while callers still apply that pair's mask unchanged to every
+    estimator arm.
+    """
+    if len(src_p) != len(nxt_p):
+        raise ValueError("source and next-frame lists must have equal length")
+
+    masks = []
+    diagnostics = []
+    for index, (frame, nextframe) in enumerate(zip(src_p, nxt_p)):
+        blocks, score, sigma = select_flat(frame, bits, fraction, bs)
+        cut_index = len(blocks) - 1
+        cut = score.ravel()[np.argsort(score.ravel())[::-1][cut_index]]
+        static = static_flat_blocks(frame, nextframe, blocks, bs)
+        if len(static) < minimum:
+            raise SystemExit(
+                f"sample pair {index}: only {len(static)} static flat blocks; "
+                "pick frames with less motion")
+        masks.append(static)
+        diagnostics.append({
+            "candidate_count": len(blocks),
+            "grid_count": int(score.size),
+            "score_cut": float(cut),
+            "static_count": len(static),
+            "sigma_median": float(np.median([sigma[block] for block in static])),
+        })
+    return masks, diagnostics
+
+
 def accumulate_ar(field, blocks, detrend, ata, atb, lag=LAG, bs=BS):
     """Add one frame's lag-3 normal equations over the given blocks.
 
@@ -310,20 +345,26 @@ def report(label, acf, implied):
 
 def run(src_p, cln_p, idl_p, bits, seeds, shift, fraction, sim_sigma=32.0,
         nxt_p=None):
-    blocks, score, sigma = select_flat(src_p[0], bits, fraction)
-    nb = blockwise(src_p[0], BS).shape[:2]
-    cut = score.ravel()[np.argsort(score.ravel())[::-1][len(blocks) - 1]]
-    total_flat = len(blocks)
     if nxt_p is not None:
-        # Restrict EVERY arm to the same static subset, so the temporal truth
-        # and the estimators under test are measured on identical pixels.
-        blocks = static_flat_blocks(src_p[0], nxt_p[0], blocks)
-        if len(blocks) < 8:
-            raise SystemExit(f"only {len(blocks)} static flat blocks; "
-                             "pick frames with less motion")
-    print(f"flat blocks {total_flat}/{nb[0] * nb[1]} (score {cut:.3f} at the cut)"
-          + (f", {len(blocks)} of them static" if nxt_p is not None else "")
-          + f", block sigma median {np.median([sigma[b] for b in blocks]):.2f}\n")
+        # Restrict EVERY arm to the same source-derived subset for each pair,
+        # but do not carry coordinates across unrelated frames.
+        blocks_by_frame, diagnostics = temporal_block_masks(
+            src_p, nxt_p, bits, fraction)
+        print("flat/static blocks per frame pair: "
+              + ", ".join(
+                  f"{row['candidate_count']}/{row['grid_count']} -> "
+                  f"{row['static_count']} (cut {row['score_cut']:.3f}, "
+                  f"sigma {row['sigma_median']:.2f})"
+                  for row in diagnostics)
+              + "\n")
+    else:
+        blocks, score, sigma = select_flat(src_p[0], bits, fraction)
+        nb = blockwise(src_p[0], BS).shape[:2]
+        cut = score.ravel()[np.argsort(score.ravel())[::-1][len(blocks) - 1]]
+        blocks_by_frame = [blocks] * len(src_p)
+        print(f"flat blocks {len(blocks)}/{nb[0] * nb[1]} "
+              f"(score {cut:.3f} at the cut), block sigma median "
+              f"{np.median([sigma[b] for b in blocks]):.2f}\n")
 
     print(f"{'estimator':<28}{'sigma':>9}{'lag1':>9}{'lag2':>9}"
           f"{'AR lag1':>9}{'AR lag2':>9}{'gain':>8}{'clip%':>8}")
@@ -351,11 +392,13 @@ def run(src_p, cln_p, idl_p, bits, seeds, shift, fraction, sim_sigma=32.0,
         ata = np.zeros((n, n))
         atb = np.zeros(n)
         acfs = []
-        for f in fields:
+        for f, blocks in zip(fields, blocks_by_frame):
             accumulate_ar(f, blocks, detrend, ata, atb)
             acfs.append(field_acf(f, blocks, detrend))
         coeffs = solve_ar(ata, atb)
-        acf = {k: float(np.mean([a[k] for a in acfs if a])) for k in acfs[0]}
+        present = [acf for acf in acfs if acf is not None]
+        acf = ({key: float(np.mean([row[key] for row in present]))
+                for key in present[0]} if present else None)
         implied = implied_acf(coeffs, shift, seeds, bits, sim_sigma)
         report(label, acf, implied)
         out[label] = (acf, implied, coeffs)
