@@ -190,6 +190,8 @@ std::vector<StrengthPoint> fit_strength_points(const FilmGrainSolvedPlane& solve
 void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& src);
 bool apply_luma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
     uint64_t minTemporalBlocks, NVEncFilmGrainDiagnostics& diagnostics);
+bool apply_chroma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
+    uint64_t minTemporalBlocks, bool perBin);
 bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,
     bool analyzeChroma, bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
     NVEncFilmGrainDiagnostics& diagnostics, double maxLumaCorrelation = -1.0);

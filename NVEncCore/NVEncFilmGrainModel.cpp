@@ -468,6 +468,64 @@ bool apply_luma_leak_closure(FilmGrainGpuStats& stats, const double qvbr,
     return true;
 }
 
+bool apply_chroma_leak_closure(FilmGrainGpuStats& stats, const double qvbr,
+    const uint64_t minTemporalBlocks, const bool perBin) {
+    if (!std::isfinite(qvbr) || qvbr < FGS_LEAK_QVBR_MIN || qvbr > FGS_LEAK_QVBR_MAX) return false;
+
+    struct PlaneClosure {
+        double sourceVariance;
+        double baseVariance;
+        uint64_t temporalBlocks;
+        int populatedBins;
+    };
+    std::array<PlaneClosure, 2> closure = {};
+    for (int chroma = 0; chroma < 2; ++chroma) {
+        const auto& measured = stats.plane[chroma + 1];
+        auto& plane = closure[chroma];
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            const auto count = measured.temporalBlockCount[bin];
+            plane.sourceVariance += measured.temporalSourceVarSum[bin];
+            plane.baseVariance += measured.temporalBaseVarSum[bin];
+            plane.temporalBlocks += count;
+            plane.populatedBins += count >= FGS_MIN_TEMPORAL_BIN_BLOCKS;
+        }
+        if (plane.temporalBlocks < minTemporalBlocks || plane.populatedBins < 2
+            || plane.sourceVariance <= 1e-9) return false;
+    }
+
+    const double theta = FGS_LEAK_THETA_INTERCEPT + FGS_LEAK_THETA_QVBR_SLOPE * qvbr;
+    for (int chroma = 0; chroma < 2; ++chroma) {
+        auto& measured = stats.plane[chroma + 1];
+        double globalSynthesisFraction2 = 0.0;
+        if (!perBin) {
+            const auto& plane = closure[chroma];
+            const double preLeak = std::sqrt(std::clamp(
+                plane.baseVariance / plane.sourceVariance, 0.0, 1.0));
+            const double postLeak = std::max(0.0, preLeak - theta);
+            globalSynthesisFraction2 = std::max(0.0, 1.0 - postLeak * postLeak);
+        }
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            const auto count = measured.temporalBlockCount[bin];
+            const double sourceVariance = measured.temporalSourceVarSum[bin];
+            if (count < FGS_MIN_TEMPORAL_BIN_BLOCKS || sourceVariance <= 1e-9) {
+                measured.binVarSum[bin] = 0.0;
+                measured.binBlockCount[bin] = 0;
+                continue;
+            }
+            double synthesisFraction2 = globalSynthesisFraction2;
+            if (perBin) {
+                const double preLeak = std::sqrt(std::clamp(
+                    measured.temporalBaseVarSum[bin] / sourceVariance, 0.0, 1.0));
+                const double postLeak = std::max(0.0, preLeak - theta);
+                synthesisFraction2 = std::max(0.0, 1.0 - postLeak * postLeak);
+            }
+            measured.binVarSum[bin] = sourceVariance * synthesisFraction2;
+            measured.binBlockCount[bin] = count;
+        }
+    }
+    return true;
+}
+
 bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     const bool analyzeChroma, const bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
     NVEncFilmGrainDiagnostics& diagnostics, const double maxLumaCorrelation) {

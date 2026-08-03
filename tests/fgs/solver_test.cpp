@@ -199,6 +199,63 @@ void testTemporalLeakClosure() {
     expect(!gated.leakCompensated, "gated temporal closure stays diagnostic-only");
 }
 
+void testChromaTemporalLeakClosure() {
+    constexpr double sourceVariance = 100.0;
+    constexpr double qvbr = 29.0;
+    const double theta = FGS_LEAK_THETA_INTERCEPT + FGS_LEAK_THETA_QVBR_SLOPE * qvbr;
+
+    FilmGrainGpuStats global = {};
+    for (int plane = 1; plane <= 2; ++plane) {
+        const double preLeak = plane == 1 ? 0.40 : 0.60;
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            auto& chroma = global.plane[plane];
+            chroma.binVarSum[bin] = 10.0;
+            chroma.binBlockCount[bin] = 10;
+            chroma.temporalSourceVarSum[bin] = 10.0 * sourceVariance;
+            chroma.temporalBaseVarSum[bin] =
+                10.0 * sourceVariance * preLeak * preLeak;
+            chroma.temporalBlockCount[bin] = 10;
+        }
+    }
+    expect(apply_chroma_leak_closure(global, qvbr, 100, false),
+        "global chroma closure accepts paired plane coverage");
+    for (int plane = 1; plane <= 2; ++plane) {
+        const double preLeak = plane == 1 ? 0.40 : 0.60;
+        const double postLeak = preLeak - theta;
+        const double expected = sourceVariance * (1.0 - postLeak * postLeak);
+        expectNear(global.plane[plane].binVarSum[3]
+            / global.plane[plane].binBlockCount[3], expected, 1e-9,
+            "global chroma closure uses each plane's aggregate leak");
+    }
+
+    FilmGrainGpuStats local = {};
+    for (int plane = 1; plane <= 2; ++plane) {
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            const double preLeak = bin & 1 ? 0.60 : 0.20;
+            auto& chroma = local.plane[plane];
+            chroma.temporalSourceVarSum[bin] = 10.0 * sourceVariance;
+            chroma.temporalBaseVarSum[bin] =
+                10.0 * sourceVariance * preLeak * preLeak;
+            chroma.temporalBlockCount[bin] = 10;
+        }
+    }
+    expect(apply_chroma_leak_closure(local, qvbr, 100, true),
+        "local chroma closure accepts paired plane coverage");
+    for (int bin = 0; bin < 2; ++bin) {
+        const double preLeak = bin ? 0.60 : 0.20;
+        const double postLeak = std::max(0.0, preLeak - theta);
+        const double expected = sourceVariance * (1.0 - postLeak * postLeak);
+        expectNear(local.plane[1].binVarSum[bin]
+            / local.plane[1].binBlockCount[bin], expected, 1e-9,
+            "local chroma closure follows per-bin leak");
+    }
+
+    FilmGrainGpuStats missingPlane = global;
+    missingPlane.plane[2] = {};
+    expect(!apply_chroma_leak_closure(missingPlane, qvbr, 100, false),
+        "chroma closure requires both 4:2:0 planes");
+}
+
 void testWhiteLuma() {
     FilmGrainGpuStats stats = {};
     fillWhitePlane(stats.plane[0], 6.0, false);
@@ -373,6 +430,7 @@ int main() {
     testSourceCorrelationRegularizer();
     testSourceTemplateGain();
     testTemporalLeakClosure();
+    testChromaTemporalLeakClosure();
     testWhiteLuma();
     testRampLuma();
     testChromaCorrelationClamp();
