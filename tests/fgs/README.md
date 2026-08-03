@@ -150,6 +150,13 @@ prototype. Paired past/future confidence recovers most of the control-title
 quality giveback while the centred arm removes Taxi Driver's directional lag
 and saves 3--9% at matched settings. It remains test-only pending a wider
 corpus, throughput measurement, perceptual review and luma-band closure.
+See `FINDINGS-2026-08-03-INTEGRATED-ARCHITECTURE.md` for that wider six-film
+gate. Source-derived AR fitting reduces luma texture error by about an order of
+magnitude and causal motion reaches 32.2% corpus saving, but paired centering
+removes direction by increasing symmetric smoothing and loses base quality on
+the corpus. It remains rejected for production; cycle-consistency/current-
+frame fallback and pixel-aware offline strength response are the next code
+experiments.
 See `FINDINGS-2026-07-31-WIENER-PSD.md` for the coarse-grain plan: FFT3D's
 Wiener gain uses a scalar noise power where libaom uses a per-bin PSD.
 `wiener_psd_sim.py` reproduces the current 0.366 capture offline and measures
