@@ -7,6 +7,7 @@ from integrated_architecture import (
     build_clean_command,
     build_encode_command,
     partial_path,
+    publish_outputs,
 )
 
 
@@ -47,6 +48,10 @@ class IntegratedArchitectureHarnessTests(unittest.TestCase):
             "plain")
         self.assertNotIn("--av1-film-grain", command)
         self.assertNotIn("--film-grain-table-out", command)
+
+    def test_publish_rejects_mismatched_output_lists(self):
+        with self.assertRaisesRegex(ValueError, "count mismatch"):
+            publish_outputs([Path("one.partial.mkv")], [])
 
 
 if __name__ == "__main__":

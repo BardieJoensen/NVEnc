@@ -20,7 +20,9 @@ the same and is the quantity needed by the closure and base-fidelity reports.
 
 No copyrighted input or generated media is stored in the repository.  Tasks
 are resumable through command/source/binary manifests and write to ``.partial``
-paths before publishing their final outputs.
+paths before publishing their final outputs.  Direct streams and grain tables
+are hashed.  Multi-gigabyte lossless clean bases record identity metadata but
+are not re-read solely for a checksum; their source is hashed once per title.
 """
 
 from __future__ import annotations
@@ -249,7 +251,11 @@ def main() -> int:
         source = source_root / f"clip_{title}.mkv"
         if not source.is_file():
             raise RuntimeError(f"missing source: {source}")
-        title_record = {"source": identity(source), "arms": {}}
+        source_identity = identity(source)
+        title_record = {
+            "source": identity(source, include_hash=True),
+            "arms": {},
+        }
         print(f"\n== {title} ==", flush=True)
         for arm in arms:
             binary = production if arm in ("plain", "production") else candidate
@@ -274,7 +280,7 @@ def main() -> int:
                         "NVENC_FGS_TEST_MOTION_THSAD",
                     ) if key in env
                 },
-                "source": identity(source),
+                "source": source_identity,
                 "binary": identity(binary, include_hash=True),
             }
             if not complete_task(encode_manifest, expected, encode_outputs):
@@ -326,7 +332,10 @@ def main() -> int:
                     publish_outputs(clean_partials, clean_outputs)
                     clean_record = {
                         "input": clean_expected,
-                        "outputs": [identity(path, include_hash=True) for path in clean_outputs],
+                        "outputs": [
+                            identity(clean),
+                            identity(raw_table, include_hash=True),
+                        ],
                         "log": str(clean_log.resolve()),
                         "elapsed_seconds": elapsed,
                     }
