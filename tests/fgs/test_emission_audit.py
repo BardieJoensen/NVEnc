@@ -122,6 +122,61 @@ class EmissionAuditTests(unittest.TestCase):
             av1_grain.scale_values(lut, pixels, 10).tolist(),
             [0, 1, 2, 3, 4, 1020, 1020])
 
+    def test_chroma_scaling_uses_normative_horizontal_luma_average(self):
+        luma = np.arange(32 * 32, dtype=np.int64).reshape(32, 32) % 1024
+        chroma = np.full((16, 16), 777, dtype=np.int64)
+        entry = {
+            "params": {
+                "chroma_scaling_from_luma": 0,
+                "cb_mult": 0,
+                "cb_luma_mult": 64,
+                "cb_offset": 0,
+            },
+            "scaling_points": {
+                "y": [[0, 0], [255, 255]],
+                "cb": [[0, 0], [255, 255]],
+                "cr": [],
+            },
+        }
+        response = av1_grain.selected_chroma_scaling(
+            luma, chroma, [(0, 0)], entry, 10, "cb")
+        expected = (luma[::2, 0::2] + luma[::2, 1::2] + 1) >> 1
+        np.testing.assert_array_equal(response["indices"][0], expected)
+        # The signed chroma multiplier is zero, so changing Cb cannot move the
+        # lookup coordinate despite chroma_scaling_from_luma being false.
+        response_changed = av1_grain.selected_chroma_scaling(
+            luma, chroma - 500, [(0, 0)], entry, 10, "cb")
+        np.testing.assert_array_equal(
+            response_changed["indices"], response["indices"])
+
+    def test_chroma_rng_uses_plane_specific_normative_seed_offset(self):
+        gaussian = np.arange(2048, dtype=np.int64) - 1024
+        entry = {
+            "random_seed": 7391,
+            "params": {
+                "ar_coeff_lag": 0,
+                "ar_coeff_shift": 6,
+                "grain_scale_shift": 0,
+                "chroma_scaling_from_luma": 0,
+            },
+            "scaling_points": {
+                "y": [[0, 1]], "cb": [[0, 1]], "cr": [[0, 1]],
+            },
+            "ar_coeffs": {"y": [], "cb": [0], "cr": [0]},
+        }
+        luma_template = av1_grain.generate_luma_template(entry, gaussian, 8)
+        cb = av1_grain.generate_chroma_template(
+            entry, luma_template, gaussian, 8, "cb")
+        cr = av1_grain.generate_chroma_template(
+            entry, luma_template, gaussian, 8, "cr")
+        cb_register = av1_grain.init_random_generator(7 << 5, 7391)
+        cr_register = av1_grain.init_random_generator(11 << 5, 7391)
+        _cb_register, cb_index = av1_grain.random_number(cb_register, 11)
+        _cr_register, cr_index = av1_grain.random_number(cr_register, 11)
+        self.assertEqual(cb[0, 0], (int(gaussian[cb_index]) + 8) >> 4)
+        self.assertEqual(cr[0, 0], (int(gaussian[cr_index]) + 8) >> 4)
+        self.assertNotEqual(cb[0, 0], cr[0, 0])
+
     def test_lfsr_matches_known_first_step(self):
         register, value = av1_grain.random_number(7391, 8)
         self.assertEqual(register, 3695)

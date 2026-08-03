@@ -239,11 +239,12 @@ def selected_luma_band_positions(source, blocks, bit_depth, ranges):
     return result
 
 
-def actual_synth_blocks(encoded_on, encoded_off, blocks):
+def actual_synth_blocks(encoded_on, encoded_off, blocks, block_size=32):
     rows = np.asarray([row for row, _col in blocks])
     cols = np.asarray([col for _row, col in blocks])
     difference = blockwise(
-        encoded_on.astype(np.int64) - encoded_off.astype(np.int64))
+        encoded_on.astype(np.int64) - encoded_off.astype(np.int64),
+        block_size)
     return difference[rows, cols]
 
 
