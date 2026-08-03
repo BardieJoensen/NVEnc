@@ -174,3 +174,14 @@ failure of the two.
    both the README and the review doc direct attention to dark regions.
 4. Run the amplitude-matched Shining replay before quoting any finished-frame
    full-reference number in either direction.
+
+## Follow-up resolution
+
+Recommendation 4 is closed by
+`FINDINGS-2026-08-03-AMPLITUDE-MATCHED-TEXTURE.md`. Two fixed-base,
+fixed-seed, luma-only replays matched delivered sigma within 0.45% and 0.37%.
+Coarse source-fit grain loses `0.80--0.84` VMAF at production-like amplitude
+and `1.36--1.48` at candidate-like amplitude, despite a byte-identical decoded
+base and essentially flat PSNR. The hypothesised scale sensitivity is real and
+grows with amplitude. It explains a material part, but not all, of the original
+dynamic Shining gap.

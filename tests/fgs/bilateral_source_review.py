@@ -123,10 +123,16 @@ The mapping is consistent within a title and hidden in
 `REVEAL-AFTER-REVIEW.md`. File size is irrelevant because these are lossless
 review copies.
 
+The Shining base pair is a null control: decoded A-base and B-base pixels are
+byte-identical for every frame. Record whether they appear different, but do
+not spend time searching for a real base change there. Its finished pair still
+differs and cleanly isolates the grain layer.
+
 ## Review order
 
 1. Watch each base pair first. Since both arms use bilateral separation, look
    for any real-detail or black-level difference rather than motion ghosting.
+   Treat The Shining as the declared pixel-identical base control.
 2. Watch the finished pair at normal speed. Judge grain *scale* first: coarse
    film grain should not turn into fine electronic noise.
 3. Judge strength separately. Inspect bright flat regions first -- skies,

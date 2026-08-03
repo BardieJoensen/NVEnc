@@ -185,6 +185,15 @@ reported as evidence that source-fitted grain is perceptually worse. Base
 fidelity, energy closure and amplitude-independent texture answer separate
 questions.
 
+The audit's fixed-energy follow-up now isolates the previously open scale term.
+On The Shining's bit-identical base, source-fit coarse grain loses `0.84` VMAF
+to production-fine grain at matched production-like energy and `1.48` at
+matched candidate-like energy. PSNR-Y is flat at the higher level. VMAF
+therefore penalises coarser grain more strongly at equal energy; see
+`FINDINGS-2026-08-03-AMPLITUDE-MATCHED-TEXTURE.md`. The static luma-only
+factorial explains about 61% of the dynamic stream's finished VMAF gap. The
+remainder is not a quality finding and the playback gate remains necessary.
+
 ## Compression and timing
 
 The six candidate streams total 116,099,448 bytes:
@@ -228,3 +237,7 @@ written.
    dark-band lift and chroma crawling. Because per-luma and chroma strength are
    still open, observations in those known failure regions confirm the
    measurement gaps rather than deciding the architecture alone.
+6. Before any universal production default, rerun the general-content corpus
+   with plain, production and bilateral/source-fit arms. Include clean digital,
+   animation and the known Drag Race/Stormester separator failures. Passing the
+   synthetic clean KAT is necessary but does not establish real-content safety.

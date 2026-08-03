@@ -32,6 +32,12 @@ SHA-256 hashes and passed complete software decoding after generation. File
 sizes are not a comparison metric because the review copies are lossless and
 independently grained.
 
+The Shining `A-base` and `B-base` are a declared null control discovered by
+the audit: their decoded YUV pixels are byte-identical for every frame. Record
+whether they appear different, but do not spend review time looking for a real
+base change there. The finished Shining pair still differs and is the cleanest
+grain-only comparison in the package.
+
 ## Why this is the next gate
 
 Source fitting reduces luma lag-1/lag-2 texture error from `0.223/0.343` to
@@ -62,6 +68,12 @@ The remaining uncertainty is perceptual, not decoder correctness:
 - the current hard-bin curve can redistribute strength across sharp luma
   transitions even when title-wide amplitude is correct.
 
+A controlled follow-up also proves that VMAF prefers finer grain at equal
+energy: the source-fit Shining model loses `0.84` points at production-like
+strength and `1.48` at candidate-like strength on a bit-identical base. That
+explains a material part of the finished-score gap and is why the review must
+judge texture rather than attempt to reproduce the VMAF ranking.
+
 Three currently flagged luma-shape errors all occur in the brightest populated
 `0.375--0.500` band: Taxi Driver is low (`0.890`), while Interstellar (`1.278`)
 and Deer Hunter (`1.344`) are high. The corpus mean hides these opposite-sign
@@ -74,7 +86,8 @@ worsens from `1.139` to `1.286`.
 
 1. Watch each `base` pair first. Look for real-detail or black-level changes.
    Both arms use the same bilateral separator, so motion ghosting is not the
-   question.
+   question. The Shining base pair is pixel-identical and serves as the null
+   control.
 2. Watch the corresponding `finished` pair at normal speed. Judge coarse/fine
    grain scale before judging strength.
 3. Inspect bright flat regions -- skies, walls and faces in key light -- for
@@ -91,7 +104,9 @@ is not a defect by itself.
 A clean review would make bilateral/source-fit the leading deployable-quality
 candidate, but would not itself change the production default. It would still
 need a pinned production build, full KAT, complete dav1d validation and a
-limited rollout with the original retained.
+limited rollout with the original retained. It would also need a separate
+general-content gate on clean digital, animation and hard-edged studio/reality
+material; the film corpus cannot establish a universal routing default.
 
 This review deliberately runs before its earlier stated precondition that the
 per-luma and chroma strength report be fully trustworthy. That is acceptable

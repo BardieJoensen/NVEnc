@@ -38,6 +38,7 @@ for bilateral and 35.3-52.3 for motion.
 | `temporal_grain_report.py` | amplitude vs temporal truth, lag-1, lag-2, per luma band, per plane | needs static flat blocks selected from the *source* and applied unchanged to every arm |
 | `source_fit.py` | offline oracle: what the AR fit should be, with an ideal-clean control | simulation clipping if `--sim-sigma` is left at a saturating value |
 | `ar_acf.py` / `cap_table_acf.py` | coefficient-implied autocorrelation of an emitted table | saturating simulation/clipping or too few simulation seeds; the table seed is intentionally irrelevant to this coefficient statistic |
+| `amplitude_matched_texture.py` | metric response to fine versus coarse grain with base, seed, luma placement and delivered energy controlled | a single static model does not reproduce rolling per-luma delivery or decide perceptual quality |
 
 Amplitude and texture must be reported **separately**.  HF sigma alone cannot
 tell correct grain from correctly-sized grain: 2026-07-17 measured HF 3.67
@@ -114,8 +115,12 @@ fixed-base/fixed-AR replacement changes only luma scaling values in opposite
 directions on two films: VMAF-family means reward less grain in both cases,
 even though both candidates move toward their physical target.  Butteraugli is
 effectively flat and HDR CVVDP gets slightly worse for both corrections.  None
-is a grain-correctness objective.  Whether VIF/ADM prefer finer grain at fixed
-energy is still a separate open controlled experiment.
+is a grain-correctness objective.  The fixed-base/fixed-seed replay now closes
+the remaining scale question (`FINDINGS-2026-08-03-AMPLITUDE-MATCHED-TEXTURE.md`):
+at matched luma energy, coarse source-fit grain loses `0.80--0.84` VMAF at a
+production-like amplitude and `1.36--1.48` at a candidate-like amplitude,
+while PSNR is essentially flat. VIF/ADM therefore do prefer finer grain at
+fixed energy. That is a measured metric bias, not a perceptual ranking.
 
 ## The one thing none of the above replaces
 
@@ -135,6 +140,11 @@ knows what masking does.  The current set is
    point, plus a matched-bitrate sweep before making rate-quality claims;
 6. guard rails show no new banding or colour drift;
 7. the blinded review passes.
+8. a general-content gate compares plain, production FGS and the candidate on
+   genuinely clean, low-grain digital, animation and hard-edged studio/reality
+   material, including the labelled Drag Race and Stormester failures. The
+   synthetic `clean` KAT proves zero-grain invariance; it does not prove that a
+   separator will leave real clean-looking texture and sharpening untouched.
 
 Whole-title aggregates hide opposite per-title and per-band errors -- this has
 already happened twice (the global delivery multiplier, and the luma-occupancy
