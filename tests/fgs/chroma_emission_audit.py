@@ -26,6 +26,12 @@ three-bin smoothing on the emitted curve, then applies the same ten-point
 greedy reduction.  It tests whether smoothing a real discontinuity is the
 source of a band error without changing the separator or AR texture.
 
+With ``--population``, ``population_raw`` replaces the curve with the exact
+rolling raw-bin estimates reconstructed by ``chroma_population_trace.py``;
+``population_centered`` also puts those estimates at their hard-bin centres.
+These coupled counterfactuals retain a valid ten-point AV1 curve and test what
+the one-variable geometry/smoothing replays cannot.
+
 Usage:
   python3 tests/fgs/chroma_emission_audit.py \
       --source clip_Taxi_Driver.mkv --encoded bilateral-source.mkv \
@@ -152,6 +158,32 @@ def unsmoothed_curve_entry(entry, plane, bins=20, max_points=10):
     return changed
 
 
+def population_curve_entry(entry, plane, population, centered=False,
+                           max_points=10):
+    """Build an AV1-representable curve from reconstructed rolling bins."""
+    if plane not in ("cb", "cr"):
+        raise ValueError(f"chroma plane must be cb or cr, got {plane}")
+    scale = population["shape_fit"]["scale"]
+    if scale is None:
+        raise ValueError("population row has no usable shape scale")
+    bins = population["bins"]
+    count = len(bins)
+    if count < 2:
+        raise ValueError("population row needs at least two strength bins")
+    points = []
+    for index, item in enumerate(bins):
+        position = ((index + 0.5) * 256.0 / count if centered
+                    else index * 255.0 / (count - 1))
+        points.append([position, item["filled_sigma"] * scale])
+    changed = copy.deepcopy(entry)
+    changed["scaling_points"][plane] = [
+        [min(255, max(0, int(round(position)))),
+         min(255, max(0, int(round(value))))]
+        for position, value in reduce_points(points, max_points)
+    ]
+    return changed
+
+
 def block_variances(blocks):
     return emission_audit.selected_variances(np.asarray(blocks, dtype=np.float64))
 
@@ -160,7 +192,7 @@ def frame_fields(
         source, next_source, base, next_base, on, next_on,
         source_luma, next_source_luma, base_luma, next_base_luma,
         blocks, entry, next_entry,
-        gaussian, bits, plane):
+        gaussian, bits, plane, population=None):
     """Return one value per selected block plus exact mismatch diagnostics."""
     source_blocks = selected_blocks(source, blocks, 16)
     next_source_blocks = selected_blocks(next_source, blocks, 16)
@@ -230,6 +262,23 @@ def frame_fields(
         block_variances(unsmoothed_delta)
         + block_variances(next_unsmoothed_delta))
 
+    if population is not None:
+        current_population, next_population = population
+        for name, centered_population in (
+                ("population_raw", False), ("population_centered", True)):
+            population_entry = population_curve_entry(
+                entry, plane, current_population, centered_population)
+            next_population_entry = population_curve_entry(
+                next_entry, plane, next_population, centered_population)
+            population_delta = av1_grain.synthesize_selected_chroma(
+                base_luma, base, blocks, population_entry, gaussian, bits, plane)
+            next_population_delta = av1_grain.synthesize_selected_chroma(
+                next_base_luma, next_base, blocks, next_population_entry,
+                gaussian, bits, plane)
+            fields[name] = 0.5 * (
+                block_variances(population_delta)
+                + block_variances(next_population_delta))
+
     difference = np.concatenate((
         (predicted - actual).reshape(len(blocks), -1),
         (next_predicted - next_actual).reshape(len(blocks), -1)), axis=1)
@@ -280,7 +329,7 @@ def accumulate(fields, positions=None):
         "blocks": int(len(selected)),
         "variance_sums": {
             name: float(fields["variance"][name][selected].sum())
-            for name in VARIANCE_FIELDS
+            for name in fields["variance"]
         },
         "scale_sq_sum": float(fields["scale_sq"][selected].sum()),
         "block_mean_scale_sq_sum": float(
@@ -299,11 +348,12 @@ def accumulate(fields, positions=None):
 
 def combine(records):
     present = [record for record in records if record["blocks"]]
+    variance_names = list(present[0]["variance_sums"]) if present else list(VARIANCE_FIELDS)
     combined = {
         "blocks": sum(record["blocks"] for record in present),
         "variance_sums": {
             name: sum(record["variance_sums"][name] for record in present)
-            for name in VARIANCE_FIELDS
+            for name in variance_names
         },
         "scale_sq_sum": sum(record["scale_sq_sum"] for record in present),
         "block_mean_scale_sq_sum": sum(
@@ -353,12 +403,14 @@ def finalize(record, bits):
             name: ratio(sigmas[name], target)
             for name in (
                 "actual", "predicted", "no_luma", "no_spatial", "white",
-                "centered", "unsmoothed")
+                "centered", "unsmoothed", "population_raw",
+                "population_centered") if name in sigmas
         },
         "counterfactual_over_actual": {
             name: ratio(sigmas[name], sigmas["actual"])
             for name in (
-                "no_luma", "no_spatial", "white", "centered", "unsmoothed")
+                "no_luma", "no_spatial", "white", "centered", "unsmoothed",
+                "population_raw", "population_centered") if name in sigmas
         },
         "curve_scale_rms": curve_scale_rms,
         "block_mean_curve_scale_rms": block_mean_curve_scale_rms,
@@ -396,6 +448,9 @@ def main():
         default=os.environ.get(
             "AOM_GRAIN_SOURCE", "/tmp/aomref/src/av1/decoder/grain_synthesis.c"))
     parser.add_argument("--json-out", default="")
+    parser.add_argument(
+        "--population", default="",
+        help="JSON from chroma_population_trace.py for coupled curve replays")
     args = parser.parse_args()
 
     frames = [int(value) for value in args.frames.split(",")]
@@ -423,6 +478,16 @@ def main():
         entry for entry in table_entries
         if entry["apply_grain"] and entry["update_parameters"]
     ]
+    population_by_frame = None
+    if args.population:
+        with open(args.population, encoding="utf-8") as handle:
+            population_report = json.load(handle)
+        if population_report.get("plane") != args.plane:
+            raise SystemExit("population report plane does not match --plane")
+        population_by_frame = {
+            int(row["update_frame"]): row
+            for row in population_report["updates"]
+        }
     gaussian = av1_grain.load_gaussian_sequence(args.aom_grain_source)
     with open(args.aom_grain_source, "rb") as handle:
         grain_source_sha256 = hashlib.sha256(handle.read()).hexdigest()
@@ -448,13 +513,26 @@ def main():
             continue
         entry = stream_entries[frame_number]
         next_entry = stream_entries[frame_number + 1]
+        population = None
+        if population_by_frame is not None:
+            active_frames = [value for value in population_by_frame
+                             if value <= frame_number]
+            next_active_frames = [value for value in population_by_frame
+                                  if value <= frame_number + 1]
+            if not active_frames or not next_active_frames:
+                raise SystemExit(
+                    f"population report does not cover frame {frame_number}")
+            population = (
+                population_by_frame[max(active_frames)],
+                population_by_frame[max(next_active_frames)],
+            )
         fields = frame_fields(
             source_chroma[frame_number], source_chroma[frame_number + 1],
             base_chroma[frame_number], base_chroma[frame_number + 1],
             on_chroma[frame_number], on_chroma[frame_number + 1],
             source_luma[frame_number], source_luma[frame_number + 1],
             base_luma[frame_number], base_luma[frame_number + 1],
-            blocks, entry, next_entry, gaussian, args.bits, plane)
+            blocks, entry, next_entry, gaussian, args.bits, plane, population)
         overall = accumulate(fields)
         all_records.append(overall)
         positions = emission_audit.selected_luma_band_positions(
@@ -512,23 +590,30 @@ def main():
           f"{aggregate['pixel_mismatches']}/{aggregate['pixel_count']}")
     print(f"{'range':<15}{'blocks':>8}{'truth':>9}{'target':>9}"
           f"{'synth':>9}{'played':>9}{'s/tgt':>9}{'noY/act':>10}"
-          f"{'white/act':>11}{'ctr/tgt':>9}{'raw/tgt':>9}{'curve':>9}{'nz':>8}")
+          f"{'white/act':>11}{'ctr/tgt':>9}{'raw/tgt':>9}"
+          + (f"{'fit/tgt':>9}{'fitc/tgt':>10}" if population_by_frame else "")
+          + f"{'curve':>9}{'nz':>8}")
     def number(value, width):
         return f"{value:>{width}.3f}" if value is not None else f"{'n/a':>{width}}"
 
     for row in luma_bins:
         low, high = row["range"]
         sigma = row["sigma"]
-        print(f"{low:.3f}-{high:.3f} {row['blocks']:>7}"
+        line = (f"{low:.3f}-{high:.3f} {row['blocks']:>7}"
               f"{number(sigma['truth'], 9)}{number(sigma['target'], 9)}"
               f"{number(sigma['actual'], 9)}{number(sigma['played'], 9)}"
               f"{number(row['synth_over_target']['actual'], 9)}"
               f"{number(row['counterfactual_over_actual']['no_luma'], 10)}"
               f"{number(row['counterfactual_over_actual']['white'], 11)}"
               f"{number(row['synth_over_target']['centered'], 9)}"
-              f"{number(row['synth_over_target']['unsmoothed'], 9)}"
-              f"{number(row['curve_scale_rms'], 9)}"
-              f"{number(row['nonzero_delta_fraction'], 8)}")
+              f"{number(row['synth_over_target']['unsmoothed'], 9)}")
+        if population_by_frame:
+            line += (
+                f"{number(row['synth_over_target']['population_raw'], 9)}"
+                f"{number(row['synth_over_target']['population_centered'], 10)}")
+        print(line
+              + f"{number(row['curve_scale_rms'], 9)}"
+              + f"{number(row['nonzero_delta_fraction'], 8)}")
     print("aggregate "
           f"truth={aggregate['sigma']['truth']:.3f} "
           f"target={aggregate['sigma']['target']:.3f} "

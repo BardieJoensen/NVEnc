@@ -95,6 +95,29 @@ class ChromaEmissionAuditTests(unittest.TestCase):
         self.assertEqual(reduced[0], points[0])
         self.assertEqual(reduced[-1], points[-1])
 
+    def test_population_curve_uses_reconstructed_bins_and_is_plane_local(self):
+        entry = {
+            "scaling_points": {
+                "y": [[0, 1]], "cb": [[0, 2]], "cr": [[0, 3]],
+            },
+            "ar_coeffs": {"y": [1], "cb": [2], "cr": [3]},
+        }
+        population = {
+            "shape_fit": {"scale": 4.0},
+            "bins": [
+                {"filled_sigma": 1.0},
+                {"filled_sigma": 2.0},
+                {"filled_sigma": 3.0},
+            ],
+        }
+        changed = chroma_emission_audit.population_curve_entry(
+            entry, "cr", population, centered=True, max_points=3)
+        self.assertEqual(changed["scaling_points"]["cr"], [
+            [43, 4], [128, 8], [213, 12]
+        ])
+        self.assertEqual(changed["scaling_points"]["cb"], [[0, 2]])
+        self.assertEqual(changed["ar_coeffs"], entry["ar_coeffs"])
+
 
 if __name__ == "__main__":
     unittest.main()
