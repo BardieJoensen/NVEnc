@@ -5,6 +5,8 @@ This harness deliberately separates four questions:
 
 * ``plain`` is the compression denominator;
 * ``production`` is the deployed r4069 bilateral/residual analyser;
+* ``bilateral-source`` keeps the bilateral separator but fits the grain model
+  from source flat blocks, isolating model quality from motion separation;
 * ``causal`` is source fitting with one past reference; and
 * ``paired`` is source fitting with one past plus one future reference whose
   render confidence is paired at the weaker SAD.
@@ -61,6 +63,10 @@ MOTION_ARMS = (
     "balanced-detail",
     "balanced-nofinish",
     "balanced-median-detail",
+)
+CANDIDATE_ARMS = (
+    "bilateral-source",
+    *MOTION_ARMS,
 )
 
 CONTROLLED_ENCODE = (
@@ -159,6 +165,8 @@ def publish_outputs(partials: list[Path], outputs: list[Path]) -> None:
 def fgs_options(arm: str) -> str:
     if arm == "production":
         return "denoise=auto,chroma=auto,denoiser=bilateral"
+    if arm == "bilateral-source":
+        return "denoise=auto,chroma=auto,denoiser=bilateral,modelsrc=on"
     if arm in MOTION_ARMS:
         return "denoise=auto,chroma=auto,denoiser=motion,motion-refs=1,modelsrc=on"
     raise ValueError(arm)
@@ -233,7 +241,8 @@ def main() -> int:
     parser.add_argument("--titles", default=",".join(TITLES))
     parser.add_argument(
         "--arms", default="plain,production,causal,paired",
-        help=("comma-separated subset of plain,production,causal,paired,balanced,"
+        help=("comma-separated subset of plain,production,bilateral-source,"
+              "causal,paired,balanced,"
               "balanced-detail,balanced-nofinish,balanced-median-detail"))
     parser.add_argument("--skip-clean", action="store_true")
     parser.add_argument("--skip-decode", action="store_true")
@@ -255,7 +264,7 @@ def main() -> int:
         parser.error(f"unknown titles: {', '.join(unknown_titles)}")
     arms = [value.strip() for value in args.arms.split(",") if value.strip()]
     unknown_arms = sorted(set(arms).difference(
-        ("plain", "production", *MOTION_ARMS)))
+        ("plain", "production", *CANDIDATE_ARMS)))
     if unknown_arms:
         parser.error(f"unknown arms: {', '.join(unknown_arms)}")
 

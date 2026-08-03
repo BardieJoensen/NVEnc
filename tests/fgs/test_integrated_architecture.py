@@ -34,6 +34,18 @@ class IntegratedArchitectureHarnessTests(unittest.TestCase):
         self.assertIn("denoiser=motion,motion-refs=1,modelsrc=on", joined)
         self.assertIn("--codec raw", joined)
 
+    def test_bilateral_source_arm_changes_model_not_separator(self):
+        command = build_clean_command(
+            Path("candidate"), Path("source.mkv"), Path("clean.y4m"),
+            Path("raw.tbl"), "bilateral-source")
+        joined = " ".join(command)
+        self.assertIn(
+            "denoiser=bilateral,modelsrc=on", joined)
+        self.assertNotIn("denoiser=motion", joined)
+        self.assertNotIn(
+            "NVENC_FGS_TEST_MOTION_CENTERED",
+            arm_environment("bilateral-source"))
+
     def test_paired_and_causal_differ_only_by_paired_environment(self):
         causal = arm_environment("causal")
         paired = arm_environment("paired")
