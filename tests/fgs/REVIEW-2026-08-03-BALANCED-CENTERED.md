@@ -2,9 +2,14 @@
 
 ## Status
 
-**Blind playback judgement pending. Research only; nothing here has been
-deployed to Tdarr.** Production remains on r4069 with the bilateral separator,
-and `modelsrc` remains default-off.
+**Superseded; do not use this package for the current decision.** The later
+detail-aware finishing arm improved the labelled fixture, six-film base VMAF
+and temporal drag. Its replacement playback gate is documented in
+`REVIEW-2026-08-03-MOTION-FINISH.md`. This older set remains retained as an
+audit artifact only.
+
+Research remains undeployed. Production is still r4069 with the bilateral
+separator, and `modelsrc` remains default-off.
 
 The review set is at:
 
