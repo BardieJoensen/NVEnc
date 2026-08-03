@@ -151,3 +151,43 @@ code effort into separator admission: forward/backward motion-vector cycle
 consistency with current/spatial fallback, ranked on base Butteraugli tails,
 VMAF/SSIMULACRA2, temporal drag and grain texture.  Speed remains secondary
 until either quality path clears.
+
+## Resolution: response-Jacobian gate also fails
+
+`delivery_jacobian.py` implements the proposed slope-aware test.  It decodes
+the source and saved clean base once, holds one deterministic block selection,
+perturbs each populated luma control independently *after table
+quantization*, measures the full cross-band response matrix, solves a damped
+least-squares log-factor update, and re-evaluates the proposed table.  This is
+strictly offline and writes only an alternate `filmgrn1` table.
+
+The response matrix itself is healthy.  On Interstellar its condition number
+is about 5, and it exposes why independent per-band multiplication was wrong:
+adjacent curve controls materially affect the same delivered bands.  With two
+bounded solver iterations:
+
+| response sample | internal max error | independent 8-seed/full-block max |
+| --- | ---: | ---: |
+| 16 blocks/bin, 1 seed | 0.0314 | **0.0518** |
+| 16 blocks/bin, 2 seeds | 0.0355 | **0.0486** |
+| 32 blocks/bin, 2 seeds | 0.0397 | **0.0514** |
+
+All failures move from the clipped darkest band to the adjacent
+0.125--0.250 band.  The other three bands in the final 32-block run are within
+0.0112.  Doubling both the seed precision and then the block count does not
+reduce the external miss; the 32-block result is slightly worse.  This is not
+evidence for ordinary sampling noise.  It is a mismatch between the bounded
+response/control population and the full within-band pixel population.
+
+The 16-block/two-seed configuration evaluates 2,338,816 clean pixels per
+response and needs 12 responses for two four-control iterations.  The
+32-block version evaluates 3,866,624 pixels per response.  Continuing to finer
+controls, more seeds or denser blocks would be designing a second normative
+synthesizer around the audit corpus, after the predeclared precision retry has
+already failed.
+
+**Final decision:** stop delivery-normalizer implementation.  Keep
+`delivery_jacobian.py` as a diagnostic and reproducible negative result, but
+do not add a CUDA pass, public option or production table correction.  The
+source-fit texture improvement remains valid and separate.  The next quality
+code work is the separator fallback described above.
