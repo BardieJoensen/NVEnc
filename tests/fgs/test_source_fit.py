@@ -52,6 +52,9 @@ class TemporalLeakTests(unittest.TestCase):
         self.assertEqual(
             temporal_grain_report.plane_geometry(1919, 1079, "v"),
             (960, 540, 16))
+        self.assertEqual(
+            strength_selection_report.plane_geometry(3840, 2160, "u"),
+            (1920, 1080, 16))
 
     def test_temporal_report_records_zero_energy_without_texture(self):
         truth = {"sigma": 4.0, "h1": 0.2, "v1": 0.2,
@@ -111,20 +114,36 @@ class TemporalLeakTests(unittest.TestCase):
             .reshape(height, width)
             for index in range(4)
         ]
-        chroma = np.zeros(width * height // 2, dtype=np.uint16)
+        cb = [
+            np.arange(width * height // 4, dtype=np.uint16) + 1000 + index * 10
+            for index in range(4)
+        ]
+        cr = [
+            np.arange(width * height // 4, dtype=np.uint16) + 2000 + index * 10
+            for index in range(4)
+        ]
         with tempfile.NamedTemporaryFile(suffix=".y4m", delete=False) as handle:
             path = handle.name
             handle.write(b"YUV4MPEG2 W4 H2 F24:1 Ip A1:1 C420p10\n")
             for index, frame in enumerate(frames):
                 handle.write(f"FRAME Xindex={index}\n".encode("ascii"))
                 handle.write(frame.astype("<u2").tobytes())
-                handle.write(chroma.astype("<u2").tobytes())
+                handle.write(cb[index].astype("<u2").tobytes())
+                handle.write(cr[index].astype("<u2").tobytes())
         try:
             selected = strength_selection_report.decode_y4m_selected(
                 path, width, height, [1, 3], bits)
             np.testing.assert_array_equal(selected[1], frames[1])
             np.testing.assert_array_equal(selected[3], frames[3])
             self.assertEqual(list(selected), [1, 3])
+            selected_u = strength_selection_report.decode_y4m_selected(
+                path, width, height, [0, 2], bits, plane="u")
+            selected_v = strength_selection_report.decode_y4m_selected(
+                path, width, height, [0, 2], bits, plane="v")
+            np.testing.assert_array_equal(selected_u[0], cb[0].reshape(1, 2))
+            np.testing.assert_array_equal(selected_u[2], cb[2].reshape(1, 2))
+            np.testing.assert_array_equal(selected_v[0], cr[0].reshape(1, 2))
+            np.testing.assert_array_equal(selected_v[2], cr[2].reshape(1, 2))
         finally:
             os.unlink(path)
 

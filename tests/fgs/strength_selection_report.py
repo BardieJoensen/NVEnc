@@ -21,6 +21,10 @@ Usage:
   python3 tests/fgs/strength_selection_report.py \
       --source clip.mkv --clean-base clean.y4m \
       --frames 10,58,106,154,202,250,275 --json-out report.json
+
+Use ``--plane u`` or ``--plane v`` for a variance-weighted real-film chroma
+closure. Flat/static selection and intensity bins remain source-luma based;
+each selected 32x32 luma block maps to the corresponding 16x16 4:2:0 block.
 """
 import argparse
 import json
@@ -51,8 +55,14 @@ def probe_size(path):
     return tuple(int(value) for value in result.stdout.strip().split(",")[:2])
 
 
-def decode_y4m_selected(path, width, height, indices, bits):
-    """Read selected Y4M luma planes without streaming every skipped payload.
+def plane_geometry(width, height, plane):
+    if plane == "y":
+        return width, height, 32
+    return (width + 1) // 2, (height + 1) // 2, 16
+
+
+def decode_y4m_selected(path, width, height, indices, bits, plane="y"):
+    """Read selected Y4M planes without streaming every skipped payload.
 
     The clean-base corpus uses multi-gigabyte uncompressed Y4M files. FFmpeg's
     select filter still reads all intervening pixels; Y4M is seekable at the
@@ -84,20 +94,32 @@ def decode_y4m_selected(path, width, height, indices, bits):
             raise RuntimeError(
                 f"{path}: Y4M is {header_bits}-bit, requested {bits}-bit")
 
+        plane_width, plane_height, _block_size = plane_geometry(
+            width, height, plane)
         luma_bytes = width * height * itemsize
-        frame_bytes = width * height * 3 // 2 * itemsize
+        chroma_bytes = ((width + 1) // 2) * ((height + 1) // 2) * itemsize
+        frame_bytes = luma_bytes + 2 * chroma_bytes
+        plane_bytes = (luma_bytes if plane == "y" else chroma_bytes)
+        plane_offset = {
+            "y": 0,
+            "u": luma_bytes,
+            "v": luma_bytes + chroma_bytes,
+        }[plane]
         for frame_number in range(max(indices) + 1):
             frame_header = handle.readline()
             if not frame_header.startswith(b"FRAME"):
                 raise RuntimeError(
                     f"{path}: missing FRAME header at index {frame_number}")
             if frame_number in wanted:
-                raw = handle.read(luma_bytes)
-                if len(raw) != luma_bytes:
+                handle.seek(plane_offset, os.SEEK_CUR)
+                raw = handle.read(plane_bytes)
+                if len(raw) != plane_bytes:
                     raise RuntimeError(f"{path}: truncated frame {frame_number}")
                 selected[frame_number] = np.frombuffer(
-                    raw, dtype, count=width * height).reshape(height, width)
-                handle.seek(frame_bytes - luma_bytes, os.SEEK_CUR)
+                    raw, dtype, count=plane_width * plane_height).reshape(
+                        plane_height, plane_width)
+                handle.seek(
+                    frame_bytes - plane_offset - plane_bytes, os.SEEK_CUR)
             else:
                 handle.seek(frame_bytes, os.SEEK_CUR)
     if selected.keys() != wanted:
@@ -106,48 +128,56 @@ def decode_y4m_selected(path, width, height, indices, bits):
     return {index: selected[index] for index in indices}
 
 
-def decode_selected(path, width, height, indices, bits, filmgrain=None):
+def decode_selected(path, width, height, indices, bits, filmgrain=None, plane="y"):
     if filmgrain is None and os.path.splitext(path)[1].lower() == ".y4m":
-        return decode_y4m_selected(path, width, height, indices, bits)
+        return decode_y4m_selected(
+            path, width, height, indices, bits, plane=plane)
     terms = "+".join(f"eq(n\\,{index})" for index in indices)
     pix_fmt = "gray" if bits == 8 else f"gray{bits}le"
+    plane_width, plane_height, _block_size = plane_geometry(
+        width, height, plane)
     cmd = [FFMPEG, "-v", "error"]
     if filmgrain is not None:
         cmd += ["-c:v", "libdav1d", "-filmgrain", str(filmgrain)]
     cmd += ["-i", path, "-map", "0:v:0",
-            # extractplanes keeps the stored luma code values exact. Asking the
-            # scaler for gray10le directly expands limited-range luma, which would
+            # extractplanes keeps stored code values exact. Asking the scaler
+            # for gray10le directly expands limited-range samples, which would
             # no longer match the direct Y4M reader.
-            "-vf", f"select='{terms}',extractplanes=y", "-fps_mode", "passthrough",
+            "-vf", f"select='{terms}',extractplanes={plane}",
+            "-fps_mode", "passthrough",
             "-pix_fmt", pix_fmt, "-f", "rawvideo", "-"]
     result = subprocess.run(
         cmd,
         check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     dtype = np.uint8 if bits == 8 else np.uint16
-    frame_bytes = width * height * np.dtype(dtype).itemsize
+    frame_bytes = plane_width * plane_height * np.dtype(dtype).itemsize
     if len(result.stdout) != len(indices) * frame_bytes:
         raise RuntimeError(
             f"{path}: decoded {len(result.stdout) // frame_bytes} frames, "
             f"expected {len(indices)}")
     return {
-        index: np.frombuffer(result.stdout, dtype, count=width * height,
-                             offset=position * frame_bytes).reshape(height, width)
+        index: np.frombuffer(
+            result.stdout, dtype, count=plane_width * plane_height,
+            offset=position * frame_bytes).reshape(plane_height, plane_width)
         for position, index in enumerate(indices)
     }
 
 
-def block_variances(frame):
-    residual = detrend_blocks(blockwise(frame))
+def block_variances(frame, block_size=32):
+    residual = detrend_blocks(blockwise(frame, block_size))
     return (residual * residual).mean(axis=(-2, -1))
 
 
-def strength_variance_fields(source, next_source, clean, next_clean):
+def strength_variance_fields(
+        source, next_source, clean, next_clean, block_size=32):
     """Calculate each full-frame block statistic once for all masks/bands."""
     return {
-        "source": block_variances(source),
-        "base": block_variances(clean),
-        "truth": block_variances((source - next_source) / math.sqrt(2.0)),
-        "leak": block_variances((clean - next_clean) / math.sqrt(2.0)),
+        "source": block_variances(source, block_size),
+        "base": block_variances(clean, block_size),
+        "truth": block_variances(
+            (source - next_source) / math.sqrt(2.0), block_size),
+        "leak": block_variances(
+            (clean - next_clean) / math.sqrt(2.0), block_size),
     }
 
 
@@ -186,9 +216,10 @@ def measure_strength_fields(fields, blocks):
     }
 
 
-def measure(source, next_source, clean, next_clean, blocks):
+def measure(source, next_source, clean, next_clean, blocks, block_size=32):
     return measure_strength_fields(
-        strength_variance_fields(source, next_source, clean, next_clean), blocks)
+        strength_variance_fields(
+            source, next_source, clean, next_clean, block_size), blocks)
 
 
 def aggregate(rows):
@@ -211,7 +242,7 @@ def aggregate(rows):
 
 
 def encoded_variance_fields(source, next_source, encoded_on, next_encoded_on,
-                            encoded_off, next_encoded_off):
+                            encoded_off, next_encoded_off, block_size=32):
     """Calculate decoded block fields once for all source-selected masks."""
     # Decoder buffers are uint16 for every >8-bit format. Differences must be
     # signed: grain-on minus grain-off legitimately crosses zero, and uint16
@@ -223,14 +254,16 @@ def encoded_variance_fields(source, next_source, encoded_on, next_encoded_on,
     encoded_off = np.asarray(encoded_off, dtype=np.float64)
     next_encoded_off = np.asarray(next_encoded_off, dtype=np.float64)
     return {
-        "truth": block_variances((source - next_source) / math.sqrt(2.0)),
+        "truth": block_variances(
+            (source - next_source) / math.sqrt(2.0), block_size),
         "base": block_variances(
-            (encoded_off - next_encoded_off) / math.sqrt(2.0)),
+            (encoded_off - next_encoded_off) / math.sqrt(2.0), block_size),
         "synth": 0.5 * (
-            block_variances(encoded_on - encoded_off)
-            + block_variances(next_encoded_on - next_encoded_off)),
+            block_variances(encoded_on - encoded_off, block_size)
+            + block_variances(
+                next_encoded_on - next_encoded_off, block_size)),
         "total": block_variances(
-            (encoded_on - next_encoded_on) / math.sqrt(2.0)),
+            (encoded_on - next_encoded_on) / math.sqrt(2.0), block_size),
     }
 
 
@@ -270,12 +303,12 @@ def measure_encoded_fields(fields, blocks):
 
 
 def measure_encoded(source, next_source, encoded_on, next_encoded_on,
-                    encoded_off, next_encoded_off, blocks):
+                    encoded_off, next_encoded_off, blocks, block_size=32):
     """Measure the post-encode variance closure on the same source mask."""
     return measure_encoded_fields(
         encoded_variance_fields(
             source, next_source, encoded_on, next_encoded_on,
-            encoded_off, next_encoded_off),
+            encoded_off, next_encoded_off, block_size),
         blocks)
 
 
@@ -340,6 +373,9 @@ def main():
              "analysis; cannot be combined with --encoded")
     parser.add_argument("--frames", default="10,58,106,154,202,250,275")
     parser.add_argument("--bits", type=int, default=10, choices=(8, 10, 12, 16))
+    parser.add_argument(
+        "--plane", choices=("y", "u", "v"), default="y",
+        help="plane to measure; masks and intensity bins always use source luma")
     parser.add_argument("--flat-fraction", type=float, default=0.10)
     parser.add_argument("--static-lo", type=float, default=0.8)
     parser.add_argument("--static-hi", type=float, default=1.3)
@@ -365,17 +401,26 @@ def main():
         if probe_size(path) != size:
             raise SystemExit(f"source and encoded arm {label} dimensions differ")
     width, height = size
+    plane_width, plane_height, plane_block_size = plane_geometry(
+        width, height, args.plane)
     frames = [int(value) for value in args.frames.split(",")]
     source_indices = sorted(set(frames + [frame + 1 for frame in frames]))
-    source_decoded = decode_selected(args.source, width, height, source_indices, args.bits)
+    source_luma = decode_selected(
+        args.source, width, height, source_indices, args.bits)
+    source_decoded = (source_luma if args.plane == "y" else decode_selected(
+        args.source, width, height, source_indices, args.bits,
+        plane=args.plane))
     clean_decoded = decode_selected(
-        args.clean_base, width, height, source_indices, args.bits)
+        args.clean_base, width, height, source_indices, args.bits,
+        plane=args.plane)
     encoded_decoded = {
         label: {
             "on": decode_selected(
-                path, width, height, source_indices, args.bits, filmgrain=1),
+                path, width, height, source_indices, args.bits,
+                filmgrain=1, plane=args.plane),
             "off": decode_selected(
-                path, width, height, source_indices, args.bits, filmgrain=0),
+                path, width, height, source_indices, args.bits,
+                filmgrain=0, plane=args.plane),
         }
         for label, path in encoded_paths.items()
     }
@@ -384,7 +429,9 @@ def main():
         "source": os.path.abspath(args.source),
         "clean_base": os.path.abspath(args.clean_base),
         "encoded": os.path.abspath(args.encoded) if args.encoded else None,
-        "dimensions": [width, height],
+        "source_dimensions": [width, height],
+        "dimensions": [plane_width, plane_height],
+        "plane": args.plane,
         "bits": args.bits,
         "frames": frames,
         "static_ratio": [args.static_lo, args.static_hi],
@@ -403,7 +450,8 @@ def main():
     per_frame_strength_fields = {}
     per_frame_encoded_fields = {}
 
-    print(f"{os.path.basename(args.source)}: {width}x{height} {args.bits}-bit")
+    print(f"{os.path.basename(args.source)}: plane {args.plane} "
+          f"{plane_width}x{plane_height} {args.bits}-bit")
     print(f"{'frame':>6} {'mask':<20}{'blocks':>8}{'src s':>9}{'base s':>9}"
           f"{'truth s':>9}{'spatial':>10}{'leak':>9}{'target':>9}")
     for frame_number in frames:
@@ -412,24 +460,30 @@ def main():
         clean = clean_decoded[frame_number].astype(np.float64)
         next_clean = clean_decoded[frame_number + 1].astype(np.float64)
         strength_fields = strength_variance_fields(
-            source, next_source, clean, next_clean)
+            source, next_source, clean, next_clean, plane_block_size)
         per_frame_strength_fields[frame_number] = strength_fields
         encoded_fields = {
             label: encoded_variance_fields(
                 source, next_source,
                 decoded["on"][frame_number], decoded["on"][frame_number + 1],
-                decoded["off"][frame_number], decoded["off"][frame_number + 1])
+                decoded["off"][frame_number], decoded["off"][frame_number + 1],
+                plane_block_size)
             for label, decoded in encoded_decoded.items()
         }
         per_frame_encoded_fields[frame_number] = encoded_fields
-        top, _score, _sigma = select_flat(source, args.bits, args.flat_fraction)
-        production, _score, _sigma = production_flat_blocks(source, args.bits)
+        luma = source_luma[frame_number].astype(np.float64)
+        next_luma = source_luma[frame_number + 1].astype(np.float64)
+        top, _score, _sigma = select_flat(
+            luma, args.bits, args.flat_fraction)
+        production, _score, _sigma = production_flat_blocks(luma, args.bits)
         masks = {
             "top10_static": static_flat_blocks(
-                source, next_source, top, lo=args.static_lo, hi=args.static_hi),
+                luma, next_luma, top,
+                lo=args.static_lo, hi=args.static_hi),
             "production_spatial": production,
             "production_static": static_flat_blocks(
-                source, next_source, production, lo=args.static_lo, hi=args.static_hi),
+                luma, next_luma, production,
+                lo=args.static_lo, hi=args.static_hi),
         }
         for name in per_frame_masks:
             per_frame_masks[name].append(masks[name])
@@ -493,9 +547,9 @@ def main():
         for name, frame_masks in per_frame_masks.items():
             rows = []
             for frame_number, blocks in zip(frames, frame_masks):
-                source = source_decoded[frame_number].astype(np.float64)
-                next_source = source_decoded[frame_number + 1].astype(np.float64)
-                band = luma_bands(source, blocks, args.luma_bins, max_value)[bin_index]
+                luma = source_luma[frame_number].astype(np.float64)
+                band = luma_bands(
+                    luma, blocks, args.luma_bins, max_value)[bin_index]
                 if len(band) >= 8:
                     measured = measure_strength_fields(
                         per_frame_strength_fields[frame_number], band)
