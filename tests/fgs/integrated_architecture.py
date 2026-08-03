@@ -7,6 +7,8 @@ This harness deliberately separates four questions:
 * ``production`` is the deployed r4069 bilateral/residual analyser;
 * ``bilateral-source`` keeps the bilateral separator but fits the grain model
   from source flat blocks, isolating model quality from motion separation;
+* ``bilateral-source-chroma-global`` and ``-local`` keep that exact luma path
+  while testing aggregate versus per-luma-bin temporal chroma closure;
 * ``causal`` is source fitting with one past reference; and
 * ``paired`` is source fitting with one past plus one future reference whose
   render confidence is paired at the weaker SAD.
@@ -64,9 +66,21 @@ MOTION_ARMS = (
     "balanced-nofinish",
     "balanced-median-detail",
 )
+CHROMA_LEAK_ARMS = (
+    "bilateral-source-chroma-global",
+    "bilateral-source-chroma-local",
+)
 CANDIDATE_ARMS = (
     "bilateral-source",
+    *CHROMA_LEAK_ARMS,
     *MOTION_ARMS,
+)
+
+RESEARCH_ENVIRONMENT = (
+    "NVENC_FGS_TEST_CHROMA_LEAK",
+    "NVENC_FGS_TEST_MOTION_CENTERED",
+    "NVENC_FGS_TEST_MOTION_FINISH",
+    "NVENC_FGS_TEST_MOTION_THSAD",
 )
 
 CONTROLLED_ENCODE = (
@@ -122,11 +136,7 @@ def run_logged(command: list[str], env: dict[str, str], log: Path) -> float:
     with log_partial.open("w", encoding="utf-8") as handle:
         handle.write("command: " + shlex.join(command) + "\n")
         selected = {
-            key: env[key] for key in (
-                "NVENC_FGS_TEST_MOTION_CENTERED",
-                "NVENC_FGS_TEST_MOTION_FINISH",
-                "NVENC_FGS_TEST_MOTION_THSAD",
-            ) if key in env
+            key: env[key] for key in RESEARCH_ENVIRONMENT if key in env
         }
         handle.write("environment: " + json.dumps(selected, sort_keys=True) + "\n")
         handle.flush()
@@ -165,7 +175,7 @@ def publish_outputs(partials: list[Path], outputs: list[Path]) -> None:
 def fgs_options(arm: str) -> str:
     if arm == "production":
         return "denoise=auto,chroma=auto,denoiser=bilateral"
-    if arm == "bilateral-source":
+    if arm == "bilateral-source" or arm in CHROMA_LEAK_ARMS:
         return "denoise=auto,chroma=auto,denoiser=bilateral,modelsrc=on"
     if arm in MOTION_ARMS:
         return "denoise=auto,chroma=auto,denoiser=motion,motion-refs=1,modelsrc=on"
@@ -174,6 +184,10 @@ def fgs_options(arm: str) -> str:
 
 def arm_environment(arm: str) -> dict[str, str]:
     env = os.environ.copy()
+    if arm == "bilateral-source-chroma-global":
+        env["NVENC_FGS_TEST_CHROMA_LEAK"] = "global"
+    if arm == "bilateral-source-chroma-local":
+        env["NVENC_FGS_TEST_CHROMA_LEAK"] = "local"
     if arm in MOTION_ARMS:
         env["NVENC_FGS_TEST_MOTION_THSAD"] = "640"
     if arm == "paired":
@@ -242,6 +256,8 @@ def main() -> int:
     parser.add_argument(
         "--arms", default="plain,production,causal,paired",
         help=("comma-separated subset of plain,production,bilateral-source,"
+              "bilateral-source-chroma-global,"
+              "bilateral-source-chroma-local,"
               "causal,paired,balanced,"
               "balanced-detail,balanced-nofinish,balanced-median-detail"))
     parser.add_argument("--skip-clean", action="store_true")
@@ -313,11 +329,7 @@ def main() -> int:
             expected = {
                 "command": encode_command,
                 "environment": {
-                    key: env[key] for key in (
-                        "NVENC_FGS_TEST_MOTION_CENTERED",
-                        "NVENC_FGS_TEST_MOTION_FINISH",
-                        "NVENC_FGS_TEST_MOTION_THSAD",
-                    ) if key in env
+                    key: env[key] for key in RESEARCH_ENVIRONMENT if key in env
                 },
                 "source": source_identity,
                 "binary": identity(binary, include_hash=True),

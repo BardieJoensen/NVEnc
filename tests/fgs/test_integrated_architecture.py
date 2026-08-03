@@ -46,6 +46,26 @@ class IntegratedArchitectureHarnessTests(unittest.TestCase):
             "NVENC_FGS_TEST_MOTION_CENTERED",
             arm_environment("bilateral-source"))
 
+    def test_chroma_closure_arms_change_only_test_environment(self):
+        baseline = arm_environment("bilateral-source")
+        global_closure = arm_environment("bilateral-source-chroma-global")
+        local_closure = arm_environment("bilateral-source-chroma-local")
+        self.assertNotIn("NVENC_FGS_TEST_CHROMA_LEAK", baseline)
+        self.assertEqual(
+            global_closure["NVENC_FGS_TEST_CHROMA_LEAK"], "global")
+        self.assertEqual(
+            local_closure["NVENC_FGS_TEST_CHROMA_LEAK"], "local")
+        for arm in (
+            "bilateral-source-chroma-global",
+            "bilateral-source-chroma-local",
+        ):
+            command = build_clean_command(
+                Path("candidate"), Path("source.mkv"), Path("clean.y4m"),
+                Path("raw.tbl"), arm)
+            joined = " ".join(command)
+            self.assertIn("denoiser=bilateral,modelsrc=on", joined)
+            self.assertNotIn("denoiser=motion", joined)
+
     def test_paired_and_causal_differ_only_by_paired_environment(self):
         causal = arm_environment("causal")
         paired = arm_environment("paired")
