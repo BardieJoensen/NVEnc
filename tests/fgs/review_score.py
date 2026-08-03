@@ -200,7 +200,8 @@ def _validate_vmaf(path, frames, model_names):
 
 
 def vmaf_run(reference, distorted, tag, work=WORK, models=None,
-             distorted_filter="", allow_dimension_mismatch=False, timeout=3600):
+             distorted_filter="", allow_dimension_mismatch=False, timeout=3600,
+             limit=MAX_FRAMES):
     """Score a pair through FIFO-fed libvmaf after strict alignment checks."""
     models = models or {
         "vmaf": "version=vmaf_v0.6.1",
@@ -208,7 +209,8 @@ def vmaf_run(reference, distorted, tag, work=WORK, models=None,
     }
     os.makedirs(work, exist_ok=True)
     frames, ref_probe, dist_probe = aligned_frame_count(
-        reference, distorted, allow_dimension_mismatch=allow_dimension_mismatch)
+        reference, distorted, limit=limit,
+        allow_dimension_mismatch=allow_dimension_mismatch)
     output = os.path.join(work, f"vmaf-{tag}.json")
     manifest_path = f"{output}.manifest.json"
     manifest = {

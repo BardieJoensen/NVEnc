@@ -64,6 +64,14 @@ class AlignmentTests(unittest.TestCase):
                 "ref", "dist", allow_dimension_mismatch=True)
         self.assertEqual(count, 288)
 
+    def test_explicit_limit_can_exceed_review_default(self):
+        with mock.patch.object(
+                review_score, "probe_video",
+                side_effect=[probe("ref", 600), probe("dist", 600)]):
+            count, _, _ = review_score.aligned_frame_count(
+                "ref", "dist", limit=600)
+        self.assertEqual(count, 600)
+
 
 class ArtifactValidationTests(unittest.TestCase):
     def test_rejects_color_metadata_mismatch(self):

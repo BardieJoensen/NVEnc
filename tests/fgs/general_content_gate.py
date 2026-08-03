@@ -332,8 +332,13 @@ def score_pair(
     full: bool = True,
 ) -> dict:
     tag = f"{title}-{arm}-{kind}"
+    expected_frames = len(review_score.probe_video(str(reference))["timestamps"])
     document, frames = review_score.vmaf_run(
-        str(reference), str(distorted), tag, work=str(metric_dir))
+        str(reference), str(distorted), tag, work=str(metric_dir),
+        limit=expected_frames)
+    if frames != expected_frames:
+        raise RuntimeError(
+            f"{tag}: scored {frames} frames, expected {expected_frames}")
     pooled = document["pooled_metrics"]
     vmaf_frames = sorted(
         frame["metrics"]["vmaf"] for frame in document["frames"])
