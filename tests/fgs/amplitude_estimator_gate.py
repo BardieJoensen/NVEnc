@@ -105,16 +105,26 @@ def error_summary(records: list[dict], field: str) -> dict:
     weights = np.asarray([row["weight"] for row in records], dtype=np.float64)
     if not len(errors):
         return {"bands": 0, "bias": None, "mae": None, "max": None,
-                "weighted_rmse": None}
+                "weighted_rmse": None, "sigma8_mae": None,
+                "sigma8_max": None}
     if not np.any(weights > 0.0):
         weights = np.ones_like(weights)
-    return {
+    result = {
         "bands": int(len(errors)),
         "bias": float(np.mean(errors)),
         "mae": float(np.mean(np.abs(errors))),
         "max": float(np.max(np.abs(errors))),
         "weighted_rmse": float(np.sqrt(np.average(errors * errors, weights=weights))),
     }
+    if all("truth_sigma_8bit" in row for row in records):
+        sigma_error = np.abs(errors) * np.asarray(
+            [row["truth_sigma_8bit"] for row in records], dtype=np.float64)
+        result["sigma8_mae"] = float(np.mean(sigma_error))
+        result["sigma8_max"] = float(np.max(sigma_error))
+    else:
+        result["sigma8_mae"] = None
+        result["sigma8_max"] = None
+    return result
 
 
 def read_records(path: Path, title: str, plane: str, mask: str,
@@ -130,6 +140,7 @@ def read_records(path: Path, title: str, plane: str, mask: str,
         float(aggregate["temporal_leak_ratio"]), qvbr)
     global_target = float(global_fraction)
     theta = target_from_pre_leak(0.0, qvbr)[0]
+    depth_scale = float(1 << (int(report.get("bits", 8)) - 8))
     rows = []
     for band in bins:
         if int(band["blocks"]) < min_blocks:
@@ -149,6 +160,7 @@ def read_records(path: Path, title: str, plane: str, mask: str,
             "range": band["range"],
             "blocks": int(band["blocks"]),
             "weight": float(band["blocks"]) * truth_sigma * truth_sigma,
+            "truth_sigma_8bit": truth_sigma / depth_scale,
             "pre_leak": pre_leak,
             "post_leak": post_leak,
             "true_target": float(encoded["post_target_ratio"]),
@@ -208,23 +220,23 @@ def analyse_group(records: list[dict], qvbr: float, allow_plane_fit: bool) -> di
 def print_group(label: str, result: dict) -> None:
     print(f"\n{label}")
     print(f"{'model':<24}{'bands':>7}{'bias':>10}{'MAE':>10}"
-          f"{'max':>10}{'wRMSE':>10}")
+          f"{'max':>10}{'wRMSE':>10}{'sigma8':>10}")
     for name, row in result["models"].items():
         print(f"{name:<24}{row['bands']:>7}{row['bias']:>10.4f}"
               f"{row['mae']:>10.4f}{row['max']:>10.4f}"
-              f"{row['weighted_rmse']:>10.4f}")
+              f"{row['weighted_rmse']:>10.4f}{row['sigma8_max']:>10.4f}")
     if "pooled_plane_deadzone" in result:
         pooled = result["pooled_plane_deadzone"]
         row = pooled["summary"]
         print(f"{'pooled_plane':<24}{row['bands']:>7}{row['bias']:>10.4f}"
               f"{row['mae']:>10.4f}{row['max']:>10.4f}"
-              f"{row['weighted_rmse']:>10.4f}  "
+              f"{row['weighted_rmse']:>10.4f}{row['sigma8_max']:>10.4f}  "
               f"theta={pooled['rate_model']['intercept']:.4f}"
               f"+{pooled['rate_model']['slope']:.6f}q")
         loo = result["leave_one_title_out"]["summary"]
         print(f"{'LOO_plane':<24}{loo['bands']:>7}{loo['bias']:>10.4f}"
               f"{loo['mae']:>10.4f}{loo['max']:>10.4f}"
-              f"{loo['weighted_rmse']:>10.4f}")
+              f"{loo['weighted_rmse']:>10.4f}{loo['sigma8_max']:>10.4f}")
 
 
 def main() -> int:

@@ -42,8 +42,10 @@ class AmplitudeEstimatorGateTests(unittest.TestCase):
 
     def test_error_summary_keeps_equal_band_and_weighted_views(self):
         records = [
-            {"candidate": 0.9, "true_target": 1.0, "weight": 1.0},
-            {"candidate": 1.0, "true_target": 0.8, "weight": 3.0},
+            {"candidate": 0.9, "true_target": 1.0, "weight": 1.0,
+             "truth_sigma_8bit": 2.0},
+            {"candidate": 1.0, "true_target": 0.8, "weight": 3.0,
+             "truth_sigma_8bit": 0.5},
         ]
         result = gate.error_summary(records, "candidate")
         self.assertEqual(result["bands"], 2)
@@ -51,6 +53,8 @@ class AmplitudeEstimatorGateTests(unittest.TestCase):
         self.assertAlmostEqual(result["mae"], 0.15)
         self.assertAlmostEqual(
             result["weighted_rmse"], math.sqrt((0.01 + 3.0 * 0.04) / 4.0))
+        self.assertAlmostEqual(result["sigma8_mae"], 0.15)
+        self.assertAlmostEqual(result["sigma8_max"], 0.2)
 
 
 if __name__ == "__main__":
