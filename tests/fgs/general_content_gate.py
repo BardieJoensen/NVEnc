@@ -14,9 +14,11 @@ Four arms keep build drift and model-source effects separate:
 * ``bilateral-source``: the same candidate binary with ``modelsrc=on``.
 
 The corpus includes the labelled Drag Race and Stormester failures, studio
-detail, clean digital video, clean animation, textured Blu-ray animation, and
-a grain-positive Silo control.  Every source is an original H.264 download
-rather than a library AV1 encode.
+detail, clean digital video, clean animation, textured Blu-ray animation, a
+grain-positive Silo control, and held-out fine/coarse film-positive controls.
+Ordinary-title sources are original H.264 downloads rather than library AV1
+encodes; the two film-positive controls are retained lossless source clips from
+original remuxes.
 Clips are cut losslessly at one-third duration.  The flow's actual operating
 point is reproduced: QVBR 29 for ordinary content and QVBR 34 for animation,
 with quality/HQ, AQ and temporal AQ enabled.
@@ -137,6 +139,22 @@ TITLES = (
         "Silo.S01E01.Freedom.Day.1080p.ATVP.WEB-DL.DDP5.1.H.264-NTb.mkv",
         "fine digital grain",
         "grain-positive control",
+    ),
+    Title(
+        "Ju_on",
+        "/media/merged-storage/media/test-encodes/svt-three-arm/"
+        "ref_juon_grainy.mkv",
+        "high-energy fine 35 mm grain / lossless source clip",
+        "held-out fine-grain film-positive admission control",
+        seek_fraction=0.0,
+    ),
+    Title(
+        "Coming_to_America",
+        "/media/merged-storage/media/test-encodes/coarse1080/"
+        "clip_coming_to_america.mkv",
+        "coarse 35 mm grain at 1080p / lossless source clip",
+        "held-out coarse-grain film-positive admission control",
+        seek_fraction=0.0,
     ),
 )
 
