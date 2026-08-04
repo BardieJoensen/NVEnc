@@ -64,11 +64,15 @@ struct NVEncFilmGrainDiagnostics {
     float preEncodeLeak;
     float predictedPostEncodeLeak;
     float leakDeadzone;
+    float textureCovarianceMinPivotRatio;
     uint64_t temporalLeakBlocks;
+    uint64_t temporalTextureObservations;
     uint64_t strengthRectifiedBlocks;
     bool sourceRegularizationRejected;
     bool sourceModelFallback;
     bool leakCompensated;
+    bool textureLeakCompensated;
+    bool textureLeakRejected;
     bool reliable;
     bool sceneReset;
     bool modelHeld;
@@ -119,6 +123,12 @@ constexpr double FGS_CHROMA_V_LEAK_THETA_QVBR_SLOPE = 0.0005557562076749464;
 constexpr double FGS_LEAK_QVBR_MIN = 25.0;
 constexpr double FGS_LEAK_QVBR_MAX = 39.0;
 constexpr uint64_t FGS_MIN_TEMPORAL_BIN_BLOCKS = 4;
+// The confirmatory eight-film replay selected a 3/4 subtraction of the clean
+// base covariance.  Keep the rational form exact in the GPU accumulators;
+// unlike a floating-point alpha this is deterministic across architectures.
+constexpr int FGS_TEXTURE_SOURCE_WEIGHT = 4;
+constexpr int FGS_TEXTURE_BASE_WEIGHT = 3;
+constexpr int FGS_TEXTURE_WEIGHT_DENOMINATOR = 4;
 
 #ifdef __CUDACC__
 #define FGS_HOST_DEVICE __host__ __device__
@@ -174,8 +184,24 @@ struct FilmGrainGpuPlaneStats {
     uint64_t observations;
 };
 
+// Test-only temporal luma covariance target.  The CUDA kernel accumulates
+//   4 * covariance(source[n]-source[n-1])
+// - 3 * covariance(base[n]-base[n-1])
+// over the same source-static blocks used by the source AR fit.  Consecutive
+// differencing doubles both covariances, which is a harmless common scale for
+// the AR normal equations.  Keeping this separate from FilmGrainGpuPlaneStats
+// lets the default spatial/source model remain byte-identical when the test
+// hook is disabled.
+struct FilmGrainTemporalArStats {
+    int64_t weightedAta[FGS_TRI_Y];
+    int64_t weightedAtb[FGS_AR_COEFFS];
+    int64_t weightedBtb;
+    uint64_t observations;
+};
+
 struct FilmGrainGpuStats {
     FilmGrainGpuPlaneStats plane[3];
+    FilmGrainTemporalArStats temporalLuma;
 };
 
 static_assert(sizeof(FilmGrainGpuStats) < 16 * 1024, "FGS readback must stay compact");
@@ -198,9 +224,12 @@ bool solve_linear_system(std::vector<double> matrix, std::vector<double> rhs, st
 FilmGrainSolvedPlane solve_plane(const FilmGrainGpuPlaneStats& stats, bool chroma, const FilmGrainSolvedPlane *lumaSolved);
 std::vector<StrengthPoint> fit_strength_points(const FilmGrainSolvedPlane& solved, int bitDepth, int maxPoints);
 void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& src);
+void add_temporal_ar_stats(FilmGrainTemporalArStats& dst, const FilmGrainTemporalArStats& src);
 bool apply_luma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
     uint64_t minTemporalBlocks, bool perBin,
     NVEncFilmGrainDiagnostics& diagnostics);
+bool apply_luma_texture_leak_closure(FilmGrainGpuStats& stats,
+    uint64_t minObservations, NVEncFilmGrainDiagnostics& diagnostics);
 bool apply_chroma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
     uint64_t minTemporalBlocks, bool perBin, bool planeSpecific);
 bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,

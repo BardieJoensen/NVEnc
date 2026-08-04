@@ -48,8 +48,10 @@ NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     detailRisk(0.0f), residualRetain(0.0f), grainCorrelation(0.0f),
     sourceModelCorrelation(0.0f), sourceArScale(1.0f), sourceStrengthGain(1.0f),
     preEncodeLeak(0.0f), predictedPostEncodeLeak(0.0f), leakDeadzone(0.0f),
-    temporalLeakBlocks(0), strengthRectifiedBlocks(0),
+    textureCovarianceMinPivotRatio(0.0f), temporalLeakBlocks(0),
+    temporalTextureObservations(0), strengthRectifiedBlocks(0),
     sourceRegularizationRejected(false), sourceModelFallback(false), leakCompensated(false),
+    textureLeakCompensated(false), textureLeakRejected(false),
     reliable(false), sceneReset(false), modelHeld(false) {
 }
 
@@ -423,6 +425,139 @@ void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& 
     dst.lumaPredVarSum += src.lumaPredVarSum;
     dst.lumaPredBlocks += src.lumaPredBlocks;
     dst.observations += src.observations;
+}
+
+void add_temporal_ar_stats(FilmGrainTemporalArStats& dst,
+    const FilmGrainTemporalArStats& src) {
+    for (int i = 0; i < FGS_TRI_Y; ++i) {
+        dst.weightedAta[i] += src.weightedAta[i];
+    }
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
+        dst.weightedAtb[i] += src.weightedAtb[i];
+    }
+    dst.weightedBtb += src.weightedBtb;
+    dst.observations += src.observations;
+}
+
+static int64_t divide_round_nearest(const int64_t value, const int64_t divisor) {
+    const auto magnitude = value >= 0 ? value : -value;
+    const auto rounded = (magnitude + divisor / 2) / divisor;
+    return value >= 0 ? rounded : -rounded;
+}
+
+static bool covariance_is_positive_definite(const std::vector<double>& matrix,
+    const int n, double& minPivotRatio) {
+    if (static_cast<int>(matrix.size()) != n * n) return false;
+    double diagonalMean = 0.0;
+    for (int i = 0; i < n; ++i) {
+        const double diagonal = matrix[i * n + i];
+        if (!std::isfinite(diagonal) || diagonal <= 0.0) return false;
+        diagonalMean += diagonal;
+    }
+    diagonalMean /= n;
+    if (!std::isfinite(diagonalMean) || diagonalMean <= 0.0) return false;
+
+    std::vector<double> lower(n * n, 0.0);
+    minPivotRatio = std::numeric_limits<double>::max();
+    for (int row = 0; row < n; ++row) {
+        for (int column = 0; column <= row; ++column) {
+            double value = matrix[row * n + column];
+            for (int k = 0; k < column; ++k) {
+                value -= lower[row * n + k] * lower[column * n + k];
+            }
+            if (!std::isfinite(value)) return false;
+            if (row == column) {
+                const double pivotRatio = value / diagonalMean;
+                minPivotRatio = std::min(minPivotRatio, pivotRatio);
+                // The offline corpus bottomed out near 5e-3.  Reject a target
+                // two orders of magnitude closer to singular instead of
+                // silently manufacturing texture through regularisation.
+                if (pivotRatio <= 1e-5) return false;
+                lower[row * n + column] = std::sqrt(value);
+            } else {
+                const double divisor = lower[column * n + column];
+                if (!(divisor > 0.0)) return false;
+                lower[row * n + column] = value / divisor;
+            }
+        }
+    }
+    return std::isfinite(minPivotRatio);
+}
+
+bool apply_luma_texture_leak_closure(FilmGrainGpuStats& stats,
+    const uint64_t minObservations, NVEncFilmGrainDiagnostics& diagnostics) {
+    const auto& temporal = stats.temporalLuma;
+    diagnostics.temporalTextureObservations = temporal.observations;
+    diagnostics.textureCovarianceMinPivotRatio = 0.0f;
+    diagnostics.textureLeakCompensated = false;
+    diagnostics.textureLeakRejected = false;
+    if (temporal.observations < std::max<uint64_t>(256, minObservations)) return false;
+
+    FilmGrainGpuPlaneStats candidate = stats.plane[0];
+    for (int i = 0; i < FGS_TRI_Y; ++i) {
+        candidate.ata[i] = divide_round_nearest(
+            temporal.weightedAta[i], FGS_TEXTURE_WEIGHT_DENOMINATOR);
+    }
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
+        candidate.atb[i] = divide_round_nearest(
+            temporal.weightedAtb[i], FGS_TEXTURE_WEIGHT_DENOMINATOR);
+    }
+    candidate.observations = temporal.observations;
+    const int64_t btb = divide_round_nearest(
+        temporal.weightedBtb, FGS_TEXTURE_WEIGHT_DENOMINATOR);
+
+    std::vector<double> matrix(FGS_AR_COEFFS * FGS_AR_COEFFS, 0.0);
+    std::vector<double> rhs(FGS_AR_COEFFS, 0.0);
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
+        rhs[i] = static_cast<double>(candidate.atb[i]);
+        for (int j = i; j < FGS_AR_COEFFS; ++j) {
+            const double value = static_cast<double>(
+                candidate.ata[tri_index(FGS_AR_COEFFS, i, j)]);
+            matrix[i * FGS_AR_COEFFS + j] = value;
+            matrix[j * FGS_AR_COEFFS + i] = value;
+        }
+    }
+    double minPivotRatio = 0.0;
+    if (btb <= 0 || !covariance_is_positive_definite(
+        matrix, FGS_AR_COEFFS, minPivotRatio)) {
+        diagnostics.textureLeakRejected = true;
+        return false;
+    }
+
+    std::vector<double> coefficients;
+    if (!solve_linear_system(matrix, rhs, coefficients, FGS_AR_COEFFS)) {
+        diagnostics.textureLeakRejected = true;
+        return false;
+    }
+    double explained = 0.0;
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
+        if (!std::isfinite(coefficients[i]) || std::abs(coefficients[i]) > 2.0) {
+            diagnostics.textureLeakRejected = true;
+            return false;
+        }
+        explained += rhs[i] * coefficients[i];
+    }
+    const double targetVariance = static_cast<double>(btb)
+        / static_cast<double>(temporal.observations);
+    const double innovationVariance = (static_cast<double>(btb) - explained)
+        / static_cast<double>(temporal.observations);
+    if (!std::isfinite(targetVariance) || !std::isfinite(innovationVariance)
+        || targetVariance <= 0.0
+        || innovationVariance <= targetVariance * 1e-5) {
+        diagnostics.textureLeakRejected = true;
+        return false;
+    }
+
+    // Exercise the exact downstream solver before mutating the live stats.
+    // This also checks that the existing strength observations remain usable.
+    if (!solve_plane(candidate, false, nullptr).valid) {
+        diagnostics.textureLeakRejected = true;
+        return false;
+    }
+    stats.plane[0] = candidate;
+    diagnostics.textureCovarianceMinPivotRatio = static_cast<float>(minPivotRatio);
+    diagnostics.textureLeakCompensated = true;
+    return true;
 }
 
 bool apply_luma_leak_closure(FilmGrainGpuStats& stats, const double qvbr,

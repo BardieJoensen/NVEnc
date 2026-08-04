@@ -174,6 +174,7 @@ private:
     ChromaLeakMode m_chromaLeakMode;
     bool m_lumaLeakLocal;
     bool m_sourceTemporalMask;
+    bool m_textureLeakClosure;
     std::unique_ptr<CUMemBufPair> m_blockMetrics;
     std::unique_ptr<CUMemBufPair> m_blockMask;
     std::unique_ptr<CUMemBufPair> m_sigmaMap;

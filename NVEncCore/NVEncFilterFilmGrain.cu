@@ -865,6 +865,214 @@ __global__ void kernel_fgs_temporal_strength(
     atomic_add_u64(output->temporalBlockCount + bin, 1ULL);
 }
 
+template<typename Type, int shift>
+__device__ inline int temporal_detrended_at(
+    const uint8_t *current, const int currentPitch,
+    const uint8_t *previous, const int previousPitch,
+    const int x, const int y, const FilmGrainBlockPlane& plane) {
+    const float xn = (2.0f * (x - plane.x0) - (plane.width - 1)) / plane.width;
+    const float yn = (2.0f * (y - plane.y0) - (plane.height - 1)) / plane.height;
+    const float difference = static_cast<float>(
+        load_code<Type, shift>(current, currentPitch, x, y, 0, 1)
+        - load_code<Type, shift>(previous, previousPitch, x, y, 0, 1));
+    return __float2int_rn(
+        difference - (plane.mean + plane.slopeX * xn + plane.slopeY * yn));
+}
+
+// Test-only texture composition.  Strength closure already subtracts the
+// amount of grain energy retained by the clean base, but a source AR fit still
+// describes the source's complete covariance.  Adding that full texture on
+// top of the correlated texture left in the base makes playback too coarse.
+// Measure the missing covariance directly on consecutive-frame differences:
+//
+//   C_synth = C_source - 0.75 * C_base
+//
+// The 4:3 integer weights are the frozen eight-film result.  The common factor
+// of two introduced by temporal differencing cancels from the AR solve.  This
+// kernel is never launched unless NVENC_FGS_TEST_TEXTURE_LEAK=on.
+template<typename Type, int shift>
+__global__ void kernel_fgs_temporal_texture_stats(
+    const uint8_t *__restrict__ source, const int sourcePitch,
+    const uint8_t *__restrict__ previousSource, const int previousSourcePitch,
+    const uint8_t *__restrict__ base, const int basePitch,
+    const uint8_t *__restrict__ previousBase, const int previousBasePitch,
+    const int width, const int height, const int blocksX,
+    const uint8_t *__restrict__ temporalMask,
+    FilmGrainTemporalArStats *__restrict__ output) {
+    const int bx = blockIdx.x;
+    const int by = blockIdx.y;
+    const int blockIndex = by * blocksX + bx;
+    if (temporalMask[blockIndex] == 0) return;
+
+    const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+    const int threads = blockDim.x * blockDim.y;
+    __shared__ int sourcePredictors[64][FGS_AR_COEFFS];
+    __shared__ int basePredictors[64][FGS_AR_COEFFS];
+    __shared__ int sourceValues[64];
+    __shared__ int baseValues[64];
+    __shared__ uint8_t valid[64];
+    __shared__ float reduce[10 * 64];
+    __shared__ FilmGrainBlockPlane sourcePlane;
+    __shared__ FilmGrainBlockPlane basePlane;
+
+    const int x0 = bx * FGS_BLOCK_SIZE;
+    const int y0 = by * FGS_BLOCK_SIZE;
+    const int blockW = min(FGS_BLOCK_SIZE, width - x0);
+    const int blockH = min(FGS_BLOCK_SIZE, height - y0);
+    const int count = blockW * blockH;
+    float sourceSum = 0.0f, sourceX = 0.0f, sourceY = 0.0f;
+    float baseSum = 0.0f, baseX = 0.0f, baseY = 0.0f;
+    float sumXX = 0.0f, sumYY = 0.0f;
+    for (int index = tid; index < count; index += threads) {
+        const int lx = index % blockW;
+        const int ly = index / blockW;
+        const int x = x0 + lx;
+        const int y = y0 + ly;
+        const float xn = (2.0f * lx - (blockW - 1)) / blockW;
+        const float yn = (2.0f * ly - (blockH - 1)) / blockH;
+        const float sourceDifference = static_cast<float>(
+            load_code<Type, shift>(source, sourcePitch, x, y, 0, 1)
+            - load_code<Type, shift>(previousSource, previousSourcePitch, x, y, 0, 1));
+        const float baseDifference = static_cast<float>(
+            load_code<Type, shift>(base, basePitch, x, y, 0, 1)
+            - load_code<Type, shift>(previousBase, previousBasePitch, x, y, 0, 1));
+        sourceSum += sourceDifference;
+        sourceX += sourceDifference * xn;
+        sourceY += sourceDifference * yn;
+        baseSum += baseDifference;
+        baseX += baseDifference * xn;
+        baseY += baseDifference * yn;
+        sumXX += xn * xn;
+        sumYY += yn * yn;
+    }
+    reduce[tid] = sourceSum;
+    reduce[threads + tid] = sourceX;
+    reduce[2 * threads + tid] = sourceY;
+    reduce[3 * threads + tid] = baseSum;
+    reduce[4 * threads + tid] = baseX;
+    reduce[5 * threads + tid] = baseY;
+    reduce[6 * threads + tid] = sumXX;
+    reduce[7 * threads + tid] = sumYY;
+    __syncthreads();
+    for (int stride = threads / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) {
+            for (int item = 0; item < 8; ++item) {
+                reduce[item * threads + tid] += reduce[item * threads + tid + stride];
+            }
+        }
+        __syncthreads();
+    }
+    if (tid == 0) {
+        const float invCount = 1.0f / fmaxf(static_cast<float>(count), 1.0f);
+        sourcePlane.mean = reduce[0] * invCount;
+        sourcePlane.slopeX = reduce[threads] / fmaxf(reduce[6 * threads], 1e-6f);
+        sourcePlane.slopeY = reduce[2 * threads] / fmaxf(reduce[7 * threads], 1e-6f);
+        sourcePlane.variance = 0.0f;
+        sourcePlane.x0 = x0;
+        sourcePlane.y0 = y0;
+        sourcePlane.width = blockW;
+        sourcePlane.height = blockH;
+        basePlane.mean = reduce[3 * threads] * invCount;
+        basePlane.slopeX = reduce[4 * threads] / fmaxf(reduce[6 * threads], 1e-6f);
+        basePlane.slopeY = reduce[5 * threads] / fmaxf(reduce[7 * threads], 1e-6f);
+        basePlane.variance = 0.0f;
+        basePlane.x0 = x0;
+        basePlane.y0 = y0;
+        basePlane.width = blockW;
+        basePlane.height = blockH;
+    }
+    __syncthreads();
+
+    const uint32_t sampleHash = fgs_sample_hash(
+        static_cast<uint32_t>(blockIndex * 64 + tid));
+    const int x = x0 + fgs_stratified_sample_offset(
+        blockW, FGS_AR_LAG, FGS_AR_LAG, threadIdx.x, sampleHash);
+    const int y = y0 + fgs_stratified_sample_offset(
+        blockH, FGS_AR_LAG, 0, threadIdx.y, sampleHash >> 8);
+    valid[tid] = blockW > FGS_AR_LAG * 2 && blockH > FGS_AR_LAG
+        && x >= FGS_AR_LAG && x + FGS_AR_LAG < width
+        && y >= FGS_AR_LAG && y < height;
+    if (valid[tid]) {
+        int coefficient = 0;
+        for (int dy = -FGS_AR_LAG; dy < 0; ++dy) {
+            for (int dx = -FGS_AR_LAG; dx <= FGS_AR_LAG; ++dx) {
+                sourcePredictors[tid][coefficient] = temporal_detrended_at<Type, shift>(
+                    source, sourcePitch, previousSource, previousSourcePitch,
+                    x + dx, y + dy, sourcePlane);
+                basePredictors[tid][coefficient] = temporal_detrended_at<Type, shift>(
+                    base, basePitch, previousBase, previousBasePitch,
+                    x + dx, y + dy, basePlane);
+                ++coefficient;
+            }
+        }
+        for (int dx = -FGS_AR_LAG; dx < 0; ++dx) {
+            sourcePredictors[tid][coefficient] = temporal_detrended_at<Type, shift>(
+                source, sourcePitch, previousSource, previousSourcePitch,
+                x + dx, y, sourcePlane);
+            basePredictors[tid][coefficient] = temporal_detrended_at<Type, shift>(
+                base, basePitch, previousBase, previousBasePitch,
+                x + dx, y, basePlane);
+            ++coefficient;
+        }
+        sourceValues[tid] = temporal_detrended_at<Type, shift>(
+            source, sourcePitch, previousSource, previousSourcePitch,
+            x, y, sourcePlane);
+        baseValues[tid] = temporal_detrended_at<Type, shift>(
+            base, basePitch, previousBase, previousBasePitch,
+            x, y, basePlane);
+    } else {
+        for (int coefficient = 0; coefficient < FGS_AR_COEFFS; ++coefficient) {
+            sourcePredictors[tid][coefficient] = 0;
+            basePredictors[tid][coefficient] = 0;
+        }
+        sourceValues[tid] = 0;
+        baseValues[tid] = 0;
+    }
+    __syncthreads();
+
+    for (int packed = tid; packed < FGS_TRI_Y; packed += threads) {
+        int i = 0;
+        int j = packed;
+        for (int rowLength = FGS_AR_COEFFS; j >= rowLength; --rowLength) {
+            j -= rowLength;
+            ++i;
+        }
+        j += i;
+        int64_t sum = 0;
+        for (int sample = 0; sample < threads; ++sample) {
+            sum += static_cast<int64_t>(FGS_TEXTURE_SOURCE_WEIGHT)
+                    * sourcePredictors[sample][i] * sourcePredictors[sample][j]
+                - static_cast<int64_t>(FGS_TEXTURE_BASE_WEIGHT)
+                    * basePredictors[sample][i] * basePredictors[sample][j];
+        }
+        atomic_add_i64(output->weightedAta + packed, sum);
+    }
+    for (int i = tid; i < FGS_AR_COEFFS; i += threads) {
+        int64_t sum = 0;
+        for (int sample = 0; sample < threads; ++sample) {
+            sum += static_cast<int64_t>(FGS_TEXTURE_SOURCE_WEIGHT)
+                    * sourcePredictors[sample][i] * sourceValues[sample]
+                - static_cast<int64_t>(FGS_TEXTURE_BASE_WEIGHT)
+                    * basePredictors[sample][i] * baseValues[sample];
+        }
+        atomic_add_i64(output->weightedAtb + i, sum);
+    }
+    if (tid == 0) {
+        int64_t btb = 0;
+        uint64_t observations = 0;
+        for (int sample = 0; sample < threads; ++sample) {
+            if (!valid[sample]) continue;
+            btb += static_cast<int64_t>(FGS_TEXTURE_SOURCE_WEIGHT)
+                    * sourceValues[sample] * sourceValues[sample]
+                - static_cast<int64_t>(FGS_TEXTURE_BASE_WEIGHT)
+                    * baseValues[sample] * baseValues[sample];
+            ++observations;
+        }
+        atomic_add_i64(&output->weightedBtb, btb);
+        atomic_add_u64(&output->observations, observations);
+    }
+}
+
 // Chroma closure is test-only and must not perturb the established luma
 // kernel above.  Build its luma-static population in a separate launch, then
 // measure the corresponding 16x16 U/V blocks.  Keeping the original luma
@@ -1257,6 +1465,46 @@ static RGY_ERR collect_temporal_strength(const RGYFrameInfo& source,
     }
 }
 
+template<typename Type, int shift>
+static RGY_ERR launch_temporal_texture_stats(const RGYFrameInfo& source,
+    const RGYFrameInfo& previousSource, const RGYFrameInfo& base,
+    const RGYFrameInfo& previousBase, const int blocksX, const int blocksY,
+    const uint8_t *temporalMask, FilmGrainTemporalArStats *stats,
+    cudaStream_t stream) {
+    const auto sourceY = getPlane(&source, RGY_PLANE_Y);
+    const auto previousSourceY = getPlane(&previousSource, RGY_PLANE_Y);
+    const auto baseY = getPlane(&base, RGY_PLANE_Y);
+    const auto previousBaseY = getPlane(&previousBase, RGY_PLANE_Y);
+    const dim3 block(8, 8);
+    const dim3 grid(blocksX, blocksY);
+    kernel_fgs_temporal_texture_stats<Type, shift><<<grid, block, 0, stream>>>(
+        sourceY.ptr[0], sourceY.pitch[0], previousSourceY.ptr[0], previousSourceY.pitch[0],
+        baseY.ptr[0], baseY.pitch[0], previousBaseY.ptr[0], previousBaseY.pitch[0],
+        sourceY.width, sourceY.height, blocksX, temporalMask, stats);
+    return err_to_rgy(cudaGetLastError());
+}
+
+static RGY_ERR collect_temporal_texture_stats(const RGYFrameInfo& source,
+    const RGYFrameInfo& previousSource, const RGYFrameInfo& base,
+    const RGYFrameInfo& previousBase, const int blocksX, const int blocksY,
+    const uint8_t *temporalMask, FilmGrainTemporalArStats *stats,
+    cudaStream_t stream) {
+    switch (source.csp) {
+    case RGY_CSP_NV12:
+    case RGY_CSP_YV12:
+        return launch_temporal_texture_stats<uint8_t, 0>(source, previousSource,
+            base, previousBase, blocksX, blocksY, temporalMask, stats, stream);
+    case RGY_CSP_YV12_10:
+        return launch_temporal_texture_stats<uint16_t, 0>(source, previousSource,
+            base, previousBase, blocksX, blocksY, temporalMask, stats, stream);
+    case RGY_CSP_P010:
+        return launch_temporal_texture_stats<uint16_t, 6>(source, previousSource,
+            base, previousBase, blocksX, blocksY, temporalMask, stats, stream);
+    default:
+        return RGY_ERR_UNSUPPORTED;
+    }
+}
+
 template<typename Type, int shift, int components>
 static RGY_ERR launch_temporal_chroma_plane(const RGYFrameInfo& source,
     const RGYFrameInfo& previousSource, const RGYFrameInfo& base,
@@ -1516,6 +1764,7 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(), m_motionFinishMode(MotionFinishMode::Uniform),
     m_chromaLeakMode(ChromaLeakMode::Off), m_lumaLeakLocal(false), m_sourceTemporalMask(false),
+    m_textureLeakClosure(false),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
     m_fallbackModelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWritten(false),
@@ -1741,6 +1990,23 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
             m_sourceTemporalMask = true;
             AddMessage(RGY_LOG_WARN,
                 _T("film-grain: fitting the test-only source model from temporally static blocks.\n"));
+        }
+    }
+    m_textureLeakClosure = false;
+    if (const auto value = std::getenv("NVENC_FGS_TEST_TEXTURE_LEAK");
+        value && value[0] != '\0') {
+        if (strcmp(value, "on") != 0) {
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: ignoring invalid NVENC_FGS_TEST_TEXTURE_LEAK=%s (expected on).\n"),
+                char_to_tstring(value).c_str());
+        } else if (!config.modelFromSource || prm->leakTargetQuality < 0.0f
+            || !m_sourceTemporalMask) {
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: ignoring NVENC_FGS_TEST_TEXTURE_LEAK=on (requires modelsrc=on, QVBR 25..39, retain=0, and NVENC_FGS_TEST_SOURCE_STATIC=on).\n"));
+        } else {
+            m_textureLeakClosure = true;
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: applying test-only 3/4 temporal luma covariance closure.\n"));
         }
     }
 
@@ -2324,6 +2590,14 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
             &static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice)->plane[0], stream);
         if (sts != RGY_ERR_NONE) return sts;
+        if (m_textureLeakClosure) {
+            sts = collect_temporal_texture_stats(*source, m_previousSource->frame,
+                *output, m_previousBase->frame, m_blocksX, m_blocksY,
+                sourceLumaModelMask,
+                &static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice)->temporalLuma,
+                stream);
+            if (sts != RGY_ERR_NONE) return sts;
+        }
         if (m_chromaLeakMode != ChromaLeakMode::Off) {
             // Denoising has already consumed the adaptive sigma map. Reuse its
             // device storage as a one-byte-per-luma-block temporal-static mask
@@ -2397,6 +2671,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             std::fill(std::begin(temporal.temporalBlockCount),
                 std::end(temporal.temporalBlockCount), uint64_t{ 0 });
         }
+        current.gpu.temporalLuma = {};
     }
     current.measuredNoise = measuredNoise;
     current.grainCorrelation = measuredGrainCorrelation;
@@ -2449,12 +2724,19 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                     fallbackCombined.plane[plane], frame.fallbackGpu.plane[plane]);
             }
         }
+        if (m_textureLeakClosure) {
+            add_temporal_ar_stats(combined.temporalLuma, frame.gpu.temporalLuma);
+        }
     }
     bool chromaLeakCompensated = false;
     if (prm->filmGrain.modelFromSource) {
         apply_luma_leak_closure(combined,
             temporalLeakEnabled ? prm->leakTargetQuality : -1.0,
             static_cast<uint64_t>(requiredBlocks), m_lumaLeakLocal, diagnostics);
+        if (m_textureLeakClosure) {
+            apply_luma_texture_leak_closure(combined,
+                static_cast<uint64_t>(requiredBlocks) * 64ULL, diagnostics);
+        }
         if (m_chromaLeakMode != ChromaLeakMode::Off) {
             chromaLeakCompensated = apply_chroma_leak_closure(combined,
                 temporalLeakEnabled ? prm->leakTargetQuality : -1.0,
@@ -2651,7 +2933,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
             _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f modelCorr=%.3f arScale=%.3f strengthGain=%.3f regReject=%d fallback=%d ")
-            _T("leak=%.3f>%.3f theta=%.3f temporal=%llu rectified=%llu leakClose=%d chromaLeak=%d:%d ")
+            _T("leak=%.3f>%.3f theta=%.3f temporal=%llu rectified=%llu leakClose=%d ")
+            _T("texture=%llu:%.5f:%d:%d chromaLeak=%d:%d ")
             _T("scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
@@ -2667,6 +2950,10 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             static_cast<unsigned long long>(diagnostics.temporalLeakBlocks),
             static_cast<unsigned long long>(diagnostics.strengthRectifiedBlocks),
             diagnostics.leakCompensated ? 1 : 0,
+            static_cast<unsigned long long>(diagnostics.temporalTextureObservations),
+            diagnostics.textureCovarianceMinPivotRatio,
+            diagnostics.textureLeakCompensated ? 1 : 0,
+            diagnostics.textureLeakRejected ? 1 : 0,
             static_cast<int>(m_chromaLeakMode), chromaLeakCompensated ? 1 : 0,
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
@@ -2689,6 +2976,7 @@ void NVEncFilterFilmGrain::close() {
     m_temporalLeakValid = false;
     m_lumaLeakLocal = false;
     m_sourceTemporalMask = false;
+    m_textureLeakClosure = false;
     m_frameBuf.clear();
     m_denoiseWork.reset();
     m_blockMetrics.reset();

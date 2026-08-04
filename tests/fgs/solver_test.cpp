@@ -247,6 +247,92 @@ void testTemporalLeakClosure() {
     }
 }
 
+void fillTemporalTextureTarget(FilmGrainTemporalArStats& temporal,
+    const double predictorVariance, const double targetVariance,
+    const double horizontalCoefficient) {
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
+        temporal.weightedAta[tri_index(FGS_AR_COEFFS, i, i)] =
+            static_cast<int64_t>(FGS_TEXTURE_WEIGHT_DENOMINATOR
+                * N_OBS * predictorVariance);
+    }
+    temporal.weightedAtb[FGS_AR_COEFFS - 1] =
+        static_cast<int64_t>(FGS_TEXTURE_WEIGHT_DENOMINATOR
+            * N_OBS * predictorVariance * horizontalCoefficient);
+    temporal.weightedBtb = static_cast<int64_t>(
+        FGS_TEXTURE_WEIGHT_DENOMINATOR * N_OBS * targetVariance);
+    temporal.observations = N_OBS;
+}
+
+void testTemporalTextureLeakClosure() {
+    FilmGrainGpuStats stats = {};
+    fillHorizontalPlane(stats.plane[0], 6.0, 0.60);
+    fillTemporalTextureTarget(stats.temporalLuma, 40.0, 40.0, 0.25);
+    const auto strengthBefore = stats.plane[0].binVarSum[0];
+    NVEncFilmGrainDiagnostics diagnostics;
+    expect(apply_luma_texture_leak_closure(stats, 1024, diagnostics),
+        "temporal texture closure accepts a positive-definite target");
+    expect(diagnostics.textureLeakCompensated,
+        "temporal texture closure reports application");
+    expect(!diagnostics.textureLeakRejected,
+        "valid temporal texture target is not rejected");
+    expect(diagnostics.temporalTextureObservations == N_OBS,
+        "temporal texture closure reports observations");
+    expect(diagnostics.textureCovarianceMinPivotRatio > 0.9f,
+        "well-conditioned temporal target reports a strong pivot");
+    expectNear(stats.plane[0].ata[tri_index(FGS_AR_COEFFS, 0, 0)],
+        N_OBS * 40.0, 1.0, "temporal texture closure replaces source covariance");
+    expectNear(stats.plane[0].atb[FGS_AR_COEFFS - 1],
+        N_OBS * 10.0, 1.0, "temporal texture closure replaces source cross-covariance");
+    expectNear(stats.plane[0].binVarSum[0], strengthBefore, 1e-9,
+        "temporal texture closure does not alter amplitude observations");
+    const auto solved = solve_plane(stats.plane[0], false, nullptr);
+    expect(solved.valid, "temporal texture target remains solvable downstream");
+    expectNear(solved.coeffs.back(), 0.25, 1e-5,
+        "temporal texture closure delivers the target AR coefficient");
+
+    FilmGrainGpuStats sparse = {};
+    fillWhitePlane(sparse.plane[0], 6.0, false);
+    fillTemporalTextureTarget(sparse.temporalLuma, 40.0, 40.0, 0.25);
+    sparse.temporalLuma.observations = 255;
+    const auto sparseBefore = sparse.plane[0];
+    NVEncFilmGrainDiagnostics sparseDiagnostics;
+    expect(!apply_luma_texture_leak_closure(sparse, 0, sparseDiagnostics),
+        "temporal texture closure gates under-sampled targets");
+    expect(!sparseDiagnostics.textureLeakRejected,
+        "under-sampling is a gate, not an unsafe-target rejection");
+    expect(std::memcmp(&sparse.plane[0], &sparseBefore, sizeof(sparseBefore)) == 0,
+        "under-sampled temporal target leaves source stats untouched");
+
+    FilmGrainGpuStats indefinite = {};
+    fillWhitePlane(indefinite.plane[0], 6.0, false);
+    fillTemporalTextureTarget(indefinite.temporalLuma, 10.0, 10.0, 0.0);
+    indefinite.temporalLuma.weightedAta[tri_index(FGS_AR_COEFFS, 0, 1)] =
+        static_cast<int64_t>(FGS_TEXTURE_WEIGHT_DENOMINATOR * N_OBS * 20.0);
+    const auto indefiniteBefore = indefinite.plane[0];
+    NVEncFilmGrainDiagnostics indefiniteDiagnostics;
+    expect(!apply_luma_texture_leak_closure(indefinite, 1024,
+        indefiniteDiagnostics), "indefinite temporal covariance fails closed");
+    expect(indefiniteDiagnostics.textureLeakRejected,
+        "indefinite temporal covariance is reported as rejected");
+    expect(std::memcmp(&indefinite.plane[0], &indefiniteBefore,
+        sizeof(indefiniteBefore)) == 0,
+        "rejected temporal covariance leaves source stats untouched");
+
+    FilmGrainGpuStats negativeInnovation = {};
+    fillWhitePlane(negativeInnovation.plane[0], 6.0, false);
+    fillTemporalTextureTarget(negativeInnovation.temporalLuma,
+        10.0, 10.0, 2.0);
+    const auto innovationBefore = negativeInnovation.plane[0];
+    NVEncFilmGrainDiagnostics innovationDiagnostics;
+    expect(!apply_luma_texture_leak_closure(negativeInnovation, 1024,
+        innovationDiagnostics), "negative innovation target fails closed");
+    expect(innovationDiagnostics.textureLeakRejected,
+        "negative innovation is reported as rejected");
+    expect(std::memcmp(&negativeInnovation.plane[0], &innovationBefore,
+        sizeof(innovationBefore)) == 0,
+        "negative innovation rejection leaves source stats untouched");
+}
+
 void testChromaTemporalLeakClosure() {
     constexpr double sourceVariance = 100.0;
     constexpr double qvbr = 29.0;
@@ -495,6 +581,7 @@ int main() {
     testSourceTemplateGain();
     testSourceModelResidualFallback();
     testTemporalLeakClosure();
+    testTemporalTextureLeakClosure();
     testChromaTemporalLeakClosure();
     testWhiteLuma();
     testRampLuma();
