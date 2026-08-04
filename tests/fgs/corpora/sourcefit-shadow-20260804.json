@@ -1,0 +1,139 @@
+{
+  "authority": "shadow-only",
+  "purpose": "untouched multi-scene source-fit admission falsification corpus",
+  "frozen_before_measurement": "2026-08-04",
+  "notes": [
+    "Every source is a retained progressive H.264 original, never a library AV1 output.",
+    "The two seek fractions were fixed for every title before any admission statistic was measured.",
+    "Only film-positive and cg-animation-negative are labelled controls; boundary results are descriptive."
+  ],
+  "shadow_policy": {
+    "name": "exploratory-two-axis-v0",
+    "source": "FINDINGS-2026-08-04-SOURCEFIT-ADMISSION.md",
+    "routing_authority": false,
+    "cross_frame_correlation_max": 0.127,
+    "anisotropy_mismatch_max": 0.032
+  },
+  "samples": [
+    {
+      "id": "Quiz_Show_31", "title": "Quiz Show", "reference_class": "film-positive",
+      "expectation": "photochemical grain should be admitted", "seek_fraction": 0.31, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Quiz.Show.1994.1080p.BluRay.REMUX.DTS-HD.MA.5.1.AVC-afm72/Quiz.Show.1994.1080p.BluRay.REMUX.DTS-HD.MA.5.1.AVC-afm72.mkv"
+    },
+    {
+      "id": "Quiz_Show_68", "title": "Quiz Show", "reference_class": "film-positive",
+      "expectation": "photochemical grain should be admitted", "seek_fraction": 0.68, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Quiz.Show.1994.1080p.BluRay.REMUX.DTS-HD.MA.5.1.AVC-afm72/Quiz.Show.1994.1080p.BluRay.REMUX.DTS-HD.MA.5.1.AVC-afm72.mkv"
+    },
+    {
+      "id": "Life_of_Brian_31", "title": "Life of Brian", "reference_class": "film-positive",
+      "expectation": "photochemical grain should be admitted", "seek_fraction": 0.31, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Life of Brian 1979 BluRay 1080p DTS-HD MA 5 1 AVC REMUX-FraMeSToR/Life of Brian 1979 BluRay 1080p DTS-HD MA 5 1 AVC REMUX-FraMeSToR.mkv"
+    },
+    {
+      "id": "Life_of_Brian_68", "title": "Life of Brian", "reference_class": "film-positive",
+      "expectation": "photochemical grain should be admitted", "seek_fraction": 0.68, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Life of Brian 1979 BluRay 1080p DTS-HD MA 5 1 AVC REMUX-FraMeSToR/Life of Brian 1979 BluRay 1080p DTS-HD MA 5 1 AVC REMUX-FraMeSToR.mkv"
+    },
+    {
+      "id": "Drunken_Master_31", "title": "Drunken Master", "reference_class": "film-positive",
+      "expectation": "photochemical grain should be admitted", "seek_fraction": 0.31, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Drunken Master 1978 MoC BluRay Remux 1080p AVC FLAC 1 0-ZQ/Drunken.Master.1978.MoC.BluRay.Remux.1080p.AVC.FLAC.1.0-ZQ/Drunken.Master.1978.MoC.BluRay.Remux.1080p.AVC.FLAC.1.0-ZQ.mkv"
+    },
+    {
+      "id": "Drunken_Master_68", "title": "Drunken Master", "reference_class": "film-positive",
+      "expectation": "photochemical grain should be admitted", "seek_fraction": 0.68, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Drunken Master 1978 MoC BluRay Remux 1080p AVC FLAC 1 0-ZQ/Drunken.Master.1978.MoC.BluRay.Remux.1080p.AVC.FLAC.1.0-ZQ/Drunken.Master.1978.MoC.BluRay.Remux.1080p.AVC.FLAC.1.0-ZQ.mkv"
+    },
+    {
+      "id": "Jerry_Maguire_31", "title": "Jerry Maguire", "reference_class": "film-positive",
+      "expectation": "photochemical grain should be admitted", "seek_fraction": 0.31, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Jerry.Maguire.1996.1080p.Remux.AVC.DTS-HD.MA.5.1-playBD/Jerry.Maguire.1996.1080p.Remux.AVC.DTS-HD.MA.5.1-playBD.mkv"
+    },
+    {
+      "id": "Jerry_Maguire_68", "title": "Jerry Maguire", "reference_class": "film-positive",
+      "expectation": "photochemical grain should be admitted", "seek_fraction": 0.68, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Jerry.Maguire.1996.1080p.Remux.AVC.DTS-HD.MA.5.1-playBD/Jerry.Maguire.1996.1080p.Remux.AVC.DTS-HD.MA.5.1-playBD.mkv"
+    },
+    {
+      "id": "Migration_31", "title": "Migration", "reference_class": "cg-animation-negative",
+      "expectation": "clean rendered animation should not be called film grain", "seek_fraction": 0.31, "frames": 288, "qvbr": 34,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Migration.2023.1080p.Remux.AVC.TrueHD.Atmos.7.1-playBD/Migration.2023.1080p.Remux.AVC.TrueHD.Atmos.7.1-playBD.mkv"
+    },
+    {
+      "id": "Migration_68", "title": "Migration", "reference_class": "cg-animation-negative",
+      "expectation": "clean rendered animation should not be called film grain", "seek_fraction": 0.68, "frames": 288, "qvbr": 34,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Migration.2023.1080p.Remux.AVC.TrueHD.Atmos.7.1-playBD/Migration.2023.1080p.Remux.AVC.TrueHD.Atmos.7.1-playBD.mkv"
+    },
+    {
+      "id": "Elio_31", "title": "Elio", "reference_class": "cg-animation-negative",
+      "expectation": "clean rendered animation should not be called film grain", "seek_fraction": 0.31, "frames": 288, "qvbr": 34,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Elio 2025 REPACK 1080p BluRay REMUX AVC TrueHD Atmos 7 1-ATELiER/Elio 2025 REPACK 1080p BluRay REMUX AVC TrueHD Atmos 7 1-ATELiER.mkv"
+    },
+    {
+      "id": "Elio_68", "title": "Elio", "reference_class": "cg-animation-negative",
+      "expectation": "clean rendered animation should not be called film grain", "seek_fraction": 0.68, "frames": 288, "qvbr": 34,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Elio 2025 REPACK 1080p BluRay REMUX AVC TrueHD Atmos 7 1-ATELiER/Elio 2025 REPACK 1080p BluRay REMUX AVC TrueHD Atmos 7 1-ATELiER.mkv"
+    },
+    {
+      "id": "Free_Guy_31", "title": "Free Guy", "reference_class": "digital-boundary",
+      "expectation": "descriptive boundary; do not score as a labelled negative", "seek_fraction": 0.31, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Free.Guy.2021.NORDiC.REMUX.1080p.BluRay.AVC.TrueHD.Atmos7.1-TWA/Free.Guy.2021.NORDiC.REMUX.1080p.BluRay.AVC.TrueHD.Atmos7.1-TWA.mkv"
+    },
+    {
+      "id": "Free_Guy_68", "title": "Free Guy", "reference_class": "digital-boundary",
+      "expectation": "descriptive boundary; do not score as a labelled negative", "seek_fraction": 0.68, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Free.Guy.2021.NORDiC.REMUX.1080p.BluRay.AVC.TrueHD.Atmos7.1-TWA/Free.Guy.2021.NORDiC.REMUX.1080p.BluRay.AVC.TrueHD.Atmos7.1-TWA.mkv"
+    },
+    {
+      "id": "TAR_31", "title": "TAR", "reference_class": "digital-boundary",
+      "expectation": "descriptive boundary; intentional texture may be grain-like", "seek_fraction": 0.31, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Tar 2022 BluRay 1080p TrueHD Atmos 7 1 AVC REMUX-FraMeSToR/Tar 2022 BluRay 1080p TrueHD Atmos 7 1 AVC REMUX-FraMeSToR.mkv"
+    },
+    {
+      "id": "TAR_68", "title": "TAR", "reference_class": "digital-boundary",
+      "expectation": "descriptive boundary; intentional texture may be grain-like", "seek_fraction": 0.68, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Tar 2022 BluRay 1080p TrueHD Atmos 7 1 AVC REMUX-FraMeSToR/Tar 2022 BluRay 1080p TrueHD Atmos 7 1 AVC REMUX-FraMeSToR.mkv"
+    },
+    {
+      "id": "Spider_Man_31", "title": "Spider-Man No Way Home", "reference_class": "digital-boundary",
+      "expectation": "descriptive VFX-heavy digital boundary", "seek_fraction": 0.31, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Spider-Man.No.Way.Home.2021.BluRay.1080p.TrueHD.Atmos.7.1.AVC.HYBRID.REMUX-FraMeSToR.mkv"
+    },
+    {
+      "id": "Spider_Man_68", "title": "Spider-Man No Way Home", "reference_class": "digital-boundary",
+      "expectation": "descriptive VFX-heavy digital boundary", "seek_fraction": 0.68, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Spider-Man.No.Way.Home.2021.BluRay.1080p.TrueHD.Atmos.7.1.AVC.HYBRID.REMUX-FraMeSToR.mkv"
+    },
+    {
+      "id": "Long_Halloween_31", "title": "Batman The Long Halloween", "reference_class": "drawn-animation-boundary",
+      "expectation": "descriptive textured-animation boundary", "seek_fraction": 0.31, "frames": 288, "qvbr": 34,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Batman The Long Halloween 2021 Deluxe Edition BluRay 1080p DTS-HD MA 5 1 AVC REMUX-FraMeSToR/Batman The Long Halloween 2021 Deluxe Edition BluRay 1080p DTS-HD MA 5 1 AVC REMUX-FraMeSToR.mkv"
+    },
+    {
+      "id": "Long_Halloween_68", "title": "Batman The Long Halloween", "reference_class": "drawn-animation-boundary",
+      "expectation": "descriptive textured-animation boundary", "seek_fraction": 0.68, "frames": 288, "qvbr": 34,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/Batman The Long Halloween 2021 Deluxe Edition BluRay 1080p DTS-HD MA 5 1 AVC REMUX-FraMeSToR/Batman The Long Halloween 2021 Deluxe Edition BluRay 1080p DTS-HD MA 5 1 AVC REMUX-FraMeSToR.mkv"
+    },
+    {
+      "id": "Poppy_Hill_31", "title": "From Up on Poppy Hill", "reference_class": "drawn-animation-boundary",
+      "expectation": "descriptive hand-drawn transfer boundary", "seek_fraction": 0.31, "frames": 288, "qvbr": 34,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/From Up on Poppy Hill 2011 Hybrid 1080p BluRay Remux AVC DTS-HD MA 5 0-ExREN/From.Up.on.Poppy.Hill.2011.Hybrid.1080p.BluRay.Remux.AVC.DTS-HD.MA.5.0-ExREN/From.Up.on.Poppy.Hill.2011.Hybrid.1080p.BluRay.Remux.AVC.DTS-HD.MA.5.0-ExREN.mkv"
+    },
+    {
+      "id": "Poppy_Hill_68", "title": "From Up on Poppy Hill", "reference_class": "drawn-animation-boundary",
+      "expectation": "descriptive hand-drawn transfer boundary", "seek_fraction": 0.68, "frames": 288, "qvbr": 34,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/From Up on Poppy Hill 2011 Hybrid 1080p BluRay Remux AVC DTS-HD MA 5 0-ExREN/From.Up.on.Poppy.Hill.2011.Hybrid.1080p.BluRay.Remux.AVC.DTS-HD.MA.5.0-ExREN/From.Up.on.Poppy.Hill.2011.Hybrid.1080p.BluRay.Remux.AVC.DTS-HD.MA.5.0-ExREN.mkv"
+    },
+    {
+      "id": "East_Side_Sushi_31", "title": "East Side Sushi", "reference_class": "compressed-digital-boundary",
+      "expectation": "descriptive WEB-DL/compression-residue boundary", "seek_fraction": 0.31, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/East Side Sushi 2014 1080p AMZN WEB-DL DD 2 0 H 264-playWEB/East Side Sushi 2014 1080p AMZN WEB-DL DD 2 0 H 264-playWEB.mkv"
+    },
+    {
+      "id": "East_Side_Sushi_68", "title": "East Side Sushi", "reference_class": "compressed-digital-boundary",
+      "expectation": "descriptive WEB-DL/compression-residue boundary", "seek_fraction": 0.68, "frames": 288, "qvbr": 29,
+      "source": "/media/merged-storage/media/downloads/long-term-seeding/movies/East Side Sushi 2014 1080p AMZN WEB-DL DD 2 0 H 264-playWEB/East Side Sushi 2014 1080p AMZN WEB-DL DD 2 0 H 264-playWEB.mkv"
+    }
+  ]
+}
