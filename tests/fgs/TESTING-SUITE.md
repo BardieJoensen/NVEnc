@@ -35,7 +35,7 @@ for bilateral and 35.3-52.3 for motion.
 
 | instrument | answers | invalidated by |
 | --- | --- | --- |
-| `temporal_grain_report.py` | amplitude vs temporal truth, lag-1, lag-2, per luma band, per plane | needs static flat blocks selected from the *source* and applied unchanged to every arm |
+| `temporal_grain_report.py` | amplitude vs temporal truth, lag-1, lag-2, per luma band, per plane | needs static flat blocks selected from stored native-plane codes and applied unchanged to every arm; reports before `50da8a40` used a gray-converted luma population and are not analyzer-exact |
 | `source_fit.py` | offline oracle: what the AR fit should be, with an ideal-clean control | simulation clipping if `--sim-sigma` is left at a saturating value |
 | `ar_acf.py` / `cap_table_acf.py` | coefficient-implied autocorrelation of an emitted table | saturating simulation/clipping or too few simulation seeds; the table seed is intentionally irrelevant to this coefficient statistic |
 | `amplitude_matched_texture.py` | metric response to fine versus coarse grain with base, seed, luma placement and delivered energy controlled | a single static model does not reproduce rolling per-luma delivery or decide perceptual quality |
@@ -43,6 +43,7 @@ for bilateral and 35.3-52.3 for motion.
 | `sourcefit_admission_compare.py` | source-fit versus residual-fit model error after independent film-like evidence is measured | a better source fit is not admission: it wins on all 16 current titles, including every labelled negative |
 | `correlation_target_report.py` | shipping all-block correlation, static-block alternatives and temporal grain truth, including fixed luma bands | pooling contaminated blocks by energy is worse than the median; estimator changes require real-film temporal controls |
 | temporal-static source AR prototype | whether excluding moving/structured flat blocks improves the emitted source model on real film | the luma-derived subset is not a chroma selector; applying it to U/V tripled six-film V texture error |
+| `strength_selection_report.py` + `amplitude_estimator_gate.py` | whether pre/post-encode leak supports a title-independent per-plane transfer across QVBR | predicts the requested target, not the response of the rolling, smoothed, reduced and quantised AV1 curve; it cannot clear an encoder change without the stage-3 replay |
 
 Amplitude and texture must be reported **separately**.  HF sigma alone cannot
 tell correct grain from correctly-sized grain: 2026-07-17 measured HF 3.67
@@ -68,6 +69,8 @@ spatial-flat population.
 | instrument | answers | invalidated by |
 | --- | --- | --- |
 | `emission_audit.py` | exact normative synthesis vs dav1d, pixel for pixel | using the table's seed: NVENC picks its own, 0 of 42 matched |
+| `chroma_emission_audit.py` | exact U/V source, base, target, synthesis and played amplitude per source-luma band | sparse frame pairs can miss table intervals; ratio is undefined at a zero target and misleading near zero energy |
+| `chroma_amplitude_compare.py` | control/candidate chroma closure across titles and bands, with ratio and absolute 8-bit sigma error side by side | input reports must use the same frame set, block selector and aggregation; any table/stream or dav1d mismatch invalidates the comparison |
 | `delivery_response.py` | whether an analyzer-feasible response summary can replace the exact per-luma oracle | counts/means/histograms lose the spatial clipping term near black; Taxi remains the labelled failure |
 | played-total closure | `sqrt(post_base_var + synth_var)` against source truth | needs a grain-disabled *and* grain-enabled decode of the same stream |
 | rectification counter | how often `fmax(0, V_source - V_base)` clamps and drags a bin mean down | populations differ between spatial and temporal paths; treat as an upper proxy |
@@ -77,6 +80,13 @@ A grain-applying decoder is mandatory.  Use dav1d explicitly
 the known corruption class it reported zero errors where dav1d reported 502.
 Even if NVDEC is compared for playback pixels on a known-good stream, it must
 never replace dav1d for delivery or safety gates.
+
+Do not make an amplitude shipping decision from the historical six/seven frame
+pairs. On 2026-08-04 a 7-pair chroma replay suggested a modest band improvement;
+the same six-film A/B over 23 pairs rejected both U and V. Sparse pairs remain
+diagnostic. Ratios must also be accompanied by absolute sigma in 8-bit code
+values: a nearly grain-free V band produced a 37x ratio error while its absolute
+error remained small.
 
 The current delivery-response implementation gate is closed **negative**:
 20-bin occupancy predicts 23/26 real-film bands within 5%, but misses Taxi's
