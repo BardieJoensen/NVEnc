@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import unittest
+from unittest import mock
 
 import numpy as np
 
@@ -69,6 +70,25 @@ class AxisCovarianceTests(unittest.TestCase):
         self.assertEqual(replaced["ar_coeffs"]["cb"], [2])
         self.assertEqual(replaced["scaling_points"], entry["scaling_points"])
         self.assertEqual(entry["ar_coeffs"]["y"], [1])
+
+    def test_table_average_uses_explicit_temporal_pairs(self):
+        def fake_entry(_entries, frame, _fps_num, _fps_den):
+            return {
+                "start": frame,
+                "params": {"ar_coeff_shift": 7},
+                "ar_coeffs": {"y": [frame]},
+            }
+
+        def fake_implied(entry, _plane, **_kwargs):
+            return {axis: float(entry["start"]) for axis in oracle.AXES}
+
+        with mock.patch.object(oracle, "entry_for_frame", fake_entry), \
+                mock.patch.object(oracle.ar_acf, "implied", fake_implied):
+            result = oracle.average_table_model(
+                [], [(7, 6)], [1], 24, 1, 10, 1, 1.0)
+        self.assertEqual(result["entry_starts"], [6, 7])
+        for axis in oracle.AXES:
+            self.assertAlmostEqual(result[axis], 6.5)
 
 
 class ArSystemTests(unittest.TestCase):

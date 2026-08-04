@@ -376,14 +376,14 @@ def quantized_oracles(coefficients, target, bit_depth, seeds, sigma):
     return rows, best
 
 
-def average_table_model(entries, frames, weights, fps_num, fps_den,
+def average_table_model(entries, pairs, weights, fps_num, fps_den,
                         bit_depth, seeds, sigma):
     cache = {}
     totals = {axis: 0.0 for axis in AXES}
     total_weight = 0.0
     starts = []
-    for frame, weight in zip(frames, weights):
-        for current in (frame, frame + 1):
+    for pair, weight in zip(pairs, weights):
+        for current in pair:
             entry = entry_for_frame(entries, current, fps_num, fps_den)
             key = (
                 entry["params"]["ar_coeff_shift"],
@@ -447,15 +447,15 @@ def replace_luma_model(entry, quantized):
     }
 
 
-def exact_model_replay(base_frames, frames, selected_blocks, table_entries,
+def exact_model_replay(base_frames, pairs, selected_blocks, table_entries,
                        stream_entries, fps_num, fps_den, quantized, gaussian,
                        bit_depth, seed_samples, include_current=True):
     """Replay current/oracle tables through exact normative selected pixels."""
     moments = {"oracle": empty_axis_moments()}
     if include_current:
         moments["current"] = empty_axis_moments()
-    for frame, blocks in zip(frames, selected_blocks):
-        for current in (frame, frame + 1):
+    for pair, blocks in zip(pairs, selected_blocks):
+        for current in pair:
             table_entry = entry_for_frame(
                 table_entries, current, fps_num, fps_den)
             # filmgrn1 cannot store the range-clipping flag; inherit the exact
@@ -565,7 +565,7 @@ def run(args):
     table_entries = filmgrn.load(args.table)
     fps_num, fps_den = probe_rate(args.source)
     table_model = average_table_model(
-        table_entries, frames, selected_counts, fps_num, fps_den,
+        table_entries, pairs, selected_counts, fps_num, fps_den,
         args.bits, args.ar_seeds, args.ar_sigma)
     stream_entries = probe_grain_entries(args.encoded, max(indices) + 1)
     table_matches = []
@@ -586,7 +586,7 @@ def run(args):
         with open(args.aom_grain_source, "rb") as handle:
             grain_source_sha256 = hashlib.sha256(handle.read()).hexdigest()
         exact_replay = exact_model_replay(
-            base_frames, frames, selected_blocks, table_entries,
+            base_frames, pairs, selected_blocks, table_entries,
             stream_entries, fps_num, fps_den, best, gaussian, args.bits,
             args.exact_seeds)
         exact_oracle_total = mix_with_base(
@@ -614,7 +614,7 @@ def run(args):
                     args.response_ar_seeds, args.ar_sigma)
             if alpha_best is not None and args.response_seeds > 0:
                 alpha_exact = exact_model_replay(
-                    base_frames, frames, selected_blocks, table_entries,
+                    base_frames, pairs, selected_blocks, table_entries,
                     stream_entries, fps_num, fps_den, alpha_best, gaussian,
                     args.bits, args.response_seeds,
                     include_current=False)["oracle"]
@@ -714,7 +714,7 @@ def main():
     parser.add_argument(
         "--pair-direction", choices=("next", "previous"), default="next",
         help=("temporal neighbour for each selected frame; previous mirrors "
-              "the encoder's rolling window and is covariance-only"))
+              "the encoder's rolling window"))
     parser.add_argument("--bits", type=int, default=10, choices=(8, 10, 12))
     parser.add_argument("--static-lo", type=float, default=0.8)
     parser.add_argument("--static-hi", type=float, default=1.3)
@@ -752,11 +752,6 @@ def main():
             parser.error(f"missing input: {path}")
     if args.exact_seeds < 0:
         parser.error("exact seeds must be non-negative")
-    if (args.pair_direction == "previous"
-            and (args.exact_seeds > 0
-                 or (args.response_alphas and args.response_seeds > 0))):
-        parser.error(
-            "previous-frame pairing currently supports covariance-only runs")
     if (args.response_seeds < 0 or args.response_ar_seeds < 1
             or any(value < 0.0 or value > 1.0
                    for value in args.response_alphas)):
