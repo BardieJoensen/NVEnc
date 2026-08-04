@@ -37,6 +37,7 @@ for bilateral and 35.3-52.3 for motion.
 | --- | --- | --- |
 | `temporal_grain_report.py` | amplitude vs temporal truth, lag-1, lag-2, per luma band, per plane | needs static flat blocks selected from stored native-plane codes and applied unchanged to every arm; reports before `50da8a40` used a gray-converted luma population and are not analyzer-exact |
 | `source_fit.py` | offline oracle: what the AR fit should be, with an ideal-clean control | simulation clipping if `--sim-sigma` is left at a saturating value |
+| `texture_leak_oracle.py` | whether the independent synthesis model represents source covariance after subtracting texture already left in the encoded base | luma only; raw AR prediction is optimistic unless `--exact-seeds` replays scaling, overlap, clipping and actual base pixels |
 | `ar_acf.py` / `cap_table_acf.py` | coefficient-implied autocorrelation of an emitted table | saturating simulation/clipping or too few simulation seeds; the table seed is intentionally irrelevant to this coefficient statistic |
 | `amplitude_matched_texture.py` | metric response to fine versus coarse grain with base, seed, luma placement and delivered energy controlled | a single static model does not reproduce rolling per-luma delivery or decide perceptual quality |
 | `sourcefit_admission_report.py` | per-table-entry temporal texture evidence, AV1 model fidelity, luma-band coverage and confidence as separate axes | it intentionally emits no routing verdict; a scalar or post-hoc corpus threshold overfits |
