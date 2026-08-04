@@ -7,6 +7,8 @@ This harness deliberately separates four questions:
 * ``production`` is the deployed r4069 bilateral/residual analyser;
 * ``bilateral-source`` keeps the bilateral separator but fits the grain model
   from source flat blocks, isolating model quality from motion separation;
+* ``bilateral-source-static`` adds the accepted temporal-static luma source
+  population and is the exact control for later amplitude experiments;
 * ``bilateral-source-chroma-global``, ``-local`` and ``-independent`` keep
   that exact luma path while testing aggregate, per-luma-bin, and separately
   calibrated U/V temporal chroma closure;
@@ -74,6 +76,7 @@ CHROMA_LEAK_ARMS = (
 )
 CANDIDATE_ARMS = (
     "bilateral-source",
+    "bilateral-source-static",
     *CHROMA_LEAK_ARMS,
     *MOTION_ARMS,
 )
@@ -178,7 +181,8 @@ def publish_outputs(partials: list[Path], outputs: list[Path]) -> None:
 def fgs_options(arm: str) -> str:
     if arm == "production":
         return "denoise=auto,chroma=auto,denoiser=bilateral"
-    if arm == "bilateral-source" or arm in CHROMA_LEAK_ARMS:
+    if arm in ("bilateral-source", "bilateral-source-static") \
+            or arm in CHROMA_LEAK_ARMS:
         return "denoise=auto,chroma=auto,denoiser=bilateral,modelsrc=on"
     if arm in MOTION_ARMS:
         return "denoise=auto,chroma=auto,denoiser=motion,motion-refs=1,modelsrc=on"
@@ -187,6 +191,8 @@ def fgs_options(arm: str) -> str:
 
 def arm_environment(arm: str) -> dict[str, str]:
     env = os.environ.copy()
+    if arm == "bilateral-source-static":
+        env["NVENC_FGS_TEST_SOURCE_STATIC"] = "on"
     if arm == "bilateral-source-chroma-global":
         env["NVENC_FGS_TEST_CHROMA_LEAK"] = "global"
     if arm == "bilateral-source-chroma-local":
@@ -265,6 +271,7 @@ def main() -> int:
     parser.add_argument(
         "--arms", default="plain,production,causal,paired",
         help=("comma-separated subset of plain,production,bilateral-source,"
+              "bilateral-source-static,"
               "bilateral-source-chroma-global,"
               "bilateral-source-chroma-local,"
               "bilateral-source-chroma-independent,"

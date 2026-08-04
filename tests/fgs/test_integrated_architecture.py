@@ -46,6 +46,15 @@ class IntegratedArchitectureHarnessTests(unittest.TestCase):
             "NVENC_FGS_TEST_MOTION_CENTERED",
             arm_environment("bilateral-source"))
 
+    def test_source_static_arm_is_explicit_control(self):
+        command = build_clean_command(
+            Path("candidate"), Path("source.mkv"), Path("clean.y4m"),
+            Path("raw.tbl"), "bilateral-source-static")
+        self.assertIn("denoiser=bilateral,modelsrc=on", " ".join(command))
+        environment = arm_environment("bilateral-source-static")
+        self.assertEqual(environment["NVENC_FGS_TEST_SOURCE_STATIC"], "on")
+        self.assertNotIn("NVENC_FGS_TEST_CHROMA_LEAK", environment)
+
     def test_chroma_closure_arms_change_only_test_environment(self):
         baseline = arm_environment("bilateral-source")
         global_closure = arm_environment("bilateral-source-chroma-global")
