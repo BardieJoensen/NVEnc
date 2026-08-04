@@ -41,6 +41,7 @@ for bilateral and 35.3-52.3 for motion.
 | `amplitude_matched_texture.py` | metric response to fine versus coarse grain with base, seed, luma placement and delivered energy controlled | a single static model does not reproduce rolling per-luma delivery or decide perceptual quality |
 | `sourcefit_admission_report.py` | per-table-entry temporal texture evidence, AV1 model fidelity, luma-band coverage and confidence as separate axes | it intentionally emits no routing verdict; a scalar or post-hoc corpus threshold overfits |
 | `sourcefit_admission_compare.py` | source-fit versus residual-fit model error after independent film-like evidence is measured | a better source fit is not admission: it wins on all 16 current titles, including every labelled negative |
+| `correlation_target_report.py` | shipping all-block correlation, static-block alternatives and temporal grain truth, including fixed luma bands | pooling contaminated blocks by energy is worse than the median; estimator changes require real-film temporal controls |
 
 Amplitude and texture must be reported **separately**.  HF sigma alone cannot
 tell correct grain from correctly-sized grain: 2026-07-17 measured HF 3.67
