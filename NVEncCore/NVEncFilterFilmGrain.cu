@@ -1515,7 +1515,7 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_denoiseWork(), m_previousSource(), m_previousBase(),
     m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(), m_motionFinishMode(MotionFinishMode::Uniform),
-    m_chromaLeakMode(ChromaLeakMode::Off), m_sourceTemporalMask(false),
+    m_chromaLeakMode(ChromaLeakMode::Off), m_lumaLeakLocal(false), m_sourceTemporalMask(false),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
     m_fallbackModelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWritten(false),
@@ -1706,6 +1706,21 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
             AddMessage(RGY_LOG_WARN,
                 _T("film-grain: ignoring invalid NVENC_FGS_TEST_CHROMA_LEAK=%s (expected global or local).\n"),
                 char_to_tstring(value).c_str());
+        }
+    }
+    m_lumaLeakLocal = false;
+    if (const auto value = std::getenv("NVENC_FGS_TEST_LUMA_LEAK"); value && value[0] != '\0') {
+        if (strcmp(value, "local") != 0) {
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: ignoring invalid NVENC_FGS_TEST_LUMA_LEAK=%s (expected local).\n"),
+                char_to_tstring(value).c_str());
+        } else if (!config.modelFromSource || prm->leakTargetQuality < 0.0f) {
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: ignoring NVENC_FGS_TEST_LUMA_LEAK=local (requires modelsrc=on, QVBR 25..39, and retain=0).\n"));
+        } else {
+            m_lumaLeakLocal = true;
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: applying test-only per-bin temporal luma leak closure.\n"));
         }
     }
     m_sourceTemporalMask = false;
@@ -2435,7 +2450,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     if (prm->filmGrain.modelFromSource) {
         apply_luma_leak_closure(combined,
             temporalLeakEnabled ? prm->leakTargetQuality : -1.0,
-            static_cast<uint64_t>(requiredBlocks), diagnostics);
+            static_cast<uint64_t>(requiredBlocks), m_lumaLeakLocal, diagnostics);
         if (m_chromaLeakMode != ChromaLeakMode::Off) {
             chromaLeakCompensated = apply_chroma_leak_closure(combined,
                 temporalLeakEnabled ? prm->leakTargetQuality : -1.0,
@@ -2666,6 +2681,7 @@ void NVEncFilterFilmGrain::close() {
     m_previousSource.reset();
     m_previousBase.reset();
     m_temporalLeakValid = false;
+    m_lumaLeakLocal = false;
     m_sourceTemporalMask = false;
     m_frameBuf.clear();
     m_denoiseWork.reset();

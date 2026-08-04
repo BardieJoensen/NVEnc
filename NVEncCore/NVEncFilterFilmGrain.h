@@ -171,6 +171,7 @@ private:
     std::shared_ptr<NVEncFilterParamDegrain> m_motionDegrainParam;
     MotionFinishMode m_motionFinishMode;
     ChromaLeakMode m_chromaLeakMode;
+    bool m_lumaLeakLocal;
     bool m_sourceTemporalMask;
     std::unique_ptr<CUMemBufPair> m_blockMetrics;
     std::unique_ptr<CUMemBufPair> m_blockMask;

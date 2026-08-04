@@ -426,7 +426,8 @@ void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& 
 }
 
 bool apply_luma_leak_closure(FilmGrainGpuStats& stats, const double qvbr,
-    const uint64_t minTemporalBlocks, NVEncFilmGrainDiagnostics& diagnostics) {
+    const uint64_t minTemporalBlocks, const bool perBin,
+    NVEncFilmGrainDiagnostics& diagnostics) {
     const auto& measured = stats.plane[0];
     diagnostics.strengthRectifiedBlocks = std::accumulate(
         std::begin(measured.rectifiedBlockCount), std::end(measured.rectifiedBlockCount), uint64_t{ 0 });
@@ -454,7 +455,17 @@ bool apply_luma_leak_closure(FilmGrainGpuStats& stats, const double qvbr,
     auto& luma = stats.plane[0];
     for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
         if (luma.temporalBlockCount[bin] >= FGS_MIN_TEMPORAL_BIN_BLOCKS) {
-            luma.binVarSum[bin] = luma.temporalSourceVarSum[bin] * synthesisFraction2;
+            double binSynthesisFraction2 = synthesisFraction2;
+            if (perBin && luma.temporalSourceVarSum[bin] > 1e-9) {
+                const double binPreLeak = std::sqrt(std::clamp(
+                    luma.temporalBaseVarSum[bin] / luma.temporalSourceVarSum[bin],
+                    0.0, 1.0));
+                const double binPostLeak = std::max(0.0, binPreLeak - theta);
+                binSynthesisFraction2 = std::max(
+                    0.0, 1.0 - binPostLeak * binPostLeak);
+            }
+            luma.binVarSum[bin] =
+                luma.temporalSourceVarSum[bin] * binSynthesisFraction2;
             luma.binBlockCount[bin] = luma.temporalBlockCount[bin];
         } else {
             luma.binVarSum[bin] = 0.0;

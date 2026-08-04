@@ -206,7 +206,7 @@ void testTemporalLeakClosure() {
         luma.rectifiedBlockCount[bin] = 2;
     }
     NVEncFilmGrainDiagnostics diag;
-    expect(apply_luma_leak_closure(stats, 29.0, 100, diag),
+    expect(apply_luma_leak_closure(stats, 29.0, 100, false, diag),
         "temporal leak closure accepts calibrated QVBR and coverage");
     const double theta = FGS_LEAK_THETA_INTERCEPT + FGS_LEAK_THETA_QVBR_SLOPE * 29.0;
     const double postLeak = preLeak - theta;
@@ -224,9 +224,27 @@ void testTemporalLeakClosure() {
     FilmGrainGpuStats outOfRange = {};
     outOfRange.plane[0] = luma;
     NVEncFilmGrainDiagnostics gated;
-    expect(!apply_luma_leak_closure(outOfRange, 20.0, 100, gated),
+    expect(!apply_luma_leak_closure(outOfRange, 20.0, 100, false, gated),
         "temporal closure does not extrapolate outside calibrated QVBR");
     expect(!gated.leakCompensated, "gated temporal closure stays diagnostic-only");
+
+    FilmGrainGpuStats local = stats;
+    for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+        const double binPreLeak = bin & 1 ? 0.60 : 0.20;
+        local.plane[0].temporalBaseVarSum[bin] =
+            local.plane[0].temporalSourceVarSum[bin] * binPreLeak * binPreLeak;
+    }
+    NVEncFilmGrainDiagnostics localDiag;
+    expect(apply_luma_leak_closure(local, 29.0, 100, true, localDiag),
+        "local luma closure accepts calibrated QVBR and coverage");
+    for (int bin = 0; bin < 2; ++bin) {
+        const double binPreLeak = bin ? 0.60 : 0.20;
+        const double binPostLeak = std::max(0.0, binPreLeak - theta);
+        const double expected = sourceVariance * (1.0 - binPostLeak * binPostLeak);
+        expectNear(local.plane[0].binVarSum[bin]
+            / local.plane[0].binBlockCount[bin], expected, 1e-9,
+            "local luma closure follows per-bin leak");
+    }
 }
 
 void testChromaTemporalLeakClosure() {

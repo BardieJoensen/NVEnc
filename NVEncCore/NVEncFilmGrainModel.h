@@ -190,7 +190,8 @@ FilmGrainSolvedPlane solve_plane(const FilmGrainGpuPlaneStats& stats, bool chrom
 std::vector<StrengthPoint> fit_strength_points(const FilmGrainSolvedPlane& solved, int bitDepth, int maxPoints);
 void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& src);
 bool apply_luma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
-    uint64_t minTemporalBlocks, NVEncFilmGrainDiagnostics& diagnostics);
+    uint64_t minTemporalBlocks, bool perBin,
+    NVEncFilmGrainDiagnostics& diagnostics);
 bool apply_chroma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
     uint64_t minTemporalBlocks, bool perBin);
 bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,
