@@ -24,7 +24,7 @@ import re
 import numpy as np
 
 
-MASK = "production_static"
+DEFAULT_MASK = "production_static"
 
 
 def parse_specs(values):
@@ -102,7 +102,7 @@ def parse_p_qindex(path):
     return float(matches[-1])
 
 
-def load_points(specs):
+def load_points(specs, mask=DEFAULT_MASK):
     reports = {}
     rates = None
     for title, path in specs.items():
@@ -115,9 +115,11 @@ def load_points(specs):
         raise ValueError("reports have no common encoded arms")
     points = []
     for title, report in reports.items():
-        pre = report["aggregate"][MASK]["temporal_leak_ratio"]
+        if mask not in report["aggregate"]:
+            raise ValueError(f"{title}: mask {mask!r} is absent from {specs[title]}")
+        pre = report["aggregate"][mask]["temporal_leak_ratio"]
         for arm in sorted(rates, key=lambda value: int(re.search(r"\d+", value).group())):
-            encoded = report["encoded_aggregates"][arm][MASK]
+            encoded = report["encoded_aggregates"][arm][mask]
             points.append({
                 "title": title,
                 "arm": arm,
@@ -129,7 +131,7 @@ def load_points(specs):
     return points
 
 
-def analyse(points, log_root="", quant_source=""):
+def analyse(points, log_root="", quant_source="", mask=DEFAULT_MASK):
     titles = sorted({point["title"] for point in points})
     qvbrs = sorted({point["qvbr"] for point in points})
     lookup = parse_qlookup(quant_source) if quant_source else None
@@ -245,7 +247,7 @@ def analyse(points, log_root="", quant_source=""):
         })
     return {
         "model": "post_leak = max(0, pre_encode_leak - theta)",
-        "mask": MASK,
+        "mask": mask,
         "titles": titles,
         "rates": rate_rows,
         "rate_fit": rate_fit,
@@ -260,6 +262,9 @@ def main():
     parser.add_argument("--report", action="append", default=[], metavar="TITLE=PATH")
     parser.add_argument("--log-root", default="")
     parser.add_argument(
+        "--mask", default=DEFAULT_MASK,
+        help="strength-selection population to fit (default production_static)")
+    parser.add_argument(
         "--aom-quant-source",
         default=os.environ.get(
             "AOM_QUANT_SOURCE", "/tmp/aomref/src/av1/common/quant_common.c"))
@@ -269,7 +274,8 @@ def main():
         parser.error("at least three --report TITLE=PATH inputs are required")
     quant_source = args.aom_quant_source if args.log_root else ""
     report = analyse(
-        load_points(parse_specs(args.report)), args.log_root, quant_source)
+        load_points(parse_specs(args.report), args.mask),
+        args.log_root, quant_source, args.mask)
 
     print(f"{'qvbr':>5}{'theta':>10}{'SD':>10}{'range':>21}{'r pre/post':>12}"
           f"{'raw MAE':>10}{'fit MAE':>10}{'LOO max':>10}")

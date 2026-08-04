@@ -17,6 +17,20 @@ class AmplitudeEstimatorGateTests(unittest.TestCase):
         ]
         self.assertAlmostEqual(gate.fit_deadzone(records), 0.12, places=4)
 
+    def test_rate_fit_recovers_linear_plane_transfer(self):
+        records = []
+        for qvbr, theta in ((25.0, 0.20), (35.0, 0.30)):
+            records.extend({
+                "qvbr": qvbr,
+                "pre_leak": pre,
+                "post_leak": max(0.0, pre - theta),
+                "weight": 1.0,
+            } for pre in (0.4, 0.6))
+        model = gate.fit_rate_deadzone(records)
+        self.assertAlmostEqual(model["intercept"], -0.05, places=3)
+        self.assertAlmostEqual(model["slope"], 0.01, places=4)
+        self.assertAlmostEqual(gate.rate_theta(model, 30.0), 0.25, places=3)
+
     def test_error_summary_keeps_equal_band_and_weighted_views(self):
         records = [
             {"candidate": 0.9, "true_target": 1.0, "weight": 1.0},

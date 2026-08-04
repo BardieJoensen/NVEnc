@@ -60,6 +60,33 @@ def fit_deadzone(records: list[dict]) -> float:
     return float(candidates[int(np.argmin(error))])
 
 
+def fit_rate_deadzone(records: list[dict]) -> dict:
+    """Fit one plane-specific deadzone at each rate, then a linear transfer."""
+    if not records:
+        raise ValueError("at least one record is required")
+    rates = sorted({float(row["qvbr"]) for row in records})
+    theta_by_rate = {
+        rate: fit_deadzone([row for row in records if row["qvbr"] == rate])
+        for rate in rates
+    }
+    if len(rates) == 1:
+        slope = 0.0
+        intercept = theta_by_rate[rates[0]]
+    else:
+        slope, intercept = np.polyfit(
+            np.asarray(rates),
+            np.asarray([theta_by_rate[rate] for rate in rates]), 1)
+    return {
+        "intercept": float(intercept),
+        "slope": float(slope),
+        "theta_by_rate": {str(rate): theta_by_rate[rate] for rate in rates},
+    }
+
+
+def rate_theta(model: dict, qvbr: float) -> float:
+    return max(0.0, float(model["intercept"]) + float(model["slope"]) * qvbr)
+
+
 def error_summary(records: list[dict], field: str) -> dict:
     errors = np.asarray(
         [row[field] - row["true_target"] for row in records], dtype=np.float64)
@@ -105,6 +132,8 @@ def read_records(path: Path, title: str, plane: str, mask: str,
             "title": title,
             "plane": plane,
             "mask": mask,
+            "arm": arm,
+            "qvbr": float(qvbr),
             "range": band["range"],
             "blocks": int(band["blocks"]),
             "weight": float(band["blocks"]) * truth_sigma * truth_sigma,
@@ -126,11 +155,12 @@ def leave_one_title_out(records: list[dict]) -> dict:
         held = [row for row in records if row["title"] == title]
         if not train or not held:
             continue
-        theta = fit_deadzone(train)
-        theta_by_holdout[title] = theta
+        model = fit_rate_deadzone(train)
+        theta_by_holdout[title] = model
         for row in held:
             copied = dict(row)
-            copied["loo_plane"] = synthesis_target(row["pre_leak"], theta)
+            copied["loo_plane"] = synthesis_target(
+                row["pre_leak"], rate_theta(model, row["qvbr"]))
             predictions.append(copied)
     return {
         "theta_by_holdout": theta_by_holdout,
@@ -148,14 +178,15 @@ def analyse_group(records: list[dict], qvbr: float, allow_plane_fit: bool) -> di
         },
     }
     if allow_plane_fit and records:
-        theta = fit_deadzone(records)
+        model = fit_rate_deadzone(records)
         fitted = []
         for row in records:
             copied = dict(row)
-            copied["pooled_plane"] = synthesis_target(row["pre_leak"], theta)
+            copied["pooled_plane"] = synthesis_target(
+                row["pre_leak"], rate_theta(model, row["qvbr"]))
             fitted.append(copied)
         result["pooled_plane_deadzone"] = {
-            "theta": theta,
+            "rate_model": model,
             "summary": error_summary(fitted, "pooled_plane"),
         }
         result["leave_one_title_out"] = leave_one_title_out(records)
@@ -175,7 +206,9 @@ def print_group(label: str, result: dict) -> None:
         row = pooled["summary"]
         print(f"{'pooled_plane':<24}{row['bands']:>7}{row['bias']:>10.4f}"
               f"{row['mae']:>10.4f}{row['max']:>10.4f}"
-              f"{row['weighted_rmse']:>10.4f}  theta={pooled['theta']:.4f}")
+              f"{row['weighted_rmse']:>10.4f}  "
+              f"theta={pooled['rate_model']['intercept']:.4f}"
+              f"+{pooled['rate_model']['slope']:.6f}q")
         loo = result["leave_one_title_out"]["summary"]
         print(f"{'LOO_plane':<24}{loo['bands']:>7}{loo['bias']:>10.4f}"
               f"{loo['mae']:>10.4f}{loo['max']:>10.4f}"
@@ -190,12 +223,28 @@ def main() -> int:
             "Casino,Interstellar,Scarface,Taxi_Driver,The_Deer_Hunter,The_Shining"))
     parser.add_argument("--arm", default="hybrid")
     parser.add_argument("--qvbr", type=float, default=29.0)
+    parser.add_argument(
+        "--arms", default="",
+        help="optional comma-separated ARM=QVBR map for a multi-rate report")
     parser.add_argument("--min-blocks", type=int, default=100)
     parser.add_argument("--json-out", default="")
     args = parser.parse_args()
 
     report_dir = Path(args.report_dir).resolve()
     titles = [value.strip() for value in args.titles.split(",") if value.strip()]
+    arms = {args.arm: args.qvbr}
+    if args.arms:
+        arms = {}
+        for value in args.arms.split(","):
+            arm, separator, rate = value.partition("=")
+            if not separator or not arm or not rate:
+                parser.error(f"invalid --arms item {value!r}; expected ARM=QVBR")
+            if arm in arms:
+                parser.error(f"duplicate --arms label {arm!r}")
+            try:
+                arms[arm] = float(rate)
+            except ValueError:
+                parser.error(f"invalid QVBR in --arms item {value!r}")
     groups = {}
     for plane in PLANES:
         masks = ["production_static"]
@@ -209,20 +258,24 @@ def main() -> int:
                 if not path.is_file():
                     missing.append(str(path))
                     continue
-                rows.extend(read_records(
-                    path, title, plane, mask, args.arm, args.qvbr,
-                    args.min_blocks))
+                for arm, qvbr in arms.items():
+                    rows.extend(read_records(
+                        path, title, plane, mask, arm, qvbr,
+                        args.min_blocks))
             if missing:
                 raise SystemExit("missing reports: " + ", ".join(missing))
             key = f"{plane}:{mask}"
+            if not rows:
+                raise SystemExit(
+                    f"{key}: no bands found; regenerate reports with the "
+                    "current strength_selection_report.py")
             groups[key] = analyse_group(rows, args.qvbr, plane != "y")
             print_group(key, groups[key])
 
     output = {
         "report_dir": str(report_dir),
         "titles": titles,
-        "arm": args.arm,
-        "qvbr": args.qvbr,
+        "arms": arms,
         "min_blocks": args.min_blocks,
         "groups": groups,
     }
