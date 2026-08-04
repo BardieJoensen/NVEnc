@@ -84,6 +84,55 @@ if FGS_QVBR:
         sys.exit(f"invalid FGS_KAT_QVBR: {FGS_QVBR}")
 
 
+def test_hook_configuration_errors(environment, extra, qvbr):
+    """Reject a requested research arm that NVEncC would silently ignore."""
+    source_static = environment.get("NVENC_FGS_TEST_SOURCE_STATIC", "")
+    texture_leak = environment.get("NVENC_FGS_TEST_TEXTURE_LEAK", "")
+    if not source_static and not texture_leak:
+        return []
+
+    errors = []
+    if source_static and source_static != "on":
+        errors.append("NVENC_FGS_TEST_SOURCE_STATIC must be 'on'")
+    if texture_leak and texture_leak not in ("on", "dynamic", "response"):
+        errors.append(
+            "NVENC_FGS_TEST_TEXTURE_LEAK must be on, dynamic, or response")
+    if texture_leak and source_static != "on":
+        errors.append("texture closure requires NVENC_FGS_TEST_SOURCE_STATIC=on")
+
+    try:
+        quality = float(qvbr)
+    except (TypeError, ValueError):
+        quality = -1.0
+    if not 25.0 <= quality <= 39.0:
+        errors.append("research hooks require FGS_KAT_QVBR in [25, 39]")
+
+    options = {}
+    for item in extra.split(","):
+        if "=" in item:
+            key, value = item.split("=", 1)
+            options[key.strip().lower()] = value.strip().lower()
+    if options.get("modelsrc") != "on":
+        errors.append("research hooks require FGS_KAT_EXTRA=modelsrc=on")
+    retain = options.get("retain")
+    if retain is not None:
+        try:
+            retain_is_zero = float(retain) == 0.0
+        except ValueError:
+            retain_is_zero = False
+        if not retain_is_zero:
+            errors.append("research hooks require retain=0")
+    return errors
+
+
+HOOK_CONFIGURATION_ERRORS = test_hook_configuration_errors(
+    os.environ, FGS_EXTRA, FGS_QVBR)
+if HOOK_CONFIGURATION_ERRORS:
+    sys.exit(
+        "invalid FGS research-hook KAT configuration:\n  - "
+        + "\n  - ".join(HOOK_CONFIGURATION_ERRORS))
+
+
 def apply_spec(spec):
     global W, H, BAND_W, BITS, DS, DTYPE, MAXVAL, LEVELS, CLIP_LO, CLIP_HI
     W = spec.get("width", 1920)
