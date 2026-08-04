@@ -1,0 +1,76 @@
+{
+  "authority": "offline-oracle-only",
+  "purpose": "test whether base-covariance subtraction closes played grain texture within the AV1 AR(3) model",
+  "frozen_before_full_corpus": "2026-08-04",
+  "changes_output": false,
+  "routing_authority": false,
+  "hypothesis": [
+    "The current source model targets full source covariance even though the encoded base retains temporally varying texture.",
+    "Subtracting base covariance will reduce decoded-total texture error on coarse film without suppressing the fine-grain control.",
+    "If a feasible quantized AR(3) model follows the covariance-subtracted target, the remaining error is analyzer architecture rather than an AV1 format ceiling."
+  ],
+  "interpretation_guards": [
+    "Amplitude and covariance are separate; this oracle assumes the already measured temporal variance closure.",
+    "A non-positive covariance difference, material PSD repair, or no feasible int8 coefficient shift is a representability/fallback result, not permission to force a model.",
+    "The eight films are grain-positive quality controls. This corpus cannot validate semantic admission or production routing."
+  ],
+  "frames": [10, 58, 106, 154, 202, 250],
+  "samples": [
+    {
+      "id": "Casino",
+      "grain_scale": "coarse",
+      "source": "/media/merged-storage/media/test-encodes/keep-original/clip_Casino.mkv",
+      "encoded": "/media/merged-storage/media/test-encodes/sourcefit-static-real-20260804/Casino/hybrid.mkv",
+      "table": "/media/merged-storage/media/test-encodes/sourcefit-static-real-20260804/Casino/hybrid.tbl"
+    },
+    {
+      "id": "Interstellar",
+      "grain_scale": "coarse",
+      "source": "/media/merged-storage/media/test-encodes/keep-original/clip_Interstellar.mkv",
+      "encoded": "/media/merged-storage/media/test-encodes/sourcefit-static-real-20260804/Interstellar/hybrid.mkv",
+      "table": "/media/merged-storage/media/test-encodes/sourcefit-static-real-20260804/Interstellar/hybrid.tbl"
+    },
+    {
+      "id": "Scarface",
+      "grain_scale": "fine",
+      "source": "/media/merged-storage/media/test-encodes/keep-original/clip_Scarface.mkv",
+      "encoded": "/media/merged-storage/media/test-encodes/sourcefit-static-real-20260804/Scarface/hybrid.mkv",
+      "table": "/media/merged-storage/media/test-encodes/sourcefit-static-real-20260804/Scarface/hybrid.tbl"
+    },
+    {
+      "id": "Taxi_Driver",
+      "grain_scale": "coarse",
+      "source": "/media/merged-storage/media/test-encodes/keep-original/clip_Taxi_Driver.mkv",
+      "encoded": "/media/merged-storage/media/test-encodes/sourcefit-static-real-20260804/Taxi_Driver/hybrid.mkv",
+      "table": "/media/merged-storage/media/test-encodes/sourcefit-static-real-20260804/Taxi_Driver/hybrid.tbl"
+    },
+    {
+      "id": "The_Deer_Hunter",
+      "grain_scale": "mixed",
+      "source": "/media/merged-storage/media/test-encodes/keep-original/clip_The_Deer_Hunter.mkv",
+      "encoded": "/media/merged-storage/media/test-encodes/sourcefit-static-real-20260804/The_Deer_Hunter/hybrid.mkv",
+      "table": "/media/merged-storage/media/test-encodes/sourcefit-static-real-20260804/The_Deer_Hunter/hybrid.tbl"
+    },
+    {
+      "id": "The_Shining",
+      "grain_scale": "coarse",
+      "source": "/media/merged-storage/media/test-encodes/keep-original/clip_The_Shining.mkv",
+      "encoded": "/media/merged-storage/media/test-encodes/sourcefit-static-real-20260804/The_Shining/hybrid.mkv",
+      "table": "/media/merged-storage/media/test-encodes/sourcefit-static-real-20260804/The_Shining/hybrid.tbl"
+    },
+    {
+      "id": "Ju_on",
+      "grain_scale": "fine",
+      "source": "/media/merged-storage/media/test-encodes/sourcefit-film-holdout-gate-20260804/clips/Ju_on.mkv",
+      "encoded": "/media/merged-storage/media/test-encodes/sourcefit-film-holdout-gate-20260804/Ju_on/hybrid.mkv",
+      "table": "/media/merged-storage/media/test-encodes/sourcefit-film-holdout-gate-20260804/Ju_on/hybrid.tbl"
+    },
+    {
+      "id": "Coming_to_America",
+      "grain_scale": "coarse",
+      "source": "/media/merged-storage/media/test-encodes/sourcefit-film-holdout-gate-20260804/clips/Coming_to_America.mkv",
+      "encoded": "/media/merged-storage/media/test-encodes/sourcefit-film-holdout-gate-20260804/Coming_to_America/hybrid.mkv",
+      "table": "/media/merged-storage/media/test-encodes/sourcefit-film-holdout-gate-20260804/Coming_to_America/hybrid.tbl"
+    }
+  ]
+}
