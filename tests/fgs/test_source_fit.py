@@ -132,6 +132,17 @@ class TemporalLeakTests(unittest.TestCase):
         self.assertEqual(ratio, {"mean": 0.0, "sd": 0.0})
         self.assertTrue(np.isnan(temporal_grain_report.lag1(None)))
 
+    def test_temporal_texture_axis_error_and_distribution(self):
+        truth = {"h1": 0.4, "h2": 0.2, "v1": 0.3, "v2": 0.1}
+        measured = {"h1": 0.5, "h2": 0.1, "v1": 0.35, "v2": 0.15}
+        self.assertAlmostEqual(
+            temporal_grain_report.axis_mae(measured, truth), 0.075)
+        self.assertIsNone(temporal_grain_report.axis_mae(None, truth))
+        summary = temporal_grain_report.distribution([0.01, 0.02, 0.03])
+        self.assertAlmostEqual(summary["mean"], 0.02)
+        self.assertAlmostEqual(summary["p50"], 0.02)
+        self.assertAlmostEqual(summary["max"], 0.03)
+
     def test_parse_encoded_arms(self):
         self.assertEqual(
             strength_selection_report.parse_encoded_arms(

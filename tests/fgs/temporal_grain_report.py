@@ -44,6 +44,7 @@ from source_fit import (  # noqa: E402
 )
 
 FFMPEG = os.environ.get("FGS_FFMPEG", "/usr/local/bin/ffmpeg")
+TEXTURE_AXES = ("h1", "h2", "v1", "v2")
 
 
 def probe_size(path):
@@ -99,6 +100,31 @@ def mean_sd(values):
     if not values:
         return {"mean": None, "sd": None}
     return {"mean": float(np.mean(values)), "sd": float(np.std(values))}
+
+
+def distribution(values):
+    finite = np.asarray([
+        value for value in values if value is not None and np.isfinite(value)
+    ], dtype=np.float64)
+    if not finite.size:
+        return {"mean": None, "sd": None, "p50": None,
+                "p95": None, "max": None}
+    return {
+        "mean": float(np.mean(finite)),
+        "sd": float(np.std(finite)),
+        "p50": float(np.percentile(finite, 50)),
+        "p95": float(np.percentile(finite, 95)),
+        "max": float(np.max(finite)),
+    }
+
+
+def axis_mae(left, right):
+    if left is None or right is None:
+        return None
+    return float(np.mean([
+        abs(float(left[axis]) - float(right[axis]))
+        for axis in TEXTURE_AXES
+    ]))
 
 
 def average_acf(rows):
@@ -281,6 +307,31 @@ def main():
             arm_report[name] = {"axis": axis, "amplitude_ratio": amplitude}
             print(f"{(label + ' ' + name):<28}{format_axis(axis)}"
                   f"{amplitude['mean']:>9.3f}±{amplitude['sd']:<.3f}")
+        frame_samples = []
+        for index, frame in enumerate(frames):
+            truth = truth_rows[index]
+            layers = {}
+            for name, rows in layer_rows.items():
+                row = rows[index]
+                layers[name] = {
+                    "axis": row,
+                    "amplitude_ratio": (
+                        row["sigma"] / truth["sigma"]
+                        if row is not None and truth is not None
+                        and truth["sigma"] > 1e-9 else None),
+                }
+            frame_samples.append({
+                "frame": frame,
+                "static_blocks": selected_counts[index],
+                "truth": truth,
+                "layers": layers,
+                "total_axis_mae_to_truth": axis_mae(
+                    layers["total"]["axis"], truth),
+            })
+        arm_report["frame_samples"] = frame_samples
+        arm_report["total_axis_error_to_truth"] = distribution([
+            row["total_axis_mae_to_truth"] for row in frame_samples
+        ])
         # The independent base and synthesised layers should predict the total
         # amplitude.  Reporting the closure error catches frame/mask mistakes.
         predicted = math.sqrt(
@@ -294,6 +345,12 @@ def main():
         }
         report["arms"][label] = arm_report
         print(f"{label + ' variance closure':<28}{'':>24}{actual - predicted:>+12.3f}")
+        texture_error = arm_report["total_axis_error_to_truth"]
+        print(f"{label + ' per-frame texture':<28}{'':>8}"
+              f"mean={texture_error['mean']:.4f} "
+              f"sd={texture_error['sd']:.4f} "
+              f"p95={texture_error['p95']:.4f} "
+              f"max={texture_error['max']:.4f}")
 
     # A whole-title aggregate can repeat the dark-film occupancy trap in a new
     # metric.  Report fixed luma ranges as a requirement, not an optional
