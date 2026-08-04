@@ -222,8 +222,11 @@ def arm_environment(arm: str) -> dict[str, str]:
 
 def build_encode_command(
     binary: Path, source: Path, output: Path, table: Path | None, arm: str,
+    qvbr: int = 29,
 ) -> list[str]:
-    command = [str(binary), "--avsw", "-i", str(source), *CONTROLLED_ENCODE]
+    controlled = list(CONTROLLED_ENCODE)
+    controlled[controlled.index("--qvbr") + 1] = str(qvbr)
+    command = [str(binary), "--avsw", "-i", str(source), *controlled]
     if arm != "plain":
         command += ["--av1-film-grain", fgs_options(arm)]
         if table is not None:
@@ -268,6 +271,7 @@ def main() -> int:
         "--production-nvencc", default="/opt/docker-apps/build/tdarr-node/nvencc")
     parser.add_argument("--ffmpeg", default="/usr/local/bin/ffmpeg")
     parser.add_argument("--titles", default=",".join(TITLES))
+    parser.add_argument("--qvbr", type=int, default=29)
     parser.add_argument(
         "--arms", default="plain,production,causal,paired",
         help=("comma-separated subset of plain,production,bilateral-source,"
@@ -304,7 +308,7 @@ def main() -> int:
     run_manifest = {
         "purpose": "quality-first six-film source-fit architecture gate",
         "settings": {
-            "qvbr": 29,
+            "qvbr": args.qvbr,
             "max_bitrate": 20000,
             "preset": "p4",
             "tune": "hq",
@@ -340,7 +344,8 @@ def main() -> int:
             encode_outputs = [encoded] + ([] if table is None else [table])
             encode_partials = [encoded_partial] + ([] if table_partial is None else [table_partial])
             encode_command = build_encode_command(
-                binary, source, encoded_partial, table_partial, arm)
+                binary, source, encoded_partial, table_partial, arm,
+                qvbr=args.qvbr)
             encode_name = f"{title}-{arm}-encode"
             encode_manifest = title_work / f"{encode_name}.task.json"
             expected = {

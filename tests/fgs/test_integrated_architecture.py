@@ -146,6 +146,12 @@ class IntegratedArchitectureHarnessTests(unittest.TestCase):
         self.assertNotIn("--av1-film-grain", command)
         self.assertNotIn("--film-grain-table-out", command)
 
+    def test_encode_command_can_override_calibrated_qvbr(self):
+        command = build_encode_command(
+            Path("candidate"), Path("source.mkv"), Path("out.mkv"),
+            Path("out.tbl"), "bilateral-source-static", qvbr=34)
+        self.assertEqual(command[command.index("--qvbr") + 1], "34")
+
     def test_publish_rejects_mismatched_output_lists(self):
         with self.assertRaisesRegex(ValueError, "count mismatch"):
             publish_outputs([Path("one.partial.mkv")], [])
