@@ -83,3 +83,12 @@ justify production.  A failure rejects this sparse response-population
 architecture at the fixed budget and returns amplitude to perceptual triage or
 a post-encode/two-pass design.  In either case, the already-validated source
 texture and guarded covariance response remain independent results.
+
+## Resolution
+
+The first Interstellar gate failed.  Maximum sparse-versus-full disagreement
+was `0.02115` on the unchanged table and `0.05529` on the changed table, against
+the frozen `0.020` bound.  The changed darkest and adjacent bands missed in
+opposite directions.  The sequence stopped before a new correction or any
+Taxi/Deer/chroma expansion.  See
+`FINDINGS-2026-08-04-AMPLITUDE-RESPONSE-POPULATION.md`.
