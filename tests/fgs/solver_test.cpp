@@ -379,6 +379,17 @@ void testTemporalTextureLeakClosure() {
 }
 
 void testTextureResponseSelector() {
+    double preencodeWeight = -1.0;
+    expect(texture_response_preencode_covariance_weight(
+        0.75, 0.445, 0.288, preencodeWeight),
+        "texture response converts a calibrated weight to pre-encode space");
+    expectNear(preencodeWeight,
+        0.75 * (0.288 * 0.288) / (0.445 * 0.445), 1e-12,
+        "texture response scales the grid by covariance survival");
+    expect(!texture_response_preencode_covariance_weight(
+        0.75, -0.1, 0.2, preencodeWeight),
+        "texture response rejects invalid leak estimates");
+
     FilmGrainGpuStats source = {};
     FilmGrainGpuStats residual = {};
     fillHorizontalPlane(source.plane[0], 6.0, 0.60);

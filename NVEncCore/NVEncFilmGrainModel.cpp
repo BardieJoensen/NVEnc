@@ -963,6 +963,25 @@ bool build_source_film_grain_params_with_residual_fallback(
     return true;
 }
 
+bool texture_response_preencode_covariance_weight(
+    const double responseWeight, const double preEncodeLeak,
+    const double predictedPostEncodeLeak, double& preencodeWeight) {
+    if (!std::isfinite(responseWeight) || responseWeight < 0.0
+        || responseWeight > 1.0 || !std::isfinite(preEncodeLeak)
+        || !std::isfinite(predictedPostEncodeLeak)
+        || preEncodeLeak < 0.0 || predictedPostEncodeLeak < 0.0) {
+        return false;
+    }
+    const double survival = preEncodeLeak > 1e-9
+        ? std::clamp(
+            predictedPostEncodeLeak * predictedPostEncodeLeak
+                / (preEncodeLeak * preEncodeLeak),
+            0.0, 1.0)
+        : 0.0;
+    preencodeWeight = responseWeight * survival;
+    return std::isfinite(preencodeWeight);
+}
+
 static bool luma_texture_response_error(
     const FilmGrainTemporalArStats& temporal,
     const NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
@@ -975,15 +994,11 @@ static bool luma_texture_response_error(
         + FGS_TEXTURE_BASE_WEIGHT * static_cast<long double>(temporal.baseBtb)
     ) / FGS_TEXTURE_SOURCE_WEIGHT;
     if (!(sourceBtb > 0.0L)) return false;
-    const double preLeak = diagnostics.preEncodeLeak;
-    const double postLeak = diagnostics.predictedPostEncodeLeak;
-    if (!std::isfinite(preLeak) || !std::isfinite(postLeak)
-        || preLeak < 0.0 || postLeak < 0.0) return false;
-    const long double survival = preLeak > 1e-9
-        ? std::clamp(
-            static_cast<long double>(postLeak * postLeak / (preLeak * preLeak)),
-            0.0L, 1.0L)
-        : 0.0L;
+    double survivalDouble = 0.0;
+    if (!texture_response_preencode_covariance_weight(
+        1.0, diagnostics.preEncodeLeak,
+        diagnostics.predictedPostEncodeLeak, survivalDouble)) return false;
+    const long double survival = survivalDouble;
     const long double basePostBtb = std::clamp(
         static_cast<long double>(temporal.baseBtb) * survival,
         0.0L, sourceBtb);
@@ -1052,11 +1067,21 @@ bool build_source_film_grain_params_with_texture_response(
     NV_ENC_FILM_GRAIN_PARAMS_AV1 bestParams = {};
     NVEncFilmGrainDiagnostics bestDiagnostics = diagnostics;
     for (const double weight : weights) {
+        // The frozen response grid was measured against decoded base
+        // covariance.  The temporal system contains the stronger denoised
+        // base before AV1's quantizer deadzone, so express each grid point in
+        // that space before solving.  Applying ``weight`` directly here made
+        // the first non-zero Deer Hunter candidate behave like 1.79 rather
+        // than 0.75 in the calibrated post-encode space.
+        double preencodeWeight = 0.0;
+        if (!texture_response_preencode_covariance_weight(
+            weight, diagnostics.preEncodeLeak,
+            diagnostics.predictedPostEncodeLeak, preencodeWeight)) continue;
         FilmGrainGpuStats candidateStats = sourceStats;
         NVEncFilmGrainDiagnostics candidateDiagnostics = diagnostics;
         if (!apply_luma_texture_leak_closure(
             candidateStats, minTextureObservations,
-            candidateDiagnostics, weight)) continue;
+            candidateDiagnostics, preencodeWeight)) continue;
         NV_ENC_FILM_GRAIN_PARAMS_AV1 candidateParams = {};
         if (!build_film_grain_params(
             candidateStats, bitDepth, analyzeChroma, limitedRange,

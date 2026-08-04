@@ -238,6 +238,9 @@ bool apply_luma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
 bool apply_luma_texture_leak_closure(FilmGrainGpuStats& stats,
     uint64_t minObservations, NVEncFilmGrainDiagnostics& diagnostics,
     double baseCovarianceWeight = 0.75);
+bool texture_response_preencode_covariance_weight(
+    double responseWeight, double preEncodeLeak, double predictedPostEncodeLeak,
+    double& preencodeWeight);
 bool build_source_film_grain_params_with_texture_response(
     const FilmGrainGpuStats& sourceStats, const FilmGrainGpuStats& residualStats,
     uint64_t minTextureObservations, int bitDepth, bool analyzeChroma,
