@@ -184,4 +184,3 @@ Not supported yet:
    band=1.113 are now concrete targets.
 5. **Only then run the blind playback review and consider enabling source
    fitting.** Compression and speed remain secondary to these quality gates.
-
