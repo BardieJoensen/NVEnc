@@ -83,6 +83,7 @@ RESEARCH_ENVIRONMENT = (
     "NVENC_FGS_TEST_MOTION_CENTERED",
     "NVENC_FGS_TEST_MOTION_FINISH",
     "NVENC_FGS_TEST_MOTION_THSAD",
+    "NVENC_FGS_TEST_SOURCE_STATIC",
 )
 
 CONTROLLED_ENCODE = (
@@ -192,6 +193,10 @@ def arm_environment(arm: str) -> dict[str, str]:
         env["NVENC_FGS_TEST_CHROMA_LEAK"] = "local"
     if arm == "bilateral-source-chroma-independent":
         env["NVENC_FGS_TEST_CHROMA_LEAK"] = "independent"
+        # The independent amplitude experiment is layered on the accepted
+        # source-texture candidate. Omitting this makes luma texture a second
+        # variable and invalidates the A/B.
+        env["NVENC_FGS_TEST_SOURCE_STATIC"] = "on"
     if arm in MOTION_ARMS:
         env["NVENC_FGS_TEST_MOTION_THSAD"] = "640"
     if arm == "paired":

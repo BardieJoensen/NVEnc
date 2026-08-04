@@ -59,6 +59,7 @@ class IntegratedArchitectureHarnessTests(unittest.TestCase):
             local_closure["NVENC_FGS_TEST_CHROMA_LEAK"], "local")
         self.assertEqual(
             independent["NVENC_FGS_TEST_CHROMA_LEAK"], "independent")
+        self.assertEqual(independent["NVENC_FGS_TEST_SOURCE_STATIC"], "on")
         for arm in (
             "bilateral-source-chroma-global",
             "bilateral-source-chroma-local",
