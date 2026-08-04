@@ -2793,7 +2793,15 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             m_state->modelWindowSettled = true;
             m_state->pendingParamsValid = false;
             m_state->pendingStreak = 0;
-            if (film_grain_params_close(
+            if (!m_state->lastParamsFallback && diagnostics.sourceModelFallback) {
+                // Window settlement may coincide with one rejected source
+                // solve. Do not let that transient fallback bypass the same
+                // persistence gate it would face on every later frame.
+                params = m_state->lastParams;
+                diagnostics.sourceModelFallback = false;
+                diagnostics.modelHeld = true;
+                m_state->advanceModelAge();
+            } else if (film_grain_params_close(
                 params, m_state->lastParams, modelTolerance, modelTolerance)) {
                 params = m_state->lastParams;
                 diagnostics.sourceModelFallback = m_state->lastParamsFallback;
