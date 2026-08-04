@@ -263,8 +263,10 @@ default-off development only:
 6. conventional/base-fidelity metrics should be rerun on the final integrated
    candidate before perceptual review.
 
-The next quality-first step is temporal stability on static, dynamic, and
-guarded arms, using several windows that cross table updates.  If guarded
-response does not pump or flicker, freeze its luma texture path and resume the
-separate per-luma-strength and chroma-amplitude investigations.  Do not tune the
-margin again on these twelve scenes.
+The objective temporal/update check is now complete in
+`FINDINGS-2026-08-04-TEXTURE-TEMPORAL-STABILITY.md`.  Guarded response improves
+the pooled per-frame mean, p95, and maximum and shows no measured spike in the
+predeclared consecutive-update clusters.  Its luma texture path is frozen for
+continued default-off development.  Resume the separate per-luma-strength and
+chroma-amplitude investigations; do not tune the margin again on these twelve
+scenes.
