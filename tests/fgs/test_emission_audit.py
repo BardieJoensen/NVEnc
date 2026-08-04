@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
+import json
 import unittest
+from unittest import mock
 
 import numpy as np
 
@@ -8,6 +10,28 @@ import emission_audit
 
 
 class EmissionAuditTests(unittest.TestCase):
+    def test_probe_can_ignore_unselected_grain_off_interval(self):
+        side_data = {
+            "side_data_type": "Film grain parameters", "seed": "1",
+        }
+        frames = [
+            {"side_data_list": [side_data]},
+            {"side_data_list": []},
+            {"side_data_list": [side_data]},
+        ]
+        completed = mock.Mock(stdout=json.dumps({"frames": frames}))
+        with mock.patch.object(
+                emission_audit.subprocess, "run", return_value=completed), \
+                mock.patch.object(
+                    emission_audit, "entry_from_side_data",
+                    side_effect=lambda value: {"seed": int(value["seed"])}) as parse:
+            entries = emission_audit.probe_grain_entries(
+                "candidate.mkv", 3, required_frames={0, 2})
+            self.assertEqual(sorted(entries), [0, 2])
+            self.assertEqual(parse.call_count, 2)
+            with self.assertRaisesRegex(ValueError, "frame 1"):
+                emission_audit.probe_grain_entries("candidate.mkv", 3)
+
     def test_encoded_path_supports_labelled_and_single_stream_reports(self):
         self.assertEqual(
             emission_audit.encoded_path_for_arm(

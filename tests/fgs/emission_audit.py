@@ -117,27 +117,43 @@ def entry_from_side_data(side_data):
     }
 
 
-def probe_grain_entries(path, frame_count):
-    """Read the actual per-frame grain parameters, including NVENC's seeds."""
+def probe_grain_entries(path, frame_count, required_frames=None):
+    """Read actual grain parameters, including NVENC's per-frame seeds.
+
+    Emission audits require film-grain side data on every decoded frame and
+    retain that strict default.  Measurement tools may pass an explicit set
+    of frames when a valid stream deliberately disables grain for an unrelated
+    interval; selected frames still fail closed if their side data is absent.
+    """
     result = subprocess.run(
         [FFPROBE, "-v", "error", "-c:v", "libdav1d", "-filmgrain", "0",
          "-export_side_data", "film_grain", "-select_streams", "v:0",
          "-show_frames", "-read_intervals", f"%+#{frame_count}", "-of", "json", path],
         check=True, capture_output=True, text=True)
     frames = json.loads(result.stdout).get("frames", [])
+    if len(frames) != frame_count:
+        raise ValueError(
+            f"ffprobe returned {len(frames)} frames, expected {frame_count}")
+    required = (set(range(frame_count)) if required_frames is None
+                else {int(frame) for frame in required_frames})
+    invalid = sorted(frame for frame in required
+                     if frame < 0 or frame >= frame_count)
+    if invalid:
+        raise ValueError(f"required frame outside probe interval: {invalid[0]}")
     entries = {}
     for frame_number, frame in enumerate(frames):
         candidates = [
             item for item in frame.get("side_data_list", [])
             if item.get("side_data_type") == "Film grain parameters"
         ]
-        if len(candidates) != 1:
+        if len(candidates) > 1 or (
+                frame_number in required and len(candidates) != 1):
             raise ValueError(
                 f"frame {frame_number}: expected one film-grain side-data item, "
                 f"found {len(candidates)}")
+        if not candidates:
+            continue
         entries[frame_number] = entry_from_side_data(candidates[0])
-    if len(entries) != frame_count:
-        raise ValueError(f"ffprobe returned {len(entries)} frames, expected {frame_count}")
     return entries
 
 

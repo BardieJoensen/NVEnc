@@ -567,7 +567,8 @@ def run(args):
     table_model = average_table_model(
         table_entries, pairs, selected_counts, fps_num, fps_den,
         args.bits, args.ar_seeds, args.ar_sigma)
-    stream_entries = probe_grain_entries(args.encoded, max(indices) + 1)
+    stream_entries = probe_grain_entries(
+        args.encoded, max(indices) + 1, required_frames=indices)
     table_matches = []
     for frame in indices:
         table_entry = entry_for_frame(
