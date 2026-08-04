@@ -68,6 +68,17 @@ class ChromaAmplitudeCompareTest(unittest.TestCase):
                 chroma_amplitude_compare.load_arm(
                     Path(directory), ("Film",), "v", "emission-{plane}.json")
 
+    def test_zero_target_keeps_absolute_error(self):
+        value = report("v", 0.25, 0.0, 0.5, 1.0)
+        row = chroma_amplitude_compare._row(
+            "Film", "v", value["aggregate"], bits=10)
+        self.assertIsNone(row["synth_ratio"])
+        self.assertAlmostEqual(row["synth_sigma_error_8bit"], 0.0625)
+        summary = chroma_amplitude_compare.summarize([row])
+        self.assertEqual(summary["synth_ratio_error"]["count"], 0)
+        self.assertAlmostEqual(
+            summary["played_sigma_error_8bit"]["mae"], 0.125)
+
 
 if __name__ == "__main__":
     unittest.main()

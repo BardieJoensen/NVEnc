@@ -26,9 +26,9 @@ DEFAULT_TITLES = (
 )
 
 
-def _ratio(numerator: float, denominator: float) -> float:
+def _ratio(numerator: float, denominator: float) -> float | None:
     if denominator <= 0.0:
-        raise ValueError("amplitude denominator must be positive")
+        return None
     return numerator / denominator
 
 
@@ -53,10 +53,19 @@ def _row(title: str, plane: str, record: dict, bits: int,
 
 
 def _summary(rows: list[dict], field: str, centre: float = 0.0) -> dict:
-    errors = [float(row[field]) - centre for row in rows]
-    weights = [int(row["blocks"]) for row in rows]
-    if not errors or sum(weights) <= 0:
-        raise ValueError(f"no usable rows for {field}")
+    selected = [row for row in rows if row[field] is not None]
+    errors = [float(row[field]) - centre for row in selected]
+    weights = [int(row["blocks"]) for row in selected]
+    if not errors:
+        return {
+            "count": 0,
+            "bias": None,
+            "mae": None,
+            "max_abs": None,
+            "block_weighted_rmse": None,
+        }
+    if sum(weights) <= 0:
+        raise ValueError(f"no weighted rows for {field}")
     return {
         "count": len(errors),
         "bias": sum(errors) / len(errors),
@@ -120,11 +129,12 @@ def compare(control: dict, candidate: dict) -> dict:
     for level in ("title_summary", "band_summary"):
         result[level] = {}
         for metric in control[level]:
-            result[level][metric] = {
-                field: candidate[level][metric][field]
-                - control[level][metric][field]
-                for field in ("bias", "mae", "max_abs", "block_weighted_rmse")
-            }
+            result[level][metric] = {}
+            for field in ("bias", "mae", "max_abs", "block_weighted_rmse"):
+                old = control[level][metric][field]
+                new = candidate[level][metric][field]
+                result[level][metric][field] = (
+                    new - old if old is not None and new is not None else None)
     return result
 
 
