@@ -2759,9 +2759,10 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             if (m_textureLeakDynamic && diagnostics.leakCompensated) {
                 const double preLeak = diagnostics.preEncodeLeak;
                 const double postLeak = diagnostics.predictedPostEncodeLeak;
-                textureBaseWeight = preLeak > 1e-9
-                    ? std::clamp((postLeak * postLeak) / (preLeak * preLeak), 0.0, 1.0)
-                    : 0.0;
+                const double survival = preLeak > 1e-9
+                    ? (postLeak * postLeak) / (preLeak * preLeak) : 0.0;
+                textureBaseWeight = survival < 0.0 ? 0.0
+                    : (survival > 1.0 ? 1.0 : survival);
             }
             textureLeakCompensated = apply_luma_texture_leak_closure(combined,
                 static_cast<uint64_t>(requiredBlocks) * 64ULL, diagnostics,
