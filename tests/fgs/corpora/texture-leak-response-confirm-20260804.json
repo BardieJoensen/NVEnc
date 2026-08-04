@@ -1,0 +1,18 @@
+{
+  "authority": "offline-oracle-only",
+  "extends": "texture-leak-response-20260804.json",
+  "frozen_before_confirmation": "2026-08-04",
+  "changes_output": false,
+  "routing_authority": false,
+  "base_covariance_weight": 0.75,
+  "exact_normative_seed_samples": 16,
+  "raw_ar_seed_samples": 64,
+  "selection_evidence": "Weight 0.75 was selected by seven of eight leave-one-title-out training folds; the remaining fold selected 0.85. No per-title optimum is used in confirmation.",
+  "success_conditions": [
+    "Macro exact played-texture error is below the 0.01855 full-subtraction result.",
+    "No title regresses from its current decoded result by more than that title's measured current-table replay floor.",
+    "Fine controls Scarface and Ju-on remain at or below their current error within replay uncertainty.",
+    "Every covariance system remains positive and every luma model has a feasible AV1 int8 coefficient shift."
+  ],
+  "warning": "A successful confirmation authorizes only a default-off code prototype with fallback, not production deployment."
+}
