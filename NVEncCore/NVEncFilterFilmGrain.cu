@@ -2769,6 +2769,20 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             m_state->modelWindowSettled = diagnostics.modelFrames >= prm->filmGrain.modelWindow;
             m_state->pendingStreak = 0;
             m_state->framesSinceModelUpdate = 0;
+        } else if (m_state->lastParamsFallback && !diagnostics.sourceModelFallback) {
+            // A source fit needs a previous frame, so the first emitted table
+            // may only be the residual fallback. Once the preferred source
+            // path becomes solvable, replace that bootstrap model immediately
+            // instead of making it wait for the normal anti-twinkle cadence.
+            // This is deliberately asymmetric: a transient fallback candidate
+            // still has to pass the ordinary persistence checks before it can
+            // displace an established source model.
+            m_state->lastParams = params;
+            m_state->lastParamsFallback = false;
+            m_state->pendingParamsValid = false;
+            m_state->pendingStreak = 0;
+            m_state->framesSinceModelUpdate = 0;
+            m_state->modelWindowSettled = diagnostics.modelFrames >= prm->filmGrain.modelWindow;
         } else if (!m_state->modelWindowSettled
             && diagnostics.modelFrames >= prm->filmGrain.modelWindow) {
             // The first model is intentionally available after one frame so
