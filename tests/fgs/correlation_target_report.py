@@ -37,8 +37,10 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from source_fit import (  # noqa: E402
-    blockwise, detrend_blocks, production_flat_blocks, static_flat_blocks,
+    accumulate_ar, blockwise, detrend_blocks, implied_acf,
+    production_flat_blocks, solve_ar, static_flat_blocks,
 )
+import ar_acf  # noqa: E402
 from sourcefit_admission_report import decode_pair_stream  # noqa: E402
 from strength_selection_report import probe_size  # noqa: E402
 
@@ -114,13 +116,66 @@ def summarize_patches(patches, detrend=True):
     return term_summary(*correlation_terms(patches))
 
 
+def make_ar_accumulators():
+    count = len(ar_acf.ar_taps(3))
+    return {
+        key: {
+            "ata": np.zeros((count, count), dtype=np.float64),
+            "atb": np.zeros(count, dtype=np.float64),
+            "observations": 0,
+        }
+        for key in ("spatial_all", "spatial_static", "temporal_truth")
+    }
+
+
+def accumulate_pair_ar(source, next_source, candidates, static, accumulators):
+    fields = {
+        "spatial_all": (source, candidates),
+        "spatial_static": (source, static),
+        "temporal_truth": ((source - next_source) / math.sqrt(2.0), static),
+    }
+    for key, (field, blocks) in fields.items():
+        accumulator = accumulators[key]
+        accumulator["observations"] += accumulate_ar(
+            field, blocks, True, accumulator["ata"], accumulator["atb"])
+
+
+def ar_fit_summary(accumulators, bits, shift, seeds, sigma):
+    result = {}
+    for key, accumulator in accumulators.items():
+        coeffs = solve_ar(accumulator["ata"], accumulator["atb"])
+        implied = implied_acf(coeffs, shift, seeds, bits, sigma)
+        result[key] = {
+            "observations": accumulator["observations"],
+            "ar_shift": shift,
+            "coefficients": coeffs.tolist(),
+            "implied_lag1": implied["lag1"],
+            "implied_lag2": 0.5 * (implied["h2"] + implied["v2"]),
+            "implied_gain": implied["gain"],
+            "clip_fraction": implied["clip_fraction"],
+        }
+    static = result["spatial_static"]
+    truth = result["temporal_truth"]
+    result["static_minus_temporal_fit"] = {
+        "lag1": static["implied_lag1"] - truth["implied_lag1"],
+        "lag2": static["implied_lag2"] - truth["implied_lag2"],
+    }
+    result["purpose"] = (
+        "dense offline fit; temporal fit is the same AV1-model upper control, "
+        "not direct field truth")
+    return result
+
+
 def measure_pair(frame, source, next_source, bits, static_lo, static_hi,
-                 luma_bins):
+                 luma_bins, ar_accumulators=None):
     source = np.asarray(source, dtype=np.float64)
     next_source = np.asarray(next_source, dtype=np.float64)
     candidates, _score, _sigma = production_flat_blocks(source, bits)
     static = static_flat_blocks(
         source, next_source, candidates, lo=static_lo, hi=static_hi)
+    if ar_accumulators is not None:
+        accumulate_pair_ar(
+            source, next_source, candidates, static, ar_accumulators)
 
     source_grid = blockwise(source)
     next_grid = blockwise(next_source)
@@ -238,6 +293,9 @@ def main():
     parser.add_argument("--static-lo", type=float, default=0.8)
     parser.add_argument("--static-hi", type=float, default=1.3)
     parser.add_argument("--luma-bins", type=int, default=8)
+    parser.add_argument("--ar-shift", type=int, default=9)
+    parser.add_argument("--ar-seeds", type=int, default=64)
+    parser.add_argument("--ar-sim-sigma", type=float, default=4.0)
     parser.add_argument("--json-out", default="")
     args = parser.parse_args()
     if not os.path.isfile(args.source):
@@ -248,11 +306,12 @@ def main():
 
     width, height = probe_size(args.source)
     rows = []
+    ar_accumulators = make_ar_accumulators()
     for frame, source, next_source in decode_pair_stream(
             args.source, width, height, frames, args.bits):
         row = measure_pair(
             frame, source, next_source, args.bits,
-            args.static_lo, args.static_hi, args.luma_bins)
+            args.static_lo, args.static_hi, args.luma_bins, ar_accumulators)
         if row["static_blocks"] < 8:
             raise RuntimeError(
                 f"frame {frame}: only {row['static_blocks']} static blocks")
@@ -272,6 +331,9 @@ def main():
             "luma_bins": args.luma_bins,
         },
         "summary": aggregate_report(rows, args.luma_bins),
+        "ar_fit_oracle": ar_fit_summary(
+            ar_accumulators, args.bits, args.ar_shift,
+            args.ar_seeds, args.ar_sim_sigma),
         "frames": rows,
     }
     encoded = json.dumps(report, indent=2, sort_keys=True) + "\n"

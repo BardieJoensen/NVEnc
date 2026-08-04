@@ -51,6 +51,14 @@ class AggregateTests(unittest.TestCase):
             report["spatial_all"]["mean_of_frame_pooled"], 0.18)
         self.assertIsNone(report["routing_verdict"])
 
+    def test_ar_accumulators_keep_model_populations_separate(self):
+        accumulators = target.make_ar_accumulators()
+        self.assertEqual(
+            set(accumulators),
+            {"spatial_all", "spatial_static", "temporal_truth"})
+        accumulators["spatial_all"]["ata"][0, 0] = 1.0
+        self.assertEqual(accumulators["spatial_static"]["ata"][0, 0], 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()
