@@ -72,6 +72,23 @@ class AxisCovarianceTests(unittest.TestCase):
 
 
 class ArSystemTests(unittest.TestCase):
+    def test_axis_moments_expose_runtime_sparse_tap_ratios(self):
+        system = oracle.empty_ar_system()
+        system["observations"] = 10
+        system["btb"] = 100.0
+        taps = oracle.ar_acf.ar_taps(oracle.LAG)
+        expected = {
+            "h1": 0.4, "v1": 0.3, "h2": -0.2, "v2": -0.1,
+        }
+        for axis, value in expected.items():
+            system["atb"][taps.index(oracle.AXIS_TAPS[axis])] = value * 100.0
+        result = oracle.ar_system_axis_moments(system)
+        self.assertTrue(result["valid"])
+        self.assertEqual(result["observations"], 10)
+        self.assertAlmostEqual(result["variance"], 10.0)
+        for axis, value in expected.items():
+            self.assertAlmostEqual(result[axis], value)
+
     def test_sample_hash_and_strata_match_frozen_cuda_values(self):
         self.assertEqual(oracle.fgs_sample_hash(0), 0)
         self.assertEqual(oracle.fgs_sample_hash(1), 1753845952)

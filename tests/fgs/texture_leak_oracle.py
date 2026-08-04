@@ -49,6 +49,12 @@ from temporal_grain_report import decode_selected, probe_size  # noqa: E402
 AXES = ("h1", "v1", "h2", "v2")
 LAG = 3
 BLOCK_SIZE = 32
+AXIS_TAPS = {
+    "h1": (0, -1),
+    "v1": (-1, 0),
+    "h2": (0, -2),
+    "v2": (-2, 0),
+}
 
 
 def empty_axis_moments():
@@ -147,6 +153,32 @@ def empty_ar_system():
         "btb": 0.0,
         "observations": 0,
     }
+
+
+def ar_system_axis_moments(system):
+    """Expose the four sparse target ratios used by the runtime selector."""
+    observations = int(system["observations"])
+    btb = float(system["btb"])
+    if observations <= 0 or btb <= 0.0:
+        return {
+            "valid": False,
+            "reason": "AR system has non-positive target energy",
+            "observations": observations,
+        }
+    taps = ar_acf.ar_taps(LAG)
+    result = {
+        "valid": True,
+        "observations": observations,
+        "variance": btb / observations,
+        "covariance": {},
+    }
+    for axis, offset in AXIS_TAPS.items():
+        covariance = float(system["atb"][taps.index(offset)]) / observations
+        result["covariance"][axis] = covariance
+        result[axis] = covariance / result["variance"]
+    result["lag1"] = 0.5 * (result["h1"] + result["v1"])
+    result["lag2"] = 0.5 * (result["h2"] + result["v2"])
+    return result
 
 
 def accumulate_ar_system(system, field, blocks, detrend=True):
@@ -459,7 +491,12 @@ def run(args):
     frames = sorted({int(value) for value in args.frames.split(",")})
     if not frames or min(frames) < 0:
         raise ValueError("frames must contain non-negative indices")
-    indices = sorted(set(frames + [frame + 1 for frame in frames]))
+    pair_offset = 1 if args.pair_direction == "next" else -1
+    pairs = [(frame, frame + pair_offset) for frame in frames]
+    if min(other for _frame, other in pairs) < 0:
+        raise ValueError("previous-frame pairing requires frames greater than zero")
+    indices = sorted(set(
+        frames + [other for _frame, other in pairs]))
     source_frames = decode_selected(
         args.source, width, height, indices, bits=args.bits)
     base_frames = decode_selected(
@@ -474,9 +511,9 @@ def run(args):
     systems = {name: empty_ar_system() for name in ("source", "base")}
     selected_counts = []
     selected_blocks = []
-    for frame in frames:
+    for frame, other in pairs:
         source = source_frames[frame].astype(np.float64)
-        next_source = source_frames[frame + 1].astype(np.float64)
+        next_source = source_frames[other].astype(np.float64)
         candidates, _score, _sigma = production_flat_blocks(source, args.bits)
         blocks = static_flat_blocks(
             source, next_source, candidates,
@@ -487,12 +524,12 @@ def run(args):
         selected_counts.append(len(blocks))
         selected_blocks.append(blocks)
         current_base = base_frames[frame].astype(np.float64)
-        next_base = base_frames[frame + 1].astype(np.float64)
+        next_base = base_frames[other].astype(np.float64)
         source_temporal = (source - next_source) / math.sqrt(2.0)
         base_temporal = (current_base - next_base) / math.sqrt(2.0)
         played_temporal = (
             played_frames[frame].astype(np.float64)
-            - played_frames[frame + 1].astype(np.float64)
+            - played_frames[other].astype(np.float64)
         ) / math.sqrt(2.0)
         accumulate_axis_moments(moments["source"], source_temporal, blocks)
         accumulate_axis_moments(moments["base"], base_temporal, blocks)
@@ -505,7 +542,7 @@ def run(args):
         else:
             accumulate_ar_system(systems["source"], source_temporal, blocks)
             accumulate_ar_system(systems["base"], base_temporal, blocks)
-        for index in (frame, frame + 1):
+        for index in (frame, other):
             synthesis = (
                 played_frames[index].astype(np.float64)
                 - base_frames[index].astype(np.float64)
@@ -627,6 +664,7 @@ def run(args):
         "bits": args.bits,
         "settings": {
             "frames": frames,
+            "pair_direction": args.pair_direction,
             "flat_selector": "production",
             "static_ratio": [args.static_lo, args.static_hi],
             "minimum_blocks": args.minimum_blocks,
@@ -647,6 +685,10 @@ def run(args):
         "current_table_implied": table_model,
         "table_models_match_bitstream": all(table_matches),
         "covariance_system": solution,
+        "ar_system_axes": {
+            name: ar_system_axis_moments(system)
+            for name, system in systems.items()
+        },
         "quantized_oracles": candidates,
         "best_quantized_oracle": best,
         "predicted_oracle_total": oracle_total,
@@ -669,6 +711,10 @@ def main():
     parser.add_argument("--encoded", required=True)
     parser.add_argument("--table", required=True)
     parser.add_argument("--frames", default="10,58,106,154,202,250")
+    parser.add_argument(
+        "--pair-direction", choices=("next", "previous"), default="next",
+        help=("temporal neighbour for each selected frame; previous mirrors "
+              "the encoder's rolling window and is covariance-only"))
     parser.add_argument("--bits", type=int, default=10, choices=(8, 10, 12))
     parser.add_argument("--static-lo", type=float, default=0.8)
     parser.add_argument("--static-hi", type=float, default=1.3)
@@ -706,6 +752,11 @@ def main():
             parser.error(f"missing input: {path}")
     if args.exact_seeds < 0:
         parser.error("exact seeds must be non-negative")
+    if (args.pair_direction == "previous"
+            and (args.exact_seeds > 0
+                 or (args.response_alphas and args.response_seeds > 0))):
+        parser.error(
+            "previous-frame pairing currently supports covariance-only runs")
     if (args.response_seeds < 0 or args.response_ar_seeds < 1
             or any(value < 0.0 or value > 1.0
                    for value in args.response_alphas)):
