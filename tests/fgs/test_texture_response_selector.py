@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import unittest
 
+import numpy as np
+
 import texture_response_selector as selector
 
 
@@ -43,6 +45,21 @@ class TextureResponseSelectorTests(unittest.TestCase):
         self.assertEqual(len(result["titles"]), 3)
         self.assertTrue(all(
             row["selected_weight"] == 0.0 for row in result["titles"]))
+
+    def test_runtime_hash_template_is_deterministic(self):
+        row = {
+            "best_quantized_model": {
+                "shift": 7,
+                "coefficients": [0] * 24,
+                "implied": {axis: 0.0 for axis in selector.AXES},
+            },
+        }
+        first = selector.runtime_template_axes(row)
+        second = selector.runtime_template_axes(row)
+        self.assertEqual(first, second)
+        self.assertTrue(all(
+            np.isfinite(first[axis]) and abs(first[axis]) < 0.05
+            for axis in selector.AXES))
 
 
 if __name__ == "__main__":
