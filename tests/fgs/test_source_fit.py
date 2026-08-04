@@ -119,7 +119,9 @@ class TemporalLeakTests(unittest.TestCase):
                 return_value=completed) as run:
             temporal_grain_report.decode_selected(
                 "input.mkv", 2, 1, [0], plane="y", bits=10)
-        filters = run.call_args.args[0][run.call_args.args[0].index("-vf") + 1]
+        command = run.call_args.args[0]
+        self.assertIn("-nostdin", command)
+        filters = command[command.index("-vf") + 1]
         self.assertIn("extractplanes=y", filters)
 
     def test_temporal_report_records_zero_energy_without_texture(self):

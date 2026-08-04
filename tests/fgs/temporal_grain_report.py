@@ -67,7 +67,9 @@ def decode_selected(path, width, height, indices, filmgrain=None, plane="y",
         raise ValueError(f"unsupported decode depth {bits}")
     pixel_format, dtype = pixel_formats[bits]
     terms = "+".join(f"eq(n\\,{index})" for index in indices)
-    cmd = [FFMPEG, "-v", "error"]
+    # Reports are often driven by a shell loop whose stdin carries the next
+    # corpus record.  FFmpeg's interactive command reader must not consume it.
+    cmd = [FFMPEG, "-nostdin", "-v", "error"]
     if filmgrain is not None:
         cmd += ["-c:v", "libdav1d", "-filmgrain", str(filmgrain)]
     # Always extract the stored plane before selecting a gray output format.
