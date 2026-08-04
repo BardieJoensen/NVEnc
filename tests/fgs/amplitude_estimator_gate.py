@@ -31,6 +31,18 @@ from delivery_normalize import target_from_pre_leak
 PLANES = ("y", "u", "v")
 
 
+def parse_planes(value: str) -> tuple[str, ...]:
+    planes = tuple(item.strip().lower() for item in value.split(",") if item.strip())
+    if not planes:
+        raise ValueError("at least one plane is required")
+    invalid = [plane for plane in planes if plane not in PLANES]
+    if invalid:
+        raise ValueError("invalid plane(s): " + ", ".join(invalid))
+    if len(set(planes)) != len(planes):
+        raise ValueError("planes must not be repeated")
+    return planes
+
+
 def synthesis_target(pre_leak: float, theta: float) -> float:
     post_leak = max(0.0, min(1.0, pre_leak) - theta)
     return math.sqrt(max(0.0, 1.0 - post_leak * post_leak))
@@ -227,8 +239,16 @@ def main() -> int:
         "--arms", default="",
         help="optional comma-separated ARM=QVBR map for a multi-rate report")
     parser.add_argument("--min-blocks", type=int, default=100)
+    parser.add_argument(
+        "--planes", default=",".join(PLANES),
+        help="comma-separated planes to analyse (default y,u,v)")
     parser.add_argument("--json-out", default="")
     args = parser.parse_args()
+
+    try:
+        planes = parse_planes(args.planes)
+    except ValueError as error:
+        parser.error(str(error))
 
     report_dir = Path(args.report_dir).resolve()
     titles = [value.strip() for value in args.titles.split(",") if value.strip()]
@@ -246,7 +266,7 @@ def main() -> int:
             except ValueError:
                 parser.error(f"invalid QVBR in --arms item {value!r}")
     groups = {}
-    for plane in PLANES:
+    for plane in planes:
         masks = ["production_static"]
         if plane != "y":
             masks.append("production_plane_static")
@@ -275,6 +295,7 @@ def main() -> int:
     output = {
         "report_dir": str(report_dir),
         "titles": titles,
+        "planes": list(planes),
         "arms": arms,
         "min_blocks": args.min_blocks,
         "groups": groups,

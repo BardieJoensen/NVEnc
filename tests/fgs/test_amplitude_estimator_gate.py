@@ -5,6 +5,15 @@ import amplitude_estimator_gate as gate
 
 
 class AmplitudeEstimatorGateTests(unittest.TestCase):
+    def test_plane_selection_is_explicit_and_validated(self):
+        self.assertEqual(gate.parse_planes("u,v"), ("u", "v"))
+        with self.assertRaises(ValueError):
+            gate.parse_planes("")
+        with self.assertRaises(ValueError):
+            gate.parse_planes("y,x")
+        with self.assertRaises(ValueError):
+            gate.parse_planes("u,u")
+
     def test_synthesis_target_applies_amplitude_deadzone(self):
         self.assertAlmostEqual(
             gate.synthesis_target(0.5, 0.1), math.sqrt(1.0 - 0.4 ** 2))
