@@ -156,6 +156,7 @@ private:
         Off,
         Global,
         Local,
+        Independent,
     };
 
     void recordTableEntry(int64_t timestamp, int64_t duration, const NV_ENC_FILM_GRAIN_PARAMS_AV1& params);

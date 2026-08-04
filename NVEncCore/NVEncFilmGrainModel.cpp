@@ -480,7 +480,8 @@ bool apply_luma_leak_closure(FilmGrainGpuStats& stats, const double qvbr,
 }
 
 bool apply_chroma_leak_closure(FilmGrainGpuStats& stats, const double qvbr,
-    const uint64_t minTemporalBlocks, const bool perBin) {
+    const uint64_t minTemporalBlocks, const bool perBin,
+    const bool planeSpecific) {
     if (!std::isfinite(qvbr) || qvbr < FGS_LEAK_QVBR_MIN || qvbr > FGS_LEAK_QVBR_MAX) return false;
 
     struct PlaneClosure {
@@ -504,9 +505,15 @@ bool apply_chroma_leak_closure(FilmGrainGpuStats& stats, const double qvbr,
             || plane.sourceVariance <= 1e-9) return false;
     }
 
-    const double theta = FGS_LEAK_THETA_INTERCEPT + FGS_LEAK_THETA_QVBR_SLOPE * qvbr;
     for (int chroma = 0; chroma < 2; ++chroma) {
         auto& measured = stats.plane[chroma + 1];
+        const double theta = planeSpecific
+            ? (chroma == 0
+                ? FGS_CHROMA_U_LEAK_THETA_INTERCEPT
+                    + FGS_CHROMA_U_LEAK_THETA_QVBR_SLOPE * qvbr
+                : FGS_CHROMA_V_LEAK_THETA_INTERCEPT
+                    + FGS_CHROMA_V_LEAK_THETA_QVBR_SLOPE * qvbr)
+            : FGS_LEAK_THETA_INTERCEPT + FGS_LEAK_THETA_QVBR_SLOPE * qvbr;
         double globalSynthesisFraction2 = 0.0;
         if (!perBin) {
             const auto& plane = closure[chroma];

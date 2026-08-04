@@ -1702,9 +1702,13 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
             m_chromaLeakMode = ChromaLeakMode::Local;
             AddMessage(RGY_LOG_WARN,
                 _T("film-grain: applying test-only per-bin temporal chroma leak closure.\n"));
+        } else if (strcmp(value, "independent") == 0) {
+            m_chromaLeakMode = ChromaLeakMode::Independent;
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: applying test-only per-plane chroma amplitude transfer.\n"));
         } else {
             AddMessage(RGY_LOG_WARN,
-                _T("film-grain: ignoring invalid NVENC_FGS_TEST_CHROMA_LEAK=%s (expected global or local).\n"),
+                _T("film-grain: ignoring invalid NVENC_FGS_TEST_CHROMA_LEAK=%s (expected global, local, or independent).\n"),
                 char_to_tstring(value).c_str());
         }
     }
@@ -2455,7 +2459,9 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             chromaLeakCompensated = apply_chroma_leak_closure(combined,
                 temporalLeakEnabled ? prm->leakTargetQuality : -1.0,
                 static_cast<uint64_t>(requiredBlocks),
-                m_chromaLeakMode == ChromaLeakMode::Local);
+                m_chromaLeakMode == ChromaLeakMode::Local
+                    || m_chromaLeakMode == ChromaLeakMode::Independent,
+                m_chromaLeakMode == ChromaLeakMode::Independent);
         }
     }
     bool modelValid = false;

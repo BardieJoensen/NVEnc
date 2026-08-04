@@ -265,7 +265,7 @@ void testChromaTemporalLeakClosure() {
             chroma.temporalBlockCount[bin] = 10;
         }
     }
-    expect(apply_chroma_leak_closure(global, qvbr, 100, false),
+    expect(apply_chroma_leak_closure(global, qvbr, 100, false, false),
         "global chroma closure accepts paired plane coverage");
     for (int plane = 1; plane <= 2; ++plane) {
         const double preLeak = plane == 1 ? 0.40 : 0.60;
@@ -287,7 +287,7 @@ void testChromaTemporalLeakClosure() {
             chroma.temporalBlockCount[bin] = 10;
         }
     }
-    expect(apply_chroma_leak_closure(local, qvbr, 100, true),
+    expect(apply_chroma_leak_closure(local, qvbr, 100, true, false),
         "local chroma closure accepts paired plane coverage");
     for (int bin = 0; bin < 2; ++bin) {
         const double preLeak = bin ? 0.60 : 0.20;
@@ -298,9 +298,25 @@ void testChromaTemporalLeakClosure() {
             "local chroma closure follows per-bin leak");
     }
 
+    FilmGrainGpuStats independent = local;
+    expect(apply_chroma_leak_closure(independent, qvbr, 100, true, true),
+        "independent chroma closure accepts paired plane coverage");
+    for (int plane = 1; plane <= 2; ++plane) {
+        const double planeTheta = plane == 1
+            ? FGS_CHROMA_U_LEAK_THETA_INTERCEPT
+                + FGS_CHROMA_U_LEAK_THETA_QVBR_SLOPE * qvbr
+            : FGS_CHROMA_V_LEAK_THETA_INTERCEPT
+                + FGS_CHROMA_V_LEAK_THETA_QVBR_SLOPE * qvbr;
+        const double postLeak = std::max(0.0, 0.60 - planeTheta);
+        const double expected = sourceVariance * (1.0 - postLeak * postLeak);
+        expectNear(independent.plane[plane].binVarSum[1]
+            / independent.plane[plane].binBlockCount[1], expected, 1e-9,
+            "independent chroma closure uses the plane transfer");
+    }
+
     FilmGrainGpuStats missingPlane = global;
     missingPlane.plane[2] = {};
-    expect(!apply_chroma_leak_closure(missingPlane, qvbr, 100, false),
+    expect(!apply_chroma_leak_closure(missingPlane, qvbr, 100, false, false),
         "chroma closure requires both 4:2:0 planes");
 }
 

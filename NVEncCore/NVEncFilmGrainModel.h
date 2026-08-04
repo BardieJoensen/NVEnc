@@ -107,6 +107,14 @@ constexpr double FGS_SOURCE_MAX_STRENGTH_GAIN = 1.25;
 // establishes whether extrapolation is safe.
 constexpr double FGS_LEAK_THETA_INTERCEPT = 0.01579030304339795;
 constexpr double FGS_LEAK_THETA_QVBR_SLOPE = 0.004870139420489915;
+// Test-only plane-specific transfer fitted on six retained films at QVBR
+// 25/29/34/39. U and V do not share luma's post-encode deadzone. Keep these
+// behind NVENC_FGS_TEST_CHROMA_LEAK=independent until a bilateral hardware
+// corpus confirms the offline leave-one-title-out result.
+constexpr double FGS_CHROMA_U_LEAK_THETA_INTERCEPT = -0.07637246049661427;
+constexpr double FGS_CHROMA_U_LEAK_THETA_QVBR_SLOPE = 0.013076297968397295;
+constexpr double FGS_CHROMA_V_LEAK_THETA_INTERCEPT = 0.29641760722347593;
+constexpr double FGS_CHROMA_V_LEAK_THETA_QVBR_SLOPE = 0.0035356659142212277;
 constexpr double FGS_LEAK_QVBR_MIN = 25.0;
 constexpr double FGS_LEAK_QVBR_MAX = 39.0;
 constexpr uint64_t FGS_MIN_TEMPORAL_BIN_BLOCKS = 4;
@@ -193,7 +201,7 @@ bool apply_luma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
     uint64_t minTemporalBlocks, bool perBin,
     NVEncFilmGrainDiagnostics& diagnostics);
 bool apply_chroma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
-    uint64_t minTemporalBlocks, bool perBin);
+    uint64_t minTemporalBlocks, bool perBin, bool planeSpecific);
 bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,
     bool analyzeChroma, bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
     NVEncFilmGrainDiagnostics& diagnostics, double maxLumaCorrelation = -1.0);
