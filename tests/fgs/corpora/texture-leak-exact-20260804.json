@@ -1,0 +1,15 @@
+{
+  "authority": "offline-oracle-only",
+  "extends": "texture-leak-oracle-20260804.json",
+  "frozen_before_exact_replay": "2026-08-04",
+  "changes_output": false,
+  "routing_authority": false,
+  "exact_normative_seed_samples": 16,
+  "purpose": "test the covariance-subtracted AR model through AV1 scaling, overlap, rounding and output clipping on the actual base pixels",
+  "interpretation_guards": [
+    "Use the same deterministic seed for current and oracle models within each replay sample.",
+    "Keep each interval's existing luma scaling curve; use covariance-subtracted variance only when predicting the played total.",
+    "The exact replay must first reproduce the current decoded synthesis closely enough to expose finite-seed uncertainty.",
+    "This is still an offline upper control and cannot enable modelsrc or change Tdarr routing."
+  ]
+}

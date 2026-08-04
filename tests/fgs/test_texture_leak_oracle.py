@@ -52,6 +52,24 @@ class AxisCovarianceTests(unittest.TestCase):
             self.assertAlmostEqual(mixed[axis], source[axis])
         self.assertAlmostEqual(mixed["sigma_over_source"], 1.0)
 
+    def test_replace_luma_model_preserves_curve_and_chroma(self):
+        entry = {
+            "params": {"ar_coeff_lag": 2, "ar_coeff_shift": 8,
+                       "scaling_shift": 11},
+            "scaling_points": {"y": [[0, 5]], "cb": [], "cr": []},
+            "ar_coeffs": {"y": [1], "cb": [2], "cr": [3]},
+        }
+        replaced = oracle.replace_luma_model(entry, {
+            "shift": 6,
+            "coefficients": list(range(24)),
+        })
+        self.assertEqual(replaced["params"]["ar_coeff_shift"], 6)
+        self.assertEqual(replaced["params"]["scaling_shift"], 11)
+        self.assertEqual(replaced["ar_coeffs"]["y"], list(range(24)))
+        self.assertEqual(replaced["ar_coeffs"]["cb"], [2])
+        self.assertEqual(replaced["scaling_points"], entry["scaling_points"])
+        self.assertEqual(entry["ar_coeffs"]["y"], [1])
+
 
 class ArSystemTests(unittest.TestCase):
     def test_identical_system_subtraction_has_no_energy(self):

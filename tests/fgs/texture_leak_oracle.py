@@ -34,8 +34,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import ar_acf  # noqa: E402
+import av1_grain  # noqa: E402
 from emission_audit import (  # noqa: E402
-    entry_for_frame, probe_grain_entries, probe_rate, table_matches_stream,
+    entry_for_frame, oracle_seed, probe_grain_entries, probe_rate,
+    table_matches_stream,
 )
 import filmgrn  # noqa: E402
 from source_fit import (  # noqa: E402
@@ -58,12 +60,11 @@ def empty_axis_moments():
     }
 
 
-def accumulate_axis_moments(moment, field, blocks, detrend=True):
-    """Pool variance/covariance without averaging per-frame correlations."""
-    if not blocks:
+def accumulate_patch_moments(moment, patches, detrend=True):
+    """Pool patch variance/covariance without averaging correlations."""
+    patches = np.asarray(patches, dtype=np.float64)
+    if not len(patches):
         return
-    grid = blockwise(np.asarray(field, dtype=np.float64), BLOCK_SIZE)
-    patches = np.stack([grid[row, col] for row, col in blocks])
     if detrend:
         patches = detrend_blocks(patches[None])[0]
     moment["variance_sum"] += float(np.sum(patches * patches))
@@ -77,6 +78,15 @@ def accumulate_axis_moments(moment, field, blocks, detrend=True):
     for axis, (left, right) in pairs.items():
         moment["covariance_sum"][axis] += float(np.sum(left * right))
         moment["covariance_count"][axis] += int(left.size)
+
+
+def accumulate_axis_moments(moment, field, blocks, detrend=True):
+    """Select aligned blocks from a field and pool their axis moments."""
+    if not blocks:
+        return
+    grid = blockwise(np.asarray(field, dtype=np.float64), BLOCK_SIZE)
+    patches = np.stack([grid[row, col] for row, col in blocks])
+    accumulate_patch_moments(moment, patches, detrend)
 
 
 def finish_axis_moments(moment):
@@ -296,6 +306,59 @@ def mix_with_base(base, synthesis, desired, source):
     return result
 
 
+def replace_luma_model(entry, quantized):
+    """Copy an entry while replacing only its luma AR model."""
+    return {
+        **entry,
+        "params": {
+            **entry["params"],
+            "ar_coeff_lag": LAG,
+            "ar_coeff_shift": quantized["shift"],
+        },
+        "ar_coeffs": {
+            **entry["ar_coeffs"],
+            "y": list(quantized["coefficients"]),
+        },
+    }
+
+
+def exact_model_replay(base_frames, frames, selected_blocks, table_entries,
+                       stream_entries, fps_num, fps_den, quantized, gaussian,
+                       bit_depth, seed_samples):
+    """Replay current/oracle tables through exact normative selected pixels."""
+    moments = {
+        "current": empty_axis_moments(),
+        "oracle": empty_axis_moments(),
+    }
+    for frame, blocks in zip(frames, selected_blocks):
+        for current in (frame, frame + 1):
+            table_entry = entry_for_frame(
+                table_entries, current, fps_num, fps_den)
+            # filmgrn1 cannot store the range-clipping flag; inherit the exact
+            # bitstream value before replaying either model.
+            current_entry = {
+                **table_entry,
+                "limit_output_range": stream_entries[current]["limit_output_range"],
+            }
+            oracle_entry = replace_luma_model(current_entry, quantized)
+            for sample in range(seed_samples):
+                seed = oracle_seed(current, sample)
+                seeded_current = {**current_entry, "random_seed": seed}
+                seeded_oracle = {**oracle_entry, "random_seed": seed}
+                current_patches = av1_grain.synthesize_selected_luma(
+                    base_frames[current], blocks, seeded_current,
+                    gaussian, bit_depth)
+                oracle_patches = av1_grain.synthesize_selected_luma(
+                    base_frames[current], blocks, seeded_oracle,
+                    gaussian, bit_depth)
+                accumulate_patch_moments(
+                    moments["current"], current_patches)
+                accumulate_patch_moments(
+                    moments["oracle"], oracle_patches)
+    return {name: finish_axis_moments(value)
+            for name, value in moments.items()}
+
+
 def run(args):
     width, height = probe_size(args.source)
     if probe_size(args.encoded) != (width, height):
@@ -317,6 +380,7 @@ def run(args):
     }
     systems = {name: empty_ar_system() for name in ("source", "base")}
     selected_counts = []
+    selected_blocks = []
     for frame in frames:
         source = source_frames[frame].astype(np.float64)
         next_source = source_frames[frame + 1].astype(np.float64)
@@ -328,6 +392,7 @@ def run(args):
             raise ValueError(
                 f"frame {frame}: only {len(blocks)} static flat blocks")
         selected_counts.append(len(blocks))
+        selected_blocks.append(blocks)
         source_temporal = (source - next_source) / math.sqrt(2.0)
         base_temporal = (
             base_frames[frame].astype(np.float64)
@@ -377,6 +442,20 @@ def run(args):
     oracle_total = (mix_with_base(
         axes["base"], best["implied"], desired, axes["source"])
         if best is not None else None)
+    exact_replay = None
+    exact_oracle_total = None
+    grain_source_sha256 = None
+    if args.exact_seeds > 0 and best is not None:
+        gaussian = av1_grain.load_gaussian_sequence(args.aom_grain_source)
+        import hashlib
+        with open(args.aom_grain_source, "rb") as handle:
+            grain_source_sha256 = hashlib.sha256(handle.read()).hexdigest()
+        exact_replay = exact_model_replay(
+            base_frames, frames, selected_blocks, table_entries,
+            stream_entries, fps_num, fps_den, best, gaussian, args.bits,
+            args.exact_seeds)
+        exact_oracle_total = mix_with_base(
+            axes["base"], exact_replay["oracle"], desired, axes["source"])
     errors = {
         "table_to_decoded_synthesis_axis_mae": axis_error(
             table_model, axes["decoded_synthesis"]),
@@ -388,6 +467,14 @@ def run(args):
             best["axis_mae_to_target"] if best is not None else None),
         "oracle_total_to_source_axis_mae": axis_error(
             oracle_total, axes["source"]),
+        "exact_current_to_decoded_synthesis_axis_mae": (
+            axis_error(exact_replay["current"], axes["decoded_synthesis"])
+            if exact_replay is not None else None),
+        "exact_oracle_synthesis_to_desired_axis_mae": (
+            axis_error(exact_replay["oracle"], desired)
+            if exact_replay is not None else None),
+        "exact_oracle_total_to_source_axis_mae": axis_error(
+            exact_oracle_total, axes["source"]),
     }
     return {
         "purpose": "offline texture-leak representability oracle",
@@ -406,6 +493,7 @@ def run(args):
             "minimum_blocks": args.minimum_blocks,
             "ar_seeds": args.ar_seeds,
             "ar_sigma": args.ar_sigma,
+            "exact_seeds": args.exact_seeds,
         },
         "static_blocks": selected_counts,
         "source_truth": axes["source"],
@@ -419,6 +507,12 @@ def run(args):
         "quantized_oracles": candidates,
         "best_quantized_oracle": best,
         "predicted_oracle_total": oracle_total,
+        "exact_replay": exact_replay,
+        "predicted_exact_oracle_total": exact_oracle_total,
+        "aom_grain_source": (
+            os.path.abspath(args.aom_grain_source)
+            if args.exact_seeds > 0 else None),
+        "aom_grain_source_sha256": grain_source_sha256,
         "errors": errors,
     }
 
@@ -435,11 +529,23 @@ def main():
     parser.add_argument("--minimum-blocks", type=int, default=8)
     parser.add_argument("--ar-seeds", type=int, default=64)
     parser.add_argument("--ar-sigma", type=float, default=4.0)
+    parser.add_argument(
+        "--exact-seeds", type=int, default=0,
+        help="exact normative current/oracle replays per selected frame")
+    parser.add_argument(
+        "--aom-grain-source",
+        default=os.environ.get(
+            "AOM_GRAIN_SOURCE", "/tmp/aomref/src/av1/decoder/grain_synthesis.c"),
+        help="pinned libaom grain_synthesis.c containing gaussian_sequence")
     parser.add_argument("--json-out", default="")
     args = parser.parse_args()
     for path in (args.source, args.encoded, args.table):
         if not os.path.isfile(path):
             parser.error(f"missing input: {path}")
+    if args.exact_seeds < 0:
+        parser.error("exact seeds must be non-negative")
+    if args.exact_seeds > 0 and not os.path.isfile(args.aom_grain_source):
+        parser.error(f"missing AV1 grain source: {args.aom_grain_source}")
     report = run(args)
     encoded = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.json_out:
