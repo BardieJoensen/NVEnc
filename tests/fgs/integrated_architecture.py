@@ -11,6 +11,8 @@ This harness deliberately separates four questions:
   population and is the exact control for later amplitude experiments;
 * ``bilateral-source-texture-dynamic`` keeps that control and subtracts base
   covariance in proportion to the quantizer-surviving temporal leak;
+* ``bilateral-source-texture-response`` chooses from the frozen covariance
+  grid using the realised quantized-template response;
 * ``bilateral-source-chroma-global``, ``-local`` and ``-independent`` keep
   that exact luma path while testing aggregate, per-luma-bin, and separately
   calibrated U/V temporal chroma closure;
@@ -80,6 +82,7 @@ CANDIDATE_ARMS = (
     "bilateral-source",
     "bilateral-source-static",
     "bilateral-source-texture-dynamic",
+    "bilateral-source-texture-response",
     *CHROMA_LEAK_ARMS,
     *MOTION_ARMS,
 )
@@ -187,7 +190,8 @@ def fgs_options(arm: str) -> str:
         return "denoise=auto,chroma=auto,denoiser=bilateral"
     if (arm in (
             "bilateral-source", "bilateral-source-static",
-            "bilateral-source-texture-dynamic")
+            "bilateral-source-texture-dynamic",
+            "bilateral-source-texture-response")
             or arm in CHROMA_LEAK_ARMS):
         return "denoise=auto,chroma=auto,denoiser=bilateral,modelsrc=on"
     if arm in MOTION_ARMS:
@@ -202,6 +206,9 @@ def arm_environment(arm: str) -> dict[str, str]:
     if arm == "bilateral-source-texture-dynamic":
         env["NVENC_FGS_TEST_SOURCE_STATIC"] = "on"
         env["NVENC_FGS_TEST_TEXTURE_LEAK"] = "dynamic"
+    if arm == "bilateral-source-texture-response":
+        env["NVENC_FGS_TEST_SOURCE_STATIC"] = "on"
+        env["NVENC_FGS_TEST_TEXTURE_LEAK"] = "response"
     if arm == "bilateral-source-chroma-global":
         env["NVENC_FGS_TEST_CHROMA_LEAK"] = "global"
     if arm == "bilateral-source-chroma-local":
@@ -285,6 +292,8 @@ def main() -> int:
         "--arms", default="plain,production,causal,paired",
         help=("comma-separated subset of plain,production,bilateral-source,"
               "bilateral-source-static,"
+              "bilateral-source-texture-dynamic,"
+              "bilateral-source-texture-response,"
               "bilateral-source-chroma-global,"
               "bilateral-source-chroma-local,"
               "bilateral-source-chroma-independent,"

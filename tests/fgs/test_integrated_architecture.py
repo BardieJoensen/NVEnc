@@ -69,6 +69,17 @@ class IntegratedArchitectureHarnessTests(unittest.TestCase):
             environment["NVENC_FGS_TEST_TEXTURE_LEAK"], "dynamic")
         self.assertNotIn("NVENC_FGS_TEST_CHROMA_LEAK", environment)
 
+    def test_response_texture_arm_is_explicit_and_source_static(self):
+        command = build_clean_command(
+            Path("candidate"), Path("source.mkv"), Path("clean.y4m"),
+            Path("raw.tbl"), "bilateral-source-texture-response")
+        self.assertIn("denoiser=bilateral,modelsrc=on", " ".join(command))
+        environment = arm_environment(
+            "bilateral-source-texture-response")
+        self.assertEqual(environment["NVENC_FGS_TEST_SOURCE_STATIC"], "on")
+        self.assertEqual(
+            environment["NVENC_FGS_TEST_TEXTURE_LEAK"], "response")
+
     def test_chroma_closure_arms_change_only_test_environment(self):
         baseline = arm_environment("bilateral-source")
         global_closure = arm_environment("bilateral-source-chroma-global")

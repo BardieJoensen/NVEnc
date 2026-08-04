@@ -48,7 +48,8 @@ NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     detailRisk(0.0f), residualRetain(0.0f), grainCorrelation(0.0f),
     sourceModelCorrelation(0.0f), sourceArScale(1.0f), sourceStrengthGain(1.0f),
     preEncodeLeak(0.0f), predictedPostEncodeLeak(0.0f), leakDeadzone(0.0f),
-    textureBaseCovarianceWeight(0.0f), textureCovarianceMinPivotRatio(0.0f), temporalLeakBlocks(0),
+    textureBaseCovarianceWeight(0.0f), textureCovarianceMinPivotRatio(0.0f),
+    textureResponseAxisError(0.0f), temporalLeakBlocks(0),
     temporalTextureObservations(0), strengthRectifiedBlocks(0),
     sourceRegularizationRejected(false), sourceModelFallback(false), leakCompensated(false),
     textureLeakCompensated(false), textureLeakRejected(false),
@@ -201,13 +202,19 @@ FilmGrainSolvedPlane solve_plane(const FilmGrainGpuPlaneStats& stats, const bool
 }
 
 struct LumaTemplateStats {
+    double h1;
+    double h2;
+    double v1;
+    double v2;
     double correlation;
     double gain;
 };
 
 static LumaTemplateStats simulate_luma_template(
     const std::vector<double>& coeffs, const double scale) {
-    if (coeffs.size() != FGS_AR_COEFFS || !std::isfinite(scale)) return { 0.0, 1.0 };
+    if (coeffs.size() != FGS_AR_COEFFS || !std::isfinite(scale)) {
+        return { 0.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+    }
     // Match the AV1 lag-3 luma template footprint.  The fixed hash supplies a
     // deterministic white field.  Correlation is normalised and gain is
     // measured against the exact same field before recursion.  Avoiding a
@@ -251,7 +258,9 @@ static LumaTemplateStats simulate_luma_template(
             for (int dx = -FGS_AR_LAG; dx < 0; ++dx) {
                 value += coeffs[coefficient++] * scale * field[y * width + x + dx];
             }
-            if (!std::isfinite(value) || std::abs(value) > 1e100) return { 1.0, 1e100 };
+            if (!std::isfinite(value) || std::abs(value) > 1e100) {
+                return { 1.0, 1.0, 1.0, 1.0, 1.0, 1e100 };
+            }
             field[y * width + x] = value;
         }
     }
@@ -266,9 +275,13 @@ static LumaTemplateStats simulate_luma_template(
     mean /= std::max<uint64_t>(1, count);
     double variance = 0.0;
     double horizontal = 0.0;
+    double horizontal2 = 0.0;
     double vertical = 0.0;
+    double vertical2 = 0.0;
     uint64_t horizontalCount = 0;
+    uint64_t horizontal2Count = 0;
     uint64_t verticalCount = 0;
+    uint64_t vertical2Count = 0;
     for (int y = y0; y < height; ++y) {
         for (int x = x0; x < x1; ++x) {
             const double value = field[y * width + x] - mean;
@@ -277,19 +290,35 @@ static LumaTemplateStats simulate_luma_template(
                 horizontal += value * (field[y * width + x - 1] - mean);
                 ++horizontalCount;
             }
+            if (x > x0 + 1) {
+                horizontal2 += value * (field[y * width + x - 2] - mean);
+                ++horizontal2Count;
+            }
             if (y > y0) {
                 vertical += value * (field[(y - 1) * width + x] - mean);
                 ++verticalCount;
+            }
+            if (y > y0 + 1) {
+                vertical2 += value * (field[(y - 2) * width + x] - mean);
+                ++vertical2Count;
             }
         }
     }
     variance /= std::max<uint64_t>(1, count);
     if (!(variance > 1e-12) || !std::isfinite(variance)
-        || !(whiteVariance > 1e-12)) return { 0.0, 1.0 };
-    const double h = horizontal / std::max<uint64_t>(1, horizontalCount) / variance;
-    const double v = vertical / std::max<uint64_t>(1, verticalCount) / variance;
+        || !(whiteVariance > 1e-12)) {
+        return { 0.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
+    }
+    const double h1 = horizontal / std::max<uint64_t>(1, horizontalCount) / variance;
+    const double h2 = horizontal2 / std::max<uint64_t>(1, horizontal2Count) / variance;
+    const double v1 = vertical / std::max<uint64_t>(1, verticalCount) / variance;
+    const double v2 = vertical2 / std::max<uint64_t>(1, vertical2Count) / variance;
     return {
-        std::clamp(0.5 * (h + v), -1.0, 1.0),
+        std::clamp(h1, -1.0, 1.0),
+        std::clamp(h2, -1.0, 1.0),
+        std::clamp(v1, -1.0, 1.0),
+        std::clamp(v2, -1.0, 1.0),
+        std::clamp(0.5 * (h1 + v1), -1.0, 1.0),
         std::sqrt(variance / whiteVariance)
     };
 }
@@ -308,6 +337,19 @@ static LumaTemplateStats quantized_luma_stats(const std::vector<double>& coeffs,
             -128, 127) / coefficientScale;
     }
     return simulate_luma_template(quantized, 1.0);
+}
+
+static LumaTemplateStats emitted_luma_stats(
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params) {
+    const int arShift = params.arCoeffShiftMinus6 + 6;
+    const double coefficientScale = static_cast<double>(1 << arShift);
+    std::vector<double> coefficients(FGS_AR_COEFFS, 0.0);
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
+        coefficients[i] =
+            (static_cast<int>(params.arCoeffsYPlus128[i]) - 128)
+            / coefficientScale;
+    }
+    return simulate_luma_template(coefficients, 1.0);
 }
 
 static int choose_ar_shift(const std::array<FilmGrainSolvedPlane, 3>& solved) {
@@ -511,6 +553,7 @@ bool apply_luma_texture_leak_closure(FilmGrainGpuStats& stats,
     diagnostics.temporalTextureObservations = temporal.observations;
     diagnostics.textureBaseCovarianceWeight = 0.0f;
     diagnostics.textureCovarianceMinPivotRatio = 0.0f;
+    diagnostics.textureResponseAxisError = 0.0f;
     diagnostics.textureLeakCompensated = false;
     diagnostics.textureLeakRejected = false;
     if (!std::isfinite(baseCovarianceWeight)
@@ -916,6 +959,144 @@ bool build_source_film_grain_params_with_residual_fallback(
         return false;
     }
     params = fallbackParams;
+    diagnostics.sourceModelFallback = true;
+    return true;
+}
+
+static bool luma_texture_response_error(
+    const FilmGrainTemporalArStats& temporal,
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
+    const NVEncFilmGrainDiagnostics& diagnostics, double& error) {
+    if (!params.applyGrain || !diagnostics.leakCompensated
+        || temporal.observations == 0) return false;
+
+    const long double sourceBtb = (
+        static_cast<long double>(temporal.weightedBtb)
+        + FGS_TEXTURE_BASE_WEIGHT * static_cast<long double>(temporal.baseBtb)
+    ) / FGS_TEXTURE_SOURCE_WEIGHT;
+    if (!(sourceBtb > 0.0L)) return false;
+    const double preLeak = diagnostics.preEncodeLeak;
+    const double postLeak = diagnostics.predictedPostEncodeLeak;
+    if (!std::isfinite(preLeak) || !std::isfinite(postLeak)
+        || preLeak < 0.0 || postLeak < 0.0) return false;
+    const long double survival = preLeak > 1e-9
+        ? std::clamp(
+            static_cast<long double>(postLeak * postLeak / (preLeak * preLeak)),
+            0.0L, 1.0L)
+        : 0.0L;
+    const long double basePostBtb = std::clamp(
+        static_cast<long double>(temporal.baseBtb) * survival,
+        0.0L, sourceBtb);
+    const long double synthesisBtb = sourceBtb - basePostBtb;
+    if (!(synthesisBtb > 0.0L)) return false;
+
+    const auto raw = emitted_luma_stats(params);
+    const std::array<double, 4> rawAxes = { raw.h1, raw.h2, raw.v1, raw.v2 };
+    // Frozen against the 40 exact response-grid points in
+    // sourcefit-texture-leak-response-20260804.  The leave-one-title-out
+    // runtime-hash selector chose the exact optimum on six of eight titles,
+    // selected the adjacent grid point on the other two, and reduced mean
+    // axis error versus a fixed 3/4 response.  This remains reachable only
+    // through NVENC_FGS_TEST_TEXTURE_LEAK=response.
+    constexpr std::array<double, 4> responseSlope = {
+        0.9510276477789934, 0.9650347260831709,
+        0.9852657782705582, 0.9180189922841282,
+    };
+    constexpr std::array<double, 4> responseIntercept = {
+        0.024070553231549847, -0.0002831193933100784,
+        -0.019096711687335878, -0.03125679267652271,
+    };
+    // Tap ordering is three complete previous rows followed by current-row
+    // x offsets -3,-2,-1.  These four positions are the measured axis
+    // covariance at h1,h2,v1,v2 respectively.
+    constexpr std::array<int, 4> axisTap = { 23, 22, 17, 10 };
+    error = 0.0;
+    for (size_t axis = 0; axis < axisTap.size(); ++axis) {
+        const int tap = axisTap[axis];
+        const long double sourceAtb = (
+            static_cast<long double>(temporal.weightedAtb[tap])
+            + FGS_TEXTURE_BASE_WEIGHT
+                * static_cast<long double>(temporal.baseAtb[tap])
+        ) / FGS_TEXTURE_SOURCE_WEIGHT;
+        const long double basePostAtb =
+            static_cast<long double>(temporal.baseAtb[tap]) * survival;
+        const double delivered = std::clamp(
+            responseSlope[axis] * rawAxes[axis] + responseIntercept[axis],
+            -1.0, 1.0);
+        const long double predicted = (
+            basePostAtb + delivered * synthesisBtb) / sourceBtb;
+        const long double target = sourceAtb / sourceBtb;
+        if (!std::isfinite(static_cast<double>(predicted))
+            || !std::isfinite(static_cast<double>(target))) return false;
+        error += std::abs(static_cast<double>(predicted - target));
+    }
+    error /= axisTap.size();
+    return std::isfinite(error);
+}
+
+bool build_source_film_grain_params_with_texture_response(
+    const FilmGrainGpuStats& sourceStats, const FilmGrainGpuStats& residualStats,
+    const uint64_t minTextureObservations, const int bitDepth,
+    const bool analyzeChroma, const bool limitedRange,
+    NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
+    NVEncFilmGrainDiagnostics& diagnostics, const double maxLumaCorrelation) {
+    // Keep the grid frozen to the preregistered exact response experiment.
+    // Selecting from this small set also makes every choice reproducible and
+    // avoids pretending that the finite AR quantizer is a smooth objective.
+    constexpr std::array<double, 5> weights = {
+        0.0, 0.75, 0.85, 0.925, 1.0,
+    };
+    bool found = false;
+    double bestError = std::numeric_limits<double>::max();
+    double bestWeight = 0.0;
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 bestParams = {};
+    NVEncFilmGrainDiagnostics bestDiagnostics = diagnostics;
+    for (const double weight : weights) {
+        FilmGrainGpuStats candidateStats = sourceStats;
+        NVEncFilmGrainDiagnostics candidateDiagnostics = diagnostics;
+        if (!apply_luma_texture_leak_closure(
+            candidateStats, minTextureObservations,
+            candidateDiagnostics, weight)) continue;
+        NV_ENC_FILM_GRAIN_PARAMS_AV1 candidateParams = {};
+        if (!build_film_grain_params(
+            candidateStats, bitDepth, analyzeChroma, limitedRange,
+            candidateParams, candidateDiagnostics,
+            maxLumaCorrelation)) continue;
+        double candidateError = 0.0;
+        if (!luma_texture_response_error(
+            sourceStats.temporalLuma, candidateParams,
+            diagnostics, candidateError)) continue;
+        if (!found || candidateError < bestError - 1e-12
+            || (std::abs(candidateError - bestError) <= 1e-12
+                && weight < bestWeight)) {
+            found = true;
+            bestError = candidateError;
+            bestWeight = weight;
+            bestParams = candidateParams;
+            bestDiagnostics = candidateDiagnostics;
+        }
+    }
+    if (found) {
+        params = bestParams;
+        diagnostics = bestDiagnostics;
+        diagnostics.textureBaseCovarianceWeight = static_cast<float>(bestWeight);
+        diagnostics.textureResponseAxisError = static_cast<float>(bestError);
+        diagnostics.sourceModelFallback = false;
+        return true;
+    }
+
+    // Never emit an unclosed full-source model when the response search is
+    // unavailable or unsafe.  A reset/under-populated window uses the same
+    // conservative residual fallback as the fixed and dynamic prototypes.
+    NVEncFilmGrainDiagnostics fallbackDiagnostics = diagnostics;
+    if (!build_film_grain_params(
+        residualStats, bitDepth, analyzeChroma, limitedRange,
+        params, fallbackDiagnostics, -1.0)) return false;
+    diagnostics = fallbackDiagnostics;
+    diagnostics.temporalTextureObservations =
+        sourceStats.temporalLuma.observations;
+    diagnostics.textureLeakCompensated = false;
+    diagnostics.textureResponseAxisError = 0.0f;
     diagnostics.sourceModelFallback = true;
     return true;
 }

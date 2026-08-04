@@ -176,6 +176,7 @@ private:
     bool m_sourceTemporalMask;
     bool m_textureLeakClosure;
     bool m_textureLeakDynamic;
+    bool m_textureLeakResponse;
     std::unique_ptr<CUMemBufPair> m_blockMetrics;
     std::unique_ptr<CUMemBufPair> m_blockMask;
     std::unique_ptr<CUMemBufPair> m_sigmaMap;

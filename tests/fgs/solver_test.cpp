@@ -378,6 +378,31 @@ void testTemporalTextureLeakClosure() {
         "negative innovation rejection leaves source stats untouched");
 }
 
+void testTextureResponseSelector() {
+    FilmGrainGpuStats source = {};
+    FilmGrainGpuStats residual = {};
+    fillHorizontalPlane(source.plane[0], 6.0, 0.60);
+    fillWhitePlane(residual.plane[0], 6.0, false);
+    fillTemporalTextureTarget(source.temporalLuma, 40.0, 40.0, 0.25);
+    NVEncFilmGrainDiagnostics diagnostics;
+    diagnostics.leakCompensated = true;
+    diagnostics.preEncodeLeak = 0.0f;
+    diagnostics.predictedPostEncodeLeak = 0.0f;
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
+    expect(build_source_film_grain_params_with_texture_response(
+        source, residual, 1024, 10, false, true,
+        params, diagnostics, 0.98),
+        "texture response selector produces a valid model");
+    expect(diagnostics.textureLeakCompensated,
+        "texture response selector reports covariance closure");
+    expect(!diagnostics.sourceModelFallback,
+        "texture response selector keeps a valid source model");
+    expectNear(diagnostics.textureBaseCovarianceWeight, 0.0, 1e-6,
+        "identical response candidates select the lower frozen weight");
+    expect(std::isfinite(diagnostics.textureResponseAxisError),
+        "texture response selector reports a finite predicted error");
+}
+
 void testChromaTemporalLeakClosure() {
     constexpr double sourceVariance = 100.0;
     constexpr double qvbr = 29.0;
@@ -627,6 +652,7 @@ int main() {
     testSourceModelResidualFallback();
     testTemporalLeakClosure();
     testTemporalTextureLeakClosure();
+    testTextureResponseSelector();
     testChromaTemporalLeakClosure();
     testWhiteLuma();
     testRampLuma();

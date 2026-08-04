@@ -66,6 +66,7 @@ struct NVEncFilmGrainDiagnostics {
     float leakDeadzone;
     float textureBaseCovarianceWeight;
     float textureCovarianceMinPivotRatio;
+    float textureResponseAxisError;
     uint64_t temporalLeakBlocks;
     uint64_t temporalTextureObservations;
     uint64_t strengthRectifiedBlocks;
@@ -237,6 +238,11 @@ bool apply_luma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
 bool apply_luma_texture_leak_closure(FilmGrainGpuStats& stats,
     uint64_t minObservations, NVEncFilmGrainDiagnostics& diagnostics,
     double baseCovarianceWeight = 0.75);
+bool build_source_film_grain_params_with_texture_response(
+    const FilmGrainGpuStats& sourceStats, const FilmGrainGpuStats& residualStats,
+    uint64_t minTextureObservations, int bitDepth, bool analyzeChroma,
+    bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
+    NVEncFilmGrainDiagnostics& diagnostics, double maxLumaCorrelation);
 bool apply_chroma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
     uint64_t minTemporalBlocks, bool perBin, bool planeSpecific);
 bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,

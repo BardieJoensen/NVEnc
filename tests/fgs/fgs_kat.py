@@ -605,7 +605,8 @@ def run_test(test, keep):
         ok &= check("scene reset at grainy cut", any(CUT_FRAME <= f <= CUT_FRAME + 1 for f in resets),
                     f"resets at {resets[:8]}")
         texture_closure = os.environ.get("NVENC_FGS_TEST_TEXTURE_LEAK", "").lower() \
-            in ("1", "on", "true", "yes", "dynamic") and "modelsrc=on" in FGS_EXTRA
+            in ("1", "on", "true", "yes", "dynamic", "response") \
+            and "modelsrc=on" in FGS_EXTRA
         if texture_closure:
             reset_models = [m for m in models
                             if m["reset"] and CUT_FRAME <= m["frame"] <= CUT_FRAME + 1]

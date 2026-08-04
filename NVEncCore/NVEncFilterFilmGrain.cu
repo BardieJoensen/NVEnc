@@ -1780,6 +1780,7 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_motionDegrain(), m_motionDegrainParam(), m_motionFinishMode(MotionFinishMode::Uniform),
     m_chromaLeakMode(ChromaLeakMode::Off), m_lumaLeakLocal(false), m_sourceTemporalMask(false),
     m_textureLeakClosure(false), m_textureLeakDynamic(false),
+    m_textureLeakResponse(false),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
     m_fallbackModelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWritten(false),
@@ -2009,13 +2010,15 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     }
     m_textureLeakClosure = false;
     m_textureLeakDynamic = false;
+    m_textureLeakResponse = false;
     if (const auto value = std::getenv("NVENC_FGS_TEST_TEXTURE_LEAK");
         value && value[0] != '\0') {
         const bool fixed = strcmp(value, "on") == 0;
         const bool dynamic = strcmp(value, "dynamic") == 0;
-        if (!fixed && !dynamic) {
+        const bool response = strcmp(value, "response") == 0;
+        if (!fixed && !dynamic && !response) {
             AddMessage(RGY_LOG_WARN,
-                _T("film-grain: ignoring invalid NVENC_FGS_TEST_TEXTURE_LEAK=%s (expected on or dynamic).\n"),
+                _T("film-grain: ignoring invalid NVENC_FGS_TEST_TEXTURE_LEAK=%s (expected on, dynamic, or response).\n"),
                 char_to_tstring(value).c_str());
         } else if (!config.modelFromSource || prm->leakTargetQuality < 0.0f
             || !m_sourceTemporalMask) {
@@ -2024,9 +2027,12 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         } else {
             m_textureLeakClosure = true;
             m_textureLeakDynamic = dynamic;
-            AddMessage(RGY_LOG_WARN, dynamic
-                ? _T("film-grain: applying test-only deadzone-weighted temporal luma covariance closure.\n")
-                : _T("film-grain: applying test-only 3/4 temporal luma covariance closure.\n"));
+            m_textureLeakResponse = response;
+            AddMessage(RGY_LOG_WARN, response
+                ? _T("film-grain: applying test-only response-selected temporal luma covariance closure.\n")
+                : (dynamic
+                    ? _T("film-grain: applying test-only deadzone-weighted temporal luma covariance closure.\n")
+                    : _T("film-grain: applying test-only 3/4 temporal luma covariance closure.\n")));
         }
     }
 
@@ -2754,7 +2760,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         apply_luma_leak_closure(combined,
             temporalLeakEnabled ? prm->leakTargetQuality : -1.0,
             static_cast<uint64_t>(requiredBlocks), m_lumaLeakLocal, diagnostics);
-        if (m_textureLeakClosure) {
+        if (m_textureLeakClosure && !m_textureLeakResponse) {
             double textureBaseWeight = 0.75;
             if (m_textureLeakDynamic && diagnostics.leakCompensated) {
                 const double preLeak = diagnostics.preEncodeLeak;
@@ -2779,7 +2785,15 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     }
     bool modelValid = false;
     if (diagnostics.modelFrames >= prm->filmGrain.minModelFrames) {
-        if (prm->filmGrain.modelFromSource
+        if (prm->filmGrain.modelFromSource && m_textureLeakResponse) {
+            modelValid = build_source_film_grain_params_with_texture_response(
+                combined, fallbackCombined,
+                static_cast<uint64_t>(requiredBlocks) * 64ULL,
+                bitDepth, prm->filmGrain.analyzeChroma,
+                prm->filmGrain.clipToRestrictedRange, params, diagnostics,
+                std::min(0.98, static_cast<double>(diagnostics.grainCorrelation)
+                    + FGS_SOURCE_CORRELATION_MARGIN));
+        } else if (prm->filmGrain.modelFromSource
             && m_textureLeakClosure && !textureLeakCompensated) {
             // A reset frame has no previous picture from which to measure the
             // missing covariance. Emitting an unclosed full-source model here
@@ -3000,7 +3014,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
             _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f modelCorr=%.3f arScale=%.3f strengthGain=%.3f regReject=%d fallback=%d ")
             _T("leak=%.3f>%.3f theta=%.3f temporal=%llu rectified=%llu leakClose=%d ")
-            _T("texture=%llu:%.5f:%d:%d textureW=%.3f chromaLeak=%d:%d ")
+            _T("texture=%llu:%.5f:%d:%d textureW=%.3f response=%.5f chromaLeak=%d:%d ")
             _T("scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
@@ -3021,6 +3035,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             diagnostics.textureLeakCompensated ? 1 : 0,
             diagnostics.textureLeakRejected ? 1 : 0,
             diagnostics.textureBaseCovarianceWeight,
+            diagnostics.textureResponseAxisError,
             static_cast<int>(m_chromaLeakMode), chromaLeakCompensated ? 1 : 0,
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
@@ -3045,6 +3060,7 @@ void NVEncFilterFilmGrain::close() {
     m_sourceTemporalMask = false;
     m_textureLeakClosure = false;
     m_textureLeakDynamic = false;
+    m_textureLeakResponse = false;
     m_frameBuf.clear();
     m_denoiseWork.reset();
     m_blockMetrics.reset();
