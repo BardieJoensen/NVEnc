@@ -203,7 +203,8 @@ def validate_dav1d(encoded: Path, ffmpeg: Path, task_dir: Path,
 
 
 def run_admission(kind: str, source: Path, table: Path, output: Path,
-                  task_dir: Path, python_identity: dict) -> dict:
+                  task_dir: Path, python_identity: dict,
+                  report_tag: str = "") -> dict:
     partial = partial_path(output)
     command = [
         sys.executable, str(HERE / "sourcefit_admission_report.py"),
@@ -220,8 +221,8 @@ def run_admission(kind: str, source: Path, table: Path, output: Path,
     return run_task(
         f"{source.stem}-{kind}-admission", command, os.environ.copy(),
         expected, [partial], [output],
-        task_dir / f"{kind}-admission.task.json",
-        task_dir / f"{kind}-admission.log")
+        task_dir / f"{kind}-admission{report_tag}.task.json",
+        task_dir / f"{kind}-admission{report_tag}.log")
 
 
 def sample_summary(sample: dict, source_report: dict,
@@ -283,7 +284,15 @@ def main() -> int:
     parser.add_argument(
         "--samples", default="",
         help="optional comma-separated sample ids; default is the whole corpus")
+    parser.add_argument(
+        "--report-tag", default="",
+        help="suffix for a new report schema replay, for example stochastic-v1")
     args = parser.parse_args()
+    if args.report_tag and not all(
+            character.isalnum() or character in "-_"
+            for character in args.report_tag):
+        parser.error("--report-tag may contain only letters, digits, '-' and '_'")
+    report_tag = f"-{args.report_tag}" if args.report_tag else ""
 
     corpus_path = args.corpus.resolve()
     work = args.work.resolve()
@@ -390,10 +399,10 @@ def main() -> int:
 
         reports = {}
         for kind, table in tables.items():
-            report_path = sample_work / f"{kind}-admission.json"
+            report_path = sample_work / f"{kind}-admission{report_tag}.json"
             run_admission(
                 kind, clip, table, report_path, sample_tasks,
-                python_identity)
+                python_identity, report_tag)
             reports[kind] = compare.load_report(report_path)
 
         row = sample_summary(
@@ -407,7 +416,8 @@ def main() -> int:
         row["candidate_binary"] = candidate_identity
         row["dav1d"] = dav1d
         rows.append(row)
-        write_json(work / "result.json", {
+        result_name = f"result{report_tag}.json"
+        write_json(work / result_name, {
             "purpose": "shadow-only source-fit admission campaign",
             "corpus": identity(corpus_path, include_hash=True),
             "candidate_binary": candidate_identity,
@@ -418,7 +428,7 @@ def main() -> int:
             "changes_output": False,
         })
 
-    print(f"\nresult: {work / 'result.json'}", flush=True)
+    print(f"\nresult: {work / f'result{report_tag}.json'}", flush=True)
     return 0
 
 

@@ -195,6 +195,121 @@ def mean_sd(values):
     return {"mean": float(np.mean(values)), "sd": float(np.std(values))}
 
 
+STOCHASTIC_FEATURES = (
+    "excess_kurtosis",
+    "absolute_to_rms",
+    "absolute_skewness",
+    "quadrant_energy_cv",
+    "grid4_gradient_ratio",
+    "grid8_gradient_ratio",
+    "grid16_gradient_ratio",
+)
+
+
+def _grid_gradient_ratio(patches, period):
+    """Boundary/non-boundary gradient energy for aligned codec grids."""
+    horizontal = np.diff(patches, axis=2) ** 2
+    vertical = np.diff(patches, axis=1) ** 2
+    positions = np.arange(patches.shape[1] - 1)
+    boundary = (positions + 1) % period == 0
+    interior = ~boundary
+    boundary_energy = 0.5 * (
+        horizontal[:, :, boundary].mean(axis=(1, 2))
+        + vertical[:, boundary, :].mean(axis=(1, 2)))
+    interior_energy = 0.5 * (
+        horizontal[:, :, interior].mean(axis=(1, 2))
+        + vertical[:, interior, :].mean(axis=(1, 2)))
+    return boundary_energy / np.maximum(interior_energy, 1e-12)
+
+
+def stochastic_patch_summary(patches):
+    """Amplitude-normalized distribution and codec-grid evidence per patch.
+
+    Each descriptor is computed per 32x32 patch before aggregation. This keeps
+    one high-energy patch from dominating the title and makes every shape
+    statistic invariant to bit depth and grain amplitude. ``patch_rms`` is
+    retained separately so a later report can test energy without smuggling it
+    into the normalized descriptors.
+    """
+    patches = np.asarray(patches, dtype=np.float64)
+    if patches.ndim != 3 or patches.shape[1:] != (model_gate.BLOCK,
+                                                   model_gate.BLOCK):
+        raise ValueError("stochastic patches must have shape (n, 32, 32)")
+    if not len(patches):
+        return None
+    energy = np.mean(patches * patches, axis=(1, 2))
+    usable = energy > 1e-12
+    if not np.any(usable):
+        return None
+    patches = patches[usable]
+    rms = np.sqrt(energy[usable])
+    normalized = patches / rms[:, None, None]
+    excess_kurtosis = np.mean(normalized ** 4, axis=(1, 2)) - 3.0
+    absolute_to_rms = np.mean(np.abs(normalized), axis=(1, 2))
+    absolute_skewness = np.abs(np.mean(normalized ** 3, axis=(1, 2)))
+    half = model_gate.BLOCK // 2
+    quadrant_energy = np.stack([
+        np.mean(normalized[:, :half, :half] ** 2, axis=(1, 2)),
+        np.mean(normalized[:, :half, half:] ** 2, axis=(1, 2)),
+        np.mean(normalized[:, half:, :half] ** 2, axis=(1, 2)),
+        np.mean(normalized[:, half:, half:] ** 2, axis=(1, 2)),
+    ], axis=1)
+    quadrant_energy_cv = (
+        np.std(quadrant_energy, axis=1)
+        / np.maximum(np.mean(quadrant_energy, axis=1), 1e-12))
+    values = {
+        "excess_kurtosis": excess_kurtosis,
+        "absolute_to_rms": absolute_to_rms,
+        "absolute_skewness": absolute_skewness,
+        "quadrant_energy_cv": quadrant_energy_cv,
+        "grid4_gradient_ratio": _grid_gradient_ratio(normalized, 4),
+        "grid8_gradient_ratio": _grid_gradient_ratio(normalized, 8),
+        "grid16_gradient_ratio": _grid_gradient_ratio(normalized, 16),
+    }
+    return {
+        "blocks": int(len(normalized)),
+        "patch_rms": mean_sd(rms.tolist()),
+        "patch_rms_cv": float(np.std(rms) / max(np.mean(rms), 1e-12)),
+        **{key: mean_sd(value.tolist()) for key, value in values.items()},
+    }
+
+
+def combine_stochastic(summaries):
+    """Pool stochastic summaries exactly from count, mean and population SD."""
+    summaries = [summary for summary in summaries if summary]
+    blocks = sum(summary["blocks"] for summary in summaries)
+    if not blocks:
+        return None
+
+    def combine_field(field):
+        total = 0.0
+        square = 0.0
+        count = 0
+        for summary in summaries:
+            stats = summary[field]
+            if stats["mean"] is None:
+                continue
+            n = summary["blocks"]
+            total += stats["mean"] * n
+            square += (stats["sd"] ** 2 + stats["mean"] ** 2) * n
+            count += n
+        if not count:
+            return {"mean": None, "sd": None}
+        mean = total / count
+        variance = max(0.0, square / count - mean * mean)
+        return {"mean": mean, "sd": math.sqrt(variance)}
+
+    rms = combine_field("patch_rms")
+    return {
+        "blocks": blocks,
+        "patch_rms": rms,
+        "patch_rms_cv": (
+            None if rms["mean"] in (None, 0.0)
+            else rms["sd"] / rms["mean"]),
+        **{field: combine_field(field) for field in STOCHASTIC_FEATURES},
+    }
+
+
 def patch_sample(patches, count):
     """Deterministic, order-preserving cap for descriptor-only patches."""
     if len(patches) <= count:
@@ -263,6 +378,8 @@ def aggregate_entries(rows, luma_bins):
         lambda row: row["model_fidelity"]["signalled_model"]["acf"][0])
     model_lag2 = weighted(
         lambda row: row["model_fidelity"]["signalled_model"]["acf"][1])
+    stochastic = combine_stochastic([
+        row["film_like_evidence"].get("stochastic") for row in measured])
     return {
         "coverage": coverage,
         "model_fidelity": {
@@ -290,6 +407,7 @@ def aggregate_entries(rows, luma_bins):
                 lambda row: row["film_like_evidence"]["cross_frame_correlation"]["mean"]),
             "source_gradient_anisotropy": weighted(
                 lambda row: row["film_like_evidence"]["gradient_anisotropy"]),
+            "stochastic": stochastic,
         },
         "luma_bands": {
             str(band): {
@@ -297,6 +415,12 @@ def aggregate_entries(rows, luma_bins):
                     row["luma_bands"][str(band)]["status"] == "OK"
                     for row in measured),
                 "measured_entries": len(measured),
+                "stochastic": combine_stochastic([
+                    row["luma_bands"][str(band)].get(
+                        "film_like_evidence", {}).get("stochastic")
+                    for row in measured
+                    if row["luma_bands"][str(band)]["status"] == "OK"
+                ]),
             }
             for band in range(luma_bins)
         },
@@ -338,10 +462,17 @@ def measure_pair(frame, source, next_source, bits, flat_selector,
             "temporal_spatial_variance_ratio")})
         record["patches"] = patch_sample(
             selected["patches"], texture_blocks_per_pair)
+        record["stochastic_evidence"] = stochastic_patch_summary(
+            selected["patches"])
         record["band_patches"] = {
             str(band): patch_sample(
                 selected["patches"][selected["bands"] == band],
                 texture_blocks_per_pair_band)
+            for band in range(luma_bins)
+        }
+        record["band_stochastic_evidence"] = {
+            str(band): stochastic_patch_summary(
+                selected["patches"][selected["bands"] == band])
             for band in range(luma_bins)
         }
     return record
@@ -378,6 +509,8 @@ def analyse_entry(entry, pairs, pair_records, minimum_band_blocks, luma_bins,
     film_evidence["temporal_lag1_pair_stability"] = mean_sd(pair_lag1)
     film_evidence["gradient_anisotropy"] = model_gate.describe(
         patches)["anisotropy"]
+    film_evidence["stochastic"] = combine_stochastic([
+        record.get("stochastic_evidence") for record in usable])
 
     band_results = {}
     for band in range(luma_bins):
@@ -397,6 +530,12 @@ def analyse_entry(entry, pairs, pair_records, minimum_band_blocks, luma_bins,
                 "status": "OK",
                 "blocks": int(len(selected)),
                 "model_fidelity": descriptor_summary(selected, model),
+                "film_like_evidence": {
+                    "stochastic": combine_stochastic([
+                        record["band_stochastic_evidence"][key]
+                        for record in usable
+                    ]),
+                },
             }
 
     return {

@@ -45,6 +45,43 @@ class EvidenceTests(unittest.TestCase):
         patches = admission.model_patches(entry, 4, 1, 4.0, 10)
         self.assertEqual(patches.shape, (4, 32, 32))
 
+    def test_stochastic_shape_is_amplitude_invariant(self):
+        rng = np.random.default_rng(11)
+        patches = rng.normal(size=(128, 32, 32))
+        quiet = admission.stochastic_patch_summary(patches)
+        loud = admission.stochastic_patch_summary(patches * 17.0)
+        for field in admission.STOCHASTIC_FEATURES:
+            self.assertAlmostEqual(
+                quiet[field]["mean"], loud[field]["mean"], places=10)
+        self.assertAlmostEqual(
+            quiet["absolute_to_rms"]["mean"], np.sqrt(2.0 / np.pi),
+            delta=0.01)
+        self.assertAlmostEqual(
+            quiet["excess_kurtosis"]["mean"], 0.0, delta=0.08)
+
+    def test_codec_grid_ratio_detects_aligned_block_steps(self):
+        rng = np.random.default_rng(12)
+        offsets = rng.normal(size=(96, 4, 4))
+        blocked = np.repeat(np.repeat(offsets, 8, axis=1), 8, axis=2)
+        blocked += rng.normal(scale=0.05, size=blocked.shape)
+        summary = admission.stochastic_patch_summary(blocked)
+        self.assertGreater(summary["grid8_gradient_ratio"]["mean"], 20.0)
+
+    def test_stochastic_pooling_preserves_moments(self):
+        rng = np.random.default_rng(13)
+        patches = rng.normal(size=(31, 32, 32))
+        combined = admission.combine_stochastic([
+            admission.stochastic_patch_summary(patches[:7]),
+            admission.stochastic_patch_summary(patches[7:]),
+        ])
+        direct = admission.stochastic_patch_summary(patches)
+        self.assertEqual(combined["blocks"], 31)
+        for field in ("patch_rms", *admission.STOCHASTIC_FEATURES):
+            self.assertAlmostEqual(
+                combined[field]["mean"], direct[field]["mean"], places=12)
+            self.assertAlmostEqual(
+                combined[field]["sd"], direct[field]["sd"], places=12)
+
     def test_measure_pair_converts_unsigned_decoder_storage_before_subtraction(self):
         source = np.full((32, 32), 100, dtype=np.uint16)
         next_source = np.full((32, 32), 101, dtype=np.uint16)
