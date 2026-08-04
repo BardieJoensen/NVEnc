@@ -1274,12 +1274,10 @@ static RGY_ERR launch_temporal_chroma_plane(const RGYFrameInfo& source,
 }
 
 template<typename Type, int shift>
-static RGY_ERR launch_temporal_chroma_strength(const RGYFrameInfo& source,
-    const RGYFrameInfo& previousSource, const RGYFrameInfo& base,
-    const RGYFrameInfo& previousBase, const int blocksX, const int blocksY,
-    const int bitDepth, const uint8_t *flatMask, uint8_t *temporalMask,
-    const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats,
-    cudaStream_t stream) {
+static RGY_ERR launch_temporal_static_mask(const RGYFrameInfo& source,
+    const RGYFrameInfo& previousSource, const int blocksX, const int blocksY,
+    const uint8_t *flatMask, uint8_t *temporalMask,
+    const FilmGrainBlockMetric *metrics, cudaStream_t stream) {
     auto cudaerr = cudaMemsetAsync(
         temporalMask, 0, static_cast<size_t>(blocksX) * blocksY, stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
@@ -1291,7 +1289,42 @@ static RGY_ERR launch_temporal_chroma_strength(const RGYFrameInfo& source,
     kernel_fgs_temporal_chroma_mask<Type, shift><<<grid, block, 0, stream>>>(
         sourceY.ptr[0], sourceY.pitch[0], previousSourceY.ptr[0], previousSourceY.pitch[0],
         sourceY.width, sourceY.height, blocksX, flatMask, metrics, temporalMask);
-    auto sts = err_to_rgy(cudaGetLastError());
+    return err_to_rgy(cudaGetLastError());
+}
+
+static RGY_ERR collect_temporal_static_mask(const RGYFrameInfo& source,
+    const RGYFrameInfo& previousSource, const int blocksX, const int blocksY,
+    const uint8_t *flatMask, uint8_t *temporalMask,
+    const FilmGrainBlockMetric *metrics, cudaStream_t stream) {
+    switch (source.csp) {
+    case RGY_CSP_NV12:
+    case RGY_CSP_YV12:
+        return launch_temporal_static_mask<uint8_t, 0>(
+            source, previousSource, blocksX, blocksY,
+            flatMask, temporalMask, metrics, stream);
+    case RGY_CSP_YV12_10:
+        return launch_temporal_static_mask<uint16_t, 0>(
+            source, previousSource, blocksX, blocksY,
+            flatMask, temporalMask, metrics, stream);
+    case RGY_CSP_P010:
+        return launch_temporal_static_mask<uint16_t, 6>(
+            source, previousSource, blocksX, blocksY,
+            flatMask, temporalMask, metrics, stream);
+    default:
+        return RGY_ERR_UNSUPPORTED;
+    }
+}
+
+template<typename Type, int shift>
+static RGY_ERR launch_temporal_chroma_strength(const RGYFrameInfo& source,
+    const RGYFrameInfo& previousSource, const RGYFrameInfo& base,
+    const RGYFrameInfo& previousBase, const int blocksX, const int blocksY,
+    const int bitDepth, const uint8_t *flatMask, uint8_t *temporalMask,
+    const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats,
+    cudaStream_t stream) {
+    auto sts = launch_temporal_static_mask<Type, shift>(
+        source, previousSource, blocksX, blocksY,
+        flatMask, temporalMask, metrics, stream);
     if (sts != RGY_ERR_NONE) return sts;
 
     const bool semiPlanar = source.csp == RGY_CSP_NV12 || source.csp == RGY_CSP_P010;
@@ -1482,7 +1515,7 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_denoiseWork(), m_previousSource(), m_previousBase(),
     m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(), m_motionFinishMode(MotionFinishMode::Uniform),
-    m_chromaLeakMode(ChromaLeakMode::Off),
+    m_chromaLeakMode(ChromaLeakMode::Off), m_sourceTemporalMask(false),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
     m_fallbackModelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWritten(false),
@@ -1671,6 +1704,22 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
             AddMessage(RGY_LOG_WARN,
                 _T("film-grain: ignoring invalid NVENC_FGS_TEST_CHROMA_LEAK=%s (expected global or local).\n"),
                 char_to_tstring(value).c_str());
+        }
+    }
+    m_sourceTemporalMask = false;
+    if (const auto value = std::getenv("NVENC_FGS_TEST_SOURCE_STATIC");
+        value && value[0] != '\0') {
+        if (strcmp(value, "on") != 0) {
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: ignoring invalid NVENC_FGS_TEST_SOURCE_STATIC=%s (expected on).\n"),
+                char_to_tstring(value).c_str());
+        } else if (!config.modelFromSource || prm->leakTargetQuality < 0.0f) {
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: ignoring NVENC_FGS_TEST_SOURCE_STATIC=on (requires modelsrc=on, QVBR 25..39, and retain=0).\n"));
+        } else {
+            m_sourceTemporalMask = true;
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: fitting the test-only source model from temporally static blocks.\n"));
         }
     }
 
@@ -2196,10 +2245,31 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if (sts != RGY_ERR_NONE) return sts;
     }
 
+    const bool temporalLeakEnabled = prm->leakTargetQuality >= 0.0f
+        && m_previousSource && m_previousBase;
+    const auto flatMask = static_cast<const uint8_t *>(m_blockMask->ptrDevice);
+    auto sourceModelMask = flatMask;
+    if (m_sourceTemporalMask) {
+        auto temporalMask = static_cast<uint8_t *>(m_sigmaMap->ptrDevice);
+        if (temporalLeakEnabled && m_temporalLeakValid) {
+            sts = collect_temporal_static_mask(
+                *source, m_previousSource->frame, m_blocksX, m_blocksY,
+                flatMask, temporalMask,
+                static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
+                stream);
+            if (sts != RGY_ERR_NONE) return sts;
+        } else {
+            cudaerr = cudaMemsetAsync(
+                temporalMask, 0, static_cast<size_t>(m_blocksX) * m_blocksY, stream);
+            if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+        }
+        sourceModelMask = temporalMask;
+    }
+
     cudaerr = cudaMemsetAsync(m_modelStats->ptrDevice, 0, m_modelStats->nSize, stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
     sts = collect_model_stats(source, output, prm->filmGrain.analyzeChroma, m_blocksX, m_blocksY,
-        bitDepth, static_cast<const uint8_t *>(m_blockMask->ptrDevice),
+        bitDepth, sourceModelMask,
         static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
         static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice),
         prm->filmGrain.modelFromSource, stream);
@@ -2216,18 +2286,16 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
         sts = collect_model_stats(source, output, prm->filmGrain.analyzeChroma,
             m_blocksX, m_blocksY, bitDepth,
-            static_cast<const uint8_t *>(m_blockMask->ptrDevice),
+            flatMask,
             static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
             static_cast<FilmGrainGpuStats *>(m_fallbackModelStats->ptrDevice),
             false, stream);
         if (sts != RGY_ERR_NONE) return sts;
     }
-    const bool temporalLeakEnabled = prm->leakTargetQuality >= 0.0f
-        && m_previousSource && m_previousBase;
     if (temporalLeakEnabled && m_temporalLeakValid) {
         sts = collect_temporal_strength(*source, m_previousSource->frame, *output,
             m_previousBase->frame, m_blocksX, m_blocksY, bitDepth,
-            static_cast<const uint8_t *>(m_blockMask->ptrDevice),
+            flatMask,
             static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
             &static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice)->plane[0], stream);
         if (sts != RGY_ERR_NONE) return sts;
@@ -2237,7 +2305,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             // for the opt-in U/V measurement.
             sts = collect_temporal_chroma_strength(*source, m_previousSource->frame, *output,
                 m_previousBase->frame, m_blocksX, m_blocksY, bitDepth,
-                static_cast<const uint8_t *>(m_blockMask->ptrDevice),
+                flatMask,
                 static_cast<uint8_t *>(m_sigmaMap->ptrDevice),
                 static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
                 static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice), stream);
@@ -2592,6 +2660,7 @@ void NVEncFilterFilmGrain::close() {
     m_previousSource.reset();
     m_previousBase.reset();
     m_temporalLeakValid = false;
+    m_sourceTemporalMask = false;
     m_frameBuf.clear();
     m_denoiseWork.reset();
     m_blockMetrics.reset();
