@@ -42,6 +42,7 @@ for bilateral and 35.3-52.3 for motion.
 | `sourcefit_admission_report.py` | per-table-entry temporal texture evidence, AV1 model fidelity, luma-band coverage and confidence as separate axes | it intentionally emits no routing verdict; a scalar or post-hoc corpus threshold overfits |
 | `sourcefit_admission_compare.py` | source-fit versus residual-fit model error after independent film-like evidence is measured | a better source fit is not admission: it wins on all 16 current titles, including every labelled negative |
 | `correlation_target_report.py` | shipping all-block correlation, static-block alternatives and temporal grain truth, including fixed luma bands | pooling contaminated blocks by energy is worse than the median; estimator changes require real-film temporal controls |
+| temporal-static source AR prototype | whether excluding moving/structured flat blocks improves the emitted source model on real film | the luma-derived subset is not a chroma selector; applying it to U/V tripled six-film V texture error |
 
 Amplitude and texture must be reported **separately**.  HF sigma alone cannot
 tell correct grain from correctly-sized grain: 2026-07-17 measured HF 3.67
@@ -56,6 +57,11 @@ detrended flat-block sigma instead.
 Chroma is measured by the same tool with the luma-derived mask mapped to 4:2:0
 blocks, so both planes select the same picture content.  Chroma currently sits
 at 0.891 mean amplitude against luma's 0.959 and is the open modelling gap.
+That shared mask is valid for comparing played output on fixed picture regions;
+it is not evidence that the same subset should train each plane's AR model.
+`FINDINGS-2026-08-04-TEMPORAL-SOURCE-OBSERVATIONS.md` measures that distinction:
+the temporal subset halves luma texture error but must leave U/V on the full
+spatial-flat population.
 
 ## Stage 3 -- delivery (does the signalled grain reach the screen?)
 

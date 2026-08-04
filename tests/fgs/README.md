@@ -173,6 +173,13 @@ animations, but source fitting beats residual model fidelity on every one of
 16 titles, including all labelled negatives. Model preference is therefore a
 post-admission choice, never evidence that content should be synthesised as
 film grain; production routing remains unchanged.
+See `FINDINGS-2026-08-04-TEMPORAL-SOURCE-OBSERVATIONS.md` for the next source-
+fit step. Temporal-static luma observations halve eight-film texture error and
+improve held-out coarse grain without suppressing held-out fine grain. Applying
+the same subset to chroma is a measured negative, so the corrected prototype
+uses the temporal population only for luma. It remains test-only and
+default-off; per-luma strength, chroma amplitude and semantic admission still
+block any routing change.
 See `FINDINGS-2026-07-31-WIENER-PSD.md` for the coarse-grain plan: FFT3D's
 Wiener gain uses a scalar noise power where libaom uses a per-bin PSD.
 `wiener_psd_sim.py` reproduces the current 0.366 capture offline and measures
