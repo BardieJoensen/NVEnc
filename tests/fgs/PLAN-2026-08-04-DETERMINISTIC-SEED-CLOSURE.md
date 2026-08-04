@@ -63,3 +63,17 @@ failure recovery, semantic admission and playback remain.
 A seed or base mismatch rejects the premise immediately.  A played-amplitude
 failure with both identities intact localises the remaining fault to the table
 solve or measurement rather than NVENC nondeterminism.
+
+## Resolution
+
+Failed at step 2 and stopped.  The internal actual-seed replay reached a
+maximum luma-band error of `0.020699`; the independent per-block replay found
+`0.039354`, both above the frozen `0.020000` bound.  No pass-2 encode or
+downstream identity test was allowed.
+
+The pre-registration's attribution of the prior disagreement solely to seed
+expectation was too strong.  The solver visits every block but collapses its
+response to a 20-bin mean before reconstructing the fixed luma bands.  The
+independent audit retains per-block response, exposing a large split inside
+the analyser bin that straddles luma `0.125`.  See
+`FINDINGS-2026-08-04-DETERMINISTIC-SEED-CLOSURE.md`.

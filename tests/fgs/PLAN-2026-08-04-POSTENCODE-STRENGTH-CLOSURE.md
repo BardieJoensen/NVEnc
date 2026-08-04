@@ -59,3 +59,15 @@ A failure—especially a pass-1/pass-2 base change—means even two encodes are
 not a stable closure and leaves safe bitstream/header rewriting as the only
 zero-reencode version worth investigating.  The guarded source-texture result
 is independent in either outcome.
+
+## Resolution
+
+The four-seed expectation solve failed step 4 (`0.0423` external maximum
+error), so no second encode was made.  A separately pre-registered follow-up
+then replaced seed expectation with the actual deterministic pass-1 seeds;
+that also failed its pre-encode replay gate at `0.039354`.
+
+The follow-up localised the remaining error to the solver's analyser-bin mean,
+not the post-encode target or seed identity.  See
+`FINDINGS-2026-08-04-DETERMINISTIC-SEED-CLOSURE.md`.  Pass-1/pass-2 base
+stability remains untested because neither candidate earned a pass-2 encode.
