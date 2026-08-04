@@ -142,3 +142,56 @@ rejection as a routing decision. It must remain behind `modelsrc=on` until Silo,
 the six films, the general corpus, KAT, CPU tests and complete dav1d validation
 all pass.
 
+## Residual-model fallback experiment
+
+Commit `8439bd0e` implements that ordering behind `modelsrc=on`. It collects a
+second compact statistics buffer from the already-produced bilateral residual.
+When the source-derived model is rejected, the analyzer tries the deployed
+residual solver before allowing the existing original-frame fallback. The
+emitted model's origin is carried through the hold/hysteresis state and printed
+as `fallback=0|1`; this avoids claiming that a held source model is a fallback,
+or vice versa.
+
+The implementation was built from a fresh pinned clone. The quick GPU gate
+passed all 18 KAT fixtures, rejected the labelled bad texture model, and
+accepted the shipping control. The CPU/parser suite passed 160 tests, including
+new cases for source rejection with a valid residual model and for both models
+being invalid.
+
+Repeating the Silo raw 2x3 isolation changes the result decisively:
+
+| isolated change | before fallback | with residual fallback |
+| --- | ---: | ---: |
+| source base vs residual base, no table | +26.39% | **-0.19%** |
+| source table vs residual table, residual base fixed | -0.03% | +0.003% |
+| combined source/source vs residual/residual | +26.34% | **-0.19%** |
+
+All 600 source-fit frames now report `reliable=1`. Source regularization is
+still rejected on 400 frames, as expected, but the emitted model is explicitly
+the residual fallback on 463 frames and the source model on 137. The difference
+between rejection count and emitted-origin count is the intentional model
+hold/hysteresis. No frame reaches the original-copy fallback.
+
+The two raw bases now have sample-identical chroma. Only 88 of 1,105,920,000
+luma samples differ (0.00000796%), by 1--3 ten-bit codes, all at input luma
+232--234. This is the bounded level-compensation difference that was previously
+hidden by the much larger original-frame fallback.
+
+The direct QVBR 29 gate agrees. Source fit is 0.016% smaller than candidate
+control; base VMAF is 94.1637 versus 94.1636 and base PSNR is 47.1281 versus
+47.1282. All grain-on and grain-off outputs pass complete dav1d decoding. The
+finished VMAF delta (-0.5893) is not a grain-fidelity verdict because the two
+arms synthesize independent, pixel-misaligned grain fields.
+
+Artifacts:
+
+```text
+/media/merged-storage/media/test-encodes/sourcefit-silo-fallback-20260804/
+/media/merged-storage/media/test-encodes/sourcefit-silo-fallback-gate-20260804/
+/home/bardie/.cache/fgs-gate/reports/20260803T235133Z/
+```
+
+This closes the Silo size regression and validates the failure-layer mechanism
+on one real title. It does **not** validate source fitting for production or
+create a routing threshold. Grain delivery/texture on Silo and the six-film
+architecture corpus remain the next gates.
