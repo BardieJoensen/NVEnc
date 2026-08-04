@@ -40,6 +40,7 @@ for bilateral and 35.3-52.3 for motion.
 | `ar_acf.py` / `cap_table_acf.py` | coefficient-implied autocorrelation of an emitted table | saturating simulation/clipping or too few simulation seeds; the table seed is intentionally irrelevant to this coefficient statistic |
 | `amplitude_matched_texture.py` | metric response to fine versus coarse grain with base, seed, luma placement and delivered energy controlled | a single static model does not reproduce rolling per-luma delivery or decide perceptual quality |
 | `sourcefit_admission_report.py` | per-table-entry temporal texture evidence, AV1 model fidelity, luma-band coverage and confidence as separate axes | it intentionally emits no routing verdict; a scalar or post-hoc corpus threshold overfits |
+| `sourcefit_admission_compare.py` | source-fit versus residual-fit model error after independent film-like evidence is measured | a better source fit is not admission: it wins on all 16 current titles, including every labelled negative |
 
 Amplitude and texture must be reported **separately**.  HF sigma alone cannot
 tell correct grain from correctly-sized grain: 2026-07-17 measured HF 3.67
@@ -156,9 +157,12 @@ knows what masking does.  The current set is
    untouched.
 
    The first gate is complete and **failed universal promotion**; see
-   `FINDINGS-2026-08-03-GENERAL-SOURCEFIT-GATE.md`. It also found a separate
-   animation/base-routing concern. Do not convert its six titles into fixed
-   routing thresholds; expand each class and build an admission measurement.
+   `FINDINGS-2026-08-03-GENERAL-SOURCEFIT-GATE.md`. Fine/coarse held-out film
+   positives and two held-out animation negatives now support the independent
+   admission axes, while the source/residual counterfactual proves model-fit
+   improvement cannot itself admit content; see
+   `FINDINGS-2026-08-04-SOURCEFIT-ADMISSION.md`. Do not convert this still-small
+   corpus into fixed routing thresholds.
 
 Whole-title aggregates hide opposite per-title and per-band errors -- this has
 already happened twice (the global delivery multiplier, and the luma-occupancy

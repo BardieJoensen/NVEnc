@@ -166,6 +166,13 @@ finite-difference response-Jacobian solves that nonlinearity but still misses
 an adjacent Interstellar band by 0.049--0.051 under the independent full-block
 oracle at both 16 and 32 blocks per bin.  No runtime normalizer is approved;
 quality work returns to separator admission.
+See `FINDINGS-2026-08-04-SOURCEFIT-ADMISSION.md` for the first held-out
+fine/coarse film admission result and the residual-model counterfactual. The
+unchanged diagnostic axes accept both held-out films and reject both held-out
+animations, but source fitting beats residual model fidelity on every one of
+16 titles, including all labelled negatives. Model preference is therefore a
+post-admission choice, never evidence that content should be synthesised as
+film grain; production routing remains unchanged.
 See `FINDINGS-2026-07-31-WIENER-PSD.md` for the coarse-grain plan: FFT3D's
 Wiener gain uses a scalar noise power where libaom uses a per-bin PSD.
 `wiener_psd_sim.py` reproduces the current 0.366 capture offline and measures
