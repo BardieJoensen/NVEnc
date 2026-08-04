@@ -1596,13 +1596,14 @@ static RGY_ERR denoise_frame(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFra
 
 template<typename Type, int shift>
 static RGY_ERR collect_model_stats_typed(const RGYFrameInfo *src, const RGYFrameInfo *denoised,
-    const bool chroma, const int blocksX, const int blocksY, const int bitDepth, const uint8_t *mask,
+    const bool chroma, const int blocksX, const int blocksY, const int bitDepth,
+    const uint8_t *lumaMask, const uint8_t *chromaMask,
     const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats, const bool modelFromSource,
     cudaStream_t stream) {
     const auto srcY = getPlane(src, RGY_PLANE_Y);
     const auto dstY = getPlane(denoised, RGY_PLANE_Y);
     auto sts = launch_model_stats<Type, shift, 1, false>(srcY, dstY, srcY.width, srcY.height, 0,
-        srcY, dstY, blocksX, blocksY, bitDepth, mask, metrics, &stats->plane[0],
+        srcY, dstY, blocksX, blocksY, bitDepth, lumaMask, metrics, &stats->plane[0],
         modelFromSource, stream);
     if (sts != RGY_ERR_NONE || !chroma) return sts;
     const bool semiPlanar = src->csp == RGY_CSP_NV12 || src->csp == RGY_CSP_P010;
@@ -1611,7 +1612,7 @@ static RGY_ERR collect_model_stats_typed(const RGYFrameInfo *src, const RGYFrame
         const auto dstUV = getPlane(denoised, RGY_PLANE_U);
         for (int component = 0; component < 2; ++component) {
             sts = launch_model_stats<Type, shift, 2, true>(srcUV, dstUV, src->width / 2, src->height / 2,
-                component, srcY, dstY, blocksX, blocksY, bitDepth, mask, metrics,
+                component, srcY, dstY, blocksX, blocksY, bitDepth, chromaMask, metrics,
                 &stats->plane[component + 1], modelFromSource, stream);
             if (sts != RGY_ERR_NONE) return sts;
         }
@@ -1620,7 +1621,7 @@ static RGY_ERR collect_model_stats_typed(const RGYFrameInfo *src, const RGYFrame
             const auto srcC = getPlane(src, static_cast<RGY_PLANE>(plane));
             const auto dstC = getPlane(denoised, static_cast<RGY_PLANE>(plane));
             sts = launch_model_stats<Type, shift, 1, true>(srcC, dstC, srcC.width, srcC.height, 0,
-                srcY, dstY, blocksX, blocksY, bitDepth, mask, metrics, &stats->plane[plane],
+                srcY, dstY, blocksX, blocksY, bitDepth, chromaMask, metrics, &stats->plane[plane],
                 modelFromSource, stream);
             if (sts != RGY_ERR_NONE) return sts;
         }
@@ -1629,17 +1630,18 @@ static RGY_ERR collect_model_stats_typed(const RGYFrameInfo *src, const RGYFrame
 }
 
 static RGY_ERR collect_model_stats(const RGYFrameInfo *src, const RGYFrameInfo *denoised,
-    const bool chroma, const int blocksX, const int blocksY, const int bitDepth, const uint8_t *mask,
+    const bool chroma, const int blocksX, const int blocksY, const int bitDepth,
+    const uint8_t *lumaMask, const uint8_t *chromaMask,
     const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats, const bool modelFromSource,
     cudaStream_t stream) {
     switch (src->csp) {
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
-        return collect_model_stats_typed<uint8_t, 0>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, modelFromSource, stream);
+        return collect_model_stats_typed<uint8_t, 0>(src, denoised, chroma, blocksX, blocksY, bitDepth, lumaMask, chromaMask, metrics, stats, modelFromSource, stream);
     case RGY_CSP_YV12_10:
-        return collect_model_stats_typed<uint16_t, 0>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, modelFromSource, stream);
+        return collect_model_stats_typed<uint16_t, 0>(src, denoised, chroma, blocksX, blocksY, bitDepth, lumaMask, chromaMask, metrics, stats, modelFromSource, stream);
     case RGY_CSP_P010:
-        return collect_model_stats_typed<uint16_t, 6>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, modelFromSource, stream);
+        return collect_model_stats_typed<uint16_t, 6>(src, denoised, chroma, blocksX, blocksY, bitDepth, lumaMask, chromaMask, metrics, stats, modelFromSource, stream);
     default:
         return RGY_ERR_UNSUPPORTED;
     }
@@ -2248,7 +2250,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     const bool temporalLeakEnabled = prm->leakTargetQuality >= 0.0f
         && m_previousSource && m_previousBase;
     const auto flatMask = static_cast<const uint8_t *>(m_blockMask->ptrDevice);
-    auto sourceModelMask = flatMask;
+    auto sourceLumaModelMask = flatMask;
     if (m_sourceTemporalMask) {
         auto temporalMask = static_cast<uint8_t *>(m_sigmaMap->ptrDevice);
         if (temporalLeakEnabled && m_temporalLeakValid) {
@@ -2263,13 +2265,17 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 temporalMask, 0, static_cast<size_t>(m_blocksX) * m_blocksY, stream);
             if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
         }
-        sourceModelMask = temporalMask;
+        sourceLumaModelMask = temporalMask;
     }
 
     cudaerr = cudaMemsetAsync(m_modelStats->ptrDevice, 0, m_modelStats->nSize, stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+    // Temporal stability materially improves source-luma AR fitting, but the
+    // same luma-derived subset removes useful U/V observations and biases the
+    // much smaller chroma fits. Keep chroma on the established spatial-flat
+    // population until it has an independently validated temporal selector.
     sts = collect_model_stats(source, output, prm->filmGrain.analyzeChroma, m_blocksX, m_blocksY,
-        bitDepth, sourceModelMask,
+        bitDepth, sourceLumaModelMask, flatMask,
         static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
         static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice),
         prm->filmGrain.modelFromSource, stream);
@@ -2286,7 +2292,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
         sts = collect_model_stats(source, output, prm->filmGrain.analyzeChroma,
             m_blocksX, m_blocksY, bitDepth,
-            flatMask,
+            flatMask, flatMask,
             static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
             static_cast<FilmGrainGpuStats *>(m_fallbackModelStats->ptrDevice),
             false, stream);
