@@ -50,14 +50,19 @@ class IntegratedArchitectureHarnessTests(unittest.TestCase):
         baseline = arm_environment("bilateral-source")
         global_closure = arm_environment("bilateral-source-chroma-global")
         local_closure = arm_environment("bilateral-source-chroma-local")
+        independent = arm_environment(
+            "bilateral-source-chroma-independent")
         self.assertNotIn("NVENC_FGS_TEST_CHROMA_LEAK", baseline)
         self.assertEqual(
             global_closure["NVENC_FGS_TEST_CHROMA_LEAK"], "global")
         self.assertEqual(
             local_closure["NVENC_FGS_TEST_CHROMA_LEAK"], "local")
+        self.assertEqual(
+            independent["NVENC_FGS_TEST_CHROMA_LEAK"], "independent")
         for arm in (
             "bilateral-source-chroma-global",
             "bilateral-source-chroma-local",
+            "bilateral-source-chroma-independent",
         ):
             command = build_clean_command(
                 Path("candidate"), Path("source.mkv"), Path("clean.y4m"),

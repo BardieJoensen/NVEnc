@@ -7,8 +7,9 @@ This harness deliberately separates four questions:
 * ``production`` is the deployed r4069 bilateral/residual analyser;
 * ``bilateral-source`` keeps the bilateral separator but fits the grain model
   from source flat blocks, isolating model quality from motion separation;
-* ``bilateral-source-chroma-global`` and ``-local`` keep that exact luma path
-  while testing aggregate versus per-luma-bin temporal chroma closure;
+* ``bilateral-source-chroma-global``, ``-local`` and ``-independent`` keep
+  that exact luma path while testing aggregate, per-luma-bin, and separately
+  calibrated U/V temporal chroma closure;
 * ``causal`` is source fitting with one past reference; and
 * ``paired`` is source fitting with one past plus one future reference whose
   render confidence is paired at the weaker SAD.
@@ -69,6 +70,7 @@ MOTION_ARMS = (
 CHROMA_LEAK_ARMS = (
     "bilateral-source-chroma-global",
     "bilateral-source-chroma-local",
+    "bilateral-source-chroma-independent",
 )
 CANDIDATE_ARMS = (
     "bilateral-source",
@@ -188,6 +190,8 @@ def arm_environment(arm: str) -> dict[str, str]:
         env["NVENC_FGS_TEST_CHROMA_LEAK"] = "global"
     if arm == "bilateral-source-chroma-local":
         env["NVENC_FGS_TEST_CHROMA_LEAK"] = "local"
+    if arm == "bilateral-source-chroma-independent":
+        env["NVENC_FGS_TEST_CHROMA_LEAK"] = "independent"
     if arm in MOTION_ARMS:
         env["NVENC_FGS_TEST_MOTION_THSAD"] = "640"
     if arm == "paired":
@@ -258,6 +262,7 @@ def main() -> int:
         help=("comma-separated subset of plain,production,bilateral-source,"
               "bilateral-source-chroma-global,"
               "bilateral-source-chroma-local,"
+              "bilateral-source-chroma-independent,"
               "causal,paired,balanced,"
               "balanced-detail,balanced-nofinish,balanced-median-detail"))
     parser.add_argument("--skip-clean", action="store_true")
