@@ -9,6 +9,8 @@ This harness deliberately separates four questions:
   from source flat blocks, isolating model quality from motion separation;
 * ``bilateral-source-static`` adds the accepted temporal-static luma source
   population and is the exact control for later amplitude experiments;
+* ``bilateral-source-texture-dynamic`` keeps that control and subtracts base
+  covariance in proportion to the quantizer-surviving temporal leak;
 * ``bilateral-source-chroma-global``, ``-local`` and ``-independent`` keep
   that exact luma path while testing aggregate, per-luma-bin, and separately
   calibrated U/V temporal chroma closure;
@@ -77,6 +79,7 @@ CHROMA_LEAK_ARMS = (
 CANDIDATE_ARMS = (
     "bilateral-source",
     "bilateral-source-static",
+    "bilateral-source-texture-dynamic",
     *CHROMA_LEAK_ARMS,
     *MOTION_ARMS,
 )
@@ -87,6 +90,7 @@ RESEARCH_ENVIRONMENT = (
     "NVENC_FGS_TEST_MOTION_FINISH",
     "NVENC_FGS_TEST_MOTION_THSAD",
     "NVENC_FGS_TEST_SOURCE_STATIC",
+    "NVENC_FGS_TEST_TEXTURE_LEAK",
 )
 
 CONTROLLED_ENCODE = (
@@ -181,8 +185,10 @@ def publish_outputs(partials: list[Path], outputs: list[Path]) -> None:
 def fgs_options(arm: str) -> str:
     if arm == "production":
         return "denoise=auto,chroma=auto,denoiser=bilateral"
-    if arm in ("bilateral-source", "bilateral-source-static") \
-            or arm in CHROMA_LEAK_ARMS:
+    if (arm in (
+            "bilateral-source", "bilateral-source-static",
+            "bilateral-source-texture-dynamic")
+            or arm in CHROMA_LEAK_ARMS):
         return "denoise=auto,chroma=auto,denoiser=bilateral,modelsrc=on"
     if arm in MOTION_ARMS:
         return "denoise=auto,chroma=auto,denoiser=motion,motion-refs=1,modelsrc=on"
@@ -193,6 +199,9 @@ def arm_environment(arm: str) -> dict[str, str]:
     env = os.environ.copy()
     if arm == "bilateral-source-static":
         env["NVENC_FGS_TEST_SOURCE_STATIC"] = "on"
+    if arm == "bilateral-source-texture-dynamic":
+        env["NVENC_FGS_TEST_SOURCE_STATIC"] = "on"
+        env["NVENC_FGS_TEST_TEXTURE_LEAK"] = "dynamic"
     if arm == "bilateral-source-chroma-global":
         env["NVENC_FGS_TEST_CHROMA_LEAK"] = "global"
     if arm == "bilateral-source-chroma-local":
