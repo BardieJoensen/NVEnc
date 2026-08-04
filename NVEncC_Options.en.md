@@ -393,7 +393,7 @@ Show version of NVEncC
 Show option list.
 
 ### --check-device
-Show device of available GPU recognized by NVEnc
+Show the DeviceId and PCI Bus ID of available GPUs recognized by NVEnc. DeviceId follows the CUDA device order.
 
 ### --check-hw [&lt;int&gt;]
 Check whether the specified device is able to run NVEnc. DeviceID: "0" will be checked if not specified.
@@ -2429,6 +2429,8 @@ High quality QTGMC deinterlacer with relaxed implementation for GPU.
 
   - search_early_sad=&lt;int|off&gt;  
     Skip the level0 full search when the predictor SAD is below this threshold. The value is in 8x8-block, 8-bit SAD units (`0-65535`) and is scaled automatically for blksize and bit depth; `off` (`-1`) disables it. Preset defaults are listed above.
+  - spatial_early_sad=&lt;int|off&gt;  
+    Skip spatial refinement for a block when the SAD selected by the level1 search is below this threshold. The value is in 8x8-block, 8-bit SAD units (`0-65535`) and is scaled automatically for blksize and bit depth. Default: `off` (`-1`).
   - rep1-thin/rep1-pad/rep2-thin/rep2-pad
     `repN-thin=0-7`, `repN-pad=0-3`.
 
@@ -2520,6 +2522,8 @@ Please note that this filter is slow, recommended to be used on dGPUs.
     Reserved nested preset. `slower`, `slow`, `medium`, `fast`, `faster` (default), `veryfast`, `superfast`, `ultrafast`, `draft`.
   - search_early_sad=&lt;int|auto|off&gt;  
     SAD threshold for skipping the level0 full search, in 8x8-block, 8-bit SAD units (`0-65535`), scaled automatically for blksize and bit depth. `auto` (default) uses the preset value; `off` (`-1`) disables it.
+  - spatial_early_sad=&lt;int|auto|off&gt;  
+    Skip spatial refinement for a block when the SAD selected by the level1 search is below this threshold. The value is in 8x8-block, 8-bit SAD units (`0-65535`) and is scaled automatically for blksize and bit depth. `auto` (default) uses the preset value (`slower`/`slow`: 0, `medium`: 16, `fast`: 32, `faster` through `draft`: 64); `off` (`-1`) disables it.
   - timing=&lt;string&gt;  
     Timing analysis mode. `realtime`, `realtime+` (default), `strict`.
   - past_cycles=&lt;int&gt;  
@@ -2965,6 +2969,8 @@ Motion compensated degrain debug filter.
     Motion-vector spatial refinement count. Default is `auto` (`-1`): run spatial refinement only at the coarsest analysis level, and skip it at all finer levels.
   - search_early_sad=&lt;int|off&gt;  
     Skip the level0 full search when the predictor SAD is below this threshold. The value is in 8x8-block, 8-bit SAD units (`0-65535`) and is scaled automatically for blksize and bit depth. Default: `off` (`-1`).
+  - spatial_early_sad=&lt;int|off&gt;  
+    Skip spatial refinement for a block when the SAD selected by the level1 search is below this threshold. The value is in 8x8-block, 8-bit SAD units (`0-65535`) and is scaled automatically for blksize and bit depth. Default: `off` (`-1`).
   - chroma/binomial/tv_range  
     Chroma analysis and prefilter/range controls.
 
@@ -4387,6 +4393,7 @@ Pre/post processing is inferred from the model channel count: 1ch=luma SR, 3ch=R
     Noise sigma for noise models.
   - frames=&lt;int&gt; (default: 1)  
     Temporal window size for models with `T*3` RGB input channels and 3 output channels. Specify a positive odd number so that the output corresponds to the centre frame.
+    For registered models with `frames` set in `models.json`, the registry value takes precedence.
   - mask=&lt;string&gt;  
     Grayscale mask image for a two-input ONNX model. White pixels are processed and black pixels are retained. This is intended for static masks such as logo or watermark removal.
   - out_res=&lt;WxH&gt;  
