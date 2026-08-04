@@ -64,6 +64,7 @@ struct NVEncFilmGrainDiagnostics {
     float preEncodeLeak;
     float predictedPostEncodeLeak;
     float leakDeadzone;
+    float textureBaseCovarianceWeight;
     float textureCovarianceMinPivotRatio;
     uint64_t temporalLeakBlocks;
     uint64_t temporalTextureObservations;
@@ -123,9 +124,11 @@ constexpr double FGS_CHROMA_V_LEAK_THETA_QVBR_SLOPE = 0.0005557562076749464;
 constexpr double FGS_LEAK_QVBR_MIN = 25.0;
 constexpr double FGS_LEAK_QVBR_MAX = 39.0;
 constexpr uint64_t FGS_MIN_TEMPORAL_BIN_BLOCKS = 4;
-// The confirmatory eight-film replay selected a 3/4 subtraction of the clean
-// base covariance.  Keep the rational form exact in the GPU accumulators;
-// unlike a floating-point alpha this is deterministic across architectures.
+// The first confirmatory eight-film replay selected a 3/4 subtraction of the
+// clean base covariance. Keep that rational form exact in the GPU
+// accumulators as the frozen comparison arm. A test-only dynamic arm also
+// records base covariance separately and replaces 3/4 with the measured
+// post/pre quantizer-survival ratio on the CPU.
 constexpr int FGS_TEXTURE_SOURCE_WEIGHT = 4;
 constexpr int FGS_TEXTURE_BASE_WEIGHT = 3;
 constexpr int FGS_TEXTURE_WEIGHT_DENOMINATOR = 4;
@@ -196,6 +199,9 @@ struct FilmGrainTemporalArStats {
     int64_t weightedAta[FGS_TRI_Y];
     int64_t weightedAtb[FGS_AR_COEFFS];
     int64_t weightedBtb;
+    int64_t baseAta[FGS_TRI_Y];
+    int64_t baseAtb[FGS_AR_COEFFS];
+    int64_t baseBtb;
     uint64_t observations;
 };
 
@@ -204,7 +210,7 @@ struct FilmGrainGpuStats {
     FilmGrainTemporalArStats temporalLuma;
 };
 
-static_assert(sizeof(FilmGrainGpuStats) < 16 * 1024, "FGS readback must stay compact");
+static_assert(sizeof(FilmGrainGpuStats) < 20 * 1024, "FGS readback must stay compact");
 
 struct FilmGrainSolvedPlane {
     std::vector<double> coeffs;
@@ -229,7 +235,8 @@ bool apply_luma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
     uint64_t minTemporalBlocks, bool perBin,
     NVEncFilmGrainDiagnostics& diagnostics);
 bool apply_luma_texture_leak_closure(FilmGrainGpuStats& stats,
-    uint64_t minObservations, NVEncFilmGrainDiagnostics& diagnostics);
+    uint64_t minObservations, NVEncFilmGrainDiagnostics& diagnostics,
+    double baseCovarianceWeight = 0.75);
 bool apply_chroma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
     uint64_t minTemporalBlocks, bool perBin, bool planeSpecific);
 bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,

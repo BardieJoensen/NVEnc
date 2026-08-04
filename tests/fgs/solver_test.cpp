@@ -263,6 +263,18 @@ void fillTemporalTextureTarget(FilmGrainTemporalArStats& temporal,
     temporal.observations = N_OBS;
 }
 
+void fillTemporalBaseTexture(FilmGrainTemporalArStats& temporal,
+    const double predictorVariance, const double targetVariance,
+    const double horizontalCoefficient) {
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
+        temporal.baseAta[tri_index(FGS_AR_COEFFS, i, i)] =
+            static_cast<int64_t>(N_OBS * predictorVariance);
+    }
+    temporal.baseAtb[FGS_AR_COEFFS - 1] = static_cast<int64_t>(
+        N_OBS * predictorVariance * horizontalCoefficient);
+    temporal.baseBtb = static_cast<int64_t>(N_OBS * targetVariance);
+}
+
 void testTemporalTextureLeakClosure() {
     FilmGrainGpuStats stats = {};
     fillHorizontalPlane(stats.plane[0], 6.0, 0.60);
@@ -289,6 +301,39 @@ void testTemporalTextureLeakClosure() {
     expect(solved.valid, "temporal texture target remains solvable downstream");
     expectNear(solved.coeffs.back(), 0.25, 1e-5,
         "temporal texture closure delivers the target AR coefficient");
+
+    FilmGrainGpuStats dynamic = {};
+    fillHorizontalPlane(dynamic.plane[0], 6.0, 0.60);
+    fillTemporalTextureTarget(dynamic.temporalLuma, 40.0, 40.0, 0.25);
+    fillTemporalBaseTexture(dynamic.temporalLuma, 20.0, 20.0, 0.50);
+    NVEncFilmGrainDiagnostics dynamicDiagnostics;
+    expect(apply_luma_texture_leak_closure(
+        dynamic, 1024, dynamicDiagnostics, 0.25),
+        "dynamic texture closure accepts a measured base-survival weight");
+    expectNear(dynamicDiagnostics.textureBaseCovarianceWeight, 0.25, 1e-6,
+        "dynamic texture closure reports its base-survival weight");
+    expectNear(dynamic.plane[0].ata[tri_index(FGS_AR_COEFFS, 0, 0)],
+        N_OBS * 50.0, 1.0,
+        "dynamic texture closure reconstructs source before weighting base");
+    expectNear(dynamic.plane[0].atb[FGS_AR_COEFFS - 1],
+        N_OBS * 15.0, 1.0,
+        "dynamic texture closure applies base weight to cross-covariance");
+    const auto dynamicSolved = solve_plane(dynamic.plane[0], false, nullptr);
+    expect(dynamicSolved.valid, "dynamic temporal texture target remains solvable");
+    expectNear(dynamicSolved.coeffs.back(), 0.30, 1e-5,
+        "dynamic texture closure delivers its reconstructed coefficient");
+
+    FilmGrainGpuStats invalidWeight = dynamic;
+    const auto invalidWeightBefore = invalidWeight.plane[0];
+    NVEncFilmGrainDiagnostics invalidWeightDiagnostics;
+    expect(!apply_luma_texture_leak_closure(
+        invalidWeight, 1024, invalidWeightDiagnostics, 1.01),
+        "texture closure rejects an invalid base-survival weight");
+    expect(invalidWeightDiagnostics.textureLeakRejected,
+        "invalid base-survival weight is reported as rejected");
+    expect(std::memcmp(&invalidWeight.plane[0], &invalidWeightBefore,
+        sizeof(invalidWeightBefore)) == 0,
+        "invalid base-survival weight leaves source stats untouched");
 
     FilmGrainGpuStats sparse = {};
     fillWhitePlane(sparse.plane[0], 6.0, false);

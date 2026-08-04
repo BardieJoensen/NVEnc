@@ -48,7 +48,7 @@ NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     detailRisk(0.0f), residualRetain(0.0f), grainCorrelation(0.0f),
     sourceModelCorrelation(0.0f), sourceArScale(1.0f), sourceStrengthGain(1.0f),
     preEncodeLeak(0.0f), predictedPostEncodeLeak(0.0f), leakDeadzone(0.0f),
-    textureCovarianceMinPivotRatio(0.0f), temporalLeakBlocks(0),
+    textureBaseCovarianceWeight(0.0f), textureCovarianceMinPivotRatio(0.0f), temporalLeakBlocks(0),
     temporalTextureObservations(0), strengthRectifiedBlocks(0),
     sourceRegularizationRejected(false), sourceModelFallback(false), leakCompensated(false),
     textureLeakCompensated(false), textureLeakRejected(false),
@@ -431,11 +431,14 @@ void add_temporal_ar_stats(FilmGrainTemporalArStats& dst,
     const FilmGrainTemporalArStats& src) {
     for (int i = 0; i < FGS_TRI_Y; ++i) {
         dst.weightedAta[i] += src.weightedAta[i];
+        dst.baseAta[i] += src.baseAta[i];
     }
     for (int i = 0; i < FGS_AR_COEFFS; ++i) {
         dst.weightedAtb[i] += src.weightedAtb[i];
+        dst.baseAtb[i] += src.baseAtb[i];
     }
     dst.weightedBtb += src.weightedBtb;
+    dst.baseBtb += src.baseBtb;
     dst.observations += src.observations;
 }
 
@@ -443,6 +446,23 @@ static int64_t divide_round_nearest(const int64_t value, const int64_t divisor) 
     const auto magnitude = value >= 0 ? value : -value;
     const auto rounded = (magnitude + divisor / 2) / divisor;
     return value >= 0 ? rounded : -rounded;
+}
+
+static int64_t temporal_covariance_target(const int64_t fixedWeighted,
+    const int64_t base, const double baseWeight) {
+    // Preserve the frozen 3/4 arm bit-for-bit.  The dynamic arm reconstructs
+    // source from (4*source - 3*base), then subtracts the fraction of base
+    // covariance predicted to survive the encoder deadzone.
+    if (std::abs(baseWeight - 0.75) <= 1e-12) {
+        return divide_round_nearest(
+            fixedWeighted, FGS_TEXTURE_WEIGHT_DENOMINATOR);
+    }
+    const long double source = (
+        static_cast<long double>(fixedWeighted)
+        + FGS_TEXTURE_BASE_WEIGHT * static_cast<long double>(base)
+    ) / FGS_TEXTURE_SOURCE_WEIGHT;
+    return static_cast<int64_t>(std::llround(
+        source - baseWeight * static_cast<long double>(base)));
 }
 
 static bool covariance_is_positive_definite(const std::vector<double>& matrix,
@@ -485,26 +505,37 @@ static bool covariance_is_positive_definite(const std::vector<double>& matrix,
 }
 
 bool apply_luma_texture_leak_closure(FilmGrainGpuStats& stats,
-    const uint64_t minObservations, NVEncFilmGrainDiagnostics& diagnostics) {
+    const uint64_t minObservations, NVEncFilmGrainDiagnostics& diagnostics,
+    const double baseCovarianceWeight) {
     const auto& temporal = stats.temporalLuma;
     diagnostics.temporalTextureObservations = temporal.observations;
+    diagnostics.textureBaseCovarianceWeight = 0.0f;
     diagnostics.textureCovarianceMinPivotRatio = 0.0f;
     diagnostics.textureLeakCompensated = false;
     diagnostics.textureLeakRejected = false;
+    if (!std::isfinite(baseCovarianceWeight)
+        || baseCovarianceWeight < 0.0 || baseCovarianceWeight > 1.0) {
+        diagnostics.textureLeakRejected = true;
+        return false;
+    }
+    diagnostics.textureBaseCovarianceWeight =
+        static_cast<float>(baseCovarianceWeight);
     if (temporal.observations < std::max<uint64_t>(256, minObservations)) return false;
 
     FilmGrainGpuPlaneStats candidate = stats.plane[0];
     for (int i = 0; i < FGS_TRI_Y; ++i) {
-        candidate.ata[i] = divide_round_nearest(
-            temporal.weightedAta[i], FGS_TEXTURE_WEIGHT_DENOMINATOR);
+        candidate.ata[i] = temporal_covariance_target(
+            temporal.weightedAta[i], temporal.baseAta[i],
+            baseCovarianceWeight);
     }
     for (int i = 0; i < FGS_AR_COEFFS; ++i) {
-        candidate.atb[i] = divide_round_nearest(
-            temporal.weightedAtb[i], FGS_TEXTURE_WEIGHT_DENOMINATOR);
+        candidate.atb[i] = temporal_covariance_target(
+            temporal.weightedAtb[i], temporal.baseAtb[i],
+            baseCovarianceWeight);
     }
     candidate.observations = temporal.observations;
-    const int64_t btb = divide_round_nearest(
-        temporal.weightedBtb, FGS_TEXTURE_WEIGHT_DENOMINATOR);
+    const int64_t btb = temporal_covariance_target(
+        temporal.weightedBtb, temporal.baseBtb, baseCovarianceWeight);
 
     std::vector<double> matrix(FGS_AR_COEFFS * FGS_AR_COEFFS, 0.0);
     std::vector<double> rhs(FGS_AR_COEFFS, 0.0);

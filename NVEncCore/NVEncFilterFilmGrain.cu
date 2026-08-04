@@ -1039,36 +1039,51 @@ __global__ void kernel_fgs_temporal_texture_stats(
         }
         j += i;
         int64_t sum = 0;
+        int64_t baseSum = 0;
         for (int sample = 0; sample < threads; ++sample) {
+            const auto baseProduct = static_cast<int64_t>(
+                basePredictors[sample][i]) * basePredictors[sample][j];
             sum += static_cast<int64_t>(FGS_TEXTURE_SOURCE_WEIGHT)
                     * sourcePredictors[sample][i] * sourcePredictors[sample][j]
                 - static_cast<int64_t>(FGS_TEXTURE_BASE_WEIGHT)
-                    * basePredictors[sample][i] * basePredictors[sample][j];
+                    * baseProduct;
+            baseSum += baseProduct;
         }
         atomic_add_i64(output->weightedAta + packed, sum);
+        atomic_add_i64(output->baseAta + packed, baseSum);
     }
     for (int i = tid; i < FGS_AR_COEFFS; i += threads) {
         int64_t sum = 0;
+        int64_t baseSum = 0;
         for (int sample = 0; sample < threads; ++sample) {
+            const auto baseProduct = static_cast<int64_t>(
+                basePredictors[sample][i]) * baseValues[sample];
             sum += static_cast<int64_t>(FGS_TEXTURE_SOURCE_WEIGHT)
                     * sourcePredictors[sample][i] * sourceValues[sample]
                 - static_cast<int64_t>(FGS_TEXTURE_BASE_WEIGHT)
-                    * basePredictors[sample][i] * baseValues[sample];
+                    * baseProduct;
+            baseSum += baseProduct;
         }
         atomic_add_i64(output->weightedAtb + i, sum);
+        atomic_add_i64(output->baseAtb + i, baseSum);
     }
     if (tid == 0) {
         int64_t btb = 0;
+        int64_t baseBtb = 0;
         uint64_t observations = 0;
         for (int sample = 0; sample < threads; ++sample) {
             if (!valid[sample]) continue;
+            const auto baseEnergy = static_cast<int64_t>(baseValues[sample])
+                * baseValues[sample];
             btb += static_cast<int64_t>(FGS_TEXTURE_SOURCE_WEIGHT)
                     * sourceValues[sample] * sourceValues[sample]
                 - static_cast<int64_t>(FGS_TEXTURE_BASE_WEIGHT)
-                    * baseValues[sample] * baseValues[sample];
+                    * baseEnergy;
+            baseBtb += baseEnergy;
             ++observations;
         }
         atomic_add_i64(&output->weightedBtb, btb);
+        atomic_add_i64(&output->baseBtb, baseBtb);
         atomic_add_u64(&output->observations, observations);
     }
 }
@@ -1764,7 +1779,7 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(), m_motionFinishMode(MotionFinishMode::Uniform),
     m_chromaLeakMode(ChromaLeakMode::Off), m_lumaLeakLocal(false), m_sourceTemporalMask(false),
-    m_textureLeakClosure(false),
+    m_textureLeakClosure(false), m_textureLeakDynamic(false),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
     m_fallbackModelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWritten(false),
@@ -1993,20 +2008,25 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         }
     }
     m_textureLeakClosure = false;
+    m_textureLeakDynamic = false;
     if (const auto value = std::getenv("NVENC_FGS_TEST_TEXTURE_LEAK");
         value && value[0] != '\0') {
-        if (strcmp(value, "on") != 0) {
+        const bool fixed = strcmp(value, "on") == 0;
+        const bool dynamic = strcmp(value, "dynamic") == 0;
+        if (!fixed && !dynamic) {
             AddMessage(RGY_LOG_WARN,
-                _T("film-grain: ignoring invalid NVENC_FGS_TEST_TEXTURE_LEAK=%s (expected on).\n"),
+                _T("film-grain: ignoring invalid NVENC_FGS_TEST_TEXTURE_LEAK=%s (expected on or dynamic).\n"),
                 char_to_tstring(value).c_str());
         } else if (!config.modelFromSource || prm->leakTargetQuality < 0.0f
             || !m_sourceTemporalMask) {
             AddMessage(RGY_LOG_WARN,
-                _T("film-grain: ignoring NVENC_FGS_TEST_TEXTURE_LEAK=on (requires modelsrc=on, QVBR 25..39, retain=0, and NVENC_FGS_TEST_SOURCE_STATIC=on).\n"));
+                _T("film-grain: ignoring texture-leak test hook (requires modelsrc=on, QVBR 25..39, retain=0, and NVENC_FGS_TEST_SOURCE_STATIC=on).\n"));
         } else {
             m_textureLeakClosure = true;
-            AddMessage(RGY_LOG_WARN,
-                _T("film-grain: applying test-only 3/4 temporal luma covariance closure.\n"));
+            m_textureLeakDynamic = dynamic;
+            AddMessage(RGY_LOG_WARN, dynamic
+                ? _T("film-grain: applying test-only deadzone-weighted temporal luma covariance closure.\n")
+                : _T("film-grain: applying test-only 3/4 temporal luma covariance closure.\n"));
         }
     }
 
@@ -2735,8 +2755,17 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             temporalLeakEnabled ? prm->leakTargetQuality : -1.0,
             static_cast<uint64_t>(requiredBlocks), m_lumaLeakLocal, diagnostics);
         if (m_textureLeakClosure) {
+            double textureBaseWeight = 0.75;
+            if (m_textureLeakDynamic && diagnostics.leakCompensated) {
+                const double preLeak = diagnostics.preEncodeLeak;
+                const double postLeak = diagnostics.predictedPostEncodeLeak;
+                textureBaseWeight = preLeak > 1e-9
+                    ? std::clamp((postLeak * postLeak) / (preLeak * preLeak), 0.0, 1.0)
+                    : 0.0;
+            }
             textureLeakCompensated = apply_luma_texture_leak_closure(combined,
-                static_cast<uint64_t>(requiredBlocks) * 64ULL, diagnostics);
+                static_cast<uint64_t>(requiredBlocks) * 64ULL, diagnostics,
+                textureBaseWeight);
         }
         if (m_chromaLeakMode != ChromaLeakMode::Off) {
             chromaLeakCompensated = apply_chroma_leak_closure(combined,
@@ -2970,7 +2999,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
             _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f modelCorr=%.3f arScale=%.3f strengthGain=%.3f regReject=%d fallback=%d ")
             _T("leak=%.3f>%.3f theta=%.3f temporal=%llu rectified=%llu leakClose=%d ")
-            _T("texture=%llu:%.5f:%d:%d chromaLeak=%d:%d ")
+            _T("texture=%llu:%.5f:%d:%d textureW=%.3f chromaLeak=%d:%d ")
             _T("scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
@@ -2990,6 +3019,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             diagnostics.textureCovarianceMinPivotRatio,
             diagnostics.textureLeakCompensated ? 1 : 0,
             diagnostics.textureLeakRejected ? 1 : 0,
+            diagnostics.textureBaseCovarianceWeight,
             static_cast<int>(m_chromaLeakMode), chromaLeakCompensated ? 1 : 0,
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
@@ -3013,6 +3043,7 @@ void NVEncFilterFilmGrain::close() {
     m_lumaLeakLocal = false;
     m_sourceTemporalMask = false;
     m_textureLeakClosure = false;
+    m_textureLeakDynamic = false;
     m_frameBuf.clear();
     m_denoiseWork.reset();
     m_blockMetrics.reset();
