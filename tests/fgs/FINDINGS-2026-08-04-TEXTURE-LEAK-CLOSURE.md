@@ -31,9 +31,12 @@ improves six titles clearly. Scarface and The Shining are already near the
 measurement floor; their small movements are below the replay's finite-seed
 uncertainty and are not counted as improvements.
 
-This supports a test-only CUDA/solver prototype with strict fallback. It does
-not support enabling `modelsrc`, changing Tdarr routing, or claiming chroma or
-per-luma closure.
+The subsequent frozen response calibration improves the exact result further:
+a single `0.75` base-covariance weight reduces macro played-texture error to
+`0.01089` (**-76.6%** versus current) and improves all eight titles
+numerically. This supports a test-only CUDA/solver prototype with strict
+fallback. It does not support enabling `modelsrc`, changing Tdarr routing, or
+claiming chroma or per-luma closure.
 
 ## Why the previous interpretation was incomplete
 
@@ -205,3 +208,77 @@ be synthesized.
 
 Compression and speed remain secondary. This result identifies a real quality
 layer that was missing from the two-operator architecture.
+
+## Normative response calibration
+
+The first exact pass also showed a stable response term: raw quantized AR
+output and exact applied-pixel output have per-axis correlations of
+`0.9997..0.9999` across the eight titles. Scaling, finite templates, overlap,
+rounding and legal-range clipping make the applied texture slightly less
+correlated than its raw AR model.
+
+Rather than fit an arbitrary grain multiplier, the response grid varied the
+fraction of base covariance removed from the AR normal equations while keeping
+the **full source-minus-base variance** as the amplitude target:
+
+```text
+AR covariance target(alpha) = source - alpha * base
+strength variance target    = source - 1.00  * base
+```
+
+The grid and leave-one-title-out rule were committed before measurement as
+`c2d53cb7`. Mean four-seed exact played error was:
+
+| base covariance weight | macro error |
+| ---: | ---: |
+| 0.000 | 0.02291 |
+| **0.750** | **0.01069** |
+| 0.850 | 0.01152 |
+| 0.925 | 0.01408 |
+| 1.000 | 0.01941 |
+
+Seven of eight leave-one-title-out training folds selected `0.75`; the eighth
+selected `0.85`. Held-out LOO mean was `0.01176`. Per-title optima were not
+used for confirmation.
+
+Commit `99ebfa91` froze one global `0.75` weight and 16 seeds before the
+confirmatory run. It passed every preregistered condition:
+
+| title | current played error | full subtraction | fixed 0.75 response | current replay floor |
+| --- | ---: | ---: | ---: | ---: |
+| Casino | 0.0629 | 0.0385 | **0.0214** | 0.0070 |
+| Coming to America | 0.1002 | 0.0134 | **0.0058** | 0.0053 |
+| Interstellar | 0.0621 | 0.0218 | **0.0086** | 0.0080 |
+| Ju-on | 0.0240 | 0.0092 | **0.0065** | 0.0085 |
+| Scarface | 0.0103 | 0.0115 | **0.0091** | 0.0061 |
+| Taxi Driver | 0.0546 | 0.0213 | **0.0104** | 0.0113 |
+| The Deer Hunter | 0.0449 | 0.0145 | **0.0117** | 0.0047 |
+| The Shining | 0.0137 | 0.0183 | **0.0135** | 0.0074 |
+| **macro mean** | **0.04659** | **0.01855** | **0.01089** | **0.00729** |
+
+The fixed response improves all eight numerically, cuts current error by
+`76.6%`, and cuts the exact full-subtraction error by another `41.3%`. The two
+fine controls improve rather than being sacrificed. All systems remain
+positive; the smallest eigenvalue/mean-diagonal ratio is `0.0050`, the only
+ridge is `1e-6`, and every luma model fits at AV1 shift 6 or 7.
+
+Confirmation artifacts:
+
+```text
+/media/merged-storage/media/test-encodes/
+  sourcefit-texture-leak-response-20260804/
+  sourcefit-texture-leak-response-confirm-20260804/
+```
+
+This closes recommended step 1 above. Step 2 is now justified, with two
+implementation cautions:
+
+1. AV1 shares `ar_coeff_shift` across luma and chroma. The offline result proves
+   a legal luma representation; production code must choose/requantize the
+   shared shift without silently changing U/V texture.
+2. `0.75` is a measured luma response transfer on this corpus, not a semantic
+   admission threshold and not permission to apply luma evidence to chroma.
+
+The next change remains test-only and default-off: collect temporal luma
+source/base AR systems, apply the frozen covariance weight, reject any unsafe
+system, and fall back to the existing source or residual model.
