@@ -350,11 +350,13 @@ def parse_log(log):
             continue
         adaptive = re.search(r"risk=([0-9.]+) retain=([0-9.]+)", line)
         grain_corr = re.search(r"grainCorr=(-?[0-9.]+)", line)
+        fallback = re.search(r"fallback=([01])", line)
         out.append({"frame": int(m.group(1)), "reliable": int(m.group(2)),
                     "reset": int(m.group(3)), "held": int(m.group(4) or 0),
                     "risk": float(adaptive.group(1)) if adaptive else 0.0,
                     "retain": float(adaptive.group(2)) if adaptive else 0.0,
-                    "grain_corr": float(grain_corr.group(1)) if grain_corr else 0.0})
+                    "grain_corr": float(grain_corr.group(1)) if grain_corr else 0.0,
+                    "fallback": int(fallback.group(1)) if fallback else 0})
     return out
 
 
@@ -602,6 +604,20 @@ def run_test(test, keep):
         resets = [m["frame"] for m in models if m["reset"]]
         ok &= check("scene reset at grainy cut", any(CUT_FRAME <= f <= CUT_FRAME + 1 for f in resets),
                     f"resets at {resets[:8]}")
+        texture_closure = os.environ.get("NVENC_FGS_TEST_TEXTURE_LEAK", "").lower() \
+            in ("1", "on", "true", "yes") and "modelsrc=on" in FGS_EXTRA
+        if texture_closure:
+            reset_models = [m for m in models
+                            if m["reset"] and CUT_FRAME <= m["frame"] <= CUT_FRAME + 1]
+            reset_frame = reset_models[0]["frame"] if reset_models else CUT_FRAME
+            resumed = [m for m in models
+                       if reset_frame < m["frame"] <= reset_frame + 2
+                       and m["reliable"] and not m["fallback"]]
+            ok &= check("texture closure falls back on reset",
+                        bool(reset_models and reset_models[0]["fallback"]),
+                        f"reset models {reset_models}")
+            ok &= check("texture closure resumes after reset",
+                        bool(resumed), f"post-reset models {resumed}")
         pre, _ = measure(on, off, range(SKIP, CUT_FRAME))
         post, _ = measure(on, off, range(CUT_FRAME + 4, nframes))
         exp = expected[0].mean()

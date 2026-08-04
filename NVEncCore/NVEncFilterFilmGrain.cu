@@ -2728,13 +2728,14 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             add_temporal_ar_stats(combined.temporalLuma, frame.gpu.temporalLuma);
         }
     }
+    bool textureLeakCompensated = false;
     bool chromaLeakCompensated = false;
     if (prm->filmGrain.modelFromSource) {
         apply_luma_leak_closure(combined,
             temporalLeakEnabled ? prm->leakTargetQuality : -1.0,
             static_cast<uint64_t>(requiredBlocks), m_lumaLeakLocal, diagnostics);
         if (m_textureLeakClosure) {
-            apply_luma_texture_leak_closure(combined,
+            textureLeakCompensated = apply_luma_texture_leak_closure(combined,
                 static_cast<uint64_t>(requiredBlocks) * 64ULL, diagnostics);
         }
         if (m_chromaLeakMode != ChromaLeakMode::Off) {
@@ -2748,16 +2749,29 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     }
     bool modelValid = false;
     if (diagnostics.modelFrames >= prm->filmGrain.minModelFrames) {
-        modelValid = prm->filmGrain.modelFromSource
-            ? build_source_film_grain_params_with_residual_fallback(
-                combined, fallbackCombined, bitDepth,
-                prm->filmGrain.analyzeChroma,
-                prm->filmGrain.clipToRestrictedRange, params, diagnostics,
-                std::min(0.98, static_cast<double>(diagnostics.grainCorrelation)
-                    + FGS_SOURCE_CORRELATION_MARGIN))
-            : build_film_grain_params(
-                combined, bitDepth, prm->filmGrain.analyzeChroma,
+        if (prm->filmGrain.modelFromSource
+            && m_textureLeakClosure && !textureLeakCompensated) {
+            // A reset frame has no previous picture from which to measure the
+            // missing covariance. Emitting an unclosed full-source model here
+            // would double-count the smooth texture left in the base, then
+            // let model hysteresis extend that error through warm-up. Use the
+            // conservative residual model until a closed source solve exists.
+            modelValid = build_film_grain_params(
+                fallbackCombined, bitDepth, prm->filmGrain.analyzeChroma,
                 prm->filmGrain.clipToRestrictedRange, params, diagnostics, -1.0);
+            diagnostics.sourceModelFallback = modelValid;
+        } else {
+            modelValid = prm->filmGrain.modelFromSource
+                ? build_source_film_grain_params_with_residual_fallback(
+                    combined, fallbackCombined, bitDepth,
+                    prm->filmGrain.analyzeChroma,
+                    prm->filmGrain.clipToRestrictedRange, params, diagnostics,
+                    std::min(0.98, static_cast<double>(diagnostics.grainCorrelation)
+                        + FGS_SOURCE_CORRELATION_MARGIN))
+                : build_film_grain_params(
+                    combined, bitDepth, prm->filmGrain.analyzeChroma,
+                    prm->filmGrain.clipToRestrictedRange, params, diagnostics, -1.0);
+        }
     }
     if (modelValid) {
         const double modelTolerance = prm->filmGrain.denoiser == FGS_DENOISE_MOTION ? 0.10 : 0.05;
