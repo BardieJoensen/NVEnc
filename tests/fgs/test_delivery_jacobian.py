@@ -2,6 +2,7 @@
 import os
 import sys
 import unittest
+from unittest import mock
 
 import numpy as np
 
@@ -47,6 +48,38 @@ class DeliveryJacobianTests(unittest.TestCase):
         self.assertEqual(result["counts"].tolist(), [1])
         self.assertAlmostEqual(result["post_leak_ratio"][0], 0.5)
         self.assertAlmostEqual(result["ratios"][0], np.sqrt(0.75))
+
+    def test_response_evaluation_can_replay_measured_stream_seeds(self):
+        context = {
+            "frame": 3,
+            "selected_blocks": [(0, 0)],
+            "clean": (np.zeros((32, 32)), np.zeros((32, 32))),
+            "selected_by_bin": {0: np.asarray([0])},
+            "weights_by_bin": {0: np.asarray([1])},
+            "selected_lookup": {0: 0},
+            "band_positions": [[0]],
+            "block_bins": np.asarray([0]),
+        }
+        entries = [{"start": 0, "end": 10_000_000}]
+        stream_entries = {
+            3: {"random_seed": 111},
+            4: {"random_seed": 222},
+        }
+        seen = []
+
+        def synthesize(_clean, _blocks, entry, _gaussian, _bits):
+            seen.append(entry["random_seed"])
+            return np.zeros((1, 32, 32))
+
+        with mock.patch.object(
+                delivery_jacobian.av1_grain, "synthesize_selected_luma",
+                side_effect=synthesize), mock.patch.object(
+                    delivery_jacobian, "selected_variances",
+                    return_value=np.asarray([1.0])):
+            delivery_jacobian.evaluate_entries(
+                entries, [context], None, 10, 24, 1, True, 1, 1,
+                seed_mode="stream", stream_entries=stream_entries)
+        self.assertEqual(seen, [111, 222])
 
 
 if __name__ == "__main__":

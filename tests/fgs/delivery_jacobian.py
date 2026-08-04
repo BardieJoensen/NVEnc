@@ -29,8 +29,8 @@ from delivery_response import (  # noqa: E402
     representative_sample_positions, response_population_features,
 )
 from emission_audit import (  # noqa: E402
-    entry_for_frame, oracle_seed, selected_luma_band_positions,
-    selected_variances,
+    entry_for_frame, evaluation_seed, probe_grain_entries,
+    selected_luma_band_positions, selected_variances,
 )
 from source_fit import (  # noqa: E402
     blockwise, production_flat_blocks, static_flat_blocks,
@@ -128,7 +128,8 @@ def build_contexts(source, clean, frames, bits, luma_ranges,
 
 
 def evaluate_entries(entries, contexts, gaussian, bits, fps_num, fps_den,
-                     limited_range, band_count, response_seeds):
+                     limited_range, band_count, response_seeds,
+                     seed_mode="oracle", stream_entries=None):
     variance_sums = np.zeros(band_count, dtype=np.float64)
     counts = np.zeros(band_count, dtype=np.int64)
     sampled_blocks = 0
@@ -142,7 +143,8 @@ def evaluate_entries(entries, contexts, gaussian, bits, fps_num, fps_den,
                 entry = entry_for_frame(entries, frame_number, fps_num, fps_den)
                 seeded = {
                     **entry,
-                    "random_seed": oracle_seed(frame_number, sample),
+                    "random_seed": evaluation_seed(
+                        frame_number, sample, seed_mode, stream_entries),
                     "limit_output_range": limited_range,
                 }
                 frame_variances.append(selected_variances(
@@ -225,6 +227,10 @@ def main():
     parser.add_argument("--blocks-per-bin", type=int, default=16)
     parser.add_argument("--response-seeds", type=int, default=1,
                         help="deterministic synthesis seeds per response evaluation")
+    parser.add_argument(
+        "--response-seed-mode", choices=("oracle", "stream"),
+        default="oracle",
+        help="seed source for response evaluation (default: synthetic oracle)")
     parser.add_argument("--selection-salt", type=int, default=0)
     parser.add_argument(
         "--sampling", choices=("spatial", "response-representative"),
@@ -254,6 +260,10 @@ def main():
         parser.error("sample count and perturbation must be positive")
     if args.target == "postencode" and args.response_base != "encoded":
         parser.error("--target postencode requires --response-base encoded")
+    if args.response_seed_mode == "stream" and args.response_base != "encoded":
+        parser.error("--response-seed-mode stream requires --response-base encoded")
+    if args.response_seed_mode == "stream" and args.response_seeds != 1:
+        parser.error("--response-seed-mode stream requires --response-seeds 1")
 
     with open(args.emission, encoding="utf-8") as handle:
         emission = json.load(handle)
@@ -279,6 +289,10 @@ def main():
     clean = decode_selected(
         response_path, width, height, indices, bits,
         filmgrain=response_filmgrain)
+    response_stream_entries = None
+    if args.response_seed_mode == "stream":
+        response_stream_entries = probe_grain_entries(
+            encoded_path, max(indices) + 1, required_frames=indices)
     gaussian = av1_grain.load_gaussian_sequence(args.aom_grain_source)
     fps_num, fps_den = emission["fps"]
     bands = emission["luma_bins"]
@@ -308,7 +322,8 @@ def main():
     for iteration in range(args.iterations):
         baseline_variance, counts, sampled_blocks = evaluate_entries(
             entries, contexts, gaussian, bits, fps_num, fps_den,
-            not args.full_range, len(bands), args.response_seeds)
+            not args.full_range, len(bands), args.response_seeds,
+            args.response_seed_mode, response_stream_entries)
         total_evaluations += 1
         if not np.array_equal(counts, expected_counts):
             raise RuntimeError("reconstructed luma-band populations differ")
@@ -323,7 +338,8 @@ def main():
             perturbed, _shifted = scale_entries(entries, points)
             variance, perturbed_counts, _samples = evaluate_entries(
                 perturbed, contexts, gaussian, bits, fps_num, fps_den,
-                not args.full_range, len(bands), args.response_seeds)
+                not args.full_range, len(bands), args.response_seeds,
+                args.response_seed_mode, response_stream_entries)
             total_evaluations += 1
             if not np.array_equal(perturbed_counts, counts):
                 raise RuntimeError("perturbation changed luma-band populations")
@@ -338,7 +354,8 @@ def main():
         proposed, shifted = scale_entries(entries, factor_points)
         proposed_variance, proposed_counts, _samples = evaluate_entries(
             proposed, contexts, gaussian, bits, fps_num, fps_den,
-            not args.full_range, len(bands), args.response_seeds)
+            not args.full_range, len(bands), args.response_seeds,
+            args.response_seed_mode, response_stream_entries)
         total_evaluations += 1
         proposed_response = ratios_from_variance(
             proposed_variance, proposed_counts, truth_sigmas)
@@ -374,6 +391,7 @@ def main():
         "qvbr": args.qvbr,
         "blocks_per_frame_bin": args.blocks_per_bin,
         "response_seeds": args.response_seeds,
+        "response_seed_mode": args.response_seed_mode,
         "selection_salt": args.selection_salt,
         "sampling": args.sampling,
         "response_base": args.response_base,

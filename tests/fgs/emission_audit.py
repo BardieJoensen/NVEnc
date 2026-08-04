@@ -275,6 +275,19 @@ def oracle_seed(frame_number, sample_number):
     return seed if seed else 1
 
 
+def evaluation_seed(frame_number, sample_number, mode, stream_entries=None):
+    """Select either the historical oracle seed or a measured stream seed."""
+    if mode == "oracle":
+        return oracle_seed(frame_number, sample_number)
+    if mode != "stream":
+        raise ValueError(f"unknown seed evaluation mode: {mode}")
+    if sample_number != 0:
+        raise ValueError("stream seed evaluation supports exactly one sample")
+    if stream_entries is None or frame_number not in stream_entries:
+        raise ValueError(f"no measured stream seed for frame {frame_number}")
+    return int(stream_entries[frame_number]["random_seed"])
+
+
 def synth_variance_for_seed(base, blocks, entry, gaussian, bits, seed):
     seeded = {**entry, "random_seed": seed}
     predicted = av1_grain.synthesize_selected_luma(
@@ -304,8 +317,16 @@ def main():
         "--seed-samples", type=int, default=0,
         help="also estimate pre-encode expected variance over this many "
              "deterministic AV1 seeds (default 0)")
+    parser.add_argument(
+        "--expected-stream-seeds", action="store_true",
+        help="replay --expected-table with the measured stream seed for each "
+             "frame (requires --seed-samples 1)")
     parser.add_argument("--json-out", default="")
     args = parser.parse_args()
+    if args.expected_stream_seeds and not args.expected_table:
+        parser.error("--expected-stream-seeds requires --expected-table")
+    if args.expected_stream_seeds and args.seed_samples != 1:
+        parser.error("--expected-stream-seeds requires --seed-samples 1")
 
     with open(args.closure, encoding="utf-8") as handle:
         closure = json.load(handle)
@@ -413,8 +434,12 @@ def main():
             seed_axes = []
             reference_axes = []
             for sample_number in range(args.seed_samples):
-                frame_seed = oracle_seed(frame_number, sample_number)
-                next_frame_seed = oracle_seed(frame_number + 1, sample_number)
+                seed_mode = (
+                    "stream" if args.expected_stream_seeds else "oracle")
+                frame_seed = evaluation_seed(
+                    frame_number, sample_number, seed_mode, stream_entries)
+                next_frame_seed = evaluation_seed(
+                    frame_number + 1, sample_number, seed_mode, stream_entries)
                 first_variance, first_axis, first_block_variances = synth_variance_for_seed(
                     base_decoded[frame_number], blocks, expected_entry, gaussian,
                     args.bits, frame_seed)
@@ -602,6 +627,8 @@ def main():
         "aom_grain_source": os.path.abspath(args.aom_grain_source),
         "aom_grain_source_sha256": grain_source_sha256,
         "mask": "production_static",
+        "expected_seed_mode": (
+            "stream" if args.expected_stream_seeds else "oracle"),
         "aggregate": aggregate,
         "luma_bins": luma_bands,
         "rows": report_rows,

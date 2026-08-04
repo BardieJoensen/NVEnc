@@ -215,6 +215,19 @@ class EmissionAuditTests(unittest.TestCase):
         self.assertGreaterEqual(len(set(first)), 31)
         self.assertNotEqual(first, following)
 
+    def test_evaluation_seed_uses_measured_stream_seed_fail_closed(self):
+        entries = {10: {"random_seed": 7391}}
+        self.assertEqual(
+            emission_audit.evaluation_seed(10, 0, "stream", entries),
+            7391)
+        with self.assertRaisesRegex(ValueError, "exactly one sample"):
+            emission_audit.evaluation_seed(10, 1, "stream", entries)
+        with self.assertRaisesRegex(ValueError, "frame 11"):
+            emission_audit.evaluation_seed(11, 0, "stream", entries)
+        self.assertEqual(
+            emission_audit.evaluation_seed(10, 2, "oracle", entries),
+            emission_audit.oracle_seed(10, 2))
+
     def test_axis_stats_are_amplitude_invariant(self):
         blocks = np.arange(2 * 32 * 32, dtype=np.float64).reshape(2, 32, 32)
         first = emission_audit.selected_axis_stats(blocks)
