@@ -14,6 +14,12 @@ estimator itself or from the block population supplied to it.  On temporal-stati
 blocks, consecutive-frame differencing also removes picture structure from the
 clean base.  This separates actual time-varying base residue from static picture
 or denoiser error that the spatial subtraction incorrectly calls retained grain.
+
+For U/V the report also includes ``production_plane_static``.  It starts from
+the same source-luma spatial-flat candidates, but accepts temporal stability from
+the measured chroma plane's own 16x16 samples.  This isolates a genuinely
+plane-specific amplitude observation from the older luma-temporal mask without
+changing the production analyser.
 The unfiltered production row is diagnostic only: motion contaminates temporal
 truth there.
 
@@ -470,11 +476,16 @@ def main():
         report["encoded_arms"] = {
             label: os.path.abspath(path) for label, path in encoded_paths.items()
         }
-    by_mask = {name: [] for name in ("top10_static", "production_spatial", "production_static")}
+    mask_names = ["top10_static", "production_spatial", "production_static"]
+    if args.plane != "y":
+        mask_names.append("production_plane_static")
+    by_mask = {name: [] for name in mask_names}
     encoded_by_arm = {
         label: {name: [] for name in by_mask} for label in encoded_decoded
     }
-    per_frame_masks = {name: [] for name in ("top10_static", "production_static")}
+    per_frame_masks = {
+        name: [] for name in mask_names if name != "production_spatial"
+    }
     per_frame_strength_fields = {}
     per_frame_encoded_fields = {}
 
@@ -513,6 +524,10 @@ def main():
                 luma, next_luma, production,
                 lo=args.static_lo, hi=args.static_hi),
         }
+        if args.plane != "y":
+            masks["production_plane_static"] = static_flat_blocks(
+                source, next_source, production, bs=plane_block_size,
+                lo=args.static_lo, hi=args.static_hi)
         for name in per_frame_masks:
             per_frame_masks[name].append(masks[name])
         frame_record = {"frame": frame_number, "masks": {}}
