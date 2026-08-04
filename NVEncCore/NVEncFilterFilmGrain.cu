@@ -3014,7 +3014,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
             _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f modelCorr=%.3f arScale=%.3f strengthGain=%.3f regReject=%d fallback=%d ")
             _T("leak=%.3f>%.3f theta=%.3f temporal=%llu rectified=%llu leakClose=%d ")
-            _T("texture=%llu:%.5f:%d:%d textureW=%.3f response=%.5f chromaLeak=%d:%d ")
+            _T("texture=%llu:%.5f:%d:%d textureW=%.3f response=%.5f responseGain=%.5f chromaLeak=%d:%d ")
             _T("scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
@@ -3036,6 +3036,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             diagnostics.textureLeakRejected ? 1 : 0,
             diagnostics.textureBaseCovarianceWeight,
             diagnostics.textureResponseAxisError,
+            diagnostics.textureResponseAxisImprovement,
             static_cast<int>(m_chromaLeakMode), chromaLeakCompensated ? 1 : 0,
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,

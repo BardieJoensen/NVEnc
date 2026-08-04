@@ -67,6 +67,7 @@ struct NVEncFilmGrainDiagnostics {
     float textureBaseCovarianceWeight;
     float textureCovarianceMinPivotRatio;
     float textureResponseAxisError;
+    float textureResponseAxisImprovement;
     uint64_t temporalLeakBlocks;
     uint64_t temporalTextureObservations;
     uint64_t strengthRectifiedBlocks;
@@ -133,6 +134,11 @@ constexpr uint64_t FGS_MIN_TEMPORAL_BIN_BLOCKS = 4;
 constexpr int FGS_TEXTURE_SOURCE_WEIGHT = 4;
 constexpr int FGS_TEXTURE_BASE_WEIGHT = 3;
 constexpr int FGS_TEXTURE_WEIGHT_DENOMINATOR = 4;
+// A response-grid candidate must beat the zero-subtraction model by this much
+// in predicted mean axis error before it may change the emitted texture.  The
+// first real-film replay showed that smaller apparent gains can reverse sign
+// after normative AV1 synthesis (The Shining, frame 49).
+constexpr double FGS_TEXTURE_RESPONSE_MIN_AXIS_IMPROVEMENT = 0.01;
 
 #ifdef __CUDACC__
 #define FGS_HOST_DEVICE __host__ __device__
@@ -241,6 +247,8 @@ bool apply_luma_texture_leak_closure(FilmGrainGpuStats& stats,
 bool texture_response_preencode_covariance_weight(
     double responseWeight, double preEncodeLeak, double predictedPostEncodeLeak,
     double& preencodeWeight);
+bool texture_response_gain_is_decisive(
+    double baselineError, double candidateError);
 bool build_source_film_grain_params_with_texture_response(
     const FilmGrainGpuStats& sourceStats, const FilmGrainGpuStats& residualStats,
     uint64_t minTextureObservations, int bitDepth, bool analyzeChroma,

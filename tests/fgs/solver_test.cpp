@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <limits>
 
 #include "NVEncFilmGrainModel.h"
 
@@ -379,6 +380,13 @@ void testTemporalTextureLeakClosure() {
 }
 
 void testTextureResponseSelector() {
+    expect(!texture_response_gain_is_decisive(0.020, 0.015),
+        "texture response rejects a weak predicted improvement");
+    expect(texture_response_gain_is_decisive(0.020, 0.009),
+        "texture response accepts a decisive predicted improvement");
+    expect(!texture_response_gain_is_decisive(
+        std::numeric_limits<double>::quiet_NaN(), 0.0),
+        "texture response rejects a non-finite confidence comparison");
     double preencodeWeight = -1.0;
     expect(texture_response_preencode_covariance_weight(
         0.75, 0.445, 0.288, preencodeWeight),
@@ -412,6 +420,8 @@ void testTextureResponseSelector() {
         "identical response candidates select the lower frozen weight");
     expect(std::isfinite(diagnostics.textureResponseAxisError),
         "texture response selector reports a finite predicted error");
+    expectNear(diagnostics.textureResponseAxisImprovement, 0.0, 1e-6,
+        "identical response candidates report no predicted improvement");
 }
 
 void testChromaTemporalLeakClosure() {

@@ -49,7 +49,8 @@ NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     sourceModelCorrelation(0.0f), sourceArScale(1.0f), sourceStrengthGain(1.0f),
     preEncodeLeak(0.0f), predictedPostEncodeLeak(0.0f), leakDeadzone(0.0f),
     textureBaseCovarianceWeight(0.0f), textureCovarianceMinPivotRatio(0.0f),
-    textureResponseAxisError(0.0f), temporalLeakBlocks(0),
+    textureResponseAxisError(0.0f), textureResponseAxisImprovement(0.0f),
+    temporalLeakBlocks(0),
     temporalTextureObservations(0), strengthRectifiedBlocks(0),
     sourceRegularizationRejected(false), sourceModelFallback(false), leakCompensated(false),
     textureLeakCompensated(false), textureLeakRejected(false),
@@ -554,6 +555,7 @@ bool apply_luma_texture_leak_closure(FilmGrainGpuStats& stats,
     diagnostics.textureBaseCovarianceWeight = 0.0f;
     diagnostics.textureCovarianceMinPivotRatio = 0.0f;
     diagnostics.textureResponseAxisError = 0.0f;
+    diagnostics.textureResponseAxisImprovement = 0.0f;
     diagnostics.textureLeakCompensated = false;
     diagnostics.textureLeakRejected = false;
     if (!std::isfinite(baseCovarianceWeight)
@@ -982,6 +984,14 @@ bool texture_response_preencode_covariance_weight(
     return std::isfinite(preencodeWeight);
 }
 
+bool texture_response_gain_is_decisive(
+    const double baselineError, const double candidateError) {
+    if (!std::isfinite(baselineError) || !std::isfinite(candidateError)
+        || baselineError < 0.0 || candidateError < 0.0) return false;
+    return baselineError - candidateError
+        >= FGS_TEXTURE_RESPONSE_MIN_AXIS_IMPROVEMENT;
+}
+
 static bool luma_texture_response_error(
     const FilmGrainTemporalArStats& temporal,
     const NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
@@ -1066,6 +1076,10 @@ bool build_source_film_grain_params_with_texture_response(
     double bestWeight = 0.0;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 bestParams = {};
     NVEncFilmGrainDiagnostics bestDiagnostics = diagnostics;
+    bool zeroFound = false;
+    double zeroError = std::numeric_limits<double>::max();
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 zeroParams = {};
+    NVEncFilmGrainDiagnostics zeroDiagnostics = diagnostics;
     for (const double weight : weights) {
         // The frozen response grid was measured against decoded base
         // covariance.  The temporal system contains the stronger denoised
@@ -1091,6 +1105,12 @@ bool build_source_film_grain_params_with_texture_response(
         if (!luma_texture_response_error(
             sourceStats.temporalLuma, candidateParams,
             diagnostics, candidateError)) continue;
+        if (weight == 0.0) {
+            zeroFound = true;
+            zeroError = candidateError;
+            zeroParams = candidateParams;
+            zeroDiagnostics = candidateDiagnostics;
+        }
         if (!found || candidateError < bestError - 1e-12
             || (std::abs(candidateError - bestError) <= 1e-12
                 && weight < bestWeight)) {
@@ -1102,12 +1122,35 @@ bool build_source_film_grain_params_with_texture_response(
         }
     }
     if (found) {
-        params = bestParams;
-        diagnostics = bestDiagnostics;
-        diagnostics.textureBaseCovarianceWeight = static_cast<float>(bestWeight);
-        diagnostics.textureResponseAxisError = static_cast<float>(bestError);
-        diagnostics.sourceModelFallback = false;
-        return true;
+        const double predictedImprovement = zeroFound
+            ? std::max(0.0, zeroError - bestError) : 0.0;
+        // A non-zero response is allowed only when its predicted improvement
+        // clears the real-film confidence margin. Otherwise retain the
+        // zero-subtraction source fit; without a valid zero candidate there
+        // is no baseline from which to claim a response improvement.
+        if (bestWeight > 0.0 && (!zeroFound
+            || !texture_response_gain_is_decisive(zeroError, bestError))) {
+            if (!zeroFound) {
+                found = false;
+            } else {
+                bestError = zeroError;
+                bestWeight = 0.0;
+                bestParams = zeroParams;
+                bestDiagnostics = zeroDiagnostics;
+            }
+        }
+        if (found) {
+            params = bestParams;
+            diagnostics = bestDiagnostics;
+            diagnostics.textureBaseCovarianceWeight =
+                static_cast<float>(bestWeight);
+            diagnostics.textureResponseAxisError =
+                static_cast<float>(bestError);
+            diagnostics.textureResponseAxisImprovement =
+                static_cast<float>(predictedImprovement);
+            diagnostics.sourceModelFallback = false;
+            return true;
+        }
     }
 
     // Never emit an unclosed full-source model when the response search is
@@ -1122,6 +1165,7 @@ bool build_source_film_grain_params_with_texture_response(
         sourceStats.temporalLuma.observations;
     diagnostics.textureLeakCompensated = false;
     diagnostics.textureResponseAxisError = 0.0f;
+    diagnostics.textureResponseAxisImprovement = 0.0f;
     diagnostics.sourceModelFallback = true;
     return true;
 }
