@@ -72,6 +72,26 @@ class AxisCovarianceTests(unittest.TestCase):
 
 
 class ArSystemTests(unittest.TestCase):
+    def test_sample_hash_and_strata_match_frozen_cuda_values(self):
+        self.assertEqual(oracle.fgs_sample_hash(0), 0)
+        self.assertEqual(oracle.fgs_sample_hash(1), 1753845952)
+        self.assertEqual(oracle.fgs_sample_hash(63), 3550727198)
+        self.assertEqual(
+            oracle.fgs_stratified_sample_offset(32, 3, 3, 0, 0), 3)
+        self.assertEqual(
+            oracle.fgs_stratified_sample_offset(32, 3, 3, 7, 0), 25)
+
+    def test_cuda64_accumulates_exactly_one_observation_per_thread(self):
+        y, x = np.mgrid[:32, :32]
+        previous = np.zeros((32, 32), dtype=np.uint16)
+        current = (100 + x * 2 + y * 3 + ((x * y) % 17)).astype(np.uint16)
+        system = oracle.empty_ar_system()
+        oracle.accumulate_ar_system_cuda64(
+            system, current, previous, [(0, 0)])
+        self.assertEqual(system["observations"], 64)
+        self.assertGreater(system["btb"], 0.0)
+        np.testing.assert_allclose(system["ata"], system["ata"].T)
+
     def test_identical_system_subtraction_has_no_energy(self):
         source = oracle.empty_ar_system()
         source["ata"] += np.eye(source["ata"].shape[0])

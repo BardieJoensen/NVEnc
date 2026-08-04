@@ -150,7 +150,7 @@ def empty_ar_system():
 
 
 def accumulate_ar_system(system, field, blocks, detrend=True):
-    """Accumulate lag-3 normal equations and target energy per block."""
+    """Accumulate dense lag-3 normal equations and target energy per block."""
     grid = blockwise(np.asarray(field, dtype=np.float64), BLOCK_SIZE)
     taps = ar_acf.ar_taps(LAG)
     for row, col in blocks:
@@ -167,6 +167,92 @@ def accumulate_ar_system(system, field, blocks, detrend=True):
         system["atb"] += predictors.T @ target
         system["btb"] += float(target @ target)
         system["observations"] += int(target.size)
+
+
+def fgs_sample_hash(value):
+    """Bit-exact Python form of ``fgs_sample_hash`` in the hot path."""
+    value = int(value) & 0xffffffff
+    value ^= value >> 16
+    value = (value * 0x7feb352d) & 0xffffffff
+    value ^= value >> 15
+    value = (value * 0x846ca68b) & 0xffffffff
+    value ^= value >> 16
+    return value & 0xffffffff
+
+
+def fgs_stratified_sample_offset(extent, leading, trailing, stratum, random):
+    """Bit-exact Python form of the analyzer's eight-stratum selector."""
+    usable = extent - leading - trailing
+    if usable <= 0:
+        return leading
+    begin = leading + usable * stratum // 8
+    end = leading + usable * (stratum + 1) // 8
+    span = end - begin
+    return begin + (int(random) % span if span > 0 else 0)
+
+
+def temporal_detrended_block(current, previous):
+    """Mirror the integer values accumulated by the temporal CUDA kernel.
+
+    CUDA fits a mean-plus-plane to the unscaled frame difference and rounds
+    each detrended predictor with ``__float2int_rn``. NumPy uses the same
+    nearest-even rounding; CUDA's float reduction order can still move a value
+    on an exact half-integer boundary. The common factor of two
+    in temporal covariance cancels from the AR solve, but this integer rounding
+    does not, so a sparse-vs-dense comparison has to preserve it.
+    """
+    difference = (
+        np.asarray(current, dtype=np.float64)
+        - np.asarray(previous, dtype=np.float64)
+    )
+    return np.rint(detrend_blocks(difference[None, None])[0, 0]).astype(np.int64)
+
+
+def accumulate_ar_system_cuda64(system, current, previous, blocks):
+    """Accumulate the analyzer's 64 stratified observations per 32x32 block.
+
+    This deliberately reproduces only the estimator population.  Rolling
+    history and model hold/update policy remain separate variables, so this
+    mode can say whether the response calibrated with the dense pooled oracle
+    transfers to the CUDA sampling scheme before another encode is built.
+    """
+    current = np.asarray(current)
+    previous = np.asarray(previous)
+    if current.shape != previous.shape or current.ndim != 2:
+        raise ValueError("temporal CUDA64 inputs must be equal-sized planes")
+    height, width = current.shape
+    blocks_x = (width + BLOCK_SIZE - 1) // BLOCK_SIZE
+    taps = ar_acf.ar_taps(LAG)
+    for row, col in blocks:
+        y0 = row * BLOCK_SIZE
+        x0 = col * BLOCK_SIZE
+        block_h = min(BLOCK_SIZE, height - y0)
+        block_w = min(BLOCK_SIZE, width - x0)
+        if block_w <= LAG * 2 or block_h <= LAG:
+            continue
+        patch = temporal_detrended_block(
+            current[y0:y0 + block_h, x0:x0 + block_w],
+            previous[y0:y0 + block_h, x0:x0 + block_w])
+        predictors = []
+        targets = []
+        block_index = row * blocks_x + col
+        for tid in range(64):
+            tx = tid & 7
+            ty = tid >> 3
+            sample_hash = fgs_sample_hash(block_index * 64 + tid)
+            x = fgs_stratified_sample_offset(
+                block_w, LAG, LAG, tx, sample_hash)
+            y = fgs_stratified_sample_offset(
+                block_h, LAG, 0, ty, sample_hash >> 8)
+            predictors.append([patch[y + drow, x + dcol]
+                               for drow, dcol in taps])
+            targets.append(patch[y, x])
+        predictors = np.asarray(predictors, dtype=np.int64)
+        targets = np.asarray(targets, dtype=np.int64)
+        system["ata"] += predictors.T @ predictors
+        system["atb"] += predictors.T @ targets
+        system["btb"] += float(targets @ targets)
+        system["observations"] += int(targets.size)
 
 
 def subtract_ar_system(source, base):
@@ -400,11 +486,10 @@ def run(args):
                 f"frame {frame}: only {len(blocks)} static flat blocks")
         selected_counts.append(len(blocks))
         selected_blocks.append(blocks)
+        current_base = base_frames[frame].astype(np.float64)
+        next_base = base_frames[frame + 1].astype(np.float64)
         source_temporal = (source - next_source) / math.sqrt(2.0)
-        base_temporal = (
-            base_frames[frame].astype(np.float64)
-            - base_frames[frame + 1].astype(np.float64)
-        ) / math.sqrt(2.0)
+        base_temporal = (current_base - next_base) / math.sqrt(2.0)
         played_temporal = (
             played_frames[frame].astype(np.float64)
             - played_frames[frame + 1].astype(np.float64)
@@ -412,8 +497,14 @@ def run(args):
         accumulate_axis_moments(moments["source"], source_temporal, blocks)
         accumulate_axis_moments(moments["base"], base_temporal, blocks)
         accumulate_axis_moments(moments["decoded_total"], played_temporal, blocks)
-        accumulate_ar_system(systems["source"], source_temporal, blocks)
-        accumulate_ar_system(systems["base"], base_temporal, blocks)
+        if args.ar_sampling == "cuda64":
+            accumulate_ar_system_cuda64(
+                systems["source"], source, next_source, blocks)
+            accumulate_ar_system_cuda64(
+                systems["base"], current_base, next_base, blocks)
+        else:
+            accumulate_ar_system(systems["source"], source_temporal, blocks)
+            accumulate_ar_system(systems["base"], base_temporal, blocks)
         for index in (frame, frame + 1):
             synthesis = (
                 played_frames[index].astype(np.float64)
@@ -547,6 +638,7 @@ def run(args):
             "response_alphas": args.response_alphas,
             "response_seeds": args.response_seeds,
             "response_ar_seeds": args.response_ar_seeds,
+            "ar_sampling": args.ar_sampling,
         },
         "static_blocks": selected_counts,
         "source_truth": axes["source"],
@@ -583,6 +675,9 @@ def main():
     parser.add_argument("--minimum-blocks", type=int, default=8)
     parser.add_argument("--ar-seeds", type=int, default=64)
     parser.add_argument("--ar-sigma", type=float, default=4.0)
+    parser.add_argument(
+        "--ar-sampling", choices=("dense", "cuda64"), default="dense",
+        help="AR normal-equation population; cuda64 mirrors the GPU hot path")
     parser.add_argument(
         "--exact-seeds", type=int, default=0,
         help="exact normative current/oracle replays per selected frame")
