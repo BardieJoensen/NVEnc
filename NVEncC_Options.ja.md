@@ -410,7 +410,7 @@ remuxer.exe -i "<video mp4file>" -i "<m4a(ALAC in mp4)file>" -o "<muxed mp4 file
 オプションリストの表示。
 
 ### --check-device
-NVEncが認識している利用可能なGPUのDeviceIdを表示
+NVEncが認識している利用可能なGPUのDeviceIdとPCI Bus IDを表示。DeviceIdはCUDAのデバイス順。
 
 ### --check-hw [&lt;int&gt;]
 ハードウェアエンコの可否の表示。数字でDeviceIDを指定できる。省略した場合は"0"。
@@ -2464,6 +2464,8 @@ nnediによるインタレ解除を行う。
 
   - search_early_sad=&lt;int|off&gt;  
     level0 の予測候補 SAD が指定値未満なら全探索を省略する。値は8x8ブロック・8bit換算で `0-65535`、実際の閾値はblksizeとbit depthに応じて自動スケールされる。`off` (`-1`) で無効。presetの既定値は上表のとおり。
+  - spatial_early_sad=&lt;int|off&gt;  
+    level1 探索で得た SAD が指定値未満なら、そのブロックの spatial refine を省略する。値は8x8ブロック・8bit換算で `0-65535`、実際の閾値はblksizeとbit depthに応じて自動スケールされる。デフォルトは `off` (`-1`)。
   - rep1-thin/rep1-pad/rep2-thin/rep2-pad
     `repN-thin=0-7`、`repN-pad=0-3`。
 
@@ -2553,6 +2555,8 @@ nnediによるインタレ解除を行う。
     内部プリセット。`slower`, `slow`, `medium`, `fast`, `faster`(デフォルト), `veryfast`, `superfast`, `ultrafast`, `draft`。
   - search_early_sad=&lt;int|auto|off&gt;  
     level0 の全探索を省略するSAD閾値。値は8x8ブロック・8bit換算で `0-65535`、実際の閾値はblksizeとbit depthに応じて自動スケールされる。`auto` (デフォルト) はpresetの値、`off` (`-1`) は無効。
+  - spatial_early_sad=&lt;int|auto|off&gt;  
+    level1 探索で得た SAD が指定値未満なら、そのブロックの spatial refine を省略する。値は8x8ブロック・8bit換算で `0-65535`、実際の閾値はblksizeとbit depthに応じて自動スケールされる。`auto` (デフォルト) はpresetの値 (`slower`/`slow`: 0、`medium`: 16、`fast`: 32、`faster`以降: 64)、`off` (`-1`) は無効。
   - timing=&lt;string&gt;  
     タイミング解析モード。`realtime`, `realtime+` (デフォルト), `strict`。
   - past_cycles=&lt;int&gt;  
@@ -3011,6 +3015,8 @@ equirect、flat、cubemap 間の投影変換を行います。
     モーションベクトルの spatial refine 回数。デフォルトは `auto` (`-1`) で、もっとも解像度の低い最上位レベルでのみ近傍ブロック参照による refine を行い、下位（高解像度）レベルでは行わない。
   - search_early_sad=&lt;int|off&gt;  
     level0 の予測候補 SAD が指定値未満なら全探索を省略する。値は8x8ブロック・8bit換算で `0-65535`、実際の閾値はblksizeとbit depthに応じて自動スケールされる。デフォルトは `off` (`-1`)。
+  - spatial_early_sad=&lt;int|off&gt;  
+    level1 探索で得た SAD が指定値未満なら、そのブロックの spatial refine を省略する。値は8x8ブロック・8bit換算で `0-65535`、実際の閾値はblksizeとbit depthに応じて自動スケールされる。デフォルトは `off` (`-1`)。
   - chroma/binomial/tv_range  
     色差解析、prefilter、レンジ制御。
 
@@ -4439,6 +4445,7 @@ sudo apt-get install libnvinfer10 libnvonnxparsers10
     ノイズモデル用のノイズシグマ値。
   - frames=&lt;int&gt; (デフォルト: 1)  
     時系列モデルへ渡すフレームウィンドウのサイズ。3ch RGB フレームをチャンネル軸に連結した `T*3` 入力・3ch 出力モデルで使用します。中央フレームを出力するため、1 以上の奇数を指定してください。
+    `models.json` に `frames` が設定された登録モデルでは、その値を優先します。
   - mask=&lt;string&gt;  
     2入力ONNXモデルへ渡すグレースケールマスク画像。白を処理対象、黒を保持領域として渡します。マスクは入力解像度に合わせて読み込まれ、静的なロゴ・ウォーターマークの除去などに使用できます。
   - out_res=&lt;WxH&gt;  
