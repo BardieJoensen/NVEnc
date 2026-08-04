@@ -195,3 +195,72 @@ This closes the Silo size regression and validates the failure-layer mechanism
 on one real title. It does **not** validate source fitting for production or
 create a routing threshold. Grain delivery/texture on Silo and the six-film
 architecture corpus remain the next gates.
+
+## Silo texture by emitted-model origin
+
+The direct Silo stream was split into intervals where the emitted table came
+from the source solver and intervals where it came from residual fallback. The
+same source-selected production-flat/static masks were used for both arms.
+
+| interval | arm | synth amplitude | synth lag-1 / lag-2 | played total |
+| --- | --- | ---: | ---: | ---: |
+| source-origin | residual control | 0.801 | 0.158 / -0.110 | 0.937 |
+| source-origin | source fit | **1.031** | **0.524 / 0.275** | **1.142** |
+| source-origin | source truth | 1.000 | 0.502 / 0.276 | 1.000 |
+| fallback-origin | residual control | 0.885 | 0.153 / -0.089 | 0.998 |
+| fallback-origin | source arm (fallback) | 0.873 | 0.168 / -0.089 | 0.991 |
+| fallback-origin | source truth | 1.000 | 0.451 / 0.234 | 1.000 |
+
+The failure layer behaves as intended: fallback intervals reproduce the
+residual arm's texture and delivery closely instead of copying the source or
+dropping synthesis. Accepted source-model intervals reproduce spatial texture
+nearly exactly, but their played total is 14.2% high because the coded base
+still contains about 46% of temporal grain amplitude. This is not a fallback
+defect. It is evidence that the six-film leak-transfer calibration does not
+close Silo's accepted intervals accurately enough to treat `modelsrc=on` as a
+general-content switch.
+
+Across the default mixed-origin sample, source fit moves luma synthesis
+lag-1/lag-2 from `0.156/-0.108` to `0.348/0.093` against source
+`0.427/0.188`, while played total moves from `0.937` to `1.054`. U/V played
+totals are `1.033/1.075`; V reaches `1.142` in the darkest populated luma
+band. These are useful quality bounds and reinforce the decision not to change
+the flow route yet.
+
+## Six-film non-interference result
+
+The pinned fallback binary was run through direct QVBR 29 encoding, raw clean
+base generation and complete dav1d decoding on Casino, Interstellar, Scarface,
+Taxi Driver, The Deer Hunter and The Shining.
+
+| title | analysed frames | source regularization rejects | emitted fallback frames |
+| --- | ---: | ---: | ---: |
+| Casino | 287 | 0 | **0** |
+| Interstellar | 288 | 1 | **0** |
+| Scarface | 287 | 0 | **0** |
+| Taxi Driver | 287 | 0 | **0** |
+| The Deer Hunter | 288 | 0 | **0** |
+| The Shining | 288 | 0 | **0** |
+
+Interstellar's one transient rejected estimate is absorbed by the existing
+model hold. The residual fallback is never emitted on the admitted film
+corpus, so the architectural source-fit result is not diluted.
+
+All six outputs are decoded-identical to the pre-fallback candidate. Four have
+byte-identical elementary AV1 streams. Casino and The Shining move one
+redundant scaling point along an equal-valued plateau in the text table; their
+grain-disabled and grain-enabled decoded-frame MD5s both match exactly. The
+previous six-film texture, delivery and base-fidelity results therefore carry
+over without statistical inference: the pixels are the same.
+
+Artifacts:
+
+```text
+/media/merged-storage/media/test-encodes/sourcefit-bilateral-fallback-20260804/
+```
+
+The fallback code is now validated as a non-interfering failure layer, not as a
+production admission rule. The remaining architectural blocker is admission:
+deciding when a source-derived model represents film-like, AV1-representable
+texture and when to choose residual fitting from the start. Silo also keeps the
+per-content leak-closure question open for any admitted non-film material.
