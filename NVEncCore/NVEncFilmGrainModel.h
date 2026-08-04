@@ -107,14 +107,15 @@ constexpr double FGS_SOURCE_MAX_STRENGTH_GAIN = 1.25;
 // establishes whether extrapolation is safe.
 constexpr double FGS_LEAK_THETA_INTERCEPT = 0.01579030304339795;
 constexpr double FGS_LEAK_THETA_QVBR_SLOPE = 0.004870139420489915;
-// Test-only plane-specific transfer fitted on six retained films at QVBR
-// 25/29/34/39. U and V do not share luma's post-encode deadzone. Keep these
-// behind NVENC_FGS_TEST_CHROMA_LEAK=independent until a bilateral hardware
-// corpus confirms the offline leave-one-title-out result.
-constexpr double FGS_CHROMA_U_LEAK_THETA_INTERCEPT = -0.07637246049661427;
-constexpr double FGS_CHROMA_U_LEAK_THETA_QVBR_SLOPE = 0.013076297968397295;
-constexpr double FGS_CHROMA_V_LEAK_THETA_INTERCEPT = 0.29641760722347593;
-constexpr double FGS_CHROMA_V_LEAK_THETA_QVBR_SLOPE = 0.0035356659142212277;
+// Test-only plane-specific transfer fitted on six retained films with the
+// bilateral separator at QVBR 25/29/34/39. The earlier motion-separator fit
+// did not transfer, proving these constants are separator-specific. Keep them
+// behind NVENC_FGS_TEST_CHROMA_LEAK=independent until the matching bilateral
+// hardware corpus confirms the offline leave-one-title-out result.
+constexpr double FGS_CHROMA_U_LEAK_THETA_INTERCEPT = 0.0644564334085775;
+constexpr double FGS_CHROMA_U_LEAK_THETA_QVBR_SLOPE = 0.005739954853273144;
+constexpr double FGS_CHROMA_V_LEAK_THETA_INTERCEPT = 0.2772047404063204;
+constexpr double FGS_CHROMA_V_LEAK_THETA_QVBR_SLOPE = 0.0005557562076749464;
 constexpr double FGS_LEAK_QVBR_MIN = 25.0;
 constexpr double FGS_LEAK_QVBR_MAX = 39.0;
 constexpr uint64_t FGS_MIN_TEMPORAL_BIN_BLOCKS = 4;
