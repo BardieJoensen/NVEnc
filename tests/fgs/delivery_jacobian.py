@@ -174,6 +174,48 @@ def ratios_from_variance(variance_sums, counts, truth_sigmas):
     return sigmas / np.asarray(truth_sigmas, dtype=np.float64)
 
 
+def postencode_target_ratios(source, encoded_base, contexts, band_count):
+    """Measure exact missing synthesis variance on the response population."""
+    source_sums = np.zeros(band_count, dtype=np.float64)
+    base_sums = np.zeros(band_count, dtype=np.float64)
+    counts = np.zeros(band_count, dtype=np.int64)
+    for context in contexts:
+        frame = context["frame"]
+        source_field = (
+            np.asarray(source[frame], dtype=np.float64)
+            - np.asarray(source[frame + 1], dtype=np.float64)) / math.sqrt(2.0)
+        base_field = (
+            np.asarray(encoded_base[frame], dtype=np.float64)
+            - np.asarray(encoded_base[frame + 1], dtype=np.float64)) / math.sqrt(2.0)
+        source_grid = blockwise(source_field)
+        base_grid = blockwise(base_field)
+        blocks = context["blocks"]
+        for band, positions in enumerate(context["band_positions"]):
+            if not positions:
+                continue
+            rows = np.asarray(
+                [blocks[position][0] for position in positions], dtype=np.int64)
+            cols = np.asarray(
+                [blocks[position][1] for position in positions], dtype=np.int64)
+            source_sums[band] += float(
+                selected_variances(source_grid[rows, cols]).sum())
+            base_sums[band] += float(
+                selected_variances(base_grid[rows, cols]).sum())
+            counts[band] += len(positions)
+    if np.any(counts <= 0) or np.any(source_sums <= 0.0):
+        raise ValueError("post-encode target has an empty or zero-energy band")
+    source_variance = source_sums / counts
+    base_variance = base_sums / counts
+    leak_squared = np.clip(base_variance / source_variance, 0.0, 1.0)
+    return {
+        "ratios": np.sqrt(1.0 - leak_squared),
+        "counts": counts,
+        "source_sigma": np.sqrt(source_variance),
+        "base_sigma": np.sqrt(base_variance),
+        "post_leak_ratio": np.sqrt(leak_squared),
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="candidate filmgrn1 table")
@@ -188,6 +230,12 @@ def main():
         "--sampling", choices=("spatial", "response-representative"),
         default="spatial",
         help="bounded response population (default preserves historical spatial sample)")
+    parser.add_argument(
+        "--response-base", choices=("clean", "encoded"), default="clean",
+        help="pixels used to model AV1 synthesis response (default: pre-encode clean base)")
+    parser.add_argument(
+        "--target", choices=("qvbr", "postencode"), default="qvbr",
+        help="strength target (postencode requires --response-base encoded)")
     parser.add_argument("--perturbation", type=float, default=0.08,
                         help="finite-difference log-factor (default 0.08)")
     parser.add_argument("--regularization", type=float, default=0.01)
@@ -204,6 +252,8 @@ def main():
     if (args.blocks_per_bin <= 0 or args.response_seeds <= 0
             or args.perturbation <= 0.0):
         parser.error("sample count and perturbation must be positive")
+    if args.target == "postencode" and args.response_base != "encoded":
+        parser.error("--target postencode requires --response-base encoded")
 
     with open(args.emission, encoding="utf-8") as handle:
         emission = json.load(handle)
@@ -211,29 +261,47 @@ def main():
         closure = json.load(handle)
     source_path = emission["source"]
     clean_path = closure["clean_base"]
+    encoded_path = emission.get("encoded")
+    response_path = clean_path
+    response_filmgrain = None
+    if args.response_base == "encoded":
+        if not encoded_path:
+            raise SystemExit("emission report has no encoded response base")
+        response_path = encoded_path
+        response_filmgrain = 0
     bits = emission["bits"]
     frames = closure["frames"]
     indices = sorted(set(frames + [frame + 1 for frame in frames]))
     width, height = probe_size(source_path)
-    if probe_size(clean_path) != (width, height):
-        raise SystemExit("source and clean-base dimensions differ")
+    if probe_size(response_path) != (width, height):
+        raise SystemExit("source and response-base dimensions differ")
     source = decode_selected(source_path, width, height, indices, bits)
-    clean = decode_selected(clean_path, width, height, indices, bits)
+    clean = decode_selected(
+        response_path, width, height, indices, bits,
+        filmgrain=response_filmgrain)
     gaussian = av1_grain.load_gaussian_sequence(args.aom_grain_source)
     fps_num, fps_den = emission["fps"]
     bands = emission["luma_bins"]
     luma_ranges = [band["range"] for band in bands]
     truth_sigmas = [band["truth_sigma"] for band in bands]
-    targets = np.asarray([
-        target_from_pre_leak(band["pre_encode_leak"], args.qvbr)[2]
-        for band in bands
-    ], dtype=np.float64)
     centers = [128.0 * (lower + upper) for lower, upper in luma_ranges]
     contexts = build_contexts(
         source, clean, frames, bits, luma_ranges,
         args.blocks_per_bin, args.selection_salt, args.sampling,
         not args.full_range)
     expected_counts = np.asarray([band["blocks"] for band in bands])
+    postencode_target = None
+    if args.target == "postencode":
+        postencode_target = postencode_target_ratios(
+            source, clean, contexts, len(bands))
+        if not np.array_equal(postencode_target["counts"], expected_counts):
+            raise RuntimeError("post-encode target population differs")
+        targets = postencode_target["ratios"]
+    else:
+        targets = np.asarray([
+            target_from_pre_leak(band["pre_encode_leak"], args.qvbr)[2]
+            for band in bands
+        ], dtype=np.float64)
     entries = filmgrn.load(args.input)
     iteration_rows = []
     total_evaluations = 0
@@ -308,6 +376,12 @@ def main():
         "response_seeds": args.response_seeds,
         "selection_salt": args.selection_salt,
         "sampling": args.sampling,
+        "response_base": args.response_base,
+        "response_base_path": os.path.abspath(response_path),
+        "target_mode": args.target,
+        "postencode_target": (None if postencode_target is None else {
+            key: value.tolist() for key, value in postencode_target.items()
+        }),
         "perturbation_log_factor": args.perturbation,
         "regularization": args.regularization,
         "max_log_step": args.max_log_step,
