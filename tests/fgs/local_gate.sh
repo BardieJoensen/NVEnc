@@ -87,7 +87,7 @@ CASINO_WIDENED="$MEDIA/widening-evidence/casino_widened_r4047.mkv"
 CASINO_SOURCE="${FGS_GATE_CASINO_SOURCE:-/media/merged-storage/media/downloads/keep-original-holds/Casino (1995) [tmdbid-524] - [Remux-2160p][DTS-X 7.1][HDR10][HEVC]-EPSiLON.mkv}"
 
 ALL_STAGES=(tools kat synthetic_oracle model_negative real_oracle texture_negative canary_negative)
-# ~3.5 minutes on this box: the 18 GPU fixtures plus the offline adversarial
+# ~3.5 minutes on this box: all GPU fixtures plus the offline adversarial
 # specimen. Deliberately excludes the libaom oracles and the canary, which need
 # real-film encodes. A pre-push hook long enough to be bypassed with
 # --no-verify protects nothing, so the slow stages belong to the full run.
@@ -295,9 +295,9 @@ if want_stage kat; then
     info "synthetic behaviour only, and cannot see real-film aliasing"
     if NVENCC="$CANDIDATE_NVENCC" FGS_KAT_DIR="$REPORT_DIR/kat" \
             python3 "$HERE/fgs_kat.py" > "$REPORT_DIR/kat.log" 2>&1; then
-        record pass "kat: 18 GPU fixtures"
+        record pass "kat: all GPU fixtures"
     else
-        record fail "kat: 18 GPU fixtures (see $REPORT_DIR/kat.log)"
+        record fail "kat: all GPU fixtures (see $REPORT_DIR/kat.log)"
         tail -25 "$REPORT_DIR/kat.log"
     fi
 fi
