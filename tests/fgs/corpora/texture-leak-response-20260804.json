@@ -1,0 +1,21 @@
+{
+  "authority": "offline-oracle-only",
+  "extends": [
+    "texture-leak-oracle-20260804.json",
+    "texture-leak-exact-20260804.json"
+  ],
+  "frozen_before_response_grid": "2026-08-04",
+  "changes_output": false,
+  "routing_authority": false,
+  "base_covariance_weights": [0.0, 0.75, 0.85, 0.925, 1.0],
+  "exact_normative_seed_samples": 4,
+  "raw_ar_seed_samples": 16,
+  "selection": "For each held-out title, choose the single weight with lowest mean exact played-texture error on the other seven titles; report the held-out error without refitting.",
+  "purpose": "test whether one transferable covariance weight compensates the stable normative texture response",
+  "interpretation_guards": [
+    "Variance always uses the full source-minus-base target; the grid changes only AR covariance shape.",
+    "Per-title best weights are descriptive and may not justify code. Only leave-one-title-out selection counts as transfer evidence.",
+    "Four-seed exact replay has a measurable floor; a selected setting must be rerun at 16 seeds before a CUDA prototype.",
+    "Weight zero is the full-source covariance control and weight one is the physical covariance-difference model."
+  ]
+}

@@ -82,6 +82,26 @@ class ArSystemTests(unittest.TestCase):
         solved = oracle.solve_covariance_system(target)
         self.assertFalse(solved["valid"])
 
+    def test_covariance_weight_interpolates_source_and_difference(self):
+        source = oracle.empty_ar_system()
+        base = oracle.empty_ar_system()
+        source["ata"] += np.eye(source["ata"].shape[0]) * 10.0
+        source["atb"] += 4.0
+        source["btb"] = 100.0
+        source["observations"] = 20
+        base["ata"] += np.eye(base["ata"].shape[0]) * 2.0
+        base["atb"] += 1.0
+        base["btb"] = 20.0
+        base["observations"] = 20
+        half = oracle.covariance_difference_system(source, base, 0.5)
+        np.testing.assert_allclose(
+            half["ata"], source["ata"] - 0.5 * base["ata"])
+        np.testing.assert_allclose(
+            half["atb"], source["atb"] - 0.5 * base["atb"])
+        self.assertEqual(half["btb"], 90.0)
+        with self.assertRaises(ValueError):
+            oracle.covariance_difference_system(source, base, 1.1)
+
     def test_quantized_oracle_rejects_coefficients_outside_int8(self):
         coefficients = np.zeros(len(oracle.ar_acf.ar_taps(oracle.LAG)))
         coefficients[0] = 2.1

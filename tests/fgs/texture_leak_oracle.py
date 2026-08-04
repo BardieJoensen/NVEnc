@@ -170,12 +170,19 @@ def accumulate_ar_system(system, field, blocks, detrend=True):
 
 
 def subtract_ar_system(source, base):
+    return covariance_difference_system(source, base, 1.0)
+
+
+def covariance_difference_system(source, base, base_weight):
+    """Subtract a controlled share of base covariance from source statistics."""
     if source["observations"] != base["observations"]:
         raise ValueError("source and base AR systems use different observations")
+    if not 0.0 <= base_weight <= 1.0:
+        raise ValueError("base covariance weight must be in [0, 1]")
     return {
-        "ata": source["ata"] - base["ata"],
-        "atb": source["atb"] - base["atb"],
-        "btb": source["btb"] - base["btb"],
+        "ata": source["ata"] - base_weight * base["ata"],
+        "atb": source["atb"] - base_weight * base["atb"],
+        "btb": source["btb"] - base_weight * base["btb"],
         "observations": source["observations"],
     }
 
@@ -324,12 +331,11 @@ def replace_luma_model(entry, quantized):
 
 def exact_model_replay(base_frames, frames, selected_blocks, table_entries,
                        stream_entries, fps_num, fps_den, quantized, gaussian,
-                       bit_depth, seed_samples):
+                       bit_depth, seed_samples, include_current=True):
     """Replay current/oracle tables through exact normative selected pixels."""
-    moments = {
-        "current": empty_axis_moments(),
-        "oracle": empty_axis_moments(),
-    }
+    moments = {"oracle": empty_axis_moments()}
+    if include_current:
+        moments["current"] = empty_axis_moments()
     for frame, blocks in zip(frames, selected_blocks):
         for current in (frame, frame + 1):
             table_entry = entry_for_frame(
@@ -345,16 +351,17 @@ def exact_model_replay(base_frames, frames, selected_blocks, table_entries,
                 seed = oracle_seed(current, sample)
                 seeded_current = {**current_entry, "random_seed": seed}
                 seeded_oracle = {**oracle_entry, "random_seed": seed}
-                current_patches = av1_grain.synthesize_selected_luma(
-                    base_frames[current], blocks, seeded_current,
-                    gaussian, bit_depth)
                 oracle_patches = av1_grain.synthesize_selected_luma(
                     base_frames[current], blocks, seeded_oracle,
                     gaussian, bit_depth)
                 accumulate_patch_moments(
-                    moments["current"], current_patches)
-                accumulate_patch_moments(
                     moments["oracle"], oracle_patches)
+                if include_current:
+                    current_patches = av1_grain.synthesize_selected_luma(
+                        base_frames[current], blocks, seeded_current,
+                        gaussian, bit_depth)
+                    accumulate_patch_moments(
+                        moments["current"], current_patches)
     return {name: finish_axis_moments(value)
             for name, value in moments.items()}
 
@@ -456,6 +463,49 @@ def run(args):
             args.exact_seeds)
         exact_oracle_total = mix_with_base(
             axes["base"], exact_replay["oracle"], desired, axes["source"])
+    response_grid = []
+    if args.response_alphas:
+        if args.response_seeds <= 0:
+            raise ValueError("response alpha grid requires positive response seeds")
+        if not os.path.isfile(args.aom_grain_source):
+            raise ValueError(f"missing AV1 grain source: {args.aom_grain_source}")
+        if grain_source_sha256 is None:
+            gaussian = av1_grain.load_gaussian_sequence(args.aom_grain_source)
+            import hashlib
+            with open(args.aom_grain_source, "rb") as handle:
+                grain_source_sha256 = hashlib.sha256(handle.read()).hexdigest()
+        for alpha in args.response_alphas:
+            alpha_system = covariance_difference_system(
+                systems["source"], systems["base"], alpha)
+            alpha_solution = solve_covariance_system(alpha_system)
+            alpha_candidates = []
+            alpha_best = None
+            alpha_exact = None
+            alpha_total = None
+            if alpha_solution.get("valid") and desired.get("valid"):
+                alpha_candidates, alpha_best = quantized_oracles(
+                    alpha_solution["coefficients"], desired, args.bits,
+                    args.response_ar_seeds, args.ar_sigma)
+            if alpha_best is not None:
+                alpha_exact = exact_model_replay(
+                    base_frames, frames, selected_blocks, table_entries,
+                    stream_entries, fps_num, fps_den, alpha_best, gaussian,
+                    args.bits, args.response_seeds,
+                    include_current=False)["oracle"]
+                alpha_total = mix_with_base(
+                    axes["base"], alpha_exact, desired, axes["source"])
+            response_grid.append({
+                "base_covariance_weight": alpha,
+                "covariance_system": alpha_solution,
+                "quantized_candidates": alpha_candidates,
+                "best_quantized_model": alpha_best,
+                "exact_synthesis": alpha_exact,
+                "predicted_total": alpha_total,
+                "synthesis_axis_mae_to_target": axis_error(
+                    alpha_exact, desired),
+                "total_axis_mae_to_source": axis_error(
+                    alpha_total, axes["source"]),
+            })
     errors = {
         "table_to_decoded_synthesis_axis_mae": axis_error(
             table_model, axes["decoded_synthesis"]),
@@ -494,6 +544,9 @@ def run(args):
             "ar_seeds": args.ar_seeds,
             "ar_sigma": args.ar_sigma,
             "exact_seeds": args.exact_seeds,
+            "response_alphas": args.response_alphas,
+            "response_seeds": args.response_seeds,
+            "response_ar_seeds": args.response_ar_seeds,
         },
         "static_blocks": selected_counts,
         "source_truth": axes["source"],
@@ -513,6 +566,7 @@ def run(args):
             os.path.abspath(args.aom_grain_source)
             if args.exact_seeds > 0 else None),
         "aom_grain_source_sha256": grain_source_sha256,
+        "response_grid": response_grid,
         "errors": errors,
     }
 
@@ -533,17 +587,34 @@ def main():
         "--exact-seeds", type=int, default=0,
         help="exact normative current/oracle replays per selected frame")
     parser.add_argument(
+        "--response-alphas", default="",
+        help="comma-separated base-covariance weights for exact response grid")
+    parser.add_argument(
+        "--response-seeds", type=int, default=4,
+        help="exact normative seeds per response-grid weight")
+    parser.add_argument(
+        "--response-ar-seeds", type=int, default=16,
+        help="raw AR seeds used to select a legal shift in the response grid")
+    parser.add_argument(
         "--aom-grain-source",
         default=os.environ.get(
             "AOM_GRAIN_SOURCE", "/tmp/aomref/src/av1/decoder/grain_synthesis.c"),
         help="pinned libaom grain_synthesis.c containing gaussian_sequence")
     parser.add_argument("--json-out", default="")
     args = parser.parse_args()
+    args.response_alphas = (
+        [float(value) for value in args.response_alphas.split(",") if value]
+        if args.response_alphas else [])
     for path in (args.source, args.encoded, args.table):
         if not os.path.isfile(path):
             parser.error(f"missing input: {path}")
     if args.exact_seeds < 0:
         parser.error("exact seeds must be non-negative")
+    if (args.response_seeds < 0 or args.response_ar_seeds < 1
+            or (args.response_alphas and args.response_seeds < 1)
+            or any(value < 0.0 or value > 1.0
+                   for value in args.response_alphas)):
+        parser.error("response settings require alphas in [0,1] and positive seeds")
     if args.exact_seeds > 0 and not os.path.isfile(args.aom_grain_source):
         parser.error(f"missing AV1 grain source: {args.aom_grain_source}")
     report = run(args)
