@@ -556,11 +556,9 @@ def run(args):
             axes["base"], exact_replay["oracle"], desired, axes["source"])
     response_grid = []
     if args.response_alphas:
-        if args.response_seeds <= 0:
-            raise ValueError("response alpha grid requires positive response seeds")
-        if not os.path.isfile(args.aom_grain_source):
+        if args.response_seeds > 0 and not os.path.isfile(args.aom_grain_source):
             raise ValueError(f"missing AV1 grain source: {args.aom_grain_source}")
-        if grain_source_sha256 is None:
+        if args.response_seeds > 0 and grain_source_sha256 is None:
             gaussian = av1_grain.load_gaussian_sequence(args.aom_grain_source)
             import hashlib
             with open(args.aom_grain_source, "rb") as handle:
@@ -577,7 +575,7 @@ def run(args):
                 alpha_candidates, alpha_best = quantized_oracles(
                     alpha_solution["coefficients"], desired, args.bits,
                     args.response_ar_seeds, args.ar_sigma)
-            if alpha_best is not None:
+            if alpha_best is not None and args.response_seeds > 0:
                 alpha_exact = exact_model_replay(
                     base_frames, frames, selected_blocks, table_entries,
                     stream_entries, fps_num, fps_den, alpha_best, gaussian,
@@ -656,7 +654,9 @@ def run(args):
         "predicted_exact_oracle_total": exact_oracle_total,
         "aom_grain_source": (
             os.path.abspath(args.aom_grain_source)
-            if args.exact_seeds > 0 else None),
+            if (args.exact_seeds > 0
+                or (args.response_alphas and args.response_seeds > 0))
+            else None),
         "aom_grain_source_sha256": grain_source_sha256,
         "response_grid": response_grid,
         "errors": errors,
@@ -686,7 +686,8 @@ def main():
         help="comma-separated base-covariance weights for exact response grid")
     parser.add_argument(
         "--response-seeds", type=int, default=4,
-        help="exact normative seeds per response-grid weight")
+        help=("exact normative seeds per response-grid weight; use zero to "
+              "emit raw quantized candidates without normative replay"))
     parser.add_argument(
         "--response-ar-seeds", type=int, default=16,
         help="raw AR seeds used to select a legal shift in the response grid")
@@ -706,11 +707,13 @@ def main():
     if args.exact_seeds < 0:
         parser.error("exact seeds must be non-negative")
     if (args.response_seeds < 0 or args.response_ar_seeds < 1
-            or (args.response_alphas and args.response_seeds < 1)
             or any(value < 0.0 or value > 1.0
                    for value in args.response_alphas)):
-        parser.error("response settings require alphas in [0,1] and positive seeds")
-    if args.exact_seeds > 0 and not os.path.isfile(args.aom_grain_source):
+        parser.error(
+            "response settings require alphas in [0,1] and non-negative seeds")
+    if ((args.exact_seeds > 0
+         or (args.response_alphas and args.response_seeds > 0))
+            and not os.path.isfile(args.aom_grain_source)):
         parser.error(f"missing AV1 grain source: {args.aom_grain_source}")
     report = run(args)
     encoded = json.dumps(report, indent=2, sort_keys=True) + "\n"
