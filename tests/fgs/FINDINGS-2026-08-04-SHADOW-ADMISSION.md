@@ -6,9 +6,12 @@
 
 ## Decision
 
-**Reject the exploratory correlation-plus-anisotropy conjunction as an
-admission policy.** It remains useful descriptive evidence, but it is not a
-semantic detector of film grain and must not be implemented in the analyzer.
+**Do not implement the exploratory correlation-plus-anisotropy conjunction
+yet.** The shadow run proves that it is not a detector of photochemical origin,
+but the post-run quality adjudication also proves that photochemical origin was
+the wrong label to demand. Migration and Elio contain measurable stochastic
+texture, and source fitting reconstructs it substantially better without a
+meaningful size or base-fidelity cost.
 
 The shadow rule was frozen before measurement:
 
@@ -17,16 +20,17 @@ cross-frame correlation <= 0.127
 AND source/model anisotropy mismatch <= 0.032
 ```
 
-It admitted all eight unseen photochemical-positive scenes, but also admitted
-three of four clean-CG negative scenes. Scene-level sensitivity was 8/8;
-specificity on the labelled negative set was only 1/4. A detector that calls
-clean rendered animation film grain is not conservative enough to control
-source fitting.
+It admitted all eight unseen photochemical scenes and three of four scenes
+pre-registered as clean-CG negatives. That initially looked like 8/8
+sensitivity and 1/4 specificity. The temporal playback measurement invalidated
+the negative labels: all four CG scenes move materially closer to source truth
+with source fitting, including the Migration scene the rule rejects.
 
-This result does **not** reject source fitting. It rejects using those two
-features to decide where source fitting is semantically appropriate. Once a
-film interval is genuinely admitted, source fitting remains much closer to its
-measured texture than residual fitting.
+The supported conclusion is narrower and more useful. These axes cannot tell
+*where* stochastic texture came from. They may still help decide whether the
+texture is temporally stochastic and AV1-representable, but this corpus has no
+quality-labelled harmful admission with which to measure specificity. A gate
+validated only against beneficial inputs is not ready to control output.
 
 ## Pre-registration and integrity
 
@@ -58,7 +62,12 @@ Artifacts:
 /media/merged-storage/media/test-encodes/sourcefit-shadow-admission-20260804/
 ```
 
-## Labelled controls
+## Pre-registered semantic labels
+
+The table below preserves the original labels and results because changing
+them after measurement would hide the experiment's mistake. “CG negative” was
+an origin label, not quality ground truth; the next section supersedes the
+`false admit` interpretation.
 
 | scene | class | cross-frame | anisotropy mismatch | shadow result | interval admit / reject / insufficient |
 | --- | --- | ---: | ---: | --- | ---: |
@@ -70,14 +79,45 @@ Artifacts:
 | Drunken Master 68% | film | 0.0393 | 0.0131 | admit | 12 / 0 / 0 |
 | Jerry Maguire 31% | film | 0.0688 | 0.0160 | admit | 13 / 1 / 1 |
 | Jerry Maguire 68% | film | 0.1030 | 0.0283 | admit | 8 / 5 / 0 |
-| Migration 31% | clean CG | **0.0306** | **0.0107** | **false admit** | 11 / 0 / 1 |
+| Migration 31% | clean CG | **0.0306** | **0.0107** | admit | 11 / 0 / 1 |
 | Migration 68% | clean CG | 0.1064 | 0.0719 | reject | 0 / 8 / 2 |
-| Elio 31% | clean CG | **0.0716** | **0.0087** | **false admit** | 12 / 0 / 0 |
-| Elio 68% | clean CG | **0.0976** | **0.0129** | **false admit** | 11 / 0 / 0 |
+| Elio 31% | clean CG | **0.0716** | **0.0087** | admit | 12 / 0 / 0 |
+| Elio 68% | clean CG | **0.0976** | **0.0129** | admit | 11 / 0 / 0 |
 
-The Migration scene flip is especially important. A title label cannot repair
-the rule: one clean-CG scene looks strongly admissible on both axes while
-another scene from the same source is rejected directionally.
+The Migration scene flip is still important. A title label cannot repair the
+rule, and the rejected scene turns out to benefit from source fitting too.
+
+## Post-run quality adjudication corrects the labels
+
+`temporal_grain_report.py` used source-selected production-flat/static blocks,
+decoded both arms with dav1d grain on and off, and measured base residue,
+synthesis and played total against adjacent-frame source truth. Ratios below
+are played amplitude divided by source truth; lag-1/lag-2 are amplitude-free
+texture shape.
+
+| scene | source truth lag-1/2 | residual total lag-1/2 | source-fit total lag-1/2 | played total residual -> source | bytes delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Migration 31% | 0.324 / 0.047 | 0.122 / -0.104 | **0.331 / 0.053** | 0.896 -> **1.035** | -0.100% |
+| Migration 68% | 0.749 / 0.563 | 0.680 / 0.520 | **0.753 / 0.587** | 0.877 -> **1.052** | +0.043% |
+| Elio 31% | 0.628 / 0.267 | 0.465 / 0.133 | **0.642 / 0.319** | 0.724 -> **0.955** | +0.053% |
+| Elio 68% | 0.458 / 0.152 | 0.202 / -0.043 | **0.477 / 0.184** | 0.853 -> **0.977** | +0.287% |
+
+Migration 68% had only one static block at the default frame 58, so its report
+uses frames `10,100,140,180,220,280`, chosen only from the already-recorded
+coverage counts. The other three use the standard six frames.
+
+The base operator remains equivalent. Residual-vs-source grain-disabled base
+PSNR is 60.38, 49.81, 55.62 and 59.40 dB respectively. Base VMAF against the
+grainy source moves by `-0.0099`, `+0.0012`, `-0.0492` and `-0.1799`; PSNR-Y
+moves by less than 0.006 dB on every scene. The Elio 68% VMAF movement remains
+a guard-rail observation, but it is not evidence of separator damage and VMAF
+still compares a denoised base against a textured source.
+
+These are quality-positive source-fit results. The correct target is not “was
+this photographed on film?” It is “does this interval contain stochastic
+texture that the separator removes, the AV1 model represents, and playback
+restores at the right amplitude?” On that target, all four CG scenes pass this
+measurement.
 
 ## Unlabelled boundaries
 
@@ -105,42 +145,65 @@ improved all 16 earlier titles, including every prior animation/general
 negative. This reproduces the architectural distinction:
 
 - model fidelity asks whether AV1 follows the selected source texture;
-- semantic admission asks whether that source texture is grain worth
-  synthesizing.
+- quality admission asks whether that source texture is stochastic,
+  representable and safe to synthesize.
 
 The first cannot answer the second, however accurate it becomes.
 
 ## The amplitude clue is not a fix
 
-On this new corpus, temporal sigma happened to separate the labelled groups:
-film positives were `1.598..3.418` codes, while the three false-admitted CG
-scenes were `0.808..1.376`. A fixed amplitude floor is nevertheless rejected:
+On this new corpus, temporal sigma happened to separate the origin labels:
+film scenes were `1.598..3.418` codes, while the three admitted CG scenes were
+`0.808..1.376`. A fixed amplitude floor is nevertheless rejected:
 
 - Interstellar is `1.285`;
 - The Shining is `1.266`;
 - Silo is `0.857`; and
 - luma occupancy and scene selection change a whole-frame sigma.
 
-A `sigma >= 1.5` rule would make the new table look perfect by discarding
-known grain-bearing real content. It would repeat the earlier unweighted-luma
-measurement error as a router.
+A `sigma >= 1.5` rule would make the origin labels look perfect by discarding
+known grain-bearing real content and three quality-positive CG results. It
+would repeat the earlier unweighted-luma measurement error as a router.
+
+## Stochastic-descriptor replay
+
+Commit `b8b8cebe` adds amplitude-normalized per-patch excess kurtosis,
+absolute-to-RMS ratio, absolute skew, quadrant-energy variation and aligned
+4/8/16-pixel boundary-gradient ratios. It reports them inside fixed luma bands
+as well as in aggregate.
+
+An aggregate conjunction can be fitted to the pre-registered origin labels:
+for example quadrant variation `>=0.15` plus grid-8 ratio `>=1` separates the
+eight film scenes from the three admitted CG scenes. It is rejected for three
+reasons:
+
+1. fixed-luma values overlap strongly (Migration overlaps Drunken Master and
+   Jerry Maguire);
+2. Elio's grid signature can be explained by its render/AVC pipeline rather
+   than by the absence of useful stochastic texture; and
+3. the playback result proves that rejecting those CG scenes would discard a
+   quality improvement.
+
+The descriptor experiment is useful instrumentation but does not produce a
+new admission threshold.
 
 ## Next measurement
 
-The next admission experiment must add genuinely new information rather than
-retune the failed axes:
+Admission now needs a quality-labelled negative rather than another content
+class:
 
-1. measure stochastic-distribution and codec-grid evidence inside fixed luma
-   bands (excess kurtosis, absolute-to-RMS ratio, within-band amplitude spread,
-   and 4/8/16-pixel boundary-gradient ratios);
-2. normalize amplitude-dependent descriptors so they cannot rediscover the
-   whole-frame sigma shortcut;
-3. freeze any candidate feature on Migration/Elio plus the eight new film
-   scenes; and
-4. validate it on new, still-sealed film and clean-CG titles before considering
-   analyzer code.
+1. construct or find an interval where source fitting demonstrably synthesizes
+   persistent picture/codec structure that temporal truth says is not noise;
+2. require the gate to reject that specimen while retaining the film and the
+   now-quality-positive CG controls;
+3. keep solver validity, coverage and residual fallback separate from any
+   semantic/stochastic evidence; and
+4. continue the independent coarse-grain representability oracle, because a
+   texture can be worth preserving yet exceed AV1's compact model.
 
-If no luma-controlled stochastic descriptor separates the controls, semantic
-admission cannot safely be inferred from the analyzer's flat-block statistics
-alone. The correct fallback would then be conservative external routing or
-residual fitting, not a more complicated fitted threshold.
+Until a known harmful admission exists, this conjunction cannot be called a
+validated safety gate. The conservative behavior remains residual fallback on
+solver/coverage failure and no production default change. The evidence also
+weakens the premise that an ontology classifier is required at all: a
+universal source model may be viable if its actual safety, amplitude and
+representability gates close on output quality.
