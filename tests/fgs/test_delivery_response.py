@@ -30,6 +30,59 @@ class DeliveryResponseTests(unittest.TestCase):
         self.assertEqual(len(first), 5)
         self.assertEqual(len(set(first.tolist())), 5)
 
+    def test_response_population_features_measure_boundary_exposure(self):
+        middle = np.full((32, 64), 128 << 2, dtype=np.uint16)
+        boundary = middle.copy()
+        boundary[:, 32:] = 16 << 2
+        features = delivery_response.response_population_features(
+            (boundary, boundary), [(0, 0), (0, 1)], bits=10,
+            limited_range=True)
+        self.assertEqual(features.shape, (2, 3))
+        self.assertGreater(features[1, 2], features[0, 2])
+        self.assertAlmostEqual(features[0, 1], 0.0)
+
+    def test_representatives_are_deterministic_bounded_and_weighted(self):
+        blocks = [(0, index) for index in range(12)]
+        features = np.column_stack((
+            np.arange(12, dtype=np.float64),
+            np.arange(12, dtype=np.float64) ** 2,
+            np.zeros(12, dtype=np.float64),
+        ))
+        first, first_weights = delivery_response.representative_sample_positions(
+            np.arange(12), features, blocks, frame=3, limit=4, salt=2)
+        second, second_weights = delivery_response.representative_sample_positions(
+            np.arange(12), features, blocks, frame=3, limit=4, salt=2)
+        np.testing.assert_array_equal(first, second)
+        np.testing.assert_array_equal(first_weights, second_weights)
+        self.assertLessEqual(len(first), 4)
+        self.assertEqual(int(first_weights.sum()), 12)
+        self.assertTrue(np.all(first_weights > 0))
+
+    def test_constant_representative_population_collapses_safely(self):
+        blocks = [(0, index) for index in range(6)]
+        selected, weights = delivery_response.representative_sample_positions(
+            np.arange(6), np.ones((6, 3)), blocks,
+            frame=0, limit=4, salt=0)
+        self.assertEqual(len(selected), 1)
+        self.assertEqual(weights.tolist(), [6])
+
+    def test_representative_weights_recover_population_mean(self):
+        blocks = [(0, index) for index in range(8)]
+        features = np.arange(8, dtype=np.float64)[:, None]
+        selected, weights = delivery_response.representative_sample_positions(
+            np.arange(8), features, blocks, frame=0, limit=3, salt=0)
+        # A response constant inside each assigned feature cell is integrated
+        # exactly by the selected medoid and its represented population.
+        normalized = (features[:, 0] - features[:, 0].mean()) / features[:, 0].std()
+        centers = normalized[selected]
+        assignment = np.argmin(
+            (normalized[:, None] - centers[None, :]) ** 2, axis=1)
+        response = np.asarray([2.0, 5.0, 11.0])[assignment]
+        selected_response = response[selected]
+        self.assertAlmostEqual(
+            float(np.average(selected_response, weights=weights)),
+            float(np.mean(response)))
+
     def test_sampled_bin_response_uses_only_matching_positions(self):
         variances = np.asarray([1.0, 3.0, 20.0, 24.0])
         bins = np.asarray([2, 2, 7, 7])

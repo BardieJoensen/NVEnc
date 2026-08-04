@@ -26,6 +26,7 @@ from delivery_normalize import (  # noqa: E402
 )
 from delivery_response import (  # noqa: E402
     analyzer_bin_from_native, deterministic_sample_positions,
+    representative_sample_positions, response_population_features,
 )
 from emission_audit import (  # noqa: E402
     entry_for_frame, oracle_seed, selected_luma_band_positions,
@@ -70,7 +71,8 @@ def scale_entries(entries, factor_points):
 
 
 def build_contexts(source, clean, frames, bits, luma_ranges,
-                   blocks_per_bin, selection_salt):
+                   blocks_per_bin, selection_salt, sampling,
+                   limited_range):
     contexts = []
     for frame in frames:
         current = np.asarray(source[frame], dtype=np.float64)
@@ -85,11 +87,24 @@ def build_contexts(source, clean, frames, bits, luma_ranges,
             analyzer_bin_from_native(source_grid[row, col].mean(), bits)
             for row, col in blocks
         ], dtype=np.int64)
+        features = (response_population_features(
+            (clean[frame], clean[frame + 1]), blocks, bits, limited_range)
+            if sampling == "response-representative" else None)
         selected_by_bin = {}
+        weights_by_bin = {}
         for bin_index in sorted(set(block_bins.tolist())):
             positions = np.flatnonzero(block_bins == bin_index)
-            selected_by_bin[bin_index] = deterministic_sample_positions(
-                positions, blocks, frame, blocks_per_bin, selection_salt)
+            if sampling == "response-representative":
+                selected, weights = representative_sample_positions(
+                    positions, features, blocks, frame,
+                    blocks_per_bin, selection_salt)
+            else:
+                selected = deterministic_sample_positions(
+                    positions, blocks, frame,
+                    blocks_per_bin, selection_salt)
+                weights = np.ones(len(selected), dtype=np.int64)
+            selected_by_bin[bin_index] = selected
+            weights_by_bin[bin_index] = weights
         selected_positions = sorted(set(
             int(position) for positions in selected_by_bin.values()
             for position in positions))
@@ -104,6 +119,7 @@ def build_contexts(source, clean, frames, bits, luma_ranges,
             "band_positions": selected_luma_band_positions(
                 current, blocks, bits, luma_ranges),
             "selected_by_bin": selected_by_bin,
+            "weights_by_bin": weights_by_bin,
             "selected_blocks": selected_blocks,
             "selected_lookup": selected_lookup,
             "clean": (clean[frame], clean[frame + 1]),
@@ -139,7 +155,9 @@ def evaluate_entries(entries, contexts, gaussian, bits, fps_num, fps_den,
         for bin_index, positions in context["selected_by_bin"].items():
             local = [context["selected_lookup"][int(position)]
                      for position in positions]
-            responses[bin_index] = float(np.mean(pair_variances[local]))
+            responses[bin_index] = float(np.average(
+                pair_variances[local],
+                weights=context["weights_by_bin"][bin_index]))
             sampled_blocks += len(local)
         for band, positions in enumerate(context["band_positions"]):
             for position in positions:
@@ -166,6 +184,10 @@ def main():
     parser.add_argument("--response-seeds", type=int, default=1,
                         help="deterministic synthesis seeds per response evaluation")
     parser.add_argument("--selection-salt", type=int, default=0)
+    parser.add_argument(
+        "--sampling", choices=("spatial", "response-representative"),
+        default="spatial",
+        help="bounded response population (default preserves historical spatial sample)")
     parser.add_argument("--perturbation", type=float, default=0.08,
                         help="finite-difference log-factor (default 0.08)")
     parser.add_argument("--regularization", type=float, default=0.01)
@@ -209,7 +231,8 @@ def main():
     centers = [128.0 * (lower + upper) for lower, upper in luma_ranges]
     contexts = build_contexts(
         source, clean, frames, bits, luma_ranges,
-        args.blocks_per_bin, args.selection_salt)
+        args.blocks_per_bin, args.selection_salt, args.sampling,
+        not args.full_range)
     expected_counts = np.asarray([band["blocks"] for band in bands])
     entries = filmgrn.load(args.input)
     iteration_rows = []
@@ -284,6 +307,7 @@ def main():
         "blocks_per_frame_bin": args.blocks_per_bin,
         "response_seeds": args.response_seeds,
         "selection_salt": args.selection_salt,
+        "sampling": args.sampling,
         "perturbation_log_factor": args.perturbation,
         "regularization": args.regularization,
         "max_log_step": args.max_log_step,

@@ -122,24 +122,129 @@ def correction_residual(target_ratio, exact_sigma, predicted_sigma):
     return target_ratio * (exact_sigma / predicted_sigma - 1.0)
 
 
+def _spatial_rank(position, blocks, frame, salt):
+    """Stable spatial tie-break independent of Python's randomized hash."""
+    row, col = blocks[position]
+    value = ((frame + 1) * 0x9E3779B1
+             ^ (row + 1) * 0x85EBCA6B
+             ^ (col + 1) * 0xC2B2AE35
+             ^ (salt + 1) * 0x27D4EB2F) & 0xffffffff
+    value ^= value >> 16
+    value = (value * 0x7FEB352D) & 0xffffffff
+    value ^= value >> 15
+    return value, position
+
+
 def deterministic_sample_positions(positions, blocks, frame, limit, salt):
     """Choose a repeatable spatially mixed subset without Python hash state."""
     positions = [int(position) for position in positions]
     if len(positions) <= limit:
         return np.asarray(positions, dtype=np.int64)
+    return np.asarray(sorted(
+        positions,
+        key=lambda position: _spatial_rank(
+            position, blocks, frame, salt))[:limit], dtype=np.int64)
 
-    def rank(position):
-        row, col = blocks[position]
-        value = ((frame + 1) * 0x9E3779B1
-                 ^ (row + 1) * 0x85EBCA6B
-                 ^ (col + 1) * 0xC2B2AE35
-                 ^ (salt + 1) * 0x27D4EB2F) & 0xffffffff
-        value ^= value >> 16
-        value = (value * 0x7FEB352D) & 0xffffffff
-        value ^= value >> 15
-        return value, position
 
-    return np.asarray(sorted(positions, key=rank)[:limit], dtype=np.int64)
+def response_population_features(clean_pair, blocks, bits, limited_range):
+    """Describe clean blocks without consulting grain truth or output error.
+
+    Mean and standard deviation retain the within-bin clean-pixel population.
+    Reciprocal legal-range headroom gives near-black/near-white pixels enough
+    leverage for a bounded representative set, which is the term omitted by
+    the old spatial-only sample when restricted-range clipping dominated.
+    """
+    if bits not in (8, 10, 12):
+        raise ValueError("response features require 8, 10, or 12 bits")
+    if len(clean_pair) != 2:
+        raise ValueError("response features require one adjacent frame pair")
+    if not blocks:
+        return np.empty((0, 3), dtype=np.float64)
+    depth_scale = float(1 << (bits - 8))
+    minimum = float((16 << (bits - 8)) if limited_range else 0)
+    maximum = float((235 << (bits - 8)) if limited_range
+                    else (1 << bits) - 1)
+    rows = np.asarray([row for row, _col in blocks], dtype=np.int64)
+    cols = np.asarray([col for _row, col in blocks], dtype=np.int64)
+    per_frame = []
+    for frame in clean_pair:
+        selected = np.asarray(blockwise(frame)[rows, cols], dtype=np.float64)
+        mean = selected.mean(axis=(-2, -1)) / depth_scale
+        standard_deviation = selected.std(axis=(-2, -1)) / depth_scale
+        headroom = np.minimum(selected - minimum, maximum - selected)
+        headroom = np.maximum(0.0, headroom) / depth_scale
+        boundary_exposure = (1.0 / (1.0 + headroom)).mean(axis=(-2, -1))
+        per_frame.append(np.column_stack(
+            (mean, standard_deviation, boundary_exposure)))
+    return 0.5 * (per_frame[0] + per_frame[1])
+
+
+def representative_sample_positions(
+        positions, features, blocks, frame, limit, salt):
+    """Choose deterministic feature medoids and their represented weights.
+
+    Farthest-first traversal spans the fixed clean-pixel feature population.
+    Assigning every eligible block to its nearest selected medoid turns the
+    bounded exact synthesis into weighted quadrature rather than an unweighted
+    sample of convenient spatial locations.
+    """
+    if limit <= 0:
+        raise ValueError("representative limit must be positive")
+    positions = np.asarray(positions, dtype=np.int64)
+    features = np.asarray(features, dtype=np.float64)
+    if features.ndim != 2 or features.shape[0] != len(blocks):
+        raise ValueError("feature rows must match the block population")
+    if np.any(positions < 0) or np.any(positions >= len(blocks)):
+        raise ValueError("representative position is outside the population")
+    local = features[positions]
+    if not np.all(np.isfinite(local)):
+        raise ValueError("representative features must be finite")
+    if len(positions) <= limit:
+        return positions.copy(), np.ones(len(positions), dtype=np.int64)
+
+    centre = local.mean(axis=0)
+    spread = local.std(axis=0)
+    active = spread > 1e-12
+    if not np.any(active):
+        selected = min(
+            positions.tolist(),
+            key=lambda position: _spatial_rank(
+                position, blocks, frame, salt))
+        return (np.asarray([selected], dtype=np.int64),
+                np.asarray([len(positions)], dtype=np.int64))
+    normalized = (local[:, active] - centre[active]) / spread[active]
+    ranks = [
+        _spatial_rank(int(position), blocks, frame, salt)
+        for position in positions
+    ]
+    centroid_distance = np.sum(normalized * normalized, axis=1)
+    first = min(
+        range(len(positions)),
+        key=lambda index: (centroid_distance[index], ranks[index]))
+    selected_local = [first]
+    nearest = np.sum(
+        (normalized - normalized[first]) ** 2, axis=1)
+    while len(selected_local) < limit:
+        furthest = max(
+            range(len(positions)),
+            key=lambda index: (nearest[index], tuple(-value for value in ranks[index])))
+        if nearest[furthest] <= 1e-24:
+            break
+        selected_local.append(furthest)
+        distance = np.sum(
+            (normalized - normalized[furthest]) ** 2, axis=1)
+        nearest = np.minimum(nearest, distance)
+
+    centers = normalized[selected_local]
+    distances = np.sum(
+        (normalized[:, None, :] - centers[None, :, :]) ** 2, axis=2)
+    assignment = np.argmin(distances, axis=1)
+    weights = np.bincount(
+        assignment, minlength=len(selected_local)).astype(np.int64)
+    selected = positions[np.asarray(selected_local, dtype=np.int64)]
+    if int(weights.sum()) != len(positions) or np.any(weights <= 0):
+        raise RuntimeError("representative assignment lost population weight")
+    return selected, weights
 
 
 def sampled_bin_responses(pair_variances, block_bins, blocks,
