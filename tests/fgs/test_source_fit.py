@@ -99,6 +99,29 @@ class TemporalLeakTests(unittest.TestCase):
             strength_selection_report.plane_geometry(3840, 2160, "u"),
             (1920, 1080, 16))
 
+    def test_temporal_luma_bands_respect_sample_depth(self):
+        frame_10 = np.zeros((32, 64), dtype=np.uint16)
+        frame_10[:, :32] = 255
+        frame_10[:, 32:] = 768
+        bands_10 = temporal_grain_report.masks_by_luma(
+            frame_10, [(0, 0), (0, 1)], 4, bits=10)
+        self.assertEqual(bands_10, [[(0, 0)], [], [], [(0, 1)]])
+
+        frame_16 = frame_10 * 64
+        bands_16 = temporal_grain_report.masks_by_luma(
+            frame_16, [(0, 0), (0, 1)], 4, bits=16)
+        self.assertEqual(bands_16, bands_10)
+
+    def test_temporal_decode_extracts_luma_before_gray_conversion(self):
+        completed = mock.Mock(stdout=b"\0" * 4, stderr=b"")
+        with mock.patch.object(
+                temporal_grain_report.subprocess, "run",
+                return_value=completed) as run:
+            temporal_grain_report.decode_selected(
+                "input.mkv", 2, 1, [0], plane="y", bits=10)
+        filters = run.call_args.args[0][run.call_args.args[0].index("-vf") + 1]
+        self.assertIn("extractplanes=y", filters)
+
     def test_temporal_report_records_zero_energy_without_texture(self):
         truth = {"sigma": 4.0, "h1": 0.2, "v1": 0.2,
                  "h2": 0.1, "v2": 0.1}

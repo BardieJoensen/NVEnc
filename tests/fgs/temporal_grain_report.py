@@ -54,28 +54,39 @@ def probe_size(path):
     return tuple(int(value) for value in result.stdout.strip().split(",")[:2])
 
 
-def decode_selected(path, width, height, indices, filmgrain=None, plane="y"):
-    """Decode exact display-order plane frames as 16-bit samples."""
+def decode_selected(path, width, height, indices, filmgrain=None, plane="y",
+                    bits=10):
+    """Decode exact display-order plane frames in the requested code domain."""
+    pixel_formats = {
+        8: ("gray", np.uint8),
+        10: ("gray10le", np.uint16),
+        12: ("gray12le", np.uint16),
+        16: ("gray16le", np.uint16),
+    }
+    if bits not in pixel_formats:
+        raise ValueError(f"unsupported decode depth {bits}")
+    pixel_format, dtype = pixel_formats[bits]
     terms = "+".join(f"eq(n\\,{index})" for index in indices)
     cmd = [FFMPEG, "-v", "error"]
     if filmgrain is not None:
         cmd += ["-c:v", "libdav1d", "-filmgrain", str(filmgrain)]
-    filters = f"select='{terms}'"
-    if plane != "y":
-        filters += f",extractplanes={plane}"
+    # Always extract the stored plane before selecting a gray output format.
+    # Direct yuv->gray conversion expands limited-range samples; that changes
+    # the flat-block population even when the requested nominal depth matches.
+    filters = f"select='{terms}',extractplanes={plane}"
     cmd += ["-i", path, "-map", "0:v:0", "-vf", filters,
-            "-fps_mode", "passthrough", "-pix_fmt", "gray16le",
+            "-fps_mode", "passthrough", "-pix_fmt", pixel_format,
             "-f", "rawvideo", "-"]
     result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
-    frame_bytes = width * height * 2
+    frame_bytes = width * height * np.dtype(dtype).itemsize
     expected = len(indices) * frame_bytes
     if len(result.stdout) != expected:
         raise RuntimeError(
             f"{path}: decoded {len(result.stdout) // frame_bytes} selected frames, "
             f"expected {len(indices)}")
     return {
-        index: np.frombuffer(result.stdout, np.uint16, count=width * height,
+        index: np.frombuffer(result.stdout, dtype, count=width * height,
                              offset=position * frame_bytes)
         .reshape(height, width).astype(np.float64)
         for position, index in enumerate(indices)
@@ -120,12 +131,12 @@ def lag1(row):
     return 0.5 * (row["h1"] + row["v1"])
 
 
-def masks_by_luma(frame, static, count):
+def masks_by_luma(frame, static, count, bits=16):
     """Split one source-derived mask into fixed normalised luma ranges."""
     grid = blockwise(frame)
     out = [[] for _ in range(count)]
     for by, bx in static:
-        normalised = float(grid[by, bx].mean()) / 65536.0
+        normalised = float(grid[by, bx].mean()) / float(1 << bits)
         index = min(count - 1, max(0, int(normalised * count)))
         out[index].append((by, bx))
     return out
@@ -145,6 +156,9 @@ def main():
                         help="LABEL=encoded.mkv; repeatable")
     parser.add_argument("--plane", choices=("y", "u", "v"), default="y",
                         help="grain plane to measure; masks always come from luma")
+    parser.add_argument(
+        "--bits", type=int, choices=(8, 10, 12, 16), default=10,
+        help="common decode/sample domain (default 10; match the analyzer input)")
     parser.add_argument("--frames", default="10,58,106,154,202,250",
                         help="comma-separated frame indices; n+1 is also decoded")
     parser.add_argument("--flat-fraction", type=float, default=0.10)
@@ -175,15 +189,17 @@ def main():
 
     frames = [int(value) for value in args.frames.split(",")]
     indices = sorted(set(frames + [frame + 1 for frame in frames]))
-    source_luma = decode_selected(args.source, width, height, indices)
+    source_luma = decode_selected(
+        args.source, width, height, indices, bits=args.bits)
     source = (source_luma if args.plane == "y" else decode_selected(
-        args.source, plane_width, plane_height, indices, plane=args.plane))
+        args.source, plane_width, plane_height, indices, plane=args.plane,
+        bits=args.bits))
     decoded = {
         label: {
             "on": decode_selected(path, plane_width, plane_height, indices,
-                                  filmgrain=1, plane=args.plane),
+                                  filmgrain=1, plane=args.plane, bits=args.bits),
             "off": decode_selected(path, plane_width, plane_height, indices,
-                                   filmgrain=0, plane=args.plane),
+                                   filmgrain=0, plane=args.plane, bits=args.bits),
         }
         for label, path in arms.items()
     }
@@ -194,10 +210,11 @@ def main():
     selected_counts = []
     for frame in frames:
         if args.flat_selector == "production":
-            candidates, _, _ = production_flat_blocks(source_luma[frame], 16)
+            candidates, _, _ = production_flat_blocks(
+                source_luma[frame], args.bits)
         else:
             candidates, _, _ = select_flat(
-                source_luma[frame], 16, args.flat_fraction)
+                source_luma[frame], args.bits, args.flat_fraction)
         static = static_flat_blocks(
             source_luma[frame], source_luma[frame + 1], candidates,
             lo=args.static_lo, hi=args.static_hi)
@@ -206,7 +223,7 @@ def main():
                 f"frame {frame}: only {len(static)} static flat blocks; choose a quieter frame")
         masks.append(static)
         luma_masks.append(masks_by_luma(
-            source_luma[frame], static, args.luma_bins))
+            source_luma[frame], static, args.luma_bins, args.bits))
         selected_counts.append(len(static))
         truth_rows.append(field_acf(
             (source[frame] - source[frame + 1]) / math.sqrt(2.0),
@@ -217,6 +234,7 @@ def main():
         "source_dimensions": [width, height],
         "dimensions": [plane_width, plane_height],
         "plane": args.plane,
+        "bits": args.bits,
         "frames": frames,
         "flat_fraction": args.flat_fraction,
         "flat_selector": args.flat_selector,
