@@ -176,9 +176,12 @@ def verdict(report, fgs_label, recompressed_label, plain_label):
     plain_amp = arm(report, plain_label)["total"]["amplitude_ratio"]["mean"]
 
     clause_a = to_c is not None and to_o is not None and to_c < to_o
-    # "no closer to O than C_plain is", on both texture and amplitude
-    clause_b = (fgs_total_err >= plain_total_err
-                and abs(fgs_amp - 1.0) >= abs(plain_amp - 1.0))
+    # "no closer to O than C_plain is".  Reported as two sub-clauses because
+    # texture and amplitude can disagree: adding energy can move played
+    # amplitude toward O while the added texture is artifact-shaped.
+    clause_b_texture = fgs_total_err >= plain_total_err
+    clause_b_amplitude = abs(fgs_amp - 1.0) >= abs(plain_amp - 1.0)
+    clause_b = clause_b_texture and clause_b_amplitude
     return {
         "o_grain_axis": o_axis,
         "c_noise_axis": c_axis,
@@ -191,6 +194,8 @@ def verdict(report, fgs_label, recompressed_label, plain_label):
         "fgs_total_axis_error_to_O": fgs_total_err,
         "plain_total_axis_error_to_O": plain_total_err,
         "clause_a_synth_tracks_codec": clause_a,
+        "clause_b_texture_not_closer": clause_b_texture,
+        "clause_b_amplitude_not_closer": clause_b_amplitude,
         "clause_b_not_closer_to_O": clause_b,
         "valid_negative": clause_a and clause_b,
     }
@@ -239,9 +244,17 @@ def main():
                 source, [("C", recompressed), ("C_plain", plain),
                          ("C_fgs", fgs)],
                 f"{d}/report-vs-O.json", depth)
-            current = grain_report(
-                recompressed, [("C_plain", plain), ("C_fgs", fgs)],
-                f"{d}/report-vs-C.json", depth)
+            # Secondary, and deliberately non-fatal: at harsh rates C can have
+            # no static flat blocks on a frozen frame.  The decisive test is
+            # the ground-truth pass above, so record the reason and continue
+            # rather than dropping the specimen.
+            try:
+                current = grain_report(
+                    recompressed, [("C_plain", plain), ("C_fgs", fgs)],
+                    f"{d}/report-vs-C.json", depth)
+            except RuntimeError as exc:
+                current = None
+                current_error = str(exc).strip().splitlines()[-1]
 
             row = {"title": title, "rate": rate, "reference": "O",
                    "frames": counts["C"],
@@ -259,7 +272,7 @@ def main():
                     arm(current, "C_fgs")["total_axis_error_to_truth"]["mean"],
                 "plain_total_axis_error":
                     arm(current, "C_plain")["total_axis_error_to_truth"]["mean"],
-            }
+            } if current else {"unavailable": current_error}
             rows.append(row)
             print(json.dumps(row), flush=True)
             with open(os.path.join(args.work, "specimens.json"), "w",
