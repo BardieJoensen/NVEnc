@@ -62,8 +62,19 @@ Densifying Taxi Driver 6000k from 6 to 16 frame pairs reverses it:
 | median | — | **−0.0183** |
 
 `A0` is *better* than plain on average. The apparent harm was entirely which
-six frames were sampled. Interstellar 6000k showed the same six-frame pattern
-and must be assumed to be the same artifact until densified.
+six frames were sampled.
+
+Interstellar 6000k was densified too rather than assumed, and reverses
+identically:
+
+| | 6 frame pairs | 16 frame pairs |
+| --- | ---: | ---: |
+| `A0` worse than plain | 2/6 | **2/16** |
+| mean `A0` − plain | +0.0084 | **-0.0114** |
+| median | — | **-0.0335** |
+
+Both cells that looked harmful on the sparse set reverse on the dense one, by
+the same margin and the same 2-of-16 frame count.
 
 **No harmful configuration has been demonstrated**, across 6 x264 cells and 4
 HEVC cells. That is now the third time in this project that a negative appeared
