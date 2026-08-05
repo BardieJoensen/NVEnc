@@ -365,6 +365,11 @@ planes above CV `0.34`, `+0.014` on the only other plane above `0.13`, and
    `1.170` and `1.136`. A constant offset would fix the cluster and leave the
    outliers, which is consistent with every fitted-constant experiment this
    project has already rejected.
+**Texture re-checked at sixteen pairs** (it was quoted from six): lag-1 error
+`0.017`--`0.030` and lag-2 `0.016`--`0.084`, against the six-pair figures of
+`0.020` and `0.039`. Same order, so the conclusion that chroma texture needs no
+work survives densification.
+
 4. **The two outliers are the two most temporally variable planes.** That is
    the residual decoupling, now measured on sixteen pairs with the scoring
    artifact removed: real, roughly `+0.10`--`0.15`, and confined to two planes.

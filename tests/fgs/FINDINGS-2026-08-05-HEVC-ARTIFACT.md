@@ -76,9 +76,16 @@ identically:
 Both cells that looked harmful on the sparse set reverse on the dense one, by
 the same margin and the same 2-of-16 frame count.
 
-**No harmful configuration has been demonstrated**, across 6 x264 cells and 4
-HEVC cells. That is now the third time in this project that a negative appeared
-and dissolved on inspection.
+The two 15000k cells were densified for symmetry and behave the same way:
+
+| cell | n | A0 worse than plain | mean A0 - plain |
+| --- | ---: | ---: | ---: |
+| Taxi Driver 15000k | 16 | **0/16** | -0.0217 |
+| Interstellar 15000k | 16 | **1/16** | -0.0529 |
+
+**No harmful configuration has been demonstrated**, across 6 x264 cells and all
+4 HEVC cells now measured at sixteen pairs. That is the third time in this
+project that a negative appeared and dissolved on inspection.
 
 ## Methodological limit worth recording
 
