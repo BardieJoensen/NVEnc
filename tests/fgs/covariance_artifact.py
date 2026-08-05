@@ -127,6 +127,10 @@ def main():
 
             recompressed = make_c(source, f"{d}/C.mp4", kbps, f"{d}/C.log")
             arms = [("C_x264", recompressed)]
+            plain = encode(CANDIDATE, recompressed, f"{d}/A_plain.mkv", 29, 8,
+                           log=f"{d}/A_plain.log")
+            decode_check(plain, log=f"{d}/A_plain-dav1d.log")
+            arms.append(("A_plain", plain))
             for label, env in ARMS.items():
                 out = encode(CANDIDATE, recompressed, f"{d}/{label}.mkv", 29, 8,
                              fgs=FGS_OPTS, env=env, log=f"{d}/{label}.log")
@@ -137,7 +141,7 @@ def main():
             if len(set(counts.values())) != 1:
                 raise RuntimeError(f"{tag}: frame counts differ {counts}")
 
-            report = grain_report(source, arms[1:], f"{d}/report-vs-O.json", 8,
+            report = grain_report(source, arms[1:], f"{d}/report-plain.json", 8,
                                   frames=FRAMES)
             o_axis = truth_axis(report)
             c_axis = artifact_axis(source, recompressed)
@@ -145,6 +149,12 @@ def main():
             row = {"title": title, "rate_kbps": kbps, "reference": "O",
                    "o_grain_axis": o_axis, "c_artifact_axis": c_axis,
                    "c_bytes": os.path.getsize(recompressed), "arms": {}}
+            row["plain"] = {
+                "total_amp": arm(report, "A_plain")["total"]["amplitude_ratio"]["mean"],
+                "total_axis_error_to_O":
+                    arm(report, "A_plain")["total_axis_error_to_truth"]["mean"],
+                "bytes": os.path.getsize(f"{d}/A_plain.mkv"),
+            }
             for label in ARMS:
                 synth = arm(report, label)["synth"]["axis"]
                 row["arms"][label] = {
@@ -159,7 +169,7 @@ def main():
                 }
             rows.append(row)
             print(json.dumps(row), flush=True)
-            with open(os.path.join(args.work, "covariance.json"), "w",
+            with open(os.path.join(args.work, "covariance-plain.json"), "w",
                       encoding="utf-8") as handle:
                 json.dump(rows, handle, indent=1)
 

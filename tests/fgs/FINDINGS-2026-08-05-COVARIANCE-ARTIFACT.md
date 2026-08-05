@@ -80,27 +80,80 @@ The covariance closure was built and justified as a *texture-accuracy* result
 This is a second, independent reason to keep it, and one nobody was looking
 for: it is also what keeps the analyser off codec structure.
 
-## The negative the project has been missing
+## The plain control: A0 is still not a harmful admission
 
-`FINDINGS-2026-08-04-SHADOW-ADMISSION.md` closed by asking for a
-quality-labelled negative — "an interval where source fitting demonstrably
-synthesizes persistent picture/codec structure that temporal truth says is not
-noise". **A0 on x264 input is that specimen**, with ground truth, on six cells
-across three titles and two rates.
+An earlier draft of this document claimed A0 was the quality-labelled negative
+`FINDINGS-2026-08-04-SHADOW-ADMISSION.md` asked for. **The plain-encode control
+withdraws that claim.**
 
-It is not the shipping configuration, which weakens it as an admission gate
-test: a gate is meant to reject harmful *inputs*, and this is a harmful
-*setting*. But it is the first configuration in this project demonstrated to
-fit non-grain structure against a known original, and it can serve as the
-labelled negative any future admission rule must reject.
+A plain arm — the same recompressed `C` encoded with no film grain at all —
+was added and scored on the same masks:
 
-## Limitation, stated plainly
+| cell | plain | A0 | A1 | A2 |
+| --- | ---: | ---: | ---: | ---: |
+| Train to Busan 5000k | 0.5195 | 0.2539 | 0.1536 | **0.1502** |
+| Train to Busan 2000k | 0.5833 | 0.3543 | 0.2653 | **0.2490** |
+| Tuner 5000k | 0.4524 | 0.2400 | 0.1817 | **0.1735** |
+| Tuner 2000k | 0.4697 | 0.4097 | 0.3383 | **0.3306** |
+| Quiz Show 5000k | 0.3354 | 0.2667 | 0.1392 | **0.1340** |
+| Quiz Show 2000k | 0.3962 | 0.3091 | 0.1282 | **0.1171** |
 
-**There is no plain-encode arm in this experiment.** The comparison is between
-closure strengths, so it establishes that A0 fits the artifact and that A2 is
-closer to the original — not that A0 is worse than not running FGS at all.
-Calling A0 harmful in the absolute sense requires that control, and it is the
-obvious next measurement.
+**A0 beats plain on 6/6.** The ordering is plain < A0 < A1 < A2 everywhere.
+Fitting the artifact is not the same as doing harm: plain destroys the texture
+outright — played amplitude `0.194`--`0.554` against the original's `1.000` —
+so even artifact-shaped synthesis lands closer to truth than no synthesis.
+
+So the project **still has no harmful admission**. What this experiment
+establishes is narrower and still worth having: covariance closure controls
+*which* texture gets synthesized, and every configuration tested improves on
+not running FGS at all.
+
+## The admission axes do separate recompression — on matched pairs
+
+`FINDINGS-2026-08-04-SHADOW-ADMISSION.md` could not measure the frozen
+conjunction's specificity, because it had no input on which source fitting was
+known to behave differently. The matched `O`/`C` pairs here are a better test
+than anything in that campaign: same film, same frames, same resolution,
+differing only in compression, so nothing but the artifact can drive the axes.
+
+Frozen rule: `cross-frame correlation <= 0.127 AND anisotropy mismatch <= 0.032`.
+Thresholds were fixed on a different corpus against origin labels and were not
+tuned here.
+
+| title | input | cross-frame | anisotropy | temporal sigma | admits |
+| --- | --- | ---: | ---: | ---: | --- |
+| Train to Busan | original | 0.0790 | 0.0139 | 1.316 | **yes** |
+| Train to Busan | recompressed | 0.2114 | 0.0402 | 0.619 | no |
+| Tuner | original | 0.0656 | 0.0181 | 0.740 | **yes** |
+| Tuner | recompressed | 0.2158 | 0.0871 | 0.779 | no |
+| Quiz Show | original | 0.0837 | 0.0147 | 2.227 | **yes** |
+| Quiz Show | recompressed | 0.1799 | 0.0507 | 1.892 | no |
+
+**Originals admitted 3/3, recompressions admitted 0/3**, and both thresholds
+fall inside the gap: cross-frame separates `0.084` from `0.180` with the bound
+at `0.127`; anisotropy separates `0.018` from `0.040` with the bound at
+`0.032`. Temporal sigma does not separate at all (`0.74`--`2.23` against
+`0.62`--`1.89`), which is consistent with every earlier finding that amplitude
+is the wrong discriminator.
+
+**But detection is not harm.** The plain control above shows FGS on `C` beats
+not running it, in every configuration including the unprotected one. So on
+this evidence the conjunction is a working *recompression detector* whose
+target is not actually harmful, and rejecting `C` would forgo a quality
+improvement rather than prevent damage. That is the same shape as shadow
+admission's Migration/Elio correction, now with matched pairs behind it.
+
+The useful conclusion is that the axes measure something real and
+compression-specific. What they have still never been shown to do is identify
+an input where synthesis makes the result worse.
+
+## Limitations, stated plainly
+
+**The metric rewards energy restoration.** Distance to the original's grain
+statistics penalises plain's flatness heavily. A viewer might prefer clean and
+flat over artifact-textured, and nothing here measures that. "Closer to `O`'s
+temporal texture" is not "looks better", and the plain column above should not
+be read as a perceptual ranking.
 
 Also: three titles, two rates, one preset, luma only, and `C` is x264 rather
 than a real distributor encode. The retained Tuner AMZN WEB-DL was used to
