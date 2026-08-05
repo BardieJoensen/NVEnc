@@ -59,6 +59,52 @@ source-minus-base estimate**. Where chroma base retention is small the spatial
 estimate's error barely matters; where it is large, the strength is
 over-signalled in proportion.
 
+## Extended to all twelve cells: it is weak-grain planes, not V
+
+The three remaining films were measured on both planes. Over-signal is
+`synth / sqrt(1 - base_amp^2)`, i.e. how much stronger the delivered synthesis
+is than independent-layer variance closure requires.
+
+| cell | source sigma | base amp | needed | synth | over | played total |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Deer U | 7.23 | 0.154 | 0.988 | 0.983 | 0.99x | 0.995 |
+| Scarface U | 6.80 | 0.142 | 0.990 | 0.943 | 0.95x | 0.955 |
+| Casino U | 5.77 | 0.226 | 0.974 | 0.958 | 0.98x | 0.984 |
+| Taxi U | 4.38 | 0.116 | 0.993 | 0.956 | 0.96x | 0.962 |
+| Interstellar U | 4.16 | 0.164 | 0.986 | 0.983 | 1.00x | 0.998 |
+| Shining U | 2.87 | 0.191 | 0.982 | 0.913 | 0.93x | 0.936 |
+| Deer V | 2.46 | 0.208 | 0.978 | 0.999 | 1.02x | 1.022 |
+| Taxi V | 2.20 | 0.113 | 0.994 | 1.073 | 1.08x | 1.079 |
+| Casino V | 2.11 | 0.256 | 0.967 | 0.951 | 0.98x | 0.990 |
+| **Interstellar V** | **1.03** | 0.468 | 0.884 | 0.958 | **1.08x** | 1.092 |
+| **Shining V** | **0.67** | 0.469 | 0.883 | 1.158 | **1.31x** | 1.267 |
+| **Scarface V** | **0.41** | 0.412 | 0.911 | 0.928 | **1.02x** | 1.018 |
+
+Correlations across the twelve: over-signal against source sigma `-0.543`,
+against base retention `+0.649`, and source sigma against base retention
+`-0.699`.
+
+Split at sigma `1.5`:
+
+| group | n | over-signal range | mean |
+| --- | ---: | --- | ---: |
+| weak-grain planes | 3 | 1.02--1.31 | **1.138** |
+| everything else | 9 | 0.93--1.08 | **0.989** |
+
+The nine ordinary cells average `0.989`, essentially closed. The three weak
+planes are the whole error, and all three are V — but **V is not the cause**.
+The distinguishing property is plane grain strength: the three weak planes are
+also the three highest base retentions (`0.412`--`0.469` against `0.113`--`0.256`),
+which is what the `-0.699` correlation says. Where real grain is faint, the
+retained base is proportionally large, and the spatial source-minus-base
+estimate has the least grain and the most picture structure to confuse.
+
+That reframes the fix. A per-plane correction would be fitting the wrong
+variable, which is consistent with `FINDINGS-2026-08-04-AMPLITUDE-CLOSURE.md`
+rejecting exactly that. The conditioning variable is measured plane grain
+strength, and the correction is to stop using a spatial estimate where it is
+least reliable.
+
 ## Recommendation
 
 1. **Do not build a chroma covariance oracle.** It would require porting
@@ -71,9 +117,12 @@ over-signalled in proportion.
    `FINDINGS-2026-08-04-AMPLITUDE-CLOSURE.md` rejected fitted per-plane QVBR
    *deadzone constants*, whereas this would use the directly measured temporal
    base residue with no fitted transfer.
-3. **Test it on Shining V first.** It is the only cell where the two estimates
-   can diverge enough to matter, so it is both the strongest test and the
-   cheapest.
+3. **Gate it on measured plane grain strength, not on plane identity.** All
+   three failing cells are V, but nine cells show V behaving normally; the
+   separating property is weak grain with correspondingly high base retention.
+   Shining V (`sigma 0.67`, over `1.31x`) is the strongest single test and
+   Scarface V (`sigma 0.41`, over `1.02x`) is the control that a plane-based
+   rule would get wrong.
 
 ## Caveat
 
