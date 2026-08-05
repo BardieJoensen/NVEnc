@@ -105,6 +105,47 @@ rejecting exactly that. The conditioning variable is measured plane grain
 strength, and the correction is to stop using a spatial estimate where it is
 least reliable.
 
+## The proposed mechanism is wrong
+
+The section above explained the weak-grain over-signal by saying the spatial
+source-minus-base estimate is dominated by picture structure where grain is
+faint. That was asserted, not measured. Measuring it
+(`chroma_estimate_probe.py`, same luma-derived mask, both estimates per plane):
+
+| cell | source sigma | spatial est | temporal est | spatial/temporal | measured over |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Deer U | 7.13 | 7.335 | 7.075 | 1.037 | 0.99x |
+| Scarface U | 6.72 | 7.119 | 6.677 | 1.066 | 0.95x |
+| Casino U | 5.64 | 6.151 | 5.553 | 1.108 | 0.98x |
+| Taxi U | 4.27 | 5.119 | 4.249 | **1.205** | 0.96x |
+| Interstellar U | 4.08 | 4.246 | 4.039 | 1.051 | 1.00x |
+| Shining U | 2.78 | 2.845 | 2.747 | 1.036 | 0.93x |
+| Deer V | 2.38 | 2.526 | 2.356 | 1.072 | 1.02x |
+| Taxi V | 2.14 | 2.685 | 2.131 | **1.260** | 1.08x |
+| Casino V | 2.02 | 2.333 | 1.993 | 1.171 | 0.98x |
+| Interstellar V | 0.92 | 0.914 | 0.842 | 1.085 | 1.08x |
+| **Shining V** | 0.60 | 0.589 | 0.545 | **1.080** | **1.31x** |
+| Scarface V | 0.39 | 0.444 | 0.367 | 1.210 | 1.02x |
+
+**Correlation between spatial inflation and measured over-signal: `+0.043`.**
+None.
+
+The spatial estimate *is* inflated — `1.04x`--`1.26x`, mean `1.115` — but the
+inflation does not grow with weak grain and does not predict which planes
+over-signal. Shining V, the worst over-signal at `1.31x`, has one of the
+*smaller* inflations at `1.080`, while Taxi V and Scarface V inflate more
+(`1.260`, `1.210`) and deliver `1.08x` and `1.02x`.
+
+So the empirical finding stands — over-signal tracks weak grain and high base
+retention — but **the stated cause does not**. Switching chroma strength to a
+temporal base estimate would remove a real `~11%` systematic inflation, which
+is worth having, but it would not fix Shining V, and the recommendation below
+must not be read as a proposed fix for the weak-grain cells.
+
+What is still unexplained: why the three weak-grain planes over-signal at all,
+given their spatial estimates are not unusually inflated. That is the open
+question, and no mechanism for it has survived measurement yet.
+
 ## Recommendation
 
 1. **Do not build a chroma covariance oracle.** It would require porting
@@ -112,12 +153,14 @@ least reliable.
    term, `chroma_scaling_from_luma`, separate scaling curves, 16x16 blocks and
    the shared `ar_coeff_shift` constraint — to fix a defect chroma does not
    have.
-2. **The chroma target is variance closure on a temporal base estimate**, the
-   same change luma received. Note this is *not* the rejected experiment:
+2. **A temporal base estimate is worth having but is not the weak-grain fix.**
+   It would remove a measured `~11%` mean spatial inflation across all twelve
+   planes. It is *not* the rejected experiment —
    `FINDINGS-2026-08-04-AMPLITUDE-CLOSURE.md` rejected fitted per-plane QVBR
-   *deadzone constants*, whereas this would use the directly measured temporal
-   base residue with no fitted transfer.
-3. **Gate it on measured plane grain strength, not on plane identity.** All
+   *deadzone constants*, not a measured residue — but the probe above shows it
+   would not correct Shining V. Do not justify it as the chroma amplitude fix.
+3. **The weak-grain over-signal has no surviving explanation.** Gate any future
+   work on measured plane grain strength rather than plane identity. All
    three failing cells are V, but nine cells show V behaving normally; the
    separating property is weak grain with correspondingly high base retention.
    Shining V (`sigma 0.67`, over `1.31x`) is the strongest single test and
