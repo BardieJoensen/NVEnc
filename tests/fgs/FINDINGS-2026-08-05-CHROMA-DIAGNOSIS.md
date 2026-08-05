@@ -373,3 +373,51 @@ work survives densification.
 4. **The two outliers are the two most temporally variable planes.** That is
    the residual decoupling, now measured on sixteen pairs with the scoring
    artifact removed: real, roughly `+0.10`--`0.15`, and confined to two planes.
+
+## Per-luma bands: the two outliers fail differently
+
+Decomposed at sixteen pairs into the analyser's fixed source-luma bands. The
+whole-plane figure hides two distinct shapes.
+
+| plane | band | blocks | truth sigma | base | played total |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Casino V | 0.000--0.125 | 5850 | 1.82 | 0.230 | 1.164 |
+| | 0.125--0.250 | 8781 | 2.07 | 0.219 | 1.052 |
+| | 0.250--0.375 | 3023 | 1.68 | 0.303 | 1.088 |
+| | 0.375--0.500 | 1085 | 1.30 | 0.233 | 1.118 |
+| **Interstellar V** | **0.000--0.125** | 2364 | **0.48** | **0.573** | **2.763** |
+| | 0.125--0.250 | 2088 | 1.14 | 0.467 | 1.107 |
+| | 0.250--0.375 | 1023 | 1.18 | 0.456 | 1.146 |
+| | 0.375--0.500 | 91 | 1.12 | 0.388 | 1.076 |
+| **Shining V** | 0.000--0.125 | 2262 | 0.76 | 0.507 | 1.120 |
+| | 0.125--0.250 | 9241 | 0.74 | 0.430 | 1.170 |
+| | **0.250--0.375** | 4819 | 0.81 | 0.512 | **1.472** |
+| | 0.375--0.500 | 11839 | 0.67 | 0.491 | 1.259 |
+| | 0.500--0.625 | 7342 | 0.48 | 0.448 | 1.270 |
+
+**Interstellar V is one catastrophic band.** Its darkest band over-delivers
+`2.763x` on 2364 blocks; its other three sit at `1.076`--`1.146`, which is
+Casino-like. The whole-plane `1.222` is almost entirely that one band.
+
+**The Shining V is broad.** Every band over-delivers, `1.120`--`1.472`, with no
+single dominant contributor. Its whole-plane `1.265` is the honest average of a
+uniformly wrong plane.
+
+These need different fixes, and a whole-plane correction would suit neither.
+
+### The band-level conditioning is the same as the plane-level one
+
+Across the thirteen bands:
+
+| relationship | corr |
+| --- | ---: |
+| band truth sigma vs over-delivery | `-0.480` |
+| band base retention vs over-delivery | `+0.526` |
+| band truth sigma vs base retention | `-0.869` |
+
+The five worst bands all pair low truth sigma (`0.48`--`0.81`) with high base
+retention (`0.430`--`0.573`); the four best all pair higher truth sigma
+(`1.12`--`2.07`) with lower retention (`0.219`--`0.467`). So the plane-level
+pattern reproduces inside the planes, and the `-0.869` collinearity noted at
+plane level is even tighter here — these two cannot be separated on this
+corpus at either scale.
