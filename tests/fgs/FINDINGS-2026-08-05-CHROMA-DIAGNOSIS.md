@@ -238,3 +238,89 @@ Three titles, six frame pairs, luma-masked chroma blocks. Per
 texture axes quoted here but too sparse for arm-versus-arm played-error means;
 no such comparison is made above. The amplitude ratios are pooled block
 statistics, not per-frame means.
+
+---
+
+# Follow-up, same day: part of the over-signal is the score, not the delivery
+
+## Densification confirms the CVs
+
+The temporal CVs above come from six frame pairs. Re-measured at sixteen on the
+three V planes they are stable, so the earlier analysis was not a sampling
+artifact:
+
+| plane | truth CV 6 | truth CV 16 | synth CV 6 | synth CV 16 |
+| --- | ---: | ---: | ---: | ---: |
+| The Shining V | 0.343 | 0.342 | 0.040 | 0.062 |
+| Interstellar V | 0.419 | 0.404 | 0.193 | 0.237 |
+| Scarface V | 0.085 | 0.136 | 0.096 | 0.155 |
+
+## Dynamic-range compression is the strongest predictor
+
+Compression is `truth CV / synth CV` — how much the delivered amplitude
+flattens the source's frame-to-frame variation.
+
+| cell | compression | over |
+| --- | ---: | ---: |
+| The Shining V | 8.64 | 1.31x |
+| Interstellar V | 2.17 | 1.08x |
+| Casino V | 2.09 | 0.98x |
+| Interstellar U | 1.81 | 1.00x |
+| Shining U | 1.67 | 0.93x |
+| Casino U | 1.46 | 0.98x |
+| Taxi V | 1.15 | 1.08x |
+| Taxi U | 0.95 | 0.96x |
+| Scarface V | 0.89 | 1.02x |
+| Scarface U | 0.54 | 0.95x |
+| Deer U | 0.44 | 0.99x |
+| Deer V | 0.36 | 1.02x |
+
+`corr = +0.872`, `t = 5.64`, `n = 12` — against `+0.699` for truth CV alone,
+`+0.649` base retention, `+0.043` spatial inflation, `-0.417` quantisation.
+
+## But roughly 40% of the worst cell is Jensen inflation
+
+`temporal_grain_report`'s amplitude figure is a **mean of per-frame ratios**.
+When delivered amplitude is near-constant and the source varies,
+`mean(c / x) > c / mean(x)` by Jensen's inequality, and the gap grows with the
+variance of `x`. So compression and score inflation are the same phenomenon
+seen twice, and part of the correlation above is definitional.
+
+| cell | mean-of-ratios | ratio-of-means | gap |
+| --- | ---: | ---: | ---: |
+| **The Shining V** | 1.158 | **1.062** | **+0.096** |
+| **Interstellar V** | 0.958 | **0.861** | **+0.097** |
+| Casino V | 0.951 | 0.941 | +0.010 |
+| Interstellar U | 0.983 | 0.971 | +0.012 |
+| all eight others | — | — | `<= 0.003` |
+
+Confirmed at sixteen pairs: The Shining V reads `1.155` as a mean of ratios and
+`1.042` as a ratio of means.
+
+**The Shining V's over-signal is therefore about `1.18x`, not `1.31x`** — still
+the worst cell, but the headline figure overstated it by roughly a third.
+
+## Luma is unaffected
+
+| | luma | chroma |
+| --- | ---: | ---: |
+| truth CV range | 0.010--0.151 | 0.015--0.419 |
+| mean Jensen gap | **+0.0003** | +0.019 |
+| max Jensen gap | **+0.0028** | +0.097 |
+
+Every luma played-total figure in this project is safe: the inflation needs a
+temporally variable source, and luma's amplitude is stable frame to frame. It
+bites only on the two chroma V planes with CV `0.34`--`0.42`, which are exactly
+the cells that looked worst.
+
+## Consequences
+
+1. **Quote chroma amplitude as a ratio of means, not a mean of ratios**, or the
+   most variable planes are penalised for their variability. This is a scoring
+   change, not an encoder change.
+2. **The residual is still real.** At `1.18x` The Shining V remains the worst
+   cell and the compression ordering survives, so temporal decoupling is not
+   dismissed — only its magnitude was overstated.
+3. **The earlier corpus figure of `1.087` mean V played total is inflated** by
+   the same effect on its two most variable members and should be recomputed
+   before being used as a target.
