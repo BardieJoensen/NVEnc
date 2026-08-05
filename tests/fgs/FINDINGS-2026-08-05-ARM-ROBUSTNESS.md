@@ -46,6 +46,28 @@ On an independent sample the conservatism costs more than it saves there.
 `0.01026`. Same media, same binaries, different frames. Only the within-set
 ordering means anything.
 
+## The Deer Hunter reversal is stable, not sampling
+
+Three independent frame sets on that title:
+
+| frames | static | response |
+| --- | ---: | ---: |
+| `6,23,...,261` (16) | 0.01832 | 0.04084 |
+| `12,29,...` (16, offset) | 0.01775 | 0.04210 |
+| `3,12,...,264` (30) | **0.01706** | **0.03965** |
+
+At thirty pairs the response arm is better on only **4/30 frames**, with static
+sd `0.00997` against response sd `0.01058` — the gap is far outside the spread.
+This is a property of the arm on this title, not a sampling accident.
+
+The two arms' emitted models are nonetheless almost the same. Their luma AR
+coefficients differ by one or two quantisation steps per tap
+(`[-4,10,-17,24,6,-4]` static against `[-4,10,-16,25,7,-4]` response on entry
+3), so the response selector is not choosing a dramatically different model
+here — it is choosing a marginally different one that delivers 2.3x worse
+played texture. That is what a guard operating near its threshold and landing
+on the wrong side looks like.
+
 ## Consequence
 
 Quote the guarded response as a **corpus-level ~35% improvement with one known
