@@ -142,9 +142,70 @@ temporal base estimate would remove a real `~11%` systematic inflation, which
 is worth having, but it would not fix Shining V, and the recommendation below
 must not be read as a proposed fix for the weak-grain cells.
 
-What is still unexplained: why the three weak-grain planes over-signal at all,
-given their spatial estimates are not unusually inflated. That is the open
-question, and no mechanism for it has survived measurement yet.
+What is still unexplained by *that* mechanism: why the weak-grain planes
+over-signal at all. The section below finds one that does survive.
+
+## A mechanism that survives: chroma strength does not track time
+
+Per-frame amplitude on the worst cell, The Shining V. `absolute synth sigma`
+is `synth amplitude ratio x that frame's own truth sigma`:
+
+| frame | truth sigma | synth ratio | absolute synth sigma |
+| ---: | ---: | ---: | ---: |
+| 58 | 0.427 | 1.617x | 0.690 |
+| 106 | 0.538 | 1.385x | 0.745 |
+| 10 | 0.560 | 1.294x | 0.725 |
+| 154 | 0.586 | 1.136x | 0.666 |
+| 202 | 0.853 | 0.821x | 0.700 |
+| 250 | 1.034 | 0.696x | 0.720 |
+
+The synthesised amplitude is almost **constant** — `0.666`--`0.745`, CV `4%` —
+while the plane's real grain varies more than twofold, CV `33%`. Over- and
+under-delivery are not an estimation-level error; they are the residue of a
+model that does not follow the source in time. The ratio column is a perfect
+monotone inversion of the truth column.
+
+Across all twelve planes, temporal coefficient of variation of the source
+against measured over-signal:
+
+| cell | truth CV | synth CV | over |
+| --- | ---: | ---: | ---: |
+| Interstellar V | 0.419 | 0.193 | 1.08x |
+| **Shining V** | **0.343** | **0.040** | **1.31x** |
+| Interstellar U | 0.152 | 0.084 | 1.00x |
+| Casino V | 0.121 | 0.058 | 0.98x |
+| Scarface V | 0.085 | 0.096 | 1.02x |
+| Casino U | 0.068 | 0.046 | 0.98x |
+| Shining U | 0.048 | 0.029 | 0.93x |
+| Taxi V | 0.043 | 0.038 | 1.08x |
+| Deer V | 0.039 | 0.107 | 1.02x |
+| Deer U | 0.021 | 0.048 | 0.99x |
+| Taxi U | 0.017 | 0.018 | 0.96x |
+| Scarface U | 0.015 | 0.028 | 0.95x |
+
+**`corr = +0.699`** (`t = 3.09`, `df = 10`, `p < 0.05`) — the strongest of any
+predictor tested, against `+0.043` for spatial inflation, `-0.417` for
+quantisation granularity and `-0.551` for mean grain strength.
+
+**It also fixes the case the weak-grain story got wrong.** Scarface V is the
+faintest plane in the corpus at sigma `0.41`, so a grain-strength rule predicts
+it should be among the worst; it is `1.02x`. Its grain is temporally *stable*
+(CV `0.085`), and the temporal account predicts exactly that. The Shining V at
+sigma `0.67` is not the faintest but is by far the most variable (CV `0.343`),
+and is the worst at `1.31x`.
+
+### Honest limits on this
+
+- **Collinearity.** truth CV correlates `+0.828` with base retention, which
+  itself correlates `+0.648` with over-signal. With `n = 12` these cannot be
+  fully separated, and base retention may be partly a proxy for temporal
+  variability rather than an independent cause.
+- **The constancy is not universal.** Synth CV is below truth CV on 7 of 12
+  planes, median ratio `0.78`. On very stable planes (Deer U/V, CV `0.02`--`0.04`)
+  synth actually varies *more* than the source. The defensible statement is that
+  synthesised and true amplitude are temporally **decoupled**, not that
+  synthesis is fixed.
+- Six frame pairs per plane, so each CV is estimated from six samples.
 
 ## Recommendation
 
@@ -159,8 +220,11 @@ question, and no mechanism for it has survived measurement yet.
    `FINDINGS-2026-08-04-AMPLITUDE-CLOSURE.md` rejected fitted per-plane QVBR
    *deadzone constants*, not a measured residue — but the probe above shows it
    would not correct Shining V. Do not justify it as the chroma amplitude fix.
-3. **The weak-grain over-signal has no surviving explanation.** Gate any future
-   work on measured plane grain strength rather than plane identity. All
+3. **The failure is temporal adaptivity, not estimation level.** Any fix should
+   make chroma strength follow the source's frame-to-frame variation rather
+   than estimate a better single value; a per-plane or per-title constant
+   cannot address a decoupling. Gate on measured temporal variability rather
+   than plane identity or grain strength. All
    three failing cells are V, but nine cells show V behaving normally; the
    separating property is weak grain with correspondingly high base retention.
    Shining V (`sigma 0.67`, over `1.31x`) is the strongest single test and
