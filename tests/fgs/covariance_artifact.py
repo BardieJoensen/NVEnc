@@ -64,13 +64,19 @@ ARMS = {
 }
 
 
-def make_c(source, out, kbps, log):
-    """x264 at a fixed bitrate -- the codec real inputs actually arrive in."""
+def make_c(source, out, kbps, log, codec="libx264", depth=8, preset="medium"):
+    """Software encode at a fixed bitrate -- the codecs real inputs arrive in.
+
+    1080p sources are delivered as H.264; 4K is HEVC, and its artifact differs
+    (larger transforms, SAO), so it must be measured rather than assumed to
+    behave like x264.
+    """
     if os.path.isfile(out):
         return out
+    pix = "yuv420p" if depth == 8 else "yuv420p10le"
     run([X264_FFMPEG, "-hide_banner", "-nostdin", "-v", "error", "-i", source,
-         "-map", "0:v:0", "-an", "-sn", "-dn", "-c:v", "libx264",
-         "-preset", "medium", "-b:v", f"{kbps}k", "-pix_fmt", "yuv420p",
+         "-map", "0:v:0", "-an", "-sn", "-dn", "-c:v", codec,
+         "-preset", preset, "-b:v", f"{kbps}k", "-pix_fmt", pix,
          "-y", out], log=log)
     return out
 
@@ -109,6 +115,10 @@ def main():
     parser.add_argument("--work", default=WORK)
     parser.add_argument("--titles", default="")
     parser.add_argument("--rates", default="")
+    parser.add_argument("--codec", default="libx264")
+    parser.add_argument("--depth", type=int, default=8)
+    parser.add_argument("--preset", default="medium")
+    parser.add_argument("--suffix", default="")
     args = parser.parse_args()
 
     titles = args.titles.split(",") if args.titles else list(TITLES)
@@ -121,19 +131,22 @@ def main():
             print(f"MISSING {source}", flush=True)
             continue
         for kbps in rates:
-            tag = f"{title}-{kbps}k"
+            tag = f"{title}-{kbps}k{args.suffix}"
             d = os.path.join(args.work, tag)
             os.makedirs(d, exist_ok=True)
 
-            recompressed = make_c(source, f"{d}/C.mp4", kbps, f"{d}/C.log")
+            recompressed = make_c(source, f"{d}/C.mp4", kbps, f"{d}/C.log",
+                                  codec=args.codec, depth=args.depth,
+                                  preset=args.preset)
             arms = [("C_x264", recompressed)]
-            plain = encode(CANDIDATE, recompressed, f"{d}/A_plain.mkv", 29, 8,
-                           log=f"{d}/A_plain.log")
+            plain = encode(CANDIDATE, recompressed, f"{d}/A_plain.mkv", 29,
+                           args.depth, log=f"{d}/A_plain.log")
             decode_check(plain, log=f"{d}/A_plain-dav1d.log")
             arms.append(("A_plain", plain))
             for label, env in ARMS.items():
-                out = encode(CANDIDATE, recompressed, f"{d}/{label}.mkv", 29, 8,
-                             fgs=FGS_OPTS, env=env, log=f"{d}/{label}.log")
+                out = encode(CANDIDATE, recompressed, f"{d}/{label}.mkv", 29,
+                             args.depth, fgs=FGS_OPTS, env=env,
+                             log=f"{d}/{label}.log")
                 decode_check(out, log=f"{d}/{label}-dav1d.log")
                 arms.append((label, out))
 
@@ -141,10 +154,10 @@ def main():
             if len(set(counts.values())) != 1:
                 raise RuntimeError(f"{tag}: frame counts differ {counts}")
 
-            report = grain_report(source, arms[1:], f"{d}/report-plain.json", 8,
-                                  frames=FRAMES)
+            report = grain_report(source, arms[1:], f"{d}/report-plain.json",
+                                  args.depth, frames=FRAMES)
             o_axis = truth_axis(report)
-            c_axis = artifact_axis(source, recompressed)
+            c_axis = artifact_axis(source, recompressed, bits=args.depth)
 
             row = {"title": title, "rate_kbps": kbps, "reference": "O",
                    "o_grain_axis": o_axis, "c_artifact_axis": c_axis,
@@ -169,7 +182,8 @@ def main():
                 }
             rows.append(row)
             print(json.dumps(row), flush=True)
-            with open(os.path.join(args.work, "covariance-plain.json"), "w",
+            with open(os.path.join(args.work,
+                                   f"covariance-plain{args.suffix}.json"), "w",
                       encoding="utf-8") as handle:
                 json.dump(rows, handle, indent=1)
 
