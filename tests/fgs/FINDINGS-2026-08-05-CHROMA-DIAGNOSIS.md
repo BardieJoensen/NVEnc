@@ -324,3 +324,47 @@ the cells that looked worst.
 3. **The earlier corpus figure of `1.087` mean V played total is inflated** by
    the same effect on its two most variable members and should be recomputed
    before being used as a target.
+
+## Definitive corrected corpus, all twelve planes at sixteen pairs
+
+| cell | as reported | corrected | gap | truth CV |
+| --- | ---: | ---: | ---: | ---: |
+| Casino U | 1.026 | 1.025 | +0.001 | 0.062 |
+| Interstellar U | 1.003 | 0.989 | +0.014 | 0.134 |
+| Taxi U | 0.995 | 0.994 | +0.000 | 0.026 |
+| Deer U | 0.977 | 0.976 | +0.001 | 0.047 |
+| Scarface U | 0.963 | 0.962 | +0.001 | 0.028 |
+| Shining U | 0.936 | 0.934 | +0.003 | 0.058 |
+| **Shining V** | 1.265 | **1.170** | **+0.095** | **0.342** |
+| **Interstellar V** | 1.222 | **1.136** | **+0.087** | **0.404** |
+| Taxi V | 1.096 | 1.094 | +0.002 | 0.050 |
+| Scarface V | 1.095 | 1.080 | +0.015 | 0.136 |
+| Casino V | 1.092 | 1.083 | +0.009 | 0.118 |
+| Deer V | 1.000 | 0.998 | +0.001 | 0.086 |
+
+| plane | corrected mean | MAE to 1.000 |
+| --- | ---: | ---: |
+| **U** (n=6) | **0.980** | **0.028** |
+| **V** (n=6) | **1.093** | **0.094** |
+| all 12 | 1.037 | 0.061 |
+
+The Jensen gap orders exactly by truth CV — `+0.095` and `+0.087` on the two
+planes above CV `0.34`, `+0.014` on the only other plane above `0.13`, and
+`<= 0.015` on the remaining nine. That is the mechanism confirming itself.
+
+**Revised conclusions:**
+
+1. **U needs nothing.** Mean `0.980`, MAE `0.028`, and the correction moves it
+   by at most `0.003`. Treating chroma as one open problem was wrong; it is a
+   V-plane problem.
+2. **V over-delivers about 9%**, not the 13% the uncorrected figure suggested
+   and not the 8.7% previously on record — the old number was right by accident,
+   with Jensen inflation and six-frame under-sampling cancelling.
+3. **It is not uniform within V.** Deer V is `0.998` and Taxi/Casino/Scarface V
+   cluster at `1.080`--`1.094`, while Shining V and Interstellar V sit at
+   `1.170` and `1.136`. A constant offset would fix the cluster and leave the
+   outliers, which is consistent with every fitted-constant experiment this
+   project has already rejected.
+4. **The two outliers are the two most temporally variable planes.** That is
+   the residual decoupling, now measured on sixteen pairs with the scoring
+   artifact removed: real, roughly `+0.10`--`0.15`, and confined to two planes.
