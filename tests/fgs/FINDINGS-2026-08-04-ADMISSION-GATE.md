@@ -1,5 +1,15 @@
 # Phase A: admission on non-grain content — 2026-08-04
 
+> **Audit resolution, 2026-08-05: the verdict below is withdrawn.** This
+> experiment was designed and judged without reading
+> `FINDINGS-2026-08-04-SHADOW-ADMISSION.md` and
+> `FINDINGS-2026-08-04-SOURCEFIT-ADMISSION.md`, which already covered most of
+> it and had already established the correct adjudication standard. Applying
+> that standard reverses the conclusion: these titles are quality-positive
+> under source fitting, exactly like the CG scenes the shadow campaign
+> re-labelled. The failed reasoning is retained below so the mistake stays
+> visible; see "Audit" at the end for what actually holds.
+
 > Measurement only. Nothing deployed. Production remains r4069 bilateral /
 > residual, `modelsrc` default-off, source-static behind an environment
 > variable.
@@ -162,3 +172,85 @@ Do not build a gate on this until at least (2) is resolved.
 
 Sinister was in the plan as the boundary case and was not measured — the
 download directory holds only a `.nfo` and an `_unpack` folder for it.
+
+---
+
+# Audit, 2026-08-05
+
+## What this experiment got wrong
+
+It was run without reading `FINDINGS-2026-08-04-SHADOW-ADMISSION.md` or
+`FINDINGS-2026-08-04-SOURCEFIT-ADMISSION.md`. Three consequences.
+
+**The sigma finding was already in the repo.** Shadow admission had already
+rejected a fixed amplitude floor, on better evidence, citing Interstellar at
+`1.285`, The Shining at `1.266` and Silo at `0.857`. The Shining measurement
+above (`1.31`) reproduces theirs. It was presented as new; it was not.
+
+**The damage measure was one this project had already disqualified.** VMAF p1
+was used to rank the arms on content where the candidate delivers 15--29% more
+grain and markedly coarser grain. Both are penalised by VMAF by construction:
+`FINDINGS-2026-08-02-METRIC-SENSITIVITY.md` measured the presence penalty and
+`FINDINGS-2026-08-03-AMPLITUDE-MATCHED-TEXTURE.md` measured a further 0.8--1.5
+point penalty for coarser grain at fixed energy. The observed `-1.21` to
+`-3.10` is the expected metric response to correct behaviour, not evidence of
+damage.
+
+**The pass condition demanded the wrong thing.** It required the candidate not
+to "signal materially more grain on content that has none". Shadow admission
+had already established that origin is the wrong label to demand, and that the
+question is whether an interval carries stochastic texture that the separator
+removes, the AV1 model represents and playback restores at the right amplitude.
+These titles carry temporal texture of `0.90`--`1.62` codes — The Shining, a
+genuine 35 mm title, sits at `1.31`. They are not content that "has none".
+
+## The adjudication that was never run
+
+Same clips, same tool, played total and texture against adjacent-frame source
+truth. Lower is better in every column.
+
+| title | \|amplitude err\| prod | cand | \|lag-1 err\| prod | cand | \|lag-2 err\| prod | cand |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| DenTid | 0.122 | **0.005** | 0.119 | **0.047** | 0.070 | **0.008** |
+| Tuner | **0.020** | 0.111 | 0.130 | **0.020** | 0.075 | **0.011** |
+| TrainToBusan | 0.163 | **0.000** | 0.103 | **0.040** | 0.061 | 0.063 |
+
+Played totals move `0.878 -> 1.005`, `0.980 -> 1.111` and `0.837 -> 1.000`.
+The candidate is closer to source truth on amplitude for 2 of 3, on lag-1 for
+3 of 3 and on lag-2 for 2 of 3.
+
+This is the Migration/Elio pattern reproduced on three further titles: content
+labelled clean by origin still carries representable stochastic texture, and
+source fitting restores it substantially better than the residual fit. **Phase
+A does not fail. It confirms the shadow-admission result on new material.**
+
+The one real defect is Tuner's `1.111` over-delivery. That belongs to the open
+amplitude-closure family alongside chroma V and the per-luma bands, not to
+admission.
+
+## What survives
+
+- **The end-to-end encode measurement itself.** Shadow admission ran tables and
+  statistics with `changes_output: false`; this ran complete encodes and
+  decodes on untouched originals and confirms no arm exceeds plain in size and
+  no VMAF-min collapse reproduces (`87.7`--`90.1` against the 2026-07
+  campaign's `31`--`60`).
+- **The table-point proxy correction.** The emitted curve's mean scaling point
+  is not a strength measure — `grain_scale_shift` differs between arms and the
+  mean is unweighted by luma occupancy, giving a 2.23x point ratio against a
+  1.15x delivered ratio on Tuner. Any future admission or strength work must
+  use delivered synthesis amplitude.
+- **The block-count CV observation**, as an untested lead only. It is not among
+  the shadow campaign's axes, and coverage heterogeneity appears there only as
+  a nuisance state rather than a candidate discriminator. Its resolution/content
+  confound is unresolved and the 24-scene shadow corpus is the right place to
+  test it, not three titles.
+
+## What was already the real open problem
+
+Per shadow admission: admission needs a **quality-labelled negative** — an
+interval where source fitting demonstrably synthesizes persistent picture or
+codec structure that temporal truth says is not noise. Every gate so far has
+only been tested against inputs where source fitting helps, including all three
+titles here. Nothing in this experiment moved that, and no admission rule can
+be called validated until such a specimen exists.
