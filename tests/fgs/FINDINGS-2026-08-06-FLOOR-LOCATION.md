@@ -1,5 +1,13 @@
 # Where the low-signal floor comes from — 2026-08-06
 
+> **RETRACTED 2026-08-06 by `FINDINGS-2026-08-06-FLOOR-ABLATION.md`.** The
+> conclusion below — that the selection floor at `:2391` is the leading
+> candidate — is false. Ablating it changes nothing: `0.05` and `0.5` admit the
+> same 208 blocks, because nothing lies below sigma 2.0. The censoring
+> mechanism described here is real and was confirmed, but it does not operate
+> at the production value. The denoise-sweep measurement in this document
+> stands; the attribution does not.
+
 > Diagnosis only. No default changed, nothing deployed, `modelsrc` still
 > default-off.
 
