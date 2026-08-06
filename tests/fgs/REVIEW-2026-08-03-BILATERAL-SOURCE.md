@@ -2,6 +2,8 @@
 
 ## Status
 
+> **Superseded for review purposes 2026-08-06.** The motion-finish package was reviewed instead; see `FINDINGS-2026-08-06-PLAYBACK-VERDICT.md`. This package remains unwatched.
+
 **Blind playback judgement pending. Research only; nothing here has been
 deployed to Tdarr.** Production remains r4069 with bilateral separation and
 the residual-derived grain model. `modelsrc` remains default-off.

@@ -2,6 +2,8 @@
 
 ## Status
 
+> **Reviewed 2026-08-06. Verdict: no visible difference between arms.** See `FINDINGS-2026-08-06-PLAYBACK-VERDICT.md`. The review used the distilled clips from `minimal_review.py` rather than this full package.
+
 **Blind playback judgement pending. Research only; nothing here has been
 deployed to Tdarr.** Production remains on r4069 with the bilateral separator,
 and `modelsrc` remains default-off.

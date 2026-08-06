@@ -110,16 +110,50 @@ def divergence_windows(left, right, frames, length, width=1920, height=1080):
     return best, best_score, per
 
 
-def cut_side_by_side(left, right, start, count, out, fps, log):
-    """One clip, both arms, no labels burned in -- the package stays sealed."""
+def busiest_column(left, right, start, count, width=1920, height=1080,
+                   window=960, step=4):
+    """Left edge of the `window`-wide column where the two arms differ most.
+
+    Cropping beats scaling for this review: an hstack of two 1920-wide arms
+    scaled back to 1920 halves each arm's resolution, which destroys the fine
+    detail the question is actually about.  Taking the same native-resolution
+    column from both keeps every pixel and still fits a 1080p screen.
+    """
+    import numpy as np
+    from temporal_grain_report import decode_selected
+    idx = list(range(start, start + count, step))
+    a = decode_selected(left, width, height, idx, bits=10)
+    b = decode_selected(right, width, height, idx, bits=10)
+    cols = np.zeros(width)
+    for i in idx:
+        cols += np.abs(a[i] - b[i]).mean(axis=0)
+    cols /= len(idx)
+    best, score = 0, -1.0
+    for x in range(0, width - window + 1, 16):
+        v = cols[x:x + window].mean()
+        if v > score:
+            best, score = x, v
+    return best, score
+
+
+def cut_side_by_side(left, right, start, count, out, fps, log, crop_x=None,
+                     window=960):
+    """Same native-resolution column from both arms, side by side.
+
+    No scaling: each half is the arm's own pixels at 1:1.  No labels are burned
+    in, so the sealed package's A/B mapping is untouched.
+    """
     if os.path.isfile(out):
         return out
+    x = 0 if crop_x is None else crop_x
     run([X264_FFMPEG, "-hide_banner", "-nostdin", "-v", "error",
          "-i", left, "-i", right,
          "-filter_complex",
-         f"[0:v]trim=start_frame={start}:end_frame={start + count},setpts=PTS-STARTPTS[l];"
-         f"[1:v]trim=start_frame={start}:end_frame={start + count},setpts=PTS-STARTPTS[r];"
-         f"[l][r]hstack=inputs=2,scale=1920:-2[v]",
+         f"[0:v]trim=start_frame={start}:end_frame={start + count},setpts=PTS-STARTPTS,"
+         f"crop={window}:1080:{x}:0[l];"
+         f"[1:v]trim=start_frame={start}:end_frame={start + count},setpts=PTS-STARTPTS,"
+         f"crop={window}:1080:{x}:0[r];"
+         f"[l][r]hstack=inputs=2[v]",
          "-map", "[v]", "-r", str(fps), "-c:v", "libx264", "-preset", "slow",
          "-crf", "12", "-pix_fmt", "yuv420p", "-y", out], log=log)
     return out
@@ -176,10 +210,17 @@ def main():
     for row in ranked:
         title = row["title"]
         out = os.path.join(args.out, f"{title}-worst.mp4")
+        cx, cscore = busiest_column(
+            os.path.join(args.package, f"{title}-A-base.mkv"),
+            os.path.join(args.package, f"{title}-B-base.mkv"),
+            row["start_frame"], length)
+        row["crop_x"] = cx
+        row["crop_divergence"] = cscore
         cut_side_by_side(os.path.join(args.package, f"{title}-A-base.mkv"),
                          os.path.join(args.package, f"{title}-B-base.mkv"),
                          row["start_frame"], length, out, args.fps,
-                         os.path.join(args.out, f"{title}-cut.log"))
+                         os.path.join(args.out, f"{title}-cut.log"),
+                         crop_x=cx)
         row["clip"] = out
         row["bytes"] = os.path.getsize(out)
         print(f"{title}: frames {row['start_frame']}..{row['start_frame']+length} "
