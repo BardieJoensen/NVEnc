@@ -421,3 +421,67 @@ retention (`0.430`--`0.573`); the four best all pair higher truth sigma
 pattern reproduces inside the planes, and the `-0.869` collinearity noted at
 plane level is even tighter here — these two cannot be separated on this
 corpus at either scale.
+
+---
+
+# Chroma delivery is non-uniform by saturation — 2026-08-06
+
+Prompted by a reviewer observation on the published clips: the original looked
+"flat and grey" at an ear while both encodes showed a red/pink cast that read as
+more natural.
+
+## It is not a colour shift
+
+Skin-like pixels in the finished Deer Hunter streams, 10-bit:
+
+| panel | U | V | chroma energy | temporal chroma noise |
+| --- | ---: | ---: | ---: | ---: |
+| ORIGINAL | 492.39 | 532.39 | 29.936 | **7.961** |
+| A | 492.47 | 532.46 | 29.896 | **6.411** |
+| B | 492.46 | 532.45 | 29.916 | **7.026** |
+
+Hue and saturation match to `0.1%`. What differs is chroma *noise*: the arms
+carry `13%`--`20%` less of it there. Chroma noise reads as grey speckle, so the
+same hue with more noise looks flatter — the perception is a correct read of a
+real difference, but the difference is noise amplitude, not colour.
+
+## The corpus pattern is over-delivery on neutral regions
+
+Temporal chroma noise, candidate over source:
+
+| title | skin | neutral | whole frame |
+| --- | ---: | ---: | ---: |
+| The Deer Hunter | 0.830 | **1.425** | 1.097 |
+| Taxi Driver | 1.099 | **1.183** | 1.110 |
+| Casino | 0.997 | **1.724** | 1.132 |
+
+Skin is mixed (`0.83`--`1.10`); the Deer Hunter deficit that prompted this is a
+single-title outlier, not a rule. **Neutral regions over-deliver on 3/3, by
+`18%`--`72%`**, while the whole-frame figure sits at a tidy `1.10`--`1.13` and
+hides it.
+
+The source's own chroma noise is much lower on neutral regions
+(`2.98`--`5.41`) than on coloured ones (`4.72`--`8.41`) — physically expected,
+since chroma noise scales with chroma signal. The delivered field does not
+reproduce that dependence, so grey areas receive chroma grain they should not
+have.
+
+## Why this matters under a source-fidelity target
+
+The reviewer's own argument settles the direction: a transcode should reproduce
+what the creator's image contains, not what looks better, because FGS already
+gives up pixel fidelity and can therefore only be judged on *statistical*
+fidelity. Under that standard, chroma noise in neutral regions at `1.4`--`1.7x`
+source is a defect regardless of whether anyone prefers the look — and colour
+speckle on grey is among the more visible artifacts available.
+
+This is a **new axis of non-uniformity**, alongside the dark-band and per-luma
+band errors already on record, and like those it is invisible in the
+whole-frame aggregate that has been used as the target.
+
+## Caveats
+
+Three titles, eight frame pairs, one crop each. The saturation masks are
+threshold-based (`|chroma| < 6` for neutral) rather than perceptual. Whether
+the AV1 chroma model can even express a saturation dependence is untested and
+is the obvious next question.
