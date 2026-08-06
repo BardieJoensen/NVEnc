@@ -174,6 +174,12 @@ private:
     ChromaLeakMode m_chromaLeakMode;
     bool m_lumaLeakLocal;
     bool m_sourceTemporalMask;
+    // Test-only overrides for the two independent uses of minNoiseLevel: the
+    // flat-block selection floor and the per-block denoise clamp.  Negative
+    // means "unset", in which case both read minNoiseLevel and behaviour is
+    // unchanged.  See PLAN-2026-08-06-FLOOR-ABLATION.md.
+    float m_minNoiseSelect;
+    float m_minNoiseDenoise;
     bool m_textureLeakClosure;
     bool m_textureLeakDynamic;
     bool m_textureLeakResponse;

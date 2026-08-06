@@ -1779,6 +1779,7 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(), m_motionFinishMode(MotionFinishMode::Uniform),
     m_chromaLeakMode(ChromaLeakMode::Off), m_lumaLeakLocal(false), m_sourceTemporalMask(false),
+    m_minNoiseSelect(-1.0f), m_minNoiseDenoise(-1.0f),
     m_textureLeakClosure(false), m_textureLeakDynamic(false),
     m_textureLeakResponse(false),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
@@ -1952,6 +1953,33 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         || prm->leakTargetQuality < FGS_LEAK_QVBR_MIN
         || prm->leakTargetQuality > FGS_LEAK_QVBR_MAX) {
         prm->leakTargetQuality = -1.0f;
+    }
+    // Diagnostic override for the two independent uses of minNoiseLevel.  The
+    // selection floor (flat-block admission) and the denoise clamp share one
+    // constant, so neither can be attributed without moving them separately;
+    // see PLAN-2026-08-06-FLOOR-ABLATION.md.  Values are held to the range the
+    // configuration already validates for itself just above.
+    m_minNoiseSelect = -1.0f;
+    m_minNoiseDenoise = -1.0f;
+    if (const auto value = std::getenv("NVENC_FGS_TEST_MIN_NOISE"); value && value[0] != '\0') {
+        float select = 0.0f;
+        float denoise = 0.0f;
+        const int parsed = sscanf(value, "%f,%f", &select, &denoise);
+        if (parsed == 1) {
+            denoise = select;
+        }
+        if (parsed < 1 || !(select > 0.0f) || !(denoise > 0.0f)
+            || select > config.maxNoiseLevel || denoise > config.maxNoiseLevel) {
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: ignoring invalid NVENC_FGS_TEST_MIN_NOISE=%s (expected <select>[,<denoise>] in (0, maxNoiseLevel]).\n"),
+                char_to_tstring(value).c_str());
+        } else {
+            m_minNoiseSelect = std::max(0.05f, select);
+            m_minNoiseDenoise = std::max(0.05f, denoise);
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: applying test-only noise floors select=%.3f denoise=%.3f (default %.3f).\n"),
+                m_minNoiseSelect, m_minNoiseDenoise, config.minNoiseLevel);
+        }
     }
     m_chromaLeakMode = ChromaLeakMode::Off;
     if (const auto value = std::getenv("NVENC_FGS_TEST_CHROMA_LEAK"); value && value[0] != '\0') {
@@ -2383,7 +2411,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     std::memset(mask, 0, blockCount);
     std::vector<int> candidates;
     candidates.reserve(blockCount);
-    const float minSigma = prm->filmGrain.minNoiseLevel * depthScale;
+    // Two separate floors, identical unless the ablation hook is set.
+    const float selectFloor = m_minNoiseSelect > 0.0f
+        ? m_minNoiseSelect : prm->filmGrain.minNoiseLevel;
+    const float denoiseFloor = m_minNoiseDenoise > 0.0f
+        ? m_minNoiseDenoise : prm->filmGrain.minNoiseLevel;
+    const float minSigma = selectFloor * depthScale;
+    const float minDenoiseSigma = denoiseFloor * depthScale;
     const float maxSigma = prm->filmGrain.maxNoiseLevel * depthScale;
     const int requiredBlocks = std::max(prm->filmGrain.minFlatBlocks,
         static_cast<int>(std::ceil(blockCount * prm->filmGrain.minFlatFraction)));
@@ -2446,7 +2480,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // texture variance does not turn the denoiser into a blur.
         auto sigmaMap = static_cast<float *>(m_sigmaMap->ptrHost);
         for (int i = 0; i < blockCount; ++i) {
-            sigmaMap[i] = mask[i] ? clamp(metrics[i].sigma, minSigma, maxSigma) : measuredNoise;
+            sigmaMap[i] = mask[i] ? clamp(metrics[i].sigma, minDenoiseSigma, maxSigma) : measuredNoise;
         }
         if ((sts = m_sigmaMap->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
     }
