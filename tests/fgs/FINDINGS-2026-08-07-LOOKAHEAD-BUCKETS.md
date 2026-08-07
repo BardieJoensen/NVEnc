@@ -64,7 +64,7 @@ synthesized grain. Three 4K films, 288 frames, lossless references.
 | bucket | measured | per-title | saving at equal quality |
 | ---: | ---: | --- | ---: |
 | 29 -> **28** | 27.9 | 26.5 / 28.4 / 28.9 | 21--32% |
-| 34 -> **33** | 32.6 | 31.3 / 33.4 / 33.2 | 19--22% |
+| 34 -> ~~33~~ **34** | 32.6 (film) | 31.3 / 33.4 / 33.2 | see correction below |
 | 38 -> **37** | 36.8 | 35.9 / 37.6 / 36.8 | 16--25% |
 
 Bucket 38 initially returned `off-range` on two titles because the first sweep
@@ -75,6 +75,31 @@ n=1.
 **15--32% at equal quality, not 53%.** The two numbers reconcile: 53% is at
 fixed qvbr with quality given up, 15--32% is at matched quality. It also agrees
 with the independent iso-size estimate of 16--30% bitrate equivalent.
+
+## Correction 2026-08-07: bucket 34 was wrong for animation
+
+The film-derived `33` was validated by re-running the smoke-test titles from
+their originals, and it failed for animation in the direction opposite to the
+one feared. Elemental at `33` came out **3.9% larger** than the old setting for
+`+0.74` VMAF-neg: lookahead's efficiency gain is smaller on animation than on
+grainy film, so `34 -> 33` more than offset it and the bucket bought quality
+nobody asked for.
+
+`animation_bucket_calibration.py` swept three animation originals against
+no-lookahead baselines at qvbr 34:
+
+| title | qvbr matching old quality | saving |
+| --- | ---: | ---: |
+| Elemental (CG) | 34.3 | 12.5% |
+| Batman: The Long Halloween (2D) | 34.5 | 9.1% |
+| Batman: The Dark Knight Returns (2D) | 34.0 | 5.6% |
+
+**Mean 34.3, so cq34 maps to qvbr 34** -- the value it had before the retune.
+The saving from lookahead on animation is `5.6`--`12.5%`, against `21`--`32%` on
+grainy film, which is the whole reason a film-derived number did not transfer.
+
+Bucket 29 -> 28 was separately validated on Alien (1979) 4K from its original:
+**56% smaller for `-0.40` VMAF-neg**. That one stands.
 
 ## Deployed
 
