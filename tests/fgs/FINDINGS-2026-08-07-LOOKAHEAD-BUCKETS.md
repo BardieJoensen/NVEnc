@@ -104,7 +104,7 @@ Bucket 29 -> 28 was separately validated on Alien (1979) 4K from its original:
 ## Deployed
 
 - encode args gain `--lookahead 32 --lookahead-level 3` (no multipass);
-- `mapQvbr_001` maps cq 29/34/38 to qvbr **28/33/37**.
+- `mapQvbr_001` maps cq 29/34/38 to qvbr **28/34/37**.
 
 The bucket router is untouched — content still routes to the same three
 buckets, they simply resolve to different qvbr. The node's `jobLog` line prints
@@ -112,22 +112,25 @@ the resolved mapping, so this is visible per job.
 
 ## Limits, and what is deliberately not covered
 
-Three grain-heavy 4K films. **The same buckets serve animation and clean
-digital content, which were not measured**: their rate-quality curves differ,
-and the production analyser additionally over-synthesizes grain on them at
-~1.9x (`FINDINGS-2026-08-06-ANIMATION-GATE.md`). Those buckets are now
-carrying a film-derived calibration and should get their own pass.
+The film buckets came from three grain-heavy 4K titles; animation was
+calibrated separately above. **Clean digital content still has no pass of its
+own** -- it falls through the router to cq29 and so runs the film-derived 28.
+Sugar (1080p WEB-DL) was the only sample: 4.3% smaller at `+0.04` VMAF-neg,
+which is fine but is n=1.
+
+The earlier claim here that the analyser over-synthesizes ~1.9x on such content
+is **withdrawn** -- see `FINDINGS-2026-08-07-LIBRARY-AUDIT.md`; that measurement
+used library copies as its source.
 
 Per-title spread is real. Bucket 29 wants 26.5 on Casino and 28.9 on Taxi, so a
 single value slightly over-delivers on one and under-delivers on the other —
 inherent to one bucket serving several titles, not a measurement fault.
 
-A conservative alternative, if any quality loss versus today is unacceptable:
-27/32/36, which gives up a few percent of the saving.
+Bucket 38 is unreachable: the router only ever emits cq29 or cq34, so its
+`37` never fires.
 
 ## Next
 
-The FGS content gate is now the outstanding production item. `--av1-film-grain`
-is applied unconditionally by a single encode template, so grain-free content
-receives synthesized grain it never had. That is independent of this work and
-of the measurement fix.
+Clean-digital calibration (cq29 currently serves it on a film-derived value,
+n=1), and the FGS content gate -- which after the library audit is insurance
+rather than a fix, since no damaged transcode was demonstrated.
