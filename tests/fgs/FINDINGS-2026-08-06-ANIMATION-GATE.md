@@ -1,5 +1,12 @@
 # Animation: the July collapse is gone, one real caveat remains — 2026-08-06
 
+> **RETRACTED 2026-08-07 by `FINDINGS-2026-08-07-LIBRARY-AUDIT.md`.** The
+> `-O` inputs were library AV1 copies, not originals -- no originals for these
+> titles exist anywhere in the download tree, and Poppy Hill's library copy
+> itself carries synthesized grain. This measured FGS applied to FGS output.
+> The 2.5x over-synthesis figure is withdrawn.
+
+
 > Offline measurement only. Nothing deployed, `modelsrc` default-off.
 
 Every "no harmful input found" statement in this project rested on ten cells

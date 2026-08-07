@@ -1,5 +1,11 @@
 # Four open problems look like one defect — 2026-08-06
 
+> **Amended 2026-08-07.** The Long Halloween row is second-generation input
+> (see `FINDINGS-2026-08-07-LIBRARY-AUDIT.md`) and should be dropped. The
+> relationship survives on the remaining cells -- three of the four
+> low-signal cells are film.
+
+
 > Offline measurement only. Nothing deployed, `modelsrc` default-off.
 
 The project has been tracking these as separate open items:
