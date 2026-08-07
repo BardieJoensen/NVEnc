@@ -66,6 +66,25 @@ Chasing 95 there buys nothing but size.
 - animation: keep **34**.
 - Do not add routes beyond that; per-title variance dominates.
 
+## Deployed 2026-08-07
+
+| bucket | reached by | qvbr |
+| ---: | --- | ---: |
+| 29 | 4K override **only** | **27** (VMAF-neg 95) |
+| 30 | fall-through, and paths outside /movies and /tv-shows | **30** |
+| 34 | animation NFO, live_high allowlist | **34** |
+| 38 | unreachable | 37 |
+
+Verification caught two faults introduced by repurposing `cq29` as "4K only":
+the router's escape hatch for paths outside `/movies` and `/tv-shows` still
+returned `29`, and `mapQvbr` still defaulted a missing bucket to `'29'`. Both
+would have handed 4K's aggressive `27` to content that should get `30`. Both
+now return `30`, and `setBucket(29)` has exactly one call site.
+
+The three ffmpeg fallback nodes read `user.cq` literally as their `-cq`, so they
+now track the routing label (29/30/34) rather than the mapped qvbr. That was
+already true before this change and the divergence is small.
+
 ## Limits
 
 144-frame segments, one per title, single seek point. Class means rest on n=1
