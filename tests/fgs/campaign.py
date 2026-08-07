@@ -287,16 +287,44 @@ def pct(sorted_vals, p):
     return sorted_vals[min(len(sorted_vals) - 1, max(0, int(len(sorted_vals) * p / 100.0)))]
 
 
+def _input_stamp(*paths):
+    """Identity of the files a score describes, for cache validation.
+
+    Scores are cached under a name derived from the tag alone, so re-encoding
+    under the same tag used to replay the previous run's numbers silently --
+    measured 2026-08-07, where a score file predated by two minutes the encode
+    it claimed to describe, and impossible values (ssimu2 -411 on a 34.9 dB
+    encode) were returned unchanged across two different encodes.  Size and
+    mtime are enough to catch re-encoding, which is the case that occurs; a
+    content hash would mean reading every file on every call.
+    """
+    return [[os.path.getsize(p), os.path.getmtime(p)] for p in paths]
+
+
 def ffvship(ref, enc, tag, d, frames, metric, out_name):
     # --cache-index lets the second metric over the same pair reuse the FFMS2
     # index instead of rebuilding it (~550ms per variant at 4K/120f)
     out_json = os.path.join(d, out_name)
+    stamp = _input_stamp(ref, enc)
+    if os.path.isfile(out_json):
+        try:
+            cached = json.load(open(out_json))
+            if isinstance(cached, dict) and cached.get("_inputs") == stamp:
+                return cached
+        except (ValueError, OSError):
+            pass
+        os.remove(out_json)
     if not os.path.isfile(out_json):
         run(["docker", "run", "--rm", "--gpus", "all", "-v", f"{d}:/data", "--entrypoint", "FFVship", FFVSHIP_IMG,
              "-s", f"/data/{os.path.basename(ref)}", "-e", f"/data/{os.path.basename(enc)}",
              "--end", str(frames), "-m", metric, "--cache-index",
              "--json", f"/data/{out_name}"])
-    return json.load(open(out_json))
+    doc = json.load(open(out_json))
+    if isinstance(doc, dict):
+        doc["_inputs"] = stamp
+        with open(out_json, "w") as handle:
+            json.dump(doc, handle)
+    return doc
 
 
 def vmaf_run(ref, enc, models, feat_json, tag, frames):
@@ -344,11 +372,26 @@ def vmaf_run(ref, enc, models, feat_json, tag, frames):
         f"{q(VMAF)} --reference {q(rp)} --distorted {q(dp)} --gpumask 0 {model_args} "
         f"--feature psnr_cuda --feature ssim_cuda --feature ciede_cuda --json --output {q(feat_json)}; st=$?; "
         f"kill $w1 $w2 2>/dev/null; wait 2>/dev/null; rm -f {q(rp)} {q(dp)}; exit $st")
-    if not os.path.isfile(feat_json):
+    # Same cache-staleness trap as ffvship: the name comes from the tag, so a
+    # re-encode under that tag would otherwise replay the previous numbers.
+    stamp = _input_stamp(ref, enc)
+    fresh = False
+    if os.path.isfile(feat_json):
+        try:
+            fresh = json.load(open(feat_json)).get("_inputs") == stamp
+        except (ValueError, OSError, AttributeError):
+            fresh = False
+        if not fresh:
+            os.remove(feat_json)
+    if not fresh:
         try:
             shell(fifo_cmd, timeout=900)
         except Exception:
             shell(fifo_cmd, timeout=900)  # one retry; transient CUDA-init failures observed
+        doc = json.load(open(feat_json))
+        doc["_inputs"] = stamp
+        with open(feat_json, "w") as handle:
+            json.dump(doc, handle)
     doc = json.load(open(feat_json))
     for key in models:
         nulls = sum(1 for f in doc["frames"] if f["metrics"].get(key) is None)
