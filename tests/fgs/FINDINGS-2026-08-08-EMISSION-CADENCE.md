@@ -93,3 +93,37 @@ across time.
 
 Unlike the ranking change, this one has an explicit known downside, so (3) is
 not optional.
+
+## Result: falsified
+
+`cadence_sweep.py`, `NVENC_FGS_TEST_UPDATE_FRAMES` at 24/12/8, binary
+`~/.cache/fgs-gate/builds/pin-f5acd914-cadence/build-gate/nvencc`.
+Twinkle is frame-to-frame variation of delivered amplitude minus the source's
+own, so negative means steadier than the source.
+
+| title | src HF | 24 | 12 | 8 | change |
+| --- | --- | --- | --- | --- | --- |
+| Elemental | 6.049 | 0.906 | 0.923 | 0.926 | +0.020 |
+| Sugar S02E08 | 5.849 | 0.911 | 0.888 | 0.907 | -0.004 |
+| Silo S03E06 | 3.941 | 0.961 | 0.980 | 0.971 | +0.010 |
+| LongHalloween | 1.507 | 1.298 | 1.274 | 1.296 | -0.002 |
+
+Tripling the update rate moves retention by at most 0.020, and not
+consistently in one direction.  Long Halloween -- the one title that genuinely
+over-delivers -- does not move at all.  Excess twinkle stayed negative
+throughout and if anything fell at looser cadence, which also argues the held
+models were not diverging from the source.
+
+So the constant does bind on every interval (measured: intervals sit exactly on
+the floor, 25 on 8 of 9 titles) but binding is not causing.  The held model is
+close enough to the fresh one that emitting it three times more often changes
+nothing.
+
+**Falsified -- the eighth mechanism.**
+
+Scope limit, recorded rather than glossed: the sweep covered the four weak-grain
+titles only.  It did not reach the strong-grain controls (Alien, Taxi Driver,
+The Shining, Casino), so point (2) of the experiment above is untested.  That
+does not affect the conclusion -- the mechanism failed to move the weak titles
+it was proposed to fix, so there is nothing for the controls to adjudicate --
+but no claim about strong-grain behaviour under cadence is supported here.
