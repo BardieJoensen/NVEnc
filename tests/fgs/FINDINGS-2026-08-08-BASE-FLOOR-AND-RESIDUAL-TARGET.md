@@ -19,9 +19,18 @@
 >
 > Sections 6-8 carry the conclusions: `modelsrc=on` removes the residual trend
 > under the corrected metric and is corroborated by 08-01's ground-truth
-> amplitudes; the under-delivery was **not** caused by tuning against the bad
-> metric; and what the fault actually did was invent an over-synthesis problem
-> that did not exist.
+> amplitudes; and the under-delivery was **not** caused by tuning against the
+> bad metric.
+>
+> **Section 9 then corrects sections 5 and 8.**  The repo already contained the
+> corrected estimator (`flat_retention.py`, 2026-08-04) and the library verifier
+> `grain-watch.py` has used a shared source mask since 2026-07-30 -- so the bad
+> selectors were confined to this investigation's own harnesses, and the batch
+> report's over-synthesis flags are **sound, not artifacts**.  Measured on the
+> sound estimator the FGS population is centred at median 0.971 with real tails
+> both ways (p10 0.806, p90 1.318, one title 2.244).  Over-synthesis is real in
+> the top decile; the four-title corpus here sits mid-distribution and cannot
+> see either tail.
 
 The premise as it stood when this file was started: delivered grain tracks
 source grain as `source^0.726` (r = -0.985).  Weak-grain sources over-deliver,
