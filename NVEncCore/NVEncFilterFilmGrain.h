@@ -183,6 +183,10 @@ private:
     // Rank flat blocks by anisotropy instead of libaom's
     // variance-penalising score when fitting the strength curve.
     bool m_measureRankSelection;
+    // Minimum frames between signalled models.  Measured intervals sit
+    // exactly on this floor (25 on 8 of 9 titles), so it, not the fit,
+    // sets how fast synthesis can track a changing source.
+    int m_minUpdateFrames;
     bool m_textureLeakClosure;
     bool m_textureLeakDynamic;
     bool m_textureLeakResponse;

@@ -1811,6 +1811,7 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_motionDegrain(), m_motionDegrainParam(), m_motionFinishMode(MotionFinishMode::Uniform),
     m_chromaLeakMode(ChromaLeakMode::Off), m_lumaLeakLocal(false), m_sourceTemporalMask(false),
     m_minNoiseSelect(-1.0f), m_minNoiseDenoise(-1.0f), m_measureRankSelection(false),
+    m_minUpdateFrames(FGS_MODEL_MIN_UPDATE_FRAMES),
     m_textureLeakClosure(false), m_textureLeakDynamic(false),
     m_textureLeakResponse(false),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
@@ -1993,6 +1994,20 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     m_minNoiseSelect = -1.0f;
     m_minNoiseDenoise = -1.0f;
     m_measureRankSelection = false;
+    m_minUpdateFrames = FGS_MODEL_MIN_UPDATE_FRAMES;
+    if (const auto value = std::getenv("NVENC_FGS_TEST_UPDATE_FRAMES"); value && value[0] != '\0') {
+        const int parsed = atoi(value);
+        if (parsed < 1 || parsed > 240) {
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: ignoring invalid NVENC_FGS_TEST_UPDATE_FRAMES=%s (expected 1..240).\n"),
+                char_to_tstring(value).c_str());
+        } else {
+            m_minUpdateFrames = parsed;
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: model update cadence set to %d frames (default %d).\n"),
+                m_minUpdateFrames, FGS_MODEL_MIN_UPDATE_FRAMES);
+        }
+    }
     if (const auto value = std::getenv("NVENC_FGS_TEST_MEASURE_RANK"); value && value[0] != '\0') {
         if (strcmp(value, "on") != 0) {
             AddMessage(RGY_LOG_WARN,
@@ -2984,7 +2999,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 m_state->pendingStreak = 1;
             }
             if (m_state->pendingStreak >= FGS_MODEL_CANDIDATE_FRAMES
-                && m_state->framesSinceModelUpdate >= FGS_MODEL_MIN_UPDATE_FRAMES) {
+                && m_state->framesSinceModelUpdate >= m_minUpdateFrames) {
                 params = m_state->pendingParams;
                 m_state->lastParams = params;
                 m_state->lastParamsFallback = m_state->pendingParamsFallback;
