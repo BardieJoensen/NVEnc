@@ -16,6 +16,12 @@
 > Sections 1-4 are kept because their A/B comparisons remain internally valid
 > and because the retraction in section 2 stands on its own.  Their framing of
 > the effect's magnitude and direction does not.
+>
+> Sections 6-8 carry the conclusions: `modelsrc=on` removes the residual trend
+> under the corrected metric and is corroborated by 08-01's ground-truth
+> amplitudes; the under-delivery was **not** caused by tuning against the bad
+> metric; and what the fault actually did was invent an over-synthesis problem
+> that did not exist.
 
 The premise as it stood when this file was started: delivered grain tracks
 source grain as `source^0.726` (r = -0.985).  Weak-grain sources over-deliver,
@@ -130,10 +136,14 @@ Driver, The Shining, Casino) is what decides it, against the standard this
 project already set in `measure_rank_gate.py:10-16`: weak must fall toward 1.0
 and strong must not move.
 
-## Status
+### Build provenance for sections 1-4
 
 Nothing deployed.  `modelsrc` remains default-off; Tdarr untouched.  Both arms
 ran on `~/.cache/fgs-gate/builds/pin-4b611c92-measure-rank/build-gate/nvencc`.
+
+The section-4 verdict ("not a deployment candidate", "a global gain change")
+is **superseded by section 6**, which re-scores the same encodes on a common
+block set and finds the opposite.
 
 ## 5. The retention metric does not survive its own free parameters
 
@@ -208,3 +218,88 @@ Fixed and per-frame ranking disagree on Elemental (0.653 vs 0.880) because
 fixed ranking admits more textured blocks, which inflates the measured base --
 neither variant is canonical yet, and that choice must be settled before the
 corrected numbers are treated as final.
+
+## 6. `modelsrc=on` under the corrected metric
+
+Re-scored with `retention_common_blocks.py --per-frame` (blocks ranked on the
+source, same indices read in every arm), same encodes as section 4:
+
+| title | default | `modelsrc=on` |
+| --- | ---: | ---: |
+| Elemental | 0.880 | 1.205 |
+| LongHalloween | 1.040 | 1.083 |
+| Silo S03E06 | 0.894 | 0.952 |
+| Sugar S02E08 | 0.877 | 1.019 |
+| slope | **+0.829** | **+1.031** |
+| corr(log src, log retention) | **-0.973** | **+0.142** |
+
+The compressive trend disappears -- correlation goes from strongly negative to
+nil -- and delivery centres near 1.0, slightly over.
+
+This **corroborates `FINDINGS-2026-08-01-SOURCE-FIT.md` from a completely
+independent direction**.  That file measured amplitude against ground truth on a
+fixture with injected grain of known strength, and on Taxi Driver:
+
+> truth 7.24 on Taxi, residual **3.97 (55%)**, source **7.79 (108%)**
+
+Two measurements sharing no machinery -- injected-grain ground truth, and
+delivered retention on common source-ranked blocks -- agree that residual
+fitting under-delivers and source fitting lands near or slightly above unity.
+The corrected metric's ~1.06 mean for `modelsrc=on` matches that 108%.
+
+Caveat: fixed-rank scoring disagrees (slope +1.343, Long Halloween 0.654)
+because fixed ranking admits more textured blocks, which inflates the measured
+base (1.737 vs 1.052 on Long Halloween).  Per-frame source ranking is the more
+defensible construction, but this choice is still unsettled and is the main
+open question against these numbers.
+
+## 7. Did tuning against the bad metric cause the under-delivery?
+
+The natural inference on discovering the metric fault is that months of tuning
+were steered by it -- the metric said "over-delivering", so changes that reduced
+grain looked good, and FGS was pushed into under-delivery.  **The evidence does
+not support that.**
+
+1. **The nine-mechanism hunt changed nothing.**  Every candidate was falsified
+   and none shipped.  All its hooks are environment-gated and default-off.
+
+2. **Every encoder-side FGS commit since 2026-07-25** is either a `test(fgs):`
+   hook (default-off) or a fix *inside* the source-fit path, which is itself
+   behind `modelsrc=off`.  The deployed default -- residual fitting -- was not
+   tuned down in response to the bad readings.
+
+3. **Under-delivery was measured a week earlier without the faulty metric.**
+   The 08-01 ground-truth fixture put residual-fit amplitude recovery at 55% on
+   Taxi Driver.  That predates and is independent of the retention metric.
+
+So the under-delivery is a long-standing property of fitting the grain model to
+`src - denoised`, not damage introduced by tuning.  What the metric fault did
+was different and arguably worse: it **invented an over-synthesis problem that
+did not exist**, and sent the investigation chasing it through nine mechanisms
+while the real, already-measured defect -- and its already-implemented fix --
+sat in a file from 2026-08-01.
+
+## 8. Where this leaves FGS
+
+- The over-synthesis that motivated this investigation is largely a measurement
+  artifact.  Nothing in the corpus meaningfully over-delivers once numerator and
+  denominator describe the same blocks.
+- The real defect is a modest, fairly uniform under-delivery under the deployed
+  residual fit.
+- `modelsrc=on` addresses it, and now has two independent lines of evidence.
+  It remains blocked on admission (step 2 of
+  `FINDINGS-2026-08-04-SOURCEFIT-ADMISSION.md`), not on amplitude.
+- Production is unaffected by any of this: the deployed qvbr buckets and the
+  568.5 GB of measured savings came from VMAF and file sizes, not from the
+  retention metric.
+
+### Open
+
+- Settle fixed vs per-frame source ranking as the canonical construction.
+- Re-check the batch report's over-synthesis column; the library verifier very
+  likely selects flat blocks the same independent-per-arm way, in which case it
+  is reporting the same artifact.
+- Strong-grain controls (Alien, Taxi Driver, The Shining, Casino) were still
+  encoding when this was written; the corpus here is four weak-class titles.
+- `campaign.py` and the other harnesses still use the flawed selector and
+  should be migrated to the common-block construction.
