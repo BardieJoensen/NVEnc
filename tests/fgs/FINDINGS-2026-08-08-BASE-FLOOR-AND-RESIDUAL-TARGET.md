@@ -303,3 +303,59 @@ sat in a file from 2026-08-01.
   encoding when this was written; the corpus here is four weak-class titles.
 - `campaign.py` and the other harnesses still use the flawed selector and
   should be migrated to the common-block construction.
+
+## 9. Corrections: the repo already had the fix, and the library verifier is sound
+
+Two claims in sections 5 and 8, and in commits `56d24830` / `60245db7`, are
+wrong.  Recorded here rather than silently edited.
+
+**`campaign.py` does not rank flat blocks.**  `campaign.py::hf_sigma` is a
+whole-frame high-pass.  It already carries a warning naming both faults and
+pointing at the corrected tool.  The flawed per-arm selectors were in the
+harnesses written for *this investigation* -- `base_floor.py`,
+`measure_rank_gate.py`, `cadence_sweep.py`, `emission_exponent*.py` -- not in
+the shared scoring harness.
+
+**`flat_retention.py` already existed (2026-08-04)** and implements exactly the
+construction of section 5: a mask derived once from the source and applied
+unchanged to every candidate, plus `MIN_SOURCE_SIGMA_8BIT` to exclude
+letterboxing, which "reads exactly 0.0".  `retention_common_blocks.py` is a
+reinvention of it.  The nine-mechanism hunt ran on a metric the repo had
+already superseded.
+
+**The library verifier is not flawed.**  `/opt/docker-apps/scripts/grain-watch.py`
+has used one shared source-derived mask since 2026-07-30, with a floor that
+excludes bars, and its docstring records the same discovery:
+
+> That inflation is what produced apparent retention above 1.0 on several
+> titles and read as "we are synthesising too much grain".  [...] That bias
+> reported Allied at 0.156 when a shared mask gives 0.87.
+
+So section 8's suggestion that the batch report reports the same artifact is
+**falsified**.  Its over-synthesis flags are sound.
+
+### What the sound estimator actually says
+
+Calibrated 2026-07-30 on the FGS-only population (n=22, shared-mask
+flat-restricted): p5 0.713, p10 0.806, p25 0.852, **median 0.971**, p75 1.110,
+p90 1.318, one title at 2.244.
+
+The distribution is centred just under 1.0 with a real tail at **both** ends.
+Over-synthesis is real on roughly the top decile; grain destruction is real at
+the bottom.  The four-title corpus in sections 5-6 (0.877 .. 1.040) sits in the
+middle of that distribution and cannot see either tail, so "nothing in the
+corpus meaningfully over-delivers" describes the corpus, not the library.
+
+### Consequences for the open list
+
+- No fix needed in `campaign.py`, and no re-scoring: VMAF, SSIMULACRA2 and the
+  size figures never used the flat-block estimator.
+- Adopt `flat_retention.py` / `grain-watch.py`'s convention rather than
+  inventing a third.  This also settles the fixed-vs-per-frame question from
+  section 6: the established convention is a mask taken once from the source
+  with a source-sigma floor, and there is no reason to depart from it.
+- The investigation harnesses should either be migrated to that convention or
+  marked as producing biased retention.
+- The real open question is the **tail**, not the centre: which titles land at
+  p90 and why.  That is a population question and needs the library scan, not
+  a four-title corpus.
