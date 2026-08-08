@@ -301,11 +301,25 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     out.mean = mean;
     out.sigma = sqrtf(fmaxf(variance, 0.0f));
     out.score = varNorm > varThreshold ? 1.0f / (1.0f + expf(-scoreArg)) : 0.0f;
-    // Same admission floor, but ranked on anisotropy alone so grain energy
-    // cannot push a genuinely flat block down the ordering.
-    const float measureArg = 6.0f * (1.30f - ratio);
+    // The same libaom logistic with one term removed.  Since trace = e1 + e2,
+    // `13087*trace - 12434*e1` is `13087*e2 + 653*e1`: it rewards *isotropic*
+    // gradient energy, which is exactly how a grainy-but-structureless block
+    // looks, and penalises the anisotropy of edges and lines.  That part is
+    // right and is kept unchanged.
+    //
+    // Only `-6682*varNorm` is wrong here.  It marks a block down for the
+    // amount of grain it contains, so ranking by it samples the least grainy
+    // parts of grainy content -- the compressive measurement recorded in
+    // FINDINGS-2026-08-07-MEASUREMENT-COMPRESSION.md.  Dropping that single
+    // term leaves flatness decided by structure alone.
+    //
+    // An earlier attempt ranked on anisotropy alone and made over-synthesis
+    // worse (Elemental 0.922 -> 1.112): without the isotropy terms, fine
+    // *texture* also passes and its variance is counted as grain.
+    const float measureArg = fminf(100.0f, fmaxf(-25.0f,
+        -0.2056f * ratio + 13087.0f * trace - 12434.0f * e1 + 2.5694f));
     out.measureScore = varNorm > varThreshold
-        ? 1.0f / (1.0f + expf(-fminf(100.0f, fmaxf(-25.0f, measureArg)))) : 0.0f;
+        ? 1.0f / (1.0f + expf(-measureArg)) : 0.0f;
     // Random grain has similar gradient energy in every direction, while
     // edges and line-like texture concentrate it along one eigenvector.  Keep
     // this continuous confidence so the refinement mask can be interpolated
