@@ -180,6 +180,9 @@ private:
     // unchanged.  See PLAN-2026-08-06-FLOOR-ABLATION.md.
     float m_minNoiseSelect;
     float m_minNoiseDenoise;
+    // Rank flat blocks by anisotropy instead of libaom's
+    // variance-penalising score when fitting the strength curve.
+    bool m_measureRankSelection;
     bool m_textureLeakClosure;
     bool m_textureLeakDynamic;
     bool m_textureLeakResponse;

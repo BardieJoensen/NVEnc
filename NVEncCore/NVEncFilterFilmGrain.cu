@@ -77,6 +77,18 @@ struct FilmGrainBlockMetric {
     float mean;
     float sigma;
     float score;
+    // Flatness ranked WITHOUT penalising the block for being noisy.  `score`
+    // is libaom's flat_block_finder logistic, whose dominant term is
+    // -6682*varNorm -- it marks grainy blocks as less flat.  That is right for
+    // choosing where to denoise and wrong for choosing where to *measure*
+    // grain: selecting the top-scoring blocks samples the least grainy parts
+    // of grainy content and under-measures it, which is the compressive
+    // response documented in FINDINGS-2026-08-07-MEASUREMENT-COMPRESSION.md
+    // (delivered ~ source^0.63) and the over-synthesis it causes on
+    // weak-grain sources.  Anisotropy separates structure from grain without
+    // that bias: isotropic grain lifts both gradient eigenvalues together and
+    // leaves the ratio near 1, while edges and lines skew it.
+    float measureScore;
     float coherence;
     float spatialCorrelation;
     uint32_t flat;
@@ -289,6 +301,11 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     out.mean = mean;
     out.sigma = sqrtf(fmaxf(variance, 0.0f));
     out.score = varNorm > varThreshold ? 1.0f / (1.0f + expf(-scoreArg)) : 0.0f;
+    // Same admission floor, but ranked on anisotropy alone so grain energy
+    // cannot push a genuinely flat block down the ordering.
+    const float measureArg = 6.0f * (1.30f - ratio);
+    out.measureScore = varNorm > varThreshold
+        ? 1.0f / (1.0f + expf(-fminf(100.0f, fmaxf(-25.0f, measureArg)))) : 0.0f;
     // Random grain has similar gradient energy in every direction, while
     // edges and line-like texture concentrate it along one eigenvector.  Keep
     // this continuous confidence so the refinement mask can be interpolated
@@ -1779,7 +1796,7 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(), m_motionFinishMode(MotionFinishMode::Uniform),
     m_chromaLeakMode(ChromaLeakMode::Off), m_lumaLeakLocal(false), m_sourceTemporalMask(false),
-    m_minNoiseSelect(-1.0f), m_minNoiseDenoise(-1.0f),
+    m_minNoiseSelect(-1.0f), m_minNoiseDenoise(-1.0f), m_measureRankSelection(false),
     m_textureLeakClosure(false), m_textureLeakDynamic(false),
     m_textureLeakResponse(false),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
@@ -1961,6 +1978,18 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     // configuration already validates for itself just above.
     m_minNoiseSelect = -1.0f;
     m_minNoiseDenoise = -1.0f;
+    m_measureRankSelection = false;
+    if (const auto value = std::getenv("NVENC_FGS_TEST_MEASURE_RANK"); value && value[0] != '\0') {
+        if (strcmp(value, "on") != 0) {
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: ignoring invalid NVENC_FGS_TEST_MEASURE_RANK=%s (expected on).\n"),
+                char_to_tstring(value).c_str());
+        } else {
+            m_measureRankSelection = true;
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: ranking flat blocks by anisotropy for grain measurement.\n"));
+        }
+    }
     if (const auto value = std::getenv("NVENC_FGS_TEST_MIN_NOISE"); value && value[0] != '\0') {
         float select = 0.0f;
         float denoise = 0.0f;
@@ -2421,15 +2450,22 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     const float maxSigma = prm->filmGrain.maxNoiseLevel * depthScale;
     const int requiredBlocks = std::max(prm->filmGrain.minFlatBlocks,
         static_cast<int>(std::ceil(blockCount * prm->filmGrain.minFlatFraction)));
+    // Which flatness ranking selects the blocks the strength curve is fit on.
+    // The default is libaom's, whose dominant term penalises variance -- see
+    // FilmGrainBlockMetric::measureScore.
+    const bool measureRank = m_measureRankSelection;
     for (int i = 0; i < blockCount; ++i) {
-        if (metrics[i].sigma >= minSigma && metrics[i].sigma <= maxSigma && metrics[i].score > 0.0f) {
+        const float rank = measureRank ? metrics[i].measureScore : metrics[i].score;
+        if (metrics[i].sigma >= minSigma && metrics[i].sigma <= maxSigma && rank > 0.0f) {
             if (metrics[i].flat) mask[i] = 1;
-            if (metrics[i].score >= 0.5f) candidates.push_back(i);
+            if (rank >= 0.5f) candidates.push_back(i);
         }
     }
-    std::sort(candidates.begin(), candidates.end(), [metrics](const int a, const int b) {
-        return metrics[a].score > metrics[b].score;
-    });
+    std::sort(candidates.begin(), candidates.end(),
+        [metrics, measureRank](const int a, const int b) {
+            return (measureRank ? metrics[a].measureScore : metrics[a].score)
+                 > (measureRank ? metrics[b].measureScore : metrics[b].score);
+        });
     int selected = static_cast<int>(std::count(mask, mask + blockCount, static_cast<uint8_t>(1)));
     // Always take the top decile of scored blocks in addition to the blocks
     // passing the strict gradient thresholds (libaom flat_block_finder_run
