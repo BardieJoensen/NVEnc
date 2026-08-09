@@ -224,13 +224,46 @@ build_candidate_from_pin() {
     #     FRESH path rather than reusing the old one.
     local commit="$1"
     local pin="$BUILD_DIR/pin-$commit-$(date -u +%s)"
+    local submodule_source=""
     log "building candidate from pinned clone $commit"
     git clone --quiet "$REPO" "$pin" || die "clone failed"
     git -C "$pin" checkout --quiet "$commit" || die "no such commit: $commit"
-    local path
+
+    # A linked worktree has its own empty submodule directories even when the
+    # main worktree has the pinned submodules checked out.  Copying from $REPO
+    # unconditionally therefore looks successful and then fails at rgy_cmd.cpp
+    # with a missing dtl/dtl.hpp. Discover a sibling worktree in the shared
+    # repository which has every required submodule populated, and refuse the
+    # build if none exists.
+    local candidate path populated
+    while IFS= read -r line; do
+        case "$line" in
+            "worktree "*)
+                candidate="${line#worktree }"
+                populated=1
+                while read -r _ path; do
+                    [ -n "$path" ] || continue
+                    if [ ! -d "$candidate/$path" ] || \
+                       [ -z "$(find "$candidate/$path" -mindepth 1 \
+                                      -maxdepth 1 -print -quit 2>/dev/null)" ]; then
+                        populated=0
+                        break
+                    fi
+                done < <(git -C "$REPO" config --file .gitmodules \
+                               --get-regexp path)
+                if [ "$populated" -eq 1 ]; then
+                    submodule_source="$candidate"
+                    break
+                fi
+                ;;
+        esac
+    done < <(git -C "$REPO" worktree list --porcelain)
+    [ -n "$submodule_source" ] || die "no worktree has every submodule populated"
+    info "submodules      : $submodule_source"
+
     while read -r _ path; do
         [ -n "$path" ] || continue
-        cp -a "$REPO/$path" "$pin/$(dirname "$path")/"
+        cp -a "$submodule_source/$path" "$pin/$(dirname "$path")/"
     done < <(git -C "$REPO" config --file .gitmodules --get-regexp path)
     docker run --rm --gpus all -v "$pin:/work" -w /work "$BUILD_IMAGE" \
         bash -lc 'git config --global --add safe.directory /work
