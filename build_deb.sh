@@ -5,7 +5,11 @@ PACKAGE_BIN=nvencc
 PACKAGE_MAINTAINER=rigaya
 PACKAGE_DESCRIPTION=
 PACKAGE_ROOT=.debpkg
-PACKAGE_VERSION=`git describe --tags | cut -f 1 --delim="-"`
+PACKAGE_VERSION=`sed -n 's/^#define VER_STR_FILEVERSION[ \t]*"\([^"]*\)".*$/\1/p' NVEncCore/rgy_version.h | tr -d '\r\n'`
+if [ -z "${PACKAGE_VERSION}" ]; then
+    echo "Failed to read package version from NVEncCore/rgy_version.h!"
+    exit 1
+fi
 PACKAGE_ARCH=`uname -m`
 PACKAGE_ARCH=`echo ${PACKAGE_ARCH} | sed -e 's/x86_64/amd64/g'`
 PACKAGE_ARCH=`echo ${PACKAGE_ARCH} | sed -e 's/aarch64/arm64/g'`
