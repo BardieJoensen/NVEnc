@@ -54,7 +54,11 @@ from integrated_architecture import (  # noqa: E402
 
 
 SCENE_FRACTIONS = (0.150, 0.325, 0.500, 0.675, 0.850)
-SAMPLE_OFFSETS = (6, 30, 54, 78, 102)
+# A frozen source-only grid.  Every eligible point is retained; frames with
+# fewer than eight static flat blocks are reported as unmeasurable rather than
+# replaced after inspecting an encode.  The gate separately requires at least
+# three usable pairs in every scene.
+SAMPLE_OFFSETS = tuple(range(6, 115, 6))
 ARMS = ("plain", "production", "candidate-control", "source", "response")
 FGS = "denoise=auto,chroma=auto,denoiser=bilateral"
 RESEARCH_PREFIX = "NVENC_FGS_TEST_"
@@ -252,12 +256,13 @@ def full_decode_command(ffmpeg: Path, encoded: Path) -> list[str]:
 
 def temporal_command(
     report_script: Path, source: Path, encoded: dict[str, Path], plane: str,
-    frames: list[int], output: Path,
+    frames: list[int], output: Path, minimum_frames: int = 3,
 ) -> list[str]:
     command = [
         sys.executable, str(report_script), "--source", str(source),
         "--plane", plane, "--bits", "10", "--flat-selector", "production",
         "--luma-bins", "8", "--frames", ",".join(map(str, frames)),
+        "--skip-thin", "--minimum-frames", str(minimum_frames),
         "--json-out", str(output),
     ]
     for arm in ARMS:
@@ -389,7 +394,14 @@ def scene_starts(
 
 def metric_summary(path: Path) -> dict:
     document = json.loads(path.read_text(encoding="utf-8"))
-    summary = {"plane": document["plane"], "truth": document["truth"], "arms": {}}
+    summary = {
+        "plane": document["plane"],
+        "truth": document["truth"],
+        "requested_frames": len(document["requested_frames"]),
+        "measured_frames": len(document["frames"]),
+        "skipped_frames": document["skipped_frames"],
+        "arms": {},
+    }
     for arm, record in document["arms"].items():
         summary["arms"][arm] = {
             "base_amplitude": record["base"]["amplitude_ratio"]["mean"],
@@ -399,6 +411,26 @@ def metric_summary(path: Path) -> dict:
             "texture_p95": record["total_axis_error_to_truth"]["p95"],
             "variance_closure_error": record["variance_closure"]["error"],
         }
+    return summary
+
+
+def validate_temporal_report(
+    path: Path, scene_frames: int, expected_scene: int,
+) -> dict:
+    summary = metric_summary(path)
+    document = json.loads(path.read_text(encoding="utf-8"))
+    count = 0
+    for frame in document["frames"]:
+        scene = frame // scene_frames
+        if scene != expected_scene:
+            raise RuntimeError(
+                f"temporal sample {frame} belongs to scene {scene}, "
+                f"expected {expected_scene}")
+        count += 1
+    if count < 3:
+        raise RuntimeError(
+            f"scene {expected_scene + 1} has only {count} usable frame pairs")
+    summary["scene"] = expected_scene + 1
     return summary
 
 
@@ -460,11 +492,6 @@ def main() -> int:
     review_score.FFMPEG = str(ffmpeg)
     review_score.FFPROBE = str(ffprobe)
     total_frames = args.scene_frames * len(SCENE_FRACTIONS)
-    sample_frames = [
-        scene * args.scene_frames + offset
-        for scene in range(len(SCENE_FRACTIONS)) for offset in SAMPLE_OFFSETS
-    ]
-
     manifest = {
         "purpose": "tail-first source-fit architecture gate; no production mutation",
         "scene_fractions": SCENE_FRACTIONS,
@@ -643,31 +670,43 @@ def main() -> int:
             continue
 
         for plane in ("y", "u", "v"):
-            report = report_dir / f"{name}-{plane}.json"
-            report_partial = partial_path(report)
-            command = temporal_command(
-                report_script, reel, encoded_by_title[name], plane,
-                sample_frames, report_partial)
-            expected = {
-                "command": command,
-                "source": identity(reel, include_hash=True),
-                "arms": {
-                    arm: identity(path, include_hash=True)
-                    for arm, path in encoded_by_title[name].items()
-                },
-                "measurement": identity(report_script, include_hash=True),
-            }
-            run_task(
-                f"{name}-{plane}-temporal", command, arm_environment("plain"),
-                expected, [report_partial], [report],
-                task_dir / f"{name}-{plane}-temporal.task.json",
-                task_dir / f"{name}-{plane}-temporal.log",
-                validate_outputs=lambda paths: metric_summary(paths[0]))
-            title_record.setdefault("grain_reports", {})[plane] = {
-                "identity": identity(report, include_hash=True),
-                "summary": metric_summary(report),
-            }
-            write_json(work / "manifest.json", manifest)
+            plane_records = []
+            for scene in range(len(SCENE_FRACTIONS)):
+                sample_frames = [
+                    scene * args.scene_frames + offset
+                    for offset in SAMPLE_OFFSETS
+                ]
+                report = report_dir / f"{name}-scene{scene + 1}-{plane}.json"
+                report_partial = partial_path(report)
+                command = temporal_command(
+                    report_script, reel, encoded_by_title[name], plane,
+                    sample_frames, report_partial)
+                expected = {
+                    "command": command,
+                    "source": identity(reel, include_hash=True),
+                    "arms": {
+                        arm: identity(path, include_hash=True)
+                        for arm, path in encoded_by_title[name].items()
+                    },
+                    "measurement": identity(report_script, include_hash=True),
+                    "scene": scene + 1,
+                }
+                def validate(paths: list[Path], scene: int = scene) -> dict:
+                    return validate_temporal_report(
+                        paths[0], args.scene_frames, scene)
+                run_task(
+                    f"{name}-scene{scene + 1}-{plane}-temporal", command,
+                    arm_environment("plain"), expected, [report_partial], [report],
+                    task_dir / f"{name}-scene{scene + 1}-{plane}-temporal.task.json",
+                    task_dir / f"{name}-scene{scene + 1}-{plane}-temporal.log",
+                    validate_outputs=validate)
+                plane_records.append({
+                    "identity": identity(report, include_hash=True),
+                    "summary": validate_temporal_report(
+                        report, args.scene_frames, scene),
+                })
+                title_record.setdefault("grain_reports", {})[plane] = plane_records
+                write_json(work / "manifest.json", manifest)
 
     if args.stop_after in ("prepare", "encode"):
         print(f"manifest: {work / 'manifest.json'}", flush=True)

@@ -177,6 +177,26 @@ def plane_geometry(width, height, plane):
     return (width + 1) // 2, (height + 1) // 2, 16
 
 
+def partition_static_frames(rows, skip_thin=False, minimum_frames=1,
+                            minimum_blocks=8):
+    """Apply a declared source-only measurability rule without cherry-picking."""
+    usable = []
+    skipped = []
+    for frame, static in rows:
+        if len(static) < minimum_blocks:
+            if not skip_thin:
+                raise ValueError(
+                    f"frame {frame}: only {len(static)} static flat blocks; "
+                    "choose a quieter frame")
+            skipped.append({"frame": frame, "static_blocks": len(static)})
+        else:
+            usable.append((frame, static))
+    if len(usable) < minimum_frames:
+        raise ValueError(
+            f"only {len(usable)} usable frame pairs; minimum is {minimum_frames}")
+    return usable, skipped
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True)
@@ -198,8 +218,17 @@ def main():
     parser.add_argument("--static-hi", type=float, default=1.3)
     parser.add_argument("--luma-bins", type=int, default=8,
                         help="fixed normalised-luma bands in the JSON report (default 8)")
+    parser.add_argument(
+        "--skip-thin", action="store_true",
+        help=("record source frames with fewer than eight static flat blocks "
+              "as unmeasurable instead of aborting"))
+    parser.add_argument(
+        "--minimum-frames", type=int, default=1,
+        help="minimum usable frame pairs after --skip-thin (default 1)")
     parser.add_argument("--json-out", default="")
     args = parser.parse_args()
+    if args.minimum_frames < 1:
+        parser.error("--minimum-frames must be at least one")
 
     arms = {}
     for item in args.arm:
@@ -215,8 +244,8 @@ def main():
     plane_width, plane_height, plane_block_size = plane_geometry(
         width, height, args.plane)
 
-    frames = [int(value) for value in args.frames.split(",")]
-    indices = sorted(set(frames + [frame + 1 for frame in frames]))
+    requested_frames = [int(value) for value in args.frames.split(",")]
+    indices = sorted(set(requested_frames + [frame + 1 for frame in requested_frames]))
     source_luma = decode_selected(
         args.source, width, height, indices, bits=args.bits)
     source = (source_luma if args.plane == "y" else decode_selected(
@@ -232,11 +261,8 @@ def main():
         for label, path in arms.items()
     }
 
-    truth_rows = []
-    masks = []
-    luma_masks = []
-    selected_counts = []
-    for frame in frames:
+    static_rows = []
+    for frame in requested_frames:
         if args.flat_selector == "production":
             candidates, _, _ = production_flat_blocks(
                 source_luma[frame], args.bits)
@@ -246,9 +272,20 @@ def main():
         static = static_flat_blocks(
             source_luma[frame], source_luma[frame + 1], candidates,
             lo=args.static_lo, hi=args.static_hi)
-        if len(static) < 8:
-            raise SystemExit(
-                f"frame {frame}: only {len(static)} static flat blocks; choose a quieter frame")
+        static_rows.append((frame, static))
+    try:
+        usable_rows, skipped_frames = partition_static_frames(
+            static_rows, skip_thin=args.skip_thin,
+            minimum_frames=args.minimum_frames)
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
+
+    frames = [frame for frame, _ in usable_rows]
+    truth_rows = []
+    masks = []
+    luma_masks = []
+    selected_counts = []
+    for frame, static in usable_rows:
         masks.append(static)
         luma_masks.append(masks_by_luma(
             source_luma[frame], static, args.luma_bins, args.bits))
@@ -263,7 +300,9 @@ def main():
         "dimensions": [plane_width, plane_height],
         "plane": args.plane,
         "bits": args.bits,
+        "requested_frames": requested_frames,
         "frames": frames,
+        "skipped_frames": skipped_frames,
         "flat_fraction": args.flat_fraction,
         "flat_selector": args.flat_selector,
         "static_ratio": [args.static_lo, args.static_hi],
@@ -275,6 +314,8 @@ def main():
 
     print(f"{os.path.basename(args.source)}: plane {args.plane} "
           f"{plane_width}x{plane_height}, frames {frames}")
+    if skipped_frames:
+        print(f"unmeasurable requested frames: {skipped_frames}")
     print(f"static flat blocks per frame: {selected_counts}\n")
     print(f"{'layer':<28}{'sigma':>8}{'lag-1':>8}{'lag-2':>8}{'amp/truth':>12}")
     print(f"{'source temporal truth':<28}{format_axis(report['truth'])}{1.0:>12.3f}")

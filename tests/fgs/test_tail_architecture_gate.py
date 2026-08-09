@@ -6,6 +6,7 @@ import unittest
 
 os.sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import tail_architecture_gate as gate  # noqa: E402
+import temporal_grain_report as temporal  # noqa: E402
 
 
 class TailArchitectureGateTest(unittest.TestCase):
@@ -95,6 +96,20 @@ class TailArchitectureGateTest(unittest.TestCase):
         self.assertNotIn("fps=", filters)
         self.assertEqual(command[command.index("-r") + 1], "24000/1001")
         self.assertEqual(command[command.index("-fps_mode") + 1], "cfr")
+
+    def test_thin_temporal_frames_are_recorded_not_replaced(self):
+        rows = [(6, list(range(12))), (18, list(range(2))),
+                (30, list(range(8)))]
+        usable, skipped = temporal.partition_static_frames(
+            rows, skip_thin=True, minimum_frames=2)
+        self.assertEqual([frame for frame, _ in usable], [6, 30])
+        self.assertEqual(skipped, [{"frame": 18, "static_blocks": 2}])
+        with self.assertRaises(ValueError):
+            temporal.partition_static_frames(rows, skip_thin=False)
+
+    def test_temporal_grid_is_frozen_and_stays_inside_each_scene(self):
+        self.assertEqual(gate.SAMPLE_OFFSETS, tuple(range(6, 115, 6)))
+        self.assertLess(max(gate.SAMPLE_OFFSETS) + 1, 120)
 
 
 if __name__ == "__main__":
