@@ -20,6 +20,36 @@ tail. The shared-mask spatial verifier remains useful as an energy/destruction
 alarm, but it is not a gain-calibration oracle: retained base detail, ringing
 and spatial texture are part of what it observes.
 
+## Measurement correction: use ratio of means, not mean of ratios
+
+The first published amplitude tables used the mean of per-frame standard-
+deviation ratios. That repeats the Jensen-bias failure already documented in
+`FINDINGS-2026-08-05-CHROMA-DIAGNOSIS.md`: noisy small denominators inflate the
+mean even when the aggregate variances are correct. Commit `0de18413` made the
+ratio of aggregate means canonical, retained the old statistic and its Jensen
+gap as diagnostics, and bumped the measurement to
+`scene-grid-v3-ratio-of-means`. All 105 scene/plane reports were regenerated
+from the same streams, source masks and frame grid. Coverage and decoder
+verdicts did not change.
+
+The correction does not retract the architecture result. It strengthens the
+luma amplitude result and narrows the chroma-V regression:
+
+| statistic | initial mean-of-ratios | corrected ratio-of-means |
+| --- | ---: | ---: |
+| production Y amplitude / MAE | 0.854 / 0.150 | 0.848 / 0.155 |
+| source Y amplitude / MAE | 1.049 / 0.078 | 1.038 / 0.076 |
+| production U amplitude / MAE | 0.908 / 0.126 | 0.887 / 0.133 |
+| source U amplitude / MAE | 1.074 / 0.116 | 1.048 / 0.105 |
+| production V amplitude / MAE | 0.933 / 0.124 | 0.896 / 0.117 |
+| source V amplitude / MAE | 1.131 / 0.176 | 1.068 / 0.127 |
+
+The earlier statement that source fitting made V amplitude MAE 42% worse is
+superseded. The corrected increase is 8.6% (6.99% with response). It remains a
+release risk because the sign and magnitude vary strongly by title, not because
+the corpus mean is catastrophic. The texture statistics do not divide by a
+frame-local amplitude denominator and are unchanged.
+
 ## Reproducible run
 
 The gate is reproducible through:
@@ -27,7 +57,7 @@ The gate is reproducible through:
 - `tail_architecture_gate.py`, which freezes provenance, source fractions,
   encoder commands, binaries and complete dav1d validation;
 - `temporal_grain_report.py`, measurement version
-  `scene-grid-v2-zero-safe`, which uses one source-derived static mask for all
+  `scene-grid-v3-ratio-of-means`, which uses one source-derived static mask for all
   arms and reports zero-synthesis controls honestly;
 - `tail_architecture_summary.py`, which enforces title coverage, keeps U and V
   separate, reports luma occupancy, sums bytes and scores grain-disabled bases
@@ -85,14 +115,15 @@ Thirty gradable scenes produced:
 
 | arm | delivered amplitude mean | amplitude MAE from 1.0 | texture MAE |
 | --- | ---: | ---: | ---: |
-| plain | 0.507 | 0.493 | 0.290 |
-| production | 0.854 | 0.150 | 0.132 |
-| candidate control | 0.859 | 0.145 | 0.133 |
-| source fit | 1.049 | 0.078 | 0.081 |
-| source + response | 1.052 | 0.073 | 0.065 |
+| plain | 0.538 | 0.462 | 0.290 |
+| production | 0.848 | 0.155 | 0.132 |
+| candidate control | 0.853 | 0.150 | 0.133 |
+| source fit | 1.038 | 0.076 | 0.081 |
+| source + response | 1.042 | 0.072 | 0.065 |
 
 Relative to production, source fitting reduces luma amplitude MAE by about
-48% and texture MAE by about 39%. The response arm reduces both by about 51%.
+51% and texture MAE by about 39%. The response arm reduces them by about 53%
+and 51%, respectively.
 This is a substantial, repeatable gain, not a small-fixture effect.
 
 It is not uniform enough to ship. The occupancy-weighted darkest band behaves
@@ -100,14 +131,14 @@ in the opposite direction:
 
 | source-luma band | blocks | production amplitude / MAE | source amplitude / MAE | response amplitude / MAE |
 | --- | ---: | ---: | ---: | ---: |
-| 0.000–0.125 | 23,044 | 0.938 / 0.081 | 1.123 / 0.131 | 1.126 / 0.135 |
-| 0.125–0.250 | 46,397 | 0.795 / 0.205 | 1.028 / 0.040 | 1.031 / 0.044 |
+| 0.000–0.125 | 23,044 | 0.931 / 0.083 | 1.115 / 0.124 | 1.117 / 0.126 |
+| 0.125–0.250 | 46,397 | 0.791 / 0.209 | 1.022 / 0.036 | 1.024 / 0.040 |
 
 Source fitting fixes the much larger second dark band, but it converts the
 darkest band from a modest deficit into an excess. Both unweighted and
 occupancy-weighted values are retained; a title-level mean must not hide this.
 
-Per-title source-fit luma means range from 0.933 on Korra S02E12 to 1.164 on
+Per-title source-fit luma means range from 0.908 on Korra S02E12 to 1.146 on
 HIMYM S09E15. The response is helpful in aggregate but is not a universal
 normalizer: it slightly worsens texture on Korra S02E12 and HIMYM S09E15.
 
@@ -131,24 +162,25 @@ U improves modestly in amplitude and substantially in texture:
 
 | arm | U amplitude | U amplitude MAE | U texture MAE |
 | --- | ---: | ---: | ---: |
-| production | 0.908 | 0.126 | 0.166 |
-| source fit | 1.074 | 0.116 | 0.088 |
-| source + response | 1.066 | 0.113 | 0.089 |
+| production | 0.887 | 0.133 | 0.166 |
+| source fit | 1.048 | 0.105 | 0.088 |
+| source + response | 1.039 | 0.105 | 0.089 |
 
-V is the release blocker:
+V remains the less stable plane, but the corrected regression is modest rather
+than the original headline:
 
 | arm | V amplitude | V amplitude MAE | V texture MAE |
 | --- | ---: | ---: | ---: |
-| production | 0.933 | 0.124 | 0.189 |
-| source fit | 1.131 | 0.176 | 0.115 |
-| source + response | 1.125 | 0.174 | 0.115 |
+| production | 0.896 | 0.117 | 0.189 |
+| source fit | 1.068 | 0.127 | 0.115 |
+| source + response | 1.064 | 0.125 | 0.115 |
 
 Source fitting makes V texture about 39% more faithful but makes V amplitude
-MAE about 42% worse. The excess is repeated rather than one-title noise:
-source-fit V means include roughly 1.151 on the lower-tail HIMYM fallback,
-1.138 on upper-tail HIMYM, 1.154 on Planet Earth and 1.319 on Trying. The
-response barely changes it. Chroma must remain per-plane; a combined chroma
-number would conceal the failure.
+MAE about 8.6% worse. The corpus mean hides opposite title behavior:
+source-fit V means are 0.957 on Korra S02E12 and 0.990 on Planet Earth, but
+1.127 on the lower-tail HIMYM fallback, 1.129 on upper-tail HIMYM and 1.193 on
+Trying. The response barely changes it. Chroma must remain per-plane; a
+combined chroma number would conceal the tail.
 
 ## Size and base fidelity
 
