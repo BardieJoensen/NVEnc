@@ -185,6 +185,13 @@ the same subset to chroma is a measured negative, so the corrected prototype
 uses the temporal population only for luma. It remains test-only and
 default-off; per-luma strength, chroma amplitude and semantic admission still
 block any routing change.
+See `FINDINGS-2026-08-09-TAIL-ARCHITECTURE.md` and
+`FINDINGS-2026-08-09-STRENGTH-PROVENANCE.md` for the current provenance-correct
+corpus result. Source AR texture roughly halves luma amplitude/texture error,
+but neither fixed source nor residual strength closes both the darkest luma
+band and chroma V. The follow-up also records temporal state coupling and
+run-to-run analyzer/NVENC control variation; no research arm is approved for
+production.
 See `FINDINGS-2026-07-31-WIENER-PSD.md` for the coarse-grain plan: FFT3D's
 Wiener gain uses a scalar noise power where libaom uses a per-bin PSD.
 `wiener_psd_sim.py` reproduces the current 0.366 capture offline and measures
