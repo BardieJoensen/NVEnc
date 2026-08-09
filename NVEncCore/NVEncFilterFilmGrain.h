@@ -190,6 +190,9 @@ private:
     bool m_textureLeakClosure;
     bool m_textureLeakDynamic;
     bool m_textureLeakResponse;
+    // Test-only plane mask: keep the source-derived AR texture while deriving
+    // selected scaling curves from the residual-model observations.
+    uint32_t m_residualStrengthPlaneMask;
     std::unique_ptr<CUMemBufPair> m_blockMetrics;
     std::unique_ptr<CUMemBufPair> m_blockMask;
     std::unique_ptr<CUMemBufPair> m_sigmaMap;
@@ -207,4 +210,3 @@ private:
     int m_blocksX;
     int m_blocksY;
 };
-

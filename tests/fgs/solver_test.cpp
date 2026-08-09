@@ -193,6 +193,73 @@ void testSourceModelResidualFallback() {
         "failed residual solve is not reported as a selected fallback");
 }
 
+void testSplitStrengthProvenance() {
+    FilmGrainGpuStats source = {};
+    fillHorizontalPlane(source.plane[0], 6.0, 0.35);
+    fillWhitePlane(source.plane[1], 4.0, true);
+    fillWhitePlane(source.plane[2], 2.0, true);
+
+    FilmGrainGpuStats residual = source;
+    for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+        residual.plane[0].binVarSum[bin] = 100.0 * 3.0 * 3.0;
+        residual.plane[1].binVarSum[bin] = 100.0 * 2.0 * 2.0;
+        residual.plane[2].binVarSum[bin] = 100.0 * 1.0 * 1.0;
+    }
+
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 sourceParams = {};
+    NVEncFilmGrainDiagnostics sourceDiagnostics;
+    expect(build_source_film_grain_params_with_residual_fallback(
+        source, residual, 8, true, true, sourceParams,
+        sourceDiagnostics, 0.98), "source model and strength solve");
+
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 allResidualParams = {};
+    NVEncFilmGrainDiagnostics allResidualDiagnostics;
+    expect(build_source_film_grain_params_with_residual_fallback(
+        source, residual, 8, true, true, allResidualParams,
+        allResidualDiagnostics, 0.98, FGS_STRENGTH_PLANE_ALL),
+        "source texture with residual strength solves");
+    expect(!allResidualDiagnostics.sourceModelFallback,
+        "split strength keeps the source texture model");
+    expectNear(allResidualDiagnostics.noiseStdDev[0], 3.0, 0.05,
+        "residual-all selects residual luma strength");
+    expectNear(allResidualDiagnostics.noiseStdDev[1], 2.0, 0.05,
+        "residual-all selects residual U strength");
+    expectNear(allResidualDiagnostics.noiseStdDev[2], 1.0, 0.05,
+        "residual-all selects residual V strength");
+    expect(sourceParams.arCoeffShiftMinus6
+        == allResidualParams.arCoeffShiftMinus6,
+        "strength split preserves shared AR shift");
+    expect(std::memcmp(sourceParams.arCoeffsYPlus128,
+        allResidualParams.arCoeffsYPlus128,
+        sizeof(sourceParams.arCoeffsYPlus128)) == 0,
+        "strength split preserves source luma AR texture");
+    expect(std::memcmp(sourceParams.arCoeffsCbPlus128,
+        allResidualParams.arCoeffsCbPlus128,
+        sizeof(sourceParams.arCoeffsCbPlus128)) == 0,
+        "strength split preserves source U AR texture");
+    expect(std::memcmp(sourceParams.arCoeffsCrPlus128,
+        allResidualParams.arCoeffsCrPlus128,
+        sizeof(sourceParams.arCoeffsCrPlus128)) == 0,
+        "strength split preserves source V AR texture");
+
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 sourceYuParams = {};
+    NVEncFilmGrainDiagnostics sourceYuDiagnostics;
+    expect(build_source_film_grain_params_with_residual_fallback(
+        source, residual, 8, true, true, sourceYuParams,
+        sourceYuDiagnostics, 0.98, FGS_STRENGTH_PLANE_V),
+        "source Y/U strength with residual V strength solves");
+    expectNear(sourceYuDiagnostics.noiseStdDev[0], 6.0, 0.05,
+        "source-yu keeps source luma strength");
+    expectNear(sourceYuDiagnostics.noiseStdDev[1], 4.0, 0.05,
+        "source-yu keeps source U strength");
+    expectNear(sourceYuDiagnostics.noiseStdDev[2], 1.0, 0.05,
+        "source-yu selects residual V strength");
+    expect(std::memcmp(sourceParams.arCoeffsCrPlus128,
+        sourceYuParams.arCoeffsCrPlus128,
+        sizeof(sourceParams.arCoeffsCrPlus128)) == 0,
+        "source-yu changes V strength without changing V texture");
+}
+
 void testTemporalLeakClosure() {
     FilmGrainGpuStats stats = {};
     auto& luma = stats.plane[0];
@@ -671,6 +738,7 @@ int main() {
     testSourceCorrelationRegularizer();
     testSourceTemplateGain();
     testSourceModelResidualFallback();
+    testSplitStrengthProvenance();
     testTemporalLeakClosure();
     testTemporalTextureLeakClosure();
     testTextureResponseSelector();

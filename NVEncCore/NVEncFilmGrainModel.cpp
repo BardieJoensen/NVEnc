@@ -59,6 +59,43 @@ NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
 
 namespace fgsmodel {
 
+static bool fit_plane_strength(const FilmGrainGpuPlaneStats& stats,
+    FilmGrainSolvedPlane& solved) {
+    solved.strength.fill(0.0);
+    solved.strengthWeight.fill(0);
+    int populatedBins = 0;
+    for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+        solved.strengthWeight[bin] = stats.binBlockCount[bin];
+        if (stats.binBlockCount[bin] == 0) continue;
+        const double variance = std::max(0.0,
+            stats.binVarSum[bin] / static_cast<double>(stats.binBlockCount[bin]));
+        solved.strength[bin] = std::sqrt(variance) / solved.templateGain;
+        ++populatedBins;
+    }
+    if (populatedBins == 0) return false;
+    for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+        if (solved.strengthWeight[bin] != 0) continue;
+        int left = bin - 1;
+        while (left >= 0 && solved.strengthWeight[left] == 0) --left;
+        int right = bin + 1;
+        while (right < FGS_STRENGTH_BINS && solved.strengthWeight[right] == 0) ++right;
+        if (left < 0) solved.strength[bin] = solved.strength[right];
+        else if (right >= FGS_STRENGTH_BINS) solved.strength[bin] = solved.strength[left];
+        else {
+            const double mix = static_cast<double>(bin - left) / (right - left);
+            solved.strength[bin] = solved.strength[left] * (1.0 - mix)
+                + solved.strength[right] * mix;
+        }
+    }
+    auto smoothed = solved.strength;
+    for (int bin = 1; bin + 1 < FGS_STRENGTH_BINS; ++bin) {
+        smoothed[bin] = (solved.strength[bin - 1]
+            + 2.0 * solved.strength[bin] + solved.strength[bin + 1]) * 0.25;
+    }
+    solved.strength = smoothed;
+    return true;
+}
+
 bool solve_linear_system(std::vector<double> matrix, std::vector<double> rhs, std::vector<double>& solution, const int n) {
     if (static_cast<int>(matrix.size()) != n * n || static_cast<int>(rhs.size()) != n) return false;
     double diagonalMean = 0.0;
@@ -170,34 +207,7 @@ FilmGrainSolvedPlane solve_plane(const FilmGrainGpuPlaneStats& stats, const bool
         }
     }
     solved.templateGain = std::sqrt(templateVariance);
-    int populatedBins = 0;
-    for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
-        solved.strengthWeight[bin] = stats.binBlockCount[bin];
-        if (stats.binBlockCount[bin] == 0) continue;
-        const double variance = std::max(0.0,
-            stats.binVarSum[bin] / static_cast<double>(stats.binBlockCount[bin]));
-        solved.strength[bin] = std::sqrt(variance) / solved.templateGain;
-        ++populatedBins;
-    }
-    if (populatedBins == 0) return solved;
-    for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
-        if (solved.strengthWeight[bin] != 0) continue;
-        int left = bin - 1;
-        while (left >= 0 && solved.strengthWeight[left] == 0) --left;
-        int right = bin + 1;
-        while (right < FGS_STRENGTH_BINS && solved.strengthWeight[right] == 0) ++right;
-        if (left < 0) solved.strength[bin] = solved.strength[right];
-        else if (right >= FGS_STRENGTH_BINS) solved.strength[bin] = solved.strength[left];
-        else {
-            const double mix = static_cast<double>(bin - left) / (right - left);
-            solved.strength[bin] = solved.strength[left] * (1.0 - mix) + solved.strength[right] * mix;
-        }
-    }
-    auto smoothed = solved.strength;
-    for (int bin = 1; bin + 1 < FGS_STRENGTH_BINS; ++bin) {
-        smoothed[bin] = (solved.strength[bin - 1] + 2.0 * solved.strength[bin] + solved.strength[bin + 1]) * 0.25;
-    }
-    solved.strength = smoothed;
+    if (!fit_plane_strength(stats, solved)) return solved;
     solved.valid = true;
     return solved;
 }
@@ -755,7 +765,9 @@ bool apply_chroma_leak_closure(FilmGrainGpuStats& stats, const double qvbr,
     return true;
 }
 
-bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
+static bool build_film_grain_params_impl(const FilmGrainGpuStats& stats,
+    const FilmGrainGpuStats *strengthStats, const uint32_t strengthPlaneMask,
+    const int bitDepth,
     const bool analyzeChroma, const bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
     NVEncFilmGrainDiagnostics& diagnostics, const double maxLumaCorrelation) {
     std::array<FilmGrainSolvedPlane, 3> solved;
@@ -817,6 +829,20 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
             // bound if a rounding boundary defeats the final safety check.
             diagnostics.sourceRegularizationRejected = true;
             return false;
+        }
+    }
+    if (strengthStats != nullptr) {
+        // Keep AR coefficients, realised template gains and chroma/luma
+        // correlation entirely source-derived. Replace only the scaling-curve
+        // observations after that texture solve. Swapping GPU accumulator
+        // structs earlier would also change chroma's cross-plane coefficient
+        // and would not isolate strength provenance.
+        for (int plane = 0; plane < 3; ++plane) {
+            if ((strengthPlaneMask & (1U << plane)) == 0
+                || !solved[plane].valid) continue;
+            if (!fit_plane_strength(strengthStats->plane[plane], solved[plane])) {
+                return false;
+            }
         }
     }
     // The decoder builds its grain template by running the AR recursion over
@@ -940,13 +966,24 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     return true;
 }
 
+bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
+    const bool analyzeChroma, const bool limitedRange,
+    NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
+    NVEncFilmGrainDiagnostics& diagnostics, const double maxLumaCorrelation) {
+    return build_film_grain_params_impl(stats, nullptr, 0, bitDepth,
+        analyzeChroma, limitedRange, params, diagnostics, maxLumaCorrelation);
+}
+
 bool build_source_film_grain_params_with_residual_fallback(
     const FilmGrainGpuStats& sourceStats, const FilmGrainGpuStats& residualStats,
     const int bitDepth, const bool analyzeChroma, const bool limitedRange,
     NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
-    NVEncFilmGrainDiagnostics& diagnostics, const double maxLumaCorrelation) {
+    NVEncFilmGrainDiagnostics& diagnostics, const double maxLumaCorrelation,
+    const uint32_t residualStrengthPlaneMask) {
     diagnostics.sourceModelFallback = false;
-    if (build_film_grain_params(sourceStats, bitDepth, analyzeChroma,
+    if (build_film_grain_params_impl(sourceStats,
+        residualStrengthPlaneMask != 0 ? &residualStats : nullptr,
+        residualStrengthPlaneMask, bitDepth, analyzeChroma,
         limitedRange, params, diagnostics, maxLumaCorrelation)) {
         return true;
     }
@@ -1064,7 +1101,8 @@ bool build_source_film_grain_params_with_texture_response(
     const uint64_t minTextureObservations, const int bitDepth,
     const bool analyzeChroma, const bool limitedRange,
     NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
-    NVEncFilmGrainDiagnostics& diagnostics, const double maxLumaCorrelation) {
+    NVEncFilmGrainDiagnostics& diagnostics, const double maxLumaCorrelation,
+    const uint32_t residualStrengthPlaneMask) {
     // Keep the grid frozen to the preregistered exact response experiment.
     // Selecting from this small set also makes every choice reproducible and
     // avoids pretending that the finite AR quantizer is a smooth objective.
@@ -1097,8 +1135,9 @@ bool build_source_film_grain_params_with_texture_response(
             candidateStats, minTextureObservations,
             candidateDiagnostics, preencodeWeight)) continue;
         NV_ENC_FILM_GRAIN_PARAMS_AV1 candidateParams = {};
-        if (!build_film_grain_params(
-            candidateStats, bitDepth, analyzeChroma, limitedRange,
+        if (!build_film_grain_params_impl(candidateStats,
+            residualStrengthPlaneMask != 0 ? &residualStats : nullptr,
+            residualStrengthPlaneMask, bitDepth, analyzeChroma, limitedRange,
             candidateParams, candidateDiagnostics,
             maxLumaCorrelation)) continue;
         double candidateError = 0.0;

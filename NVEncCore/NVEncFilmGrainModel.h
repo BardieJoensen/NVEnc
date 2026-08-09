@@ -90,6 +90,11 @@ constexpr int FGS_AR_LAG = 3;
 constexpr int FGS_AR_COEFFS = 24;
 constexpr int FGS_AR_COEFFS_CHROMA = 25;
 constexpr int FGS_STRENGTH_BINS = 20;
+constexpr uint32_t FGS_STRENGTH_PLANE_Y = 1U << 0;
+constexpr uint32_t FGS_STRENGTH_PLANE_U = 1U << 1;
+constexpr uint32_t FGS_STRENGTH_PLANE_V = 1U << 2;
+constexpr uint32_t FGS_STRENGTH_PLANE_ALL =
+    FGS_STRENGTH_PLANE_Y | FGS_STRENGTH_PLANE_U | FGS_STRENGTH_PLANE_V;
 constexpr int FGS_TRI_Y = FGS_AR_COEFFS * (FGS_AR_COEFFS + 1) / 2;
 constexpr int FGS_TRI_C = FGS_AR_COEFFS_CHROMA * (FGS_AR_COEFFS_CHROMA + 1) / 2;
 // grain_scale_shift is a 2-bit field, so 3 is the format maximum.
@@ -253,7 +258,8 @@ bool build_source_film_grain_params_with_texture_response(
     const FilmGrainGpuStats& sourceStats, const FilmGrainGpuStats& residualStats,
     uint64_t minTextureObservations, int bitDepth, bool analyzeChroma,
     bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
-    NVEncFilmGrainDiagnostics& diagnostics, double maxLumaCorrelation);
+    NVEncFilmGrainDiagnostics& diagnostics, double maxLumaCorrelation,
+    uint32_t residualStrengthPlaneMask = 0);
 bool apply_chroma_leak_closure(FilmGrainGpuStats& stats, double qvbr,
     uint64_t minTemporalBlocks, bool perBin, bool planeSpecific);
 bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,
@@ -263,7 +269,8 @@ bool build_source_film_grain_params_with_residual_fallback(
     const FilmGrainGpuStats& sourceStats, const FilmGrainGpuStats& residualStats,
     int bitDepth, bool analyzeChroma, bool limitedRange,
     NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
-    NVEncFilmGrainDiagnostics& diagnostics, double maxLumaCorrelation);
+    NVEncFilmGrainDiagnostics& diagnostics, double maxLumaCorrelation,
+    uint32_t residualStrengthPlaneMask = 0);
 double implied_luma_correlation(const std::vector<double>& coeffs, double scale = 1.0);
 double eval_scaling_curve(const uint8_t *values, const uint8_t *scalings, uint32_t count, double x);
 bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC_FILM_GRAIN_PARAMS_AV1& b,

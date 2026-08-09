@@ -1813,7 +1813,7 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_minNoiseSelect(-1.0f), m_minNoiseDenoise(-1.0f), m_measureRankSelection(false),
     m_minUpdateFrames(FGS_MODEL_MIN_UPDATE_FRAMES),
     m_textureLeakClosure(false), m_textureLeakDynamic(false),
-    m_textureLeakResponse(false),
+    m_textureLeakResponse(false), m_residualStrengthPlaneMask(0),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
     m_fallbackModelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWritten(false),
@@ -2092,6 +2092,32 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
             m_sourceTemporalMask = true;
             AddMessage(RGY_LOG_WARN,
                 _T("film-grain: fitting the test-only source model from temporally static blocks.\n"));
+        }
+    }
+    m_residualStrengthPlaneMask = 0;
+    if (const auto value = std::getenv("NVENC_FGS_TEST_STRENGTH_PROVENANCE");
+        value && value[0] != '\0') {
+        uint32_t planeMask = 0;
+        if (strcmp(value, "residual-all") == 0) {
+            planeMask = FGS_STRENGTH_PLANE_ALL;
+        } else if (strcmp(value, "source-yu") == 0) {
+            planeMask = FGS_STRENGTH_PLANE_V;
+        } else {
+            AddMessage(RGY_LOG_WARN,
+                _T("film-grain: ignoring invalid NVENC_FGS_TEST_STRENGTH_PROVENANCE=%s (expected residual-all or source-yu).\n"),
+                char_to_tstring(value).c_str());
+        }
+        if (planeMask != 0) {
+            if (!config.modelFromSource || !m_sourceTemporalMask) {
+                AddMessage(RGY_LOG_WARN,
+                    _T("film-grain: ignoring strength-provenance test hook (requires modelsrc=on and NVENC_FGS_TEST_SOURCE_STATIC=on).\n"));
+            } else {
+                m_residualStrengthPlaneMask = planeMask;
+                AddMessage(RGY_LOG_WARN,
+                    planeMask == FGS_STRENGTH_PLANE_ALL
+                        ? _T("film-grain: source AR texture with residual strength on Y/U/V (test only).\n")
+                        : _T("film-grain: source AR texture/strength on Y/U with residual strength on V (test only).\n"));
+            }
         }
     }
     m_textureLeakClosure = false;
@@ -2891,7 +2917,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 bitDepth, prm->filmGrain.analyzeChroma,
                 prm->filmGrain.clipToRestrictedRange, params, diagnostics,
                 std::min(0.98, static_cast<double>(diagnostics.grainCorrelation)
-                    + FGS_SOURCE_CORRELATION_MARGIN));
+                    + FGS_SOURCE_CORRELATION_MARGIN),
+                m_residualStrengthPlaneMask);
         } else if (prm->filmGrain.modelFromSource
             && m_textureLeakClosure && !textureLeakCompensated) {
             // A reset frame has no previous picture from which to measure the
@@ -2910,7 +2937,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                     prm->filmGrain.analyzeChroma,
                     prm->filmGrain.clipToRestrictedRange, params, diagnostics,
                     std::min(0.98, static_cast<double>(diagnostics.grainCorrelation)
-                        + FGS_SOURCE_CORRELATION_MARGIN))
+                        + FGS_SOURCE_CORRELATION_MARGIN),
+                    m_residualStrengthPlaneMask)
                 : build_film_grain_params(
                     combined, bitDepth, prm->filmGrain.analyzeChroma,
                     prm->filmGrain.clipToRestrictedRange, params, diagnostics, -1.0);
@@ -3161,6 +3189,7 @@ void NVEncFilterFilmGrain::close() {
     m_textureLeakClosure = false;
     m_textureLeakDynamic = false;
     m_textureLeakResponse = false;
+    m_residualStrengthPlaneMask = 0;
     m_frameBuf.clear();
     m_denoiseWork.reset();
     m_blockMetrics.reset();
