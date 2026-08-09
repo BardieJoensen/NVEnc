@@ -4035,6 +4035,25 @@ public:
                 // 出力surfaceをまだ取得していないので、そのまま残りのqueued frame / drain markerを処理する。
                 continue;
             }
+            auto& lastFilter = m_vpFilters[m_vpFilters.size() - 1];
+            // The last filter must be able to write directly to the encoder surface.
+            if (typeid(*lastFilter.get()) != typeid(NVEncFilterCspCrop)
+                && typeid(*lastFilter.get()) != typeid(NVEncFilterFilmGrain)) {
+                PrintMes(RGY_LOG_ERROR, _T("Last filter setting invalid.\n"));
+                return RGY_ERR_INVALID_PARAM;
+            }
+            if (filterframes.front().first.ptr[0] == nullptr && !lastFilter->mayEmitOnDrain()) {
+                // Frame-local terminal filters cannot produce anything from a
+                // drain marker. Do not reserve an encoder surface here: at an
+                // exact early-stop/lookahead boundary every surface may be held
+                // by NVENC, which must receive EOS before any becomes free.
+                if (!outputSurfs.empty()) {
+                    queueOutputSurfs();
+                    if (m_stopwatch) m_stopwatch->add(0, 3);
+                    return RGY_ERR_NONE;
+                }
+                return RGY_ERR_MORE_DATA;
+            }
             struct CUFrameEncAutoDelete {
                 RGYQueueMPMP<CUFrameEnc *>& qEncodeBufferFree;
                 CUFrameEncAutoDelete(RGYQueueMPMP<CUFrameEnc *>& q) : qEncodeBufferFree(q) {};;
@@ -4088,13 +4107,6 @@ public:
             if (m_stopwatch) m_stopwatch->add(0, 2);
 
             //エンコードバッファにコピー
-            auto &lastFilter = m_vpFilters[m_vpFilters.size() - 1];
-            // The last filter must be able to write directly to the encoder surface.
-            if (typeid(*lastFilter.get()) != typeid(NVEncFilterCspCrop)
-                && typeid(*lastFilter.get()) != typeid(NVEncFilterFilmGrain)) {
-                PrintMes(RGY_LOG_ERROR, _T("Last filter setting invalid.\n"));
-                return RGY_ERR_INVALID_PARAM;
-            }
             int nOutFrames = 0;
             RGYFrameInfo *outInfo[16] = { 0 };
             //エンコードバッファの情報を設定
