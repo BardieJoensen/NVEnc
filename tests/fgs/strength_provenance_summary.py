@@ -12,7 +12,9 @@ import sys
 
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import general_content_gate as common  # noqa: E402
 from integrated_architecture import write_json  # noqa: E402
+import review_score  # noqa: E402
 import strength_provenance_gate as gate  # noqa: E402
 
 
@@ -95,7 +97,52 @@ def band_rows(manifest: dict) -> list[dict]:
     return rows
 
 
-def summarize(manifest: dict) -> dict:
+def score_base_deltas(
+    manifest: dict, metric_dir: Path, ffmpeg: Path, ffprobe: Path,
+) -> list[dict]:
+    """Bound encoder/base coupling after a film-grain strength change."""
+    review_score.FFMPEG, review_score.FFPROBE = str(ffmpeg), str(ffprobe)
+    rows = []
+    for name, title in manifest["titles"].items():
+        control = Path(title["arms"][gate.CONTROL_ARM]["base"]["outputs"][0]["path"])
+        for arm in gate.EXPERIMENT_ARMS:
+            treatment = title["arms"][arm]
+            if treatment["base_vs_control_identical"]:
+                rows.append({
+                    "title": name,
+                    "arm": arm,
+                    "pixel_identical": True,
+                    "frames": manifest["scene_frames"] * len(
+                        manifest["scene_fractions"]),
+                })
+                continue
+            path = Path(treatment["base"]["outputs"][0]["path"])
+            row = common.score_pair(
+                control, path, name, f"control-vs-{arm}",
+                "strength-base-drift", metric_dir, full=False)
+            row["arm"] = arm
+            row["pixel_identical"] = False
+            rows.append(row)
+    return rows
+
+
+def summarize_base_deltas(base_delta_rows: list[dict]) -> dict:
+    result = {}
+    for arm in gate.EXPERIMENT_ARMS:
+        rows = [row for row in base_delta_rows if row["arm"] == arm]
+        scored = [row for row in rows if not row["pixel_identical"]]
+        result[arm] = {
+            "titles": len(rows),
+            "pixel_identical_titles": sum(row["pixel_identical"] for row in rows),
+            "vmaf_mean": mean([row["vmaf"] for row in scored]),
+            "vmaf_p1_mean": mean([row["vmaf_p1"] for row in scored]),
+            "psnr_y_mean": mean([row["psnr_y"] for row in scored]),
+            "ssim_mean": mean([row["ssim"] for row in scored]),
+        }
+    return result
+
+
+def summarize(manifest: dict, base_delta_rows: list[dict] | None = None) -> dict:
     if manifest.get("measurement_version") != gate.MEASUREMENT_VERSION:
         raise RuntimeError(
             f"measurement version is {manifest.get('measurement_version')!r}; "
@@ -149,6 +196,9 @@ def summarize(manifest: dict) -> dict:
             "identical_fraction": identical / jointly if jointly else None,
         }
 
+    base_delta_rows = [] if base_delta_rows is None else base_delta_rows
+    base_delta_summary = summarize_base_deltas(base_delta_rows)
+
     return {
         "measurement_version": gate.MEASUREMENT_VERSION,
         "titles": len(manifest["titles"]),
@@ -177,6 +227,8 @@ def summarize(manifest: dict) -> dict:
                 for arm in gate.EXPERIMENT_ARMS
             },
             "stream_texture": texture_isolation,
+            "base_delta_summary": base_delta_summary,
+            "base_delta_rows": base_delta_rows,
         },
     }
 
@@ -186,12 +238,21 @@ def main() -> int:
     parser.add_argument(
         "--work", default="/media/merged-storage/media/test-encodes/"
         "sourcefit-strength-provenance-20260809")
+    parser.add_argument("--ffmpeg", default="/usr/local/bin/ffmpeg")
+    parser.add_argument("--ffprobe", default="/usr/local/bin/ffprobe")
     args = parser.parse_args()
     work = Path(args.work).resolve()
     manifest_path = work / "manifest.json"
     if not manifest_path.is_file():
         parser.error(f"missing experiment manifest: {manifest_path}")
-    summary = summarize(json.loads(manifest_path.read_text(encoding="utf-8")))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    base_metric_dir = work / "metrics" / "base-deltas"
+    base_metric_dir.mkdir(parents=True, exist_ok=True)
+    base_delta_rows = score_base_deltas(
+        manifest, base_metric_dir,
+        Path(args.ffmpeg).resolve(), Path(args.ffprobe).resolve())
+    write_json(work / "metrics" / "base-deltas.json", base_delta_rows)
+    summary = summarize(manifest, base_delta_rows)
     output = work / "summary.json"
     write_json(output, summary)
     print(f"summary: {output}")

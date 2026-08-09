@@ -36,6 +36,20 @@ class StrengthProvenanceSummaryTest(unittest.TestCase):
         self.assertAlmostEqual(result["occupancy_weighted_amplitude"], 0.875)
         self.assertAlmostEqual(result["occupancy_weighted_mae"], 0.125)
 
+    def test_base_delta_summary_keeps_nonidentical_scores_visible(self):
+        rows = [
+            {"arm": "texture-residual-all", "pixel_identical": False,
+             "vmaf": 99.0, "vmaf_p1": 98.0, "psnr_y": 50.0, "ssim": 0.999},
+            {"arm": "texture-residual-all", "pixel_identical": True},
+        ]
+        # The missing second treatment must remain explicit rather than
+        # borrowing the first treatment's result.
+        result = summary.summarize_base_deltas(rows)
+        self.assertEqual(result["texture-residual-all"]["titles"], 2)
+        self.assertEqual(result["texture-residual-all"]["pixel_identical_titles"], 1)
+        self.assertEqual(result["texture-residual-all"]["vmaf_mean"], 99.0)
+        self.assertEqual(result["texture-source-yu"]["titles"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
