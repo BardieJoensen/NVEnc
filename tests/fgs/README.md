@@ -1,5 +1,10 @@
 # AV1 film-grain analyzer tests
 
+**Start with `STATUS-2026-08-09.md`.** It is the current branch/deployment map,
+records which conclusions survived later corrections, and defines the next
+quality gate. The files below are the chronological evidence, not a flat list
+of equally current recommendations.
+
 These tests exercise the CUDA AV1 film-grain analyzer without requiring any
 copyrighted media. Set `NVENCC` when the binary is not at
 `build-fgs-cuda/nvencc`.
