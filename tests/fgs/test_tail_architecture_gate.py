@@ -70,8 +70,8 @@ class TailArchitectureGateTest(unittest.TestCase):
         self.assertEqual(catalog["Korra_S02E12"].qvbr, 34)
         self.assertEqual(catalog["Korra_S02E07"].qvbr, 34)
         for name in (
-                "Abbott_S02E02", "Planet_Earth_S01E06", "HIMYM_S09E15",
-                "Trying_S02E06"):
+                "HIMYM_S04E17", "Abbott_S02E02", "Planet_Earth_S01E06",
+                "HIMYM_S09E15", "Trying_S02E06"):
             self.assertEqual(catalog[name].qvbr, 30)
 
     def test_extract_is_lossless_progressive_without_deinterlacing(self):
@@ -106,10 +106,21 @@ class TailArchitectureGateTest(unittest.TestCase):
         self.assertEqual(skipped, [{"frame": 18, "static_blocks": 2}])
         with self.assertRaises(ValueError):
             temporal.partition_static_frames(rows, skip_thin=False)
+        usable, skipped = temporal.partition_static_frames(
+            [(6, []), (12, [])], skip_thin=True, minimum_frames=0)
+        self.assertEqual(usable, [])
+        self.assertEqual(len(skipped), 2)
 
     def test_temporal_grid_is_frozen_and_stays_inside_each_scene(self):
         self.assertEqual(gate.SAMPLE_OFFSETS, tuple(range(6, 115, 6)))
         self.assertLess(max(gate.SAMPLE_OFFSETS) + 1, 120)
+
+    def test_temporal_command_records_sparse_scenes_before_grading(self):
+        encoded = {arm: Path(f"{arm}.mkv") for arm in gate.ARMS}
+        command = gate.temporal_command(
+            Path("report.py"), Path("source.mkv"), encoded, "y", [6, 12],
+            Path("out.json"), minimum_frames=0)
+        self.assertEqual(command[command.index("--minimum-frames") + 1], "0")
 
 
 if __name__ == "__main__":

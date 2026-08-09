@@ -224,11 +224,12 @@ def main():
               "as unmeasurable instead of aborting"))
     parser.add_argument(
         "--minimum-frames", type=int, default=1,
-        help="minimum usable frame pairs after --skip-thin (default 1)")
+        help=("minimum usable frame pairs after --skip-thin (default 1; "
+              "zero writes an explicit unmeasurable report)"))
     parser.add_argument("--json-out", default="")
     args = parser.parse_args()
-    if args.minimum_frames < 1:
-        parser.error("--minimum-frames must be at least one")
+    if args.minimum_frames < 0:
+        parser.error("--minimum-frames must not be negative")
 
     arms = {}
     for item in args.arm:
@@ -248,18 +249,6 @@ def main():
     indices = sorted(set(requested_frames + [frame + 1 for frame in requested_frames]))
     source_luma = decode_selected(
         args.source, width, height, indices, bits=args.bits)
-    source = (source_luma if args.plane == "y" else decode_selected(
-        args.source, plane_width, plane_height, indices, plane=args.plane,
-        bits=args.bits))
-    decoded = {
-        label: {
-            "on": decode_selected(path, plane_width, plane_height, indices,
-                                  filmgrain=1, plane=args.plane, bits=args.bits),
-            "off": decode_selected(path, plane_width, plane_height, indices,
-                                   filmgrain=0, plane=args.plane, bits=args.bits),
-        }
-        for label, path in arms.items()
-    }
 
     static_rows = []
     for frame in requested_frames:
@@ -281,6 +270,48 @@ def main():
         raise SystemExit(str(error)) from error
 
     frames = [frame for frame, _ in usable_rows]
+    if not frames:
+        report = {
+            "source": os.path.abspath(args.source),
+            "source_dimensions": [width, height],
+            "dimensions": [plane_width, plane_height],
+            "plane": args.plane,
+            "bits": args.bits,
+            "requested_frames": requested_frames,
+            "frames": [],
+            "skipped_frames": skipped_frames,
+            "flat_fraction": args.flat_fraction,
+            "flat_selector": args.flat_selector,
+            "static_ratio": [args.static_lo, args.static_hi],
+            "static_blocks": [],
+            "measurable": False,
+            "truth": None,
+            "requested_arms": list(arms),
+            "arms": {},
+            "luma_bins": [],
+        }
+        print(f"{os.path.basename(args.source)}: plane {args.plane} "
+              f"{plane_width}x{plane_height}, no measurable frame pairs")
+        print(f"unmeasurable requested frames: {skipped_frames}")
+        if args.json_out:
+            with open(args.json_out, "w", encoding="utf-8") as handle:
+                json.dump(report, handle, indent=2)
+                handle.write("\n")
+            print(f"\nwrote {args.json_out}")
+        return
+
+    source = (source_luma if args.plane == "y" else decode_selected(
+        args.source, plane_width, plane_height, indices, plane=args.plane,
+        bits=args.bits))
+    decoded = {
+        label: {
+            "on": decode_selected(path, plane_width, plane_height, indices,
+                                  filmgrain=1, plane=args.plane, bits=args.bits),
+            "off": decode_selected(path, plane_width, plane_height, indices,
+                                   filmgrain=0, plane=args.plane, bits=args.bits),
+        }
+        for label, path in arms.items()
+    }
     truth_rows = []
     masks = []
     luma_masks = []
@@ -307,6 +338,7 @@ def main():
         "flat_selector": args.flat_selector,
         "static_ratio": [args.static_lo, args.static_hi],
         "static_blocks": selected_counts,
+        "measurable": True,
         "truth": average_acf(truth_rows),
         "arms": {},
         "luma_bins": [],

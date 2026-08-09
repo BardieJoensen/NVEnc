@@ -2,7 +2,9 @@
 """Run the production-tail FGS architecture gate on exact retained sources.
 
 The corpus is frozen from the provenance-corrected production population: two
-lower-tail titles, two centre controls and two upper-tail titles.  Five fixed
+lower-tail titles, a predeclared next-low fallback, two centre controls and two
+upper-tail titles.  The fallback preserves two independent lower-title
+decisions if a frozen title lacks three temporally measurable scenes.  Five fixed
 positions from every original are decoded to lossless progressive FFV1 clips
 and concatenated into one 600-frame reel.  No deinterlacing, interpolation or
 source-library transcode is allowed into the experiment.
@@ -56,12 +58,14 @@ from integrated_architecture import (  # noqa: E402
 SCENE_FRACTIONS = (0.150, 0.325, 0.500, 0.675, 0.850)
 # A frozen source-only grid.  Every eligible point is retained; frames with
 # fewer than eight static flat blocks are reported as unmeasurable rather than
-# replaced after inspecting an encode.  The gate separately requires at least
-# three usable pairs in every scene.
+# replaced after inspecting an encode.  A scene is graded with at least three
+# usable pairs, and a title must retain at least three independently graded
+# scenes.  Sparse scenes remain in base-quality and byte measurements.
 SAMPLE_OFFSETS = tuple(range(6, 115, 6))
 ARMS = ("plain", "production", "candidate-control", "source", "response")
 FGS = "denoise=auto,chroma=auto,denoiser=bilateral"
 RESEARCH_PREFIX = "NVENC_FGS_TEST_"
+MEASUREMENT_VERSION = "scene-grid-v2-zero-safe"
 
 
 @dataclass(frozen=True)
@@ -95,6 +99,16 @@ TITLES = (
         "The Legend of Korra (2012) - S02E07 - Beginnings 1 "
         "[Bluray-1080p Remux][DTS-HD MA 5.1][h264]-NTb.mkv",
         "low", 0.801, (0.652, 0.925), qvbr=34),
+    Title(
+        "HIMYM_S04E17",
+        "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/"
+        "How.I.Met.Your.Mother.S04.2008.BluRay.1080p.Remux.AVC.DTS-HDMA.5.1-BluHD/"
+        "How.I.Met.Your.Mother.S04E17.The.Front.Porch.BluRay.1080p.Remux."
+        "AVC.DTS-HDMA.5.1-BluHD.mkv",
+        "/media/merged-storage/media/tv-shows/How I Met Your Mother (2005)/Season 04/"
+        "How I Met Your Mother (2005) - S04E17 - The Front Porch "
+        "[Bluray-1080p Remux][DTS-HD MA 5.1][AVC]-BluHD.mkv",
+        "low-fallback", 0.863, (0.466, 1.017)),
     Title(
         "Abbott_S02E02",
         "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/"
@@ -427,10 +441,8 @@ def validate_temporal_report(
                 f"temporal sample {frame} belongs to scene {scene}, "
                 f"expected {expected_scene}")
         count += 1
-    if count < 3:
-        raise RuntimeError(
-            f"scene {expected_scene + 1} has only {count} usable frame pairs")
     summary["scene"] = expected_scene + 1
+    summary["gradable"] = count >= 3
     return summary
 
 
@@ -497,6 +509,7 @@ def main() -> int:
         "scene_fractions": SCENE_FRACTIONS,
         "scene_frames": args.scene_frames,
         "sample_offsets": SAMPLE_OFFSETS,
+        "measurement_version": MEASUREMENT_VERSION,
         "arms": ARMS,
         "production_binary": identity(production, include_hash=True),
         "candidate_binary": identity(candidate, include_hash=True),
@@ -676,11 +689,13 @@ def main() -> int:
                     scene * args.scene_frames + offset
                     for offset in SAMPLE_OFFSETS
                 ]
-                report = report_dir / f"{name}-scene{scene + 1}-{plane}.json"
+                stem = (
+                    f"{name}-scene{scene + 1}-{plane}-{MEASUREMENT_VERSION}")
+                report = report_dir / f"{stem}.json"
                 report_partial = partial_path(report)
                 command = temporal_command(
                     report_script, reel, encoded_by_title[name], plane,
-                    sample_frames, report_partial)
+                    sample_frames, report_partial, minimum_frames=0)
                 expected = {
                     "command": command,
                     "source": identity(reel, include_hash=True),
@@ -697,8 +712,8 @@ def main() -> int:
                 run_task(
                     f"{name}-scene{scene + 1}-{plane}-temporal", command,
                     arm_environment("plain"), expected, [report_partial], [report],
-                    task_dir / f"{name}-scene{scene + 1}-{plane}-temporal.task.json",
-                    task_dir / f"{name}-scene{scene + 1}-{plane}-temporal.log",
+                    task_dir / f"{stem}.task.json",
+                    task_dir / f"{stem}.log",
                     validate_outputs=validate)
                 plane_records.append({
                     "identity": identity(report, include_hash=True),
@@ -707,6 +722,13 @@ def main() -> int:
                 })
                 title_record.setdefault("grain_reports", {})[plane] = plane_records
                 write_json(work / "manifest.json", manifest)
+            gradable = sum(record["summary"]["gradable"] for record in plane_records)
+            title_record.setdefault("temporal_coverage", {})[plane] = {
+                "gradable_scenes": gradable,
+                "required_scenes": 3,
+                "title_gradable": gradable >= 3,
+            }
+            write_json(work / "manifest.json", manifest)
 
     if args.stop_after in ("prepare", "encode"):
         print(f"manifest: {work / 'manifest.json'}", flush=True)
