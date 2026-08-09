@@ -23,14 +23,17 @@ provenance treatment until this localization experiment identifies one.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
+import subprocess
 import sys
 
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import emission_audit  # noqa: E402
+import filmgrn  # noqa: E402
 import general_content_gate as common  # noqa: E402
 import review_score  # noqa: E402
 import tail_architecture_gate as tail  # noqa: E402
@@ -135,6 +138,45 @@ def validate_parent(parent: dict, selected: list[str] | None = None) -> None:
                 tail.metric_summary(path)
 
 
+def decoded_av1_pixel_hash(path: Path, ffmpeg: Path) -> str:
+    """Hash the played pixels with dav1d synthesis explicitly enabled."""
+    result = subprocess.run([
+        str(ffmpeg), "-hide_banner", "-nostdin", "-v", "error", "-xerror",
+        "-c:v", "libdav1d", "-filmgrain", "1", "-i", str(path),
+        "-map", "0:v:0", "-an", "-sn", "-dn", "-f", "hash",
+        "-hash", "sha256", "-",
+    ], capture_output=True, text=True, check=False, timeout=1800)
+    if result.returncode:
+        raise RuntimeError(
+            f"played-pixel hash failed for {path}: {result.stderr[-2000:]}")
+    line = result.stdout.strip()
+    if not line.startswith("SHA256=") or len(line) != 71:
+        raise RuntimeError(f"unexpected played-pixel hash for {path}: {line!r}")
+    return line[7:]
+
+
+def table_semantic_hash(path: Path) -> str:
+    """Hash decoded table semantics, ignoring redundant curve control points."""
+    canonical = []
+    for entry in filmgrn.load(path):
+        canonical.append({
+            "start": entry["start"],
+            "end": entry["end"],
+            "apply_grain": entry["apply_grain"],
+            "random_seed": entry["random_seed"],
+            "update_parameters": entry["update_parameters"],
+            "params": entry["params"],
+            "curves": {
+                plane: filmgrn._curve(entry["scaling_points"][plane])
+                for plane in ("y", "cb", "cr")
+            },
+            "ar_coeffs": entry["ar_coeffs"],
+        })
+    payload = json.dumps(
+        canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def control_isolation(parent_arm: dict, control: dict) -> dict:
     checks = {
         "video_stream_identical": (
@@ -144,8 +186,19 @@ def control_isolation(parent_arm: dict, control: dict) -> dict:
             == control["table"]["identity"]["sha256"]),
         "base_pixels_identical": (
             parent_arm["base_pixel_sha256"] == control["base_pixel_sha256"]),
+        "table_semantics_identical": (
+            parent_arm["table_semantic_sha256"]
+            == control["table_semantic_sha256"]),
+        "played_pixels_identical": (
+            parent_arm["finished_pixel_sha256"]
+            == control["finished_pixel_sha256"]),
     }
-    checks["passed"] = all(checks.values())
+    # Raw table/stream identity is diagnostic.  A simplifier may choose a
+    # different redundant point on a perfectly flat scaling segment; decoded
+    # curve semantics and played pixels are the correctness boundary.
+    checks["passed"] = all(checks[key] for key in (
+        "base_pixels_identical", "table_semantics_identical",
+        "played_pixels_identical"))
     return checks
 
 
@@ -259,7 +312,10 @@ def new_arm_record(
             "identity": identity(table, include_hash=True),
             "summary": common.table_summary(table),
         },
+        "table_semantic_sha256": table_semantic_hash(table),
     }
+    if arm == CONTROL_ARM:
+        record["finished_pixel_sha256"] = decoded_av1_pixel_hash(encoded, ffmpeg)
     return record, encoded, base
 
 
@@ -356,8 +412,19 @@ def main() -> int:
             bases[arm] = base_path
             write_json(work / "manifest.json", manifest)
 
+        parent_source = dict(source_title["arms"]["source"])
+        parent_source_path = references["source"]
+        parent_source_table = Path(parent_source["table"]["identity"]["path"])
+        parent_source["finished_pixel_sha256"] = decoded_av1_pixel_hash(
+            parent_source_path, ffmpeg)
+        parent_source["table_semantic_sha256"] = table_semantic_hash(
+            parent_source_table)
+        title_record["parent_source_oracles"] = {
+            "finished_pixel_sha256": parent_source["finished_pixel_sha256"],
+            "table_semantic_sha256": parent_source["table_semantic_sha256"],
+        }
         isolation = control_isolation(
-            source_title["arms"]["source"], title_record["arms"][CONTROL_ARM])
+            parent_source, title_record["arms"][CONTROL_ARM])
         title_record["control_isolation"] = isolation
         if not isolation["passed"]:
             write_json(work / "manifest.json", manifest)

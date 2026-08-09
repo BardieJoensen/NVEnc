@@ -57,15 +57,66 @@ class StrengthProvenanceGateTest(unittest.TestCase):
             "video_stream_md5": "a",
             "base_pixel_sha256": "b",
             "table": {"identity": {"sha256": "c"}},
+            "table_semantic_sha256": "semantic",
+            "finished_pixel_sha256": "played",
         }
         control = {
             "video_stream_md5": "a",
             "base_pixel_sha256": "b",
             "table": {"identity": {"sha256": "c"}},
+            "table_semantic_sha256": "semantic",
+            "finished_pixel_sha256": "played",
         }
         self.assertTrue(gate.control_isolation(parent, control)["passed"])
         control["base_pixel_sha256"] = "changed"
         self.assertFalse(gate.control_isolation(parent, control)["passed"])
+
+    def test_control_allows_redundant_table_syntax_when_semantics_match(self):
+        parent = {
+            "video_stream_md5": "old-stream",
+            "base_pixel_sha256": "base",
+            "table": {"identity": {"sha256": "old-table"}},
+            "table_semantic_sha256": "same-model",
+            "finished_pixel_sha256": "same-playback",
+        }
+        control = {
+            "video_stream_md5": "new-stream",
+            "base_pixel_sha256": "base",
+            "table": {"identity": {"sha256": "new-table"}},
+            "table_semantic_sha256": "same-model",
+            "finished_pixel_sha256": "same-playback",
+        }
+        result = gate.control_isolation(parent, control)
+        self.assertTrue(result["passed"])
+        self.assertFalse(result["table_identical"])
+        self.assertFalse(result["video_stream_identical"])
+
+    def test_table_semantic_hash_ignores_redundant_flat_curve_point(self):
+        params = {name: 0 for name in gate.filmgrn.PARAM_NAMES}
+        entry = {
+            "start": 0, "end": 1, "apply_grain": True,
+            "random_seed": 1, "update_parameters": True,
+            "params": params,
+            "scaling_points": {
+                "y": [[0, 10], [100, 10], [255, 10]],
+                "cb": [[0, 5], [255, 5]],
+                "cr": [[0, 6], [255, 6]],
+            },
+            "ar_coeffs": {"y": [], "cb": [0], "cr": [0]},
+        }
+        changed = {
+            **entry,
+            "scaling_points": {
+                **entry["scaling_points"],
+                "y": [[0, 10], [200, 10], [255, 10]],
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            left, right = Path(directory) / "left.tbl", Path(directory) / "right.tbl"
+            gate.filmgrn.write(left, [entry])
+            gate.filmgrn.write(right, [changed])
+            self.assertEqual(
+                gate.table_semantic_hash(left), gate.table_semantic_hash(right))
 
     def test_stream_texture_isolation_uses_actual_frame_side_data(self):
         entry = {
