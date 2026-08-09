@@ -114,6 +114,8 @@ class TailArchitectureGateTest(unittest.TestCase):
     def test_temporal_grid_is_frozen_and_stays_inside_each_scene(self):
         self.assertEqual(gate.SAMPLE_OFFSETS, tuple(range(6, 115, 6)))
         self.assertLess(max(gate.SAMPLE_OFFSETS) + 1, 120)
+        self.assertEqual(
+            gate.MEASUREMENT_VERSION, "scene-grid-v3-ratio-of-means")
 
     def test_temporal_command_records_sparse_scenes_before_grading(self):
         encoded = {arm: Path(f"{arm}.mkv") for arm in gate.ARMS}

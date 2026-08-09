@@ -138,11 +138,33 @@ def average_acf(rows):
 
 
 def ratio_rows(rows, truth_rows):
-    return mean_sd([
-        (row["sigma"] if row is not None else 0.0) / truth["sigma"]
+    pairs = [
+        ((row["sigma"] if row is not None else 0.0), truth["sigma"])
         for row, truth in zip(rows, truth_rows)
         if truth is not None and truth["sigma"] > 1e-9
-    ])
+    ]
+    ratios = [measured / truth for measured, truth in pairs]
+    legacy = mean_sd(ratios)
+    # A mean of per-frame ratios is Jensen-biased when source amplitude varies
+    # and synthesis follows it imperfectly.  This was measured explicitly on
+    # real-film chroma in FINDINGS-2026-08-05-CHROMA-DIAGNOSIS.md: The Shining
+    # V moved from 1.155 to 1.042 on the same sixteen pairs.  Preserve that
+    # historical statistic and its spread, but make the ratio of means
+    # available as the decision value.  Luma is nearly invariant; variable
+    # chroma is not.
+    ratio_of_means = (
+        float(sum(measured for measured, _ in pairs)
+              / sum(truth for _, truth in pairs))
+        if pairs else None)
+    return {
+        "mean": legacy["mean"],
+        "sd": legacy["sd"],
+        "ratio_of_means": ratio_of_means,
+        "jensen_gap": (
+            legacy["mean"] - ratio_of_means
+            if legacy["mean"] is not None and ratio_of_means is not None
+            else None),
+    }
 
 
 def format_axis(row):
@@ -379,7 +401,7 @@ def main():
             amplitude = ratio_rows(rows, truth_rows)
             arm_report[name] = {"axis": axis, "amplitude_ratio": amplitude}
             print(f"{(label + ' ' + name):<28}{format_axis(axis)}"
-                  f"{amplitude['mean']:>9.3f}±{amplitude['sd']:<.3f}")
+                  f"{amplitude['ratio_of_means']:>12.3f}")
         frame_samples = []
         for index, frame in enumerate(frames):
             truth = truth_rows[index]
@@ -408,9 +430,9 @@ def main():
         # The independent base and synthesised layers should predict the total
         # amplitude.  Reporting the closure error catches frame/mask mistakes.
         predicted = math.sqrt(
-            arm_report["base"]["amplitude_ratio"]["mean"] ** 2
-            + arm_report["synth"]["amplitude_ratio"]["mean"] ** 2)
-        actual = arm_report["total"]["amplitude_ratio"]["mean"]
+            arm_report["base"]["amplitude_ratio"]["ratio_of_means"] ** 2
+            + arm_report["synth"]["amplitude_ratio"]["ratio_of_means"] ** 2)
+        actual = arm_report["total"]["amplitude_ratio"]["ratio_of_means"]
         arm_report["variance_closure"] = {
             "predicted_total": predicted,
             "measured_total": actual,
@@ -487,9 +509,9 @@ def main():
                   f"{block_label:>8}"
                   f"{truth_sigma_label:>10}"
                   f"{truth_lag1_label:>10}  "
-                  f"{label:<18}{synth['amplitude_ratio']['mean']:>11.3f}"
+                  f"{label:<18}{synth['amplitude_ratio']['ratio_of_means']:>11.3f}"
                   f"{lag1(synth['axis']):>10.3f}"
-                  f"{total['amplitude_ratio']['mean']:>11.3f}"
+                  f"{total['amplitude_ratio']['ratio_of_means']:>11.3f}"
                   f"{lag1(total['axis']):>10.3f}")
             first = False
         report["luma_bins"].append(bin_record)

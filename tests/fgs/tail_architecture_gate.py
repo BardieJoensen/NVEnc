@@ -65,7 +65,7 @@ SAMPLE_OFFSETS = tuple(range(6, 115, 6))
 ARMS = ("plain", "production", "candidate-control", "source", "response")
 FGS = "denoise=auto,chroma=auto,denoiser=bilateral"
 RESEARCH_PREFIX = "NVENC_FGS_TEST_"
-MEASUREMENT_VERSION = "scene-grid-v2-zero-safe"
+MEASUREMENT_VERSION = "scene-grid-v3-ratio-of-means"
 
 
 @dataclass(frozen=True)
@@ -417,10 +417,31 @@ def metric_summary(path: Path) -> dict:
         "arms": {},
     }
     for arm, record in document["arms"].items():
+        def amplitude(layer: str) -> tuple[float, float, float]:
+            measured = record[layer]["amplitude_ratio"]
+            canonical = measured.get("ratio_of_means")
+            if canonical is None:
+                raise RuntimeError(
+                    f"{path}: {arm}/{layer} lacks ratio-of-means amplitude")
+            return canonical, measured["mean"], measured["jensen_gap"]
+
+        base, base_legacy, base_gap = amplitude("base")
+        synth, synth_legacy, synth_gap = amplitude("synth")
+        total, total_legacy, total_gap = amplitude("total")
         summary["arms"][arm] = {
-            "base_amplitude": record["base"]["amplitude_ratio"]["mean"],
-            "synth_amplitude": record["synth"]["amplitude_ratio"]["mean"],
-            "total_amplitude": record["total"]["amplitude_ratio"]["mean"],
+            "base_amplitude": base,
+            "synth_amplitude": synth,
+            "total_amplitude": total,
+            "mean_of_ratios": {
+                "base": base_legacy,
+                "synth": synth_legacy,
+                "total": total_legacy,
+            },
+            "jensen_gap": {
+                "base": base_gap,
+                "synth": synth_gap,
+                "total": total_gap,
+            },
             "texture_mae": record["total_axis_error_to_truth"]["mean"],
             "texture_p95": record["total_axis_error_to_truth"]["p95"],
             "variance_closure_error": record["variance_closure"]["error"],

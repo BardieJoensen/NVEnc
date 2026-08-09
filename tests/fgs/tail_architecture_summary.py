@@ -115,7 +115,7 @@ def load_band_rows(manifest: dict) -> list[dict]:
                         "arm": arm,
                         "blocks": band["blocks"],
                         "amplitude": band["arms"][arm]["total"][
-                            "amplitude_ratio"]["mean"],
+                            "amplitude_ratio"]["ratio_of_means"],
                     })
     return rows
 

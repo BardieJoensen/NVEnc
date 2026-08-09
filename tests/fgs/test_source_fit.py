@@ -129,8 +129,27 @@ class TemporalLeakTests(unittest.TestCase):
                  "h2": 0.1, "v2": 0.1}
         self.assertIsNone(temporal_grain_report.average_acf([None, None]))
         ratio = temporal_grain_report.ratio_rows([None], [truth])
-        self.assertEqual(ratio, {"mean": 0.0, "sd": 0.0})
+        self.assertEqual(ratio, {
+            "mean": 0.0,
+            "sd": 0.0,
+            "ratio_of_means": 0.0,
+            "jensen_gap": 0.0,
+        })
         self.assertTrue(np.isnan(temporal_grain_report.lag1(None)))
+
+    def test_temporal_amplitude_exposes_jensen_bias(self):
+        truth = [
+            {"sigma": 1.0},
+            {"sigma": 3.0},
+        ]
+        measured = [
+            {"sigma": 2.0},
+            {"sigma": 2.0},
+        ]
+        ratio = temporal_grain_report.ratio_rows(measured, truth)
+        self.assertAlmostEqual(ratio["mean"], 4.0 / 3.0)
+        self.assertAlmostEqual(ratio["ratio_of_means"], 1.0)
+        self.assertAlmostEqual(ratio["jensen_gap"], 1.0 / 3.0)
 
     def test_temporal_texture_axis_error_and_distribution(self):
         truth = {"h1": 0.4, "h2": 0.2, "v1": 0.3, "v2": 0.1}
