@@ -7,7 +7,11 @@ PACKAGE_MAINTAINER=rigaya
 PACKAGE_DEPENDS="glibc"
 PACKAGE_DESCRIPTION=
 PACKAGE_ROOT=.rpmpkg
-PACKAGE_VERSION=`git describe --tags | cut -f 1 --delim="-"`
+PACKAGE_VERSION=`sed -n 's/^#define VER_STR_FILEVERSION[ \t]*"\([^"]*\)".*$/\1/p' NVEncCore/rgy_version.h | tr -d '\r\n'`
+if [ -z "${PACKAGE_VERSION}" ]; then
+    echo "Failed to read package version from NVEncCore/rgy_version.h!"
+    exit 1
+fi
 PACKAGE_ARCH=`uname -m`
 PACKAGE_LICENSE=MIT
 
