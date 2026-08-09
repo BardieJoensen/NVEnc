@@ -102,7 +102,7 @@ def temporal_command(
     return command
 
 
-def validate_parent(parent: dict) -> None:
+def validate_parent(parent: dict, selected: list[str] | None = None) -> None:
     """Reject stale, partial or differently sampled parent measurements."""
     expected = {
         "measurement_version": tail.MEASUREMENT_VERSION,
@@ -114,7 +114,12 @@ def validate_parent(parent: dict) -> None:
         if parent.get(key) != value:
             raise RuntimeError(
                 f"parent {key} is {parent.get(key)!r}; expected {value!r}")
-    for name, title in parent.get("titles", {}).items():
+    titles = parent.get("titles", {})
+    names = list(titles) if selected is None else selected
+    for name in names:
+        if name not in titles:
+            raise RuntimeError(f"parent lacks selected title {name}")
+        title = titles[name]
         if set(REFERENCE_ARMS).difference(title.get("arms", {})):
             raise RuntimeError(f"{name}: parent lacks a required reference arm")
         for plane in ("y", "u", "v"):
@@ -285,17 +290,18 @@ def main() -> int:
     if not parent_path.is_file():
         parser.error(f"missing parent manifest: {parent_path}")
     parent = json.loads(parent_path.read_text(encoding="utf-8"))
-    validate_parent(parent)
     selected = ([value.strip() for value in args.titles.split(",") if value.strip()]
                 or list(parent["titles"]))
     unknown = sorted(set(selected).difference(parent["titles"]))
     if unknown:
         parser.error(f"unknown parent titles: {', '.join(unknown)}")
+    validate_parent(parent, selected)
 
     task_dir, report_dir = work / "tasks", work / "grain-reports"
     for directory in (work, task_dir, report_dir):
         directory.mkdir(parents=True, exist_ok=True)
     review_score.FFMPEG, review_score.FFPROBE = str(ffmpeg), str(ffprobe)
+    emission_audit.FFPROBE = str(ffprobe)
     total_frames = parent["scene_frames"] * len(parent["scene_fractions"])
     manifest = {
         "purpose": "source AR texture / strength-provenance isolation; no production mutation",
