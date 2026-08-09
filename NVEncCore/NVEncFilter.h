@@ -96,6 +96,9 @@ public:
     // Reset only time-dependent state (pending queues, frame counters, cache metadata).
     // GPU buffer allocations and built kernels are preserved.
     virtual void resetTemporalState() {}
+    // Whether a null input can release a delayed frame. PipelineTaskCUDAVpp uses
+    // this before reserving an encoder surface while draining the terminal filter.
+    virtual bool mayEmitOnDrain() const { return false; }
 protected:
     virtual RGY_ERR AllocFrameBuf(const RGYFrameInfo &frame, int frames) override;
     RGY_ERR filter_as_interlaced_pair(const RGYFrameInfo *pInputFrame, RGYFrameInfo *pOutputFrame, cudaStream_t stream);

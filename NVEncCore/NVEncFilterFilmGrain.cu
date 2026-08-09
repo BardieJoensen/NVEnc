@@ -1218,6 +1218,12 @@ void NVEncFilterFilmGrain::writeTableFile() {
     }
 }
 
+bool NVEncFilterFilmGrain::mayEmitOnDrain() const {
+    // Bilateral and FFT3D are frame-local at this layer. Motion degrain keeps
+    // temporal frames internally and can release them only after a null input.
+    return m_motionDegrain != nullptr;
+}
+
 RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames,
     int *pOutputFrameNum, cudaStream_t stream) {
     if (!pOutputFrameNum || !ppOutputFrames) return RGY_ERR_INVALID_PARAM;

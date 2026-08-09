@@ -134,6 +134,7 @@ public:
 
     virtual RGY_ERR init(std::shared_ptr<NVEncFilterParam> pParam, std::shared_ptr<RGYLog> pPrintMes) override;
     virtual void resetTemporalState() override;
+    virtual bool mayEmitOnDrain() const override;
 
 protected:
     virtual RGY_ERR run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames,
