@@ -1,14 +1,80 @@
 # NVEnc Release Notes
 
+## 9.33
+
+- Add ARM64 build support.
+- Enable [--avhw](./NVEncC_Options.en.md#--avhw) on ARM.
+- Extend [--timecode](./NVEncC_Options.en.md#--timecode-string) to raw output.
+- Add frame durations to [--y4m-timestamp](./NVEncC_Options.en.md#--y4m-timestamp) output and improve the default y4m input timebase.
+- Add new features to [--dynamic-rc](./NVEncC_Options.en.md#--dynamic-rc-intintintintparam1value1param2value2) with some fixes.
+  - Fix ordering of mixed frame-number and timestamp [--dynamic-rc](./NVEncC_Options.en.md#--dynamic-rc-intintintintparam1value1param2value2) zones.
+  - Add timestamp range parameters `start-time` and `end-time` to [--dynamic-rc](./NVEncC_Options.en.md#--dynamic-rc-intintintintparam1value1param2value2).
+  - Fix frame-based [--dynamic-rc](./NVEncC_Options.en.md#--dynamic-rc-intintintintparam1value1param2value2) to use input frame IDs before VPP.
+- Add new filters.
+  - Add BM3D denoise filter [--vpp-bm3d](./NVEncC_Options.en.md#--vpp-bm3d-param1value1param2value2).
+  - Add [--vpp-dehaze](./NVEncC_Options.en.md#--vpp-dehaze-param1value1param2value2).
+  - Add [--vpp-clahe](./NVEncC_Options.en.md#--vpp-clahe-param1value1param2value2).
+  - Add [--vpp-guidedfilter](./NVEncC_Options.en.md#--vpp-guidedfilter-param1value1param2value2).
+  - Add 2x NNEDI upscale [--vpp-nnedi-upscale](./NVEncC_Options.en.md#--vpp-nnedi-upscale-param1value1param2value2).
+  - Add dpid (detail preserving downscaling) to [--vpp-resize](./NVEncC_Options.en.md#--vpp-resize-string-or-param1value1param2value2).
+  - Add area interpolation to [--vpp-resize](./NVEncC_Options.en.md#--vpp-resize-string-or-param1value1param2value2).
+  - Add light-source color temperature `temperature=` to [--vpp-colorfix](./NVEncC_Options.en.md#--vpp-colorfix-param1value1param2value2).
+  - Add vibrance adjustment to [--vpp-tweak](./NVEncC_Options.en.md#--vpp-tweak-param1value1param2value2).
+  - Add vignette correction to [--vpp-lenscorrection](./NVEncC_Options.en.md#--vpp-lenscorrection-param1value1param2value2).
+  - Add arbitrary frame-rate conversion to [--vpp-rife-ov](./NVEncC_Options.en.md#--vpp-rife-ov-param1value1param2value2).
+  - Support 10bit input in [--vpp-rife-ov](./NVEncC_Options.en.md#--vpp-rife-ov-param1value1param2value2).
+  - Add block-boundary spacing `grid=` to [--vpp-deblock](./NVEncC_Options.en.md#--vpp-deblock-param1value1param2value2).
+  - Support 9-16bit YUV input in [--vpp-onnx](./NVEncC_Options.en.md#--vpp-onnx-param1value1param2value2). ( #794 )
+  - Unify ONNX luma-model pre/post-processing on CUDA.
+- Fixes for some filters.
+  - Fix missing last frames in [--vpp-rife-ov](./NVEncC_Options.en.md#--vpp-rife-ov-param1value1param2value2) conversion.
+  - Fix missing last frames in [--vpp-ivtc](./NVEncC_Options.en.md#--vpp-ivtc-param1value1param2value2).
+- Support track exclusion with `!` for audio/subtitle/data selection ([--audio-copy](./NVEncC_Options.en.md#--audio-copy-intstringintstring), [--audio-codec](./NVEncC_Options.en.md#--audio-codec-intstringstringstringstringstringstring), [--sub-copy](./NVEncC_Options.en.md#--sub-copy-intstringintstring), [--sub-codec](./NVEncC_Options.en.md#--sub-codec-intstringstring), [--data-copy](./NVEncC_Options.en.md#--data-copy-intstringintstring))
+- Change Linux `libass_static` default to false. ( #792 )
+
+## 9.32
+
+- Update ffmpeg libraries. -> [binaries and src](https://github.com/rigaya/ffmpeg_dlls_for_hwenc/releases/tag/20260812), [build_scripts](https://github.com/rigaya/build_scripts)
+  - ffmpeg 8.0 -> 9.0.1
+  - libvmaf 3.0.0 -> 3.2.0
+  - libpng 1.6.50 -> 1.6.58
+  - xz 5.8.2 -> 5.8.3
+  - expat 2.7.1 -> 2.8.2
+  - harfbuzz 11.4.4 -> 14.3.0
+  - libunibreak 6.1 -> 7.0
+  - libass 0.17.4 -> 0.17.5
+  - lame 3.100 -> 4.0
+  - libxml2 2.14.5 -> 2.15.3
+  - libbluray 1.3.4 -> 1.5.0
+  - libaribcaption 1.1.1 -> 1.1.2
+  - libav1d 1.5.3 -> 1.5.4
+  - libvpl 2.16.0 -> 2.17.0
+  - nv-codec-headers 12.2.72.0 -> 13.1.15.0
+  - glslang 15.4.0 -> 16.5.0
+  - shaderc 2024.1 -> 2026.3
+  - dovi_tool 2.3.1 -> 2.3.3
+  - libjpeg-turbo 3.1.1 -> 3.2.0
+  - lcms2 2.17 -> 2.19.1
+  - vulkan-loader 1.3.295 -> 1.4.359
+  - libplacebo 7.351.0 -> 7.360.1
+  - vvenc 1.13.1 -> 1.14.0
+  - svt-av1 3.1.0 -> 4.2.0
+  - dovi_tool 2.3.1 -> 2.3.3
+- Reinitialize host path after [--vpp-onnx](./NVEncC_Options.en.md#--vpp-onnx-param1value1param2value2) zero-copy failure. ( #791 )
+- Fix [--vpp-anime4k-shader](./NVEncC_Options.en.md#--vpp-anime4k-shader-param1value1param2value2) deblur strength depending on parameter order.
+- Fix LUT3D input domain handling in [--vpp-colorspace](./NVEncC_Options.en.md#--vpp-colorspace-param1value1param2value2).
+- Fix double application of saturation in [--vpp-tweak](./NVEncC_Options.en.md#--vpp-tweak-param1value1param2value2).
+
 ## 9.31
 
 - Update to NVENC SDK 13.1.
 - Support AV1 hierarchical B-frame reference mode in [--bref-mode](./NVEncC_Options.en.md#--bref-mode-string).
 - Support mid-stream resolution changes.
-- Add [--adapt-resolution](./NVEncC_Options.en.md#--adapt-resolution-intxint).
+- Add [--adapt-resolution](./NVEncC_Options.en.md#--adapt-resolution-intxint) to set maximum mid-stream input resolution changes.
 - Add support to track PMT change.
 - Add ONNX deinterlace filter [--vpp-onnx-deint](./NVEncC_Options.en.md#--vpp-onnx-deint-param1value1param2value2).
-- Support language exclusion for audio/subtitle track selection ([--audio-copy](./NVEncC_Options.en.md#--audio-copy-intstringintstring) / [--sub-copy](./NVEncC_Options.en.md#--sub-copy-intstringintstring)).
+- Support language exclusion for audio/subtitle/data track selection ([--audio-copy](./NVEncC_Options.en.md#--audio-copy-intstringintstring) / [--audio-codec](./NVEncC_Options.en.md#--audio-codec-intstringstringstringstringstringstring) / [--sub-copy](./NVEncC_Options.en.md#--sub-copy-intstringintstring) / [--sub-codec](./NVEncC_Options.en.md#--sub-codec-intstringstring) / [--data-copy](./NVEncC_Options.en.md#--data-copy-intstringintstring)).
+- Support track exclusion with `!` for audio/subtitle/data selection.
 - Improve [--vpp-onnx](./NVEncC_Options.en.md#--vpp-onnx-param1value1param2value2) zero-copy path to reduce memory usage. ( #791 )
 - Fix GPU memory growth in long [--vpp-kfm](./NVEncC_Options.en.md#--vpp-kfm-param1value1param2value2) mode=24 runs.
 - Improve memory retention for [--vpp-kfm](./NVEncC_Options.en.md#--vpp-kfm-param1value1param2value2) and NVENC input.

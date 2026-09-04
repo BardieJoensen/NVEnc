@@ -21,6 +21,7 @@ build_root = meson.project_build_root()
 # プラットフォームチェック
 is_linux = host_machine.system() == 'linux'
 is_x86_64 = host_machine.cpu_family() == 'x86_64'
+is_aarch64 = host_machine.cpu_family() == 'aarch64'
 
 if not is_linux
   error('This meson.build is for Linux only')
@@ -45,7 +46,14 @@ message('Using CUDA path: ' + cuda_path)
 
 cuda_lib_dir = cuda_path / 'lib64'
 cuda_bin_dir = cuda_path / 'bin'
-cuda_target_lib_dir = cuda_path / 'targets' / 'x86_64-linux' / 'lib'
+if is_x86_64
+  cuda_target_name = 'x86_64-linux'
+elif is_aarch64
+  cuda_target_name = 'sbsa-linux'
+else
+  error('Unsupported Linux CPU architecture: ' + host_machine.cpu_family())
+endif
+cuda_target_lib_dir = cuda_path / 'targets' / cuda_target_name / 'lib'
 cuda_stub_lib_dir = cuda_target_lib_dir / 'stubs'
 
 # ==============================================================================
@@ -75,11 +83,19 @@ endif
 
 # CUDAバージョンに応じたGPU code生成オプション
 nvenc_dev_ptx = get_option('nvenc_dev_ptx')
+nvenc_cuda_cc = get_option('nvenc_cuda_cc')
 
-if nvenc_dev_ptx
+if nvenc_cuda_cc != ''
+  compute_num = nvenc_cuda_cc
+  message('Explicit CUDA CC: compute_' + compute_num)
+  gpu_code_gen = ['--generate-code', 'arch=compute_' + compute_num + ',code=[compute_' + compute_num + ',sm_' + compute_num + ']']
+elif nvenc_dev_ptx
   # 開発ビルド: 環境のGPUのみをビルド対象にして高速化
-  nvidia_smi_result = run_command('nvidia-smi', '--query-gpu=compute_cap', '--format=csv,noheader', check: false)
-  if nvidia_smi_result.returncode() == 0
+  nvidia_smi = find_program('nvidia-smi', required: false)
+  if nvidia_smi.found()
+    nvidia_smi_result = run_command(nvidia_smi, '--query-gpu=compute_cap', '--format=csv,noheader', check: false)
+  endif
+  if nvidia_smi.found() and nvidia_smi_result.returncode() == 0
     compute_cap = nvidia_smi_result.stdout().strip().split('\n')[0].strip()
     compute_num = compute_cap.replace('.', '')
     message('Dev PTX: detected GPU compute_' + compute_num)
@@ -124,6 +140,7 @@ message('GPU code generation targets: ' + ' '.join(gpu_code_gen))
 enable_vapoursynth = get_option('enable_vapoursynth')
 enable_avisynth = get_option('enable_avisynth')
 enable_libass = get_option('enable_libass')
+libass_static = get_option('libass_static')
 enable_libplacebo_option = get_option('enable_libplacebo')
 libplacebo_static = get_option('libplacebo_static')
 enable_vmaf_option = get_option('enable_vmaf')
@@ -351,9 +368,17 @@ int main(void) { return 0; }
 endif
 
 if enable_libass
-  libass_dep = dependency('libass', required: true)
+  libass_dep = dependency('libass', required: true, static: libass_static)
+  libass_compile_dep = libass_dep.partial_dependency(includes: true, compile_args: true)
+  if libass_static
+    libass_link_dep = libass_dep
+  else
+    libass_link_dep = disabler()
+  endif
 else
   libass_dep = disabler()
+  libass_compile_dep = disabler()
+  libass_link_dep = disabler()
 endif
 have_vmaf_headers = false
 vmaf_headers_from_default = false
@@ -658,6 +683,7 @@ endif
 # ==============================================================================
 # libdovi / libhdr10plus: system優先、なければ同梱build (configure互換)
 cargo_prog = find_program('cargo', required: false)
+cargo_multiarch_libdir = 'lib/' + host_machine.cpu_family() + '-linux-gnu'
 if cargo_prog.found()
   cargo_home_dir = source_root / '.cargo_home'
   cargo_c_check = run_command(
@@ -703,8 +729,8 @@ if not libdovi_dep.found()
     error('Failed to build bundled libdovi (exit=' + libdovi_build_result.returncode().to_string() + ')\nstdout:\n' + libdovi_build_result.stdout().strip() + '\nstderr:\n' + libdovi_build_result.stderr().strip())
   endif
   libdovi_lib_dirs = []
-  if fs.is_file(libdovi_install_dir / 'lib/x86_64-linux-gnu/libdovi.a')
-    libdovi_lib_dirs += libdovi_install_dir / 'lib/x86_64-linux-gnu'
+  if fs.is_file(libdovi_install_dir / cargo_multiarch_libdir / 'libdovi.a')
+    libdovi_lib_dirs += libdovi_install_dir / cargo_multiarch_libdir
   elif fs.is_file(libdovi_install_dir / 'lib64/libdovi.a')
     libdovi_lib_dirs += libdovi_install_dir / 'lib64'
   elif fs.is_file(libdovi_install_dir / 'lib/libdovi.a')
@@ -745,8 +771,8 @@ if not libhdr10plus_dep.found()
     error('Failed to build bundled libhdr10plus-rs (exit=' + libhdr10plus_build_result.returncode().to_string() + ')\nstdout:\n' + libhdr10plus_build_result.stdout().strip() + '\nstderr:\n' + libhdr10plus_build_result.stderr().strip())
   endif
   libhdr10plus_lib_dirs = []
-  if fs.is_file(libhdr10plus_install_dir / 'lib/x86_64-linux-gnu/libhdr10plus-rs.a')
-    libhdr10plus_lib_dirs += libhdr10plus_install_dir / 'lib/x86_64-linux-gnu'
+  if fs.is_file(libhdr10plus_install_dir / cargo_multiarch_libdir / 'libhdr10plus-rs.a')
+    libhdr10plus_lib_dirs += libhdr10plus_install_dir / cargo_multiarch_libdir
   elif fs.is_file(libhdr10plus_install_dir / 'lib64/libhdr10plus-rs.a')
     libhdr10plus_lib_dirs += libhdr10plus_install_dir / 'lib64'
   elif fs.is_file(libhdr10plus_install_dir / 'lib/libhdr10plus-rs.a')
@@ -804,6 +830,7 @@ conf_data.set10('ENABLE_VAPOURSYNTH_READER', enable_vapoursynth and have_vapours
 conf_data.set10('ENABLE_AVSW_READER', true)
 conf_data.set10('ENABLE_SM_READER', false)
 conf_data.set10('ENABLE_LIBASS_SUBBURN', libass_dep.found())
+conf_data.set10('LIBASS_STATIC_LINK', libass_dep.found() and libass_static)
 conf_data.set10('ENABLE_VMAF', have_vmaf_headers)
 conf_data.set10('ENABLE_LIBVSHIP', have_libvship_headers)
 conf_data.set10('ENABLE_AVCODEC_OUT_THREAD', true)
@@ -976,6 +1003,7 @@ nvenccore_sources = files(
   'NVEncCore/rgy_level_av1.cpp',
   'NVEncCore/rgy_level_h264.cpp',
   'NVEncCore/rgy_level_hevc.cpp',
+  'NVEncCore/rgy_libass.cpp',
   'NVEncCore/rgy_libplacebo.cpp',
   'NVEncCore/rgy_libvmaf.cpp',
   'NVEncCore/rgy_libvship.cpp',
@@ -1045,6 +1073,7 @@ cuda_sources = files(
   'NVEncCore/NVEncFilterDegrainU16Blk32.cu',
   'NVEncCore/NVEncFilterDelogo.cu',
   'NVEncCore/NVEncFilterDenoiseDct.cu',
+  'NVEncCore/NVEncFilterDenoiseBm3d.cu',
   'NVEncCore/NVEncFilterDenoiseFFT3D8FP16.cu',
   'NVEncCore/NVEncFilterDenoiseFFT3D8FP32.cu',
   'NVEncCore/NVEncFilterDenoiseFFT3D16FP16.cu',
@@ -1061,6 +1090,9 @@ cuda_sources = files(
   'NVEncCore/NVEncFilterStab.cu',
   'NVEncCore/NVEncFilterColorFix.cu',
   'NVEncCore/NVEncFilterEdgelevel.cu',
+  'NVEncCore/NVEncFilterGuidedFilter.cu',
+  'NVEncCore/NVEncFilterClahe.cu',
+  'NVEncCore/NVEncFilterDehaze.cu',
   'NVEncCore/NVEncFilterDehalo.cu',
   'NVEncCore/NVEncFilterFineDehalo.cu',
   'NVEncCore/NVEncFilterHQDering.cu',
@@ -1069,6 +1101,7 @@ cuda_sources = files(
   'NVEncCore/NVEncFilterMaa.cu',
   'NVEncCore/NVEncFilterMpdecimate.cu',
   'NVEncCore/NVEncFilterNnedi.cu',
+  'NVEncCore/NVEncFilterNnediUpscale.cu',
   'NVEncCore/NVEncFilterNnediU8Fast.cu',
   'NVEncCore/NVEncFilterNnediU8Slow.cu',
   'NVEncCore/NVEncFilterNnediU16Fast.cu',
@@ -1111,59 +1144,62 @@ cuda_sources = files(
 # ==============================================================================
 # SIMD専用ライブラリ (個別コンパイルフラグ)
 # ==============================================================================
-simd_sse2_lib = static_library('simd_sse2',
-  'NVEncCore/convert_csp_sse2.cpp',
-  cpp_args: common_cpp_args + ['-msse2'],
-  include_directories: common_include_dirs,
-)
+simd_libs = []
+if is_x86_64
+  simd_sse2_lib = static_library('simd_sse2',
+    'NVEncCore/convert_csp_sse2.cpp',
+    cpp_args: common_cpp_args + ['-msse2'],
+    include_directories: common_include_dirs,
+  )
 
-simd_ssse3_lib = static_library('simd_ssse3',
-  'NVEncCore/convert_csp_ssse3.cpp',
-  cpp_args: common_cpp_args + ['-mssse3'],
-  include_directories: common_include_dirs,
-)
+  simd_ssse3_lib = static_library('simd_ssse3',
+    'NVEncCore/convert_csp_ssse3.cpp',
+    cpp_args: common_cpp_args + ['-mssse3'],
+    include_directories: common_include_dirs,
+  )
 
-simd_sse41_lib = static_library('simd_sse41',
-  'NVEncCore/convert_csp_sse41.cpp',
-  cpp_args: common_cpp_args + ['-msse4.1'],
-  include_directories: common_include_dirs,
-)
+  simd_sse41_lib = static_library('simd_sse41',
+    'NVEncCore/convert_csp_sse41.cpp',
+    cpp_args: common_cpp_args + ['-msse4.1'],
+    include_directories: common_include_dirs,
+  )
 
-simd_avx_lib = static_library('simd_avx',
-  'NVEncCore/convert_csp_avx.cpp',
-  cpp_args: common_cpp_args + ['-mavx', '-mpopcnt'],
-  include_directories: common_include_dirs,
-)
+  simd_avx_lib = static_library('simd_avx',
+    'NVEncCore/convert_csp_avx.cpp',
+    cpp_args: common_cpp_args + ['-mavx', '-mpopcnt'],
+    include_directories: common_include_dirs,
+  )
 
-simd_avx2_lib = static_library('simd_avx2',
-  [
-    'NVEncCore/convert_csp_avx2.cpp',
-    'NVEncCore/rgy_bitstream_avx2.cpp',
-    'NVEncCore/rgy_faw_avx2.cpp',
-    'NVEncCore/rgy_memmem_avx2.cpp',
-  ],
-  cpp_args: common_cpp_args + ['-mavx2', '-mfma', '-mpopcnt', '-mbmi', '-mbmi2'],
-  include_directories: common_include_dirs,
-)
+  simd_avx2_lib = static_library('simd_avx2',
+    [
+      'NVEncCore/convert_csp_avx2.cpp',
+      'NVEncCore/rgy_bitstream_avx2.cpp',
+      'NVEncCore/rgy_faw_avx2.cpp',
+      'NVEncCore/rgy_memmem_avx2.cpp',
+    ],
+    cpp_args: common_cpp_args + ['-mavx2', '-mfma', '-mpopcnt', '-mbmi', '-mbmi2'],
+    include_directories: common_include_dirs,
+  )
 
-simd_avx512_lib = static_library('simd_avx512',
-  [
-    'NVEncCore/rgy_bitstream_avx512bw.cpp',
-    'NVEncCore/rgy_faw_avx512bw.cpp',
-    'NVEncCore/rgy_memmem_avx512bw.cpp',
-  ],
-  cpp_args: common_cpp_args + ['-mavx512f', '-mavx512bw', '-mpopcnt', '-mbmi', '-mbmi2'],
-  include_directories: common_include_dirs,
-)
+  simd_avx512_lib = static_library('simd_avx512',
+    [
+      'NVEncCore/rgy_bitstream_avx512bw.cpp',
+      'NVEncCore/rgy_faw_avx512bw.cpp',
+      'NVEncCore/rgy_memmem_avx512bw.cpp',
+    ],
+    cpp_args: common_cpp_args + ['-mavx512f', '-mavx512bw', '-mpopcnt', '-mbmi', '-mbmi2'],
+    include_directories: common_include_dirs,
+  )
 
-simd_libs = [
-  simd_sse2_lib,
-  simd_ssse3_lib,
-  simd_sse41_lib,
-  simd_avx_lib,
-  simd_avx2_lib,
-  simd_avx512_lib,
-]
+  simd_libs = [
+    simd_sse2_lib,
+    simd_ssse3_lib,
+    simd_sse41_lib,
+    simd_avx_lib,
+    simd_avx2_lib,
+    simd_avx512_lib,
+  ]
+endif
 
 # ==============================================================================
 # CUDA コンパイルフラグ (バージョンに応じて自動設定)
@@ -1201,8 +1237,11 @@ endif
 if avisynth_compile_dep.found()
   all_deps += avisynth_compile_dep
 endif
-if libass_dep.found()
-  all_deps += libass_dep
+if libass_compile_dep.found()
+  all_deps += libass_compile_dep
+endif
+if libass_link_dep.found()
+  all_deps += libass_link_dep
 endif
 if have_libplacebo_headers
   all_deps += libplacebo_compile_dep
@@ -1270,6 +1309,7 @@ summary({
   'VapourSynth': enable_vapoursynth and have_vapoursynth_headers,
   'AviSynth': enable_avisynth and have_avisynth_headers,
   'libass': libass_dep.found(),
+  'libass static': libass_dep.found() and libass_static,
   'libplacebo': have_libplacebo_headers,
   'libplacebo static': have_libplacebo_headers and libplacebo_static and have_libplacebo_link,
   'VMAF': have_vmaf_headers,
