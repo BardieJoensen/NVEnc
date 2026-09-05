@@ -28,7 +28,7 @@ import fgs_kat as kat
 import quality_metrics
 
 
-REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO = os.environ.get("FGS_GATE_REPO", os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 DEFAULT_TESTS = "const_luma,ramp_luma,coarse_luma,detail_luma,chroma_corr"
 
 
@@ -287,7 +287,8 @@ def main():
     report = {
         "schema": 1,
         "created_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "repository_commit": subprocess.check_output(
+        # The pre-push harness is a git archive, deliberately without .git.
+        "repository_commit": os.environ.get("FGS_GATE_HARNESS_COMMIT") or subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip(),
         "denoiser": args.denoiser,
         "nvencc": {"path": nvencc, "sha256": sha256(nvencc)},

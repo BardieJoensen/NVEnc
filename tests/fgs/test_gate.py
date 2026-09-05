@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -105,6 +106,27 @@ class GateTests(unittest.TestCase):
         self.env.update(FGS_TEST_CPU_CALLS=str(self.root / 'cpu-calls'),
                         FGS_TEST_GPU_CALLS=str(self.root / 'gpu-calls'))
         return old, new
+
+    def test_synthetic_oracle_records_identity_from_archived_harness(self):
+        # Reproduce the hook's .git-free archive. Stub only GPU computation;
+        # the real CLI must still initialize and write its identity/report.
+        snapshot = self.repo / 'tests/fgs'
+        snapshot.mkdir(parents=True)
+        for module in HERE.glob('*.py'):
+            shutil.copy2(module, snapshot / module.name)
+        binary = self.executable(self.root / 'candidate', '#!/bin/sh\necho candidate\n')
+        expected_commit = 'a' * 40
+        self.env.update(FGS_GATE_HARNESS_COMMIT=expected_commit, PYTHONPATH=str(snapshot))
+        output = self.root / 'oracle.json'
+        result = self.run_command([
+            sys.executable, '-c',
+            'import reference_compare as rc; '
+            'rc.compare_fixture = lambda *args: {"name": args[0]}; '
+            'raise SystemExit(rc.main())',
+            '--tests', 'const_luma', '--nvencc', str(binary),
+            '--aom-noise-model', str(binary), '--output', str(output)])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(json.loads(output.read_text())['repository_commit'], expected_commit)
 
     def hook(self, lines):
         return self.run_command(['bash', str(HERE / 'hooks/pre-push')], input=lines)
