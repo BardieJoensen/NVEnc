@@ -26,6 +26,11 @@ done
 
 snapshot="$(mktemp -d "${TMPDIR:-/tmp}/fgs-prepush-XXXXXX")"
 trap 'rm -rf -- "$snapshot"' EXIT
+# Use the installed, committed GPU harness even for an older candidate. Older
+# commits may have the faulty gate or lack its current command-line options.
+harness_commit="$(git -C "$REPO" rev-parse HEAD)"
+mkdir "$snapshot/harness"
+git -C "$REPO" archive "$harness_commit" tests/fgs | tar -x -C "$snapshot/harness"
 for commit in "${commits[@]}"; do
     tree="$snapshot/$commit"
     mkdir "$tree"
@@ -41,7 +46,8 @@ for commit in "${commits[@]}"; do
         exit 1
     fi
     printf '\n== pre-push: %s GPU gate for %s\n' "$MODE" "$commit"
-    FGS_GATE_REPO="$REPO" bash "$tree/tests/fgs/local_gate.sh" \
+    FGS_GATE_REPO="$REPO" FGS_GATE_HARNESS_COMMIT="$harness_commit" \
+        bash "$snapshot/harness/tests/fgs/local_gate.sh" \
         "--$MODE" --candidate-commit "$commit" --denoiser bilateral
 done
 printf '\npre-push: selected checks passed for every pushed commit.\n'

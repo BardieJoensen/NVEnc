@@ -59,6 +59,7 @@ sys.path.insert(0, HERE)
 import filmgrn                                                  # noqa: E402
 import reference_compare as rc                                  # noqa: E402
 import texture_metrics                                           # noqa: E402
+from fixtures import DEFAULT_ROOT                               # noqa: E402
 
 # NVEncC over libaom on the luma scaling-curve RMS. Sol's corrected build lands
 # within -6.6%..+3.3% on decoded sigma; this is deliberately looser so it is a
@@ -68,8 +69,9 @@ MIN_RATIO, MAX_RATIO = 0.80, 1.25
 
 DEFAULT_CLIPS = [
     # label,      path,                                                          expect
-    ("taxi_coarse", "/media/merged-storage/media/test-encodes/keep-original/ms_Taxi_Driver_20.mkv", "coarse"),
-    ("silo_fine",   "/media/merged-storage/media/test-encodes/silo-retest/clip_S03E01.mkv",         "fine"),
+    ("taxi_coarse", os.path.join(os.environ.get("FGS_GATE_FIXTURES", DEFAULT_ROOT), "taxi-coarse-24f.mkv"), "coarse"),
+    ("silo_fine", os.path.join(os.environ.get("FGS_GATE_FIXTURES", DEFAULT_ROOT), "silo-fine-24f.mkv"), "fine"),
+    ("alien_coarse", os.path.join(os.environ.get("FGS_GATE_FIXTURES", DEFAULT_ROOT), "alien-coarse-24f.mkv"), "coarse"),
 ]
 
 

@@ -11,7 +11,7 @@ the reason matters more than the arrangement.
 | where | GitHub Actions, every push | this box, manually and pre-push | this box, 08:45 and 20:15 |
 | needs | g++, python, numpy | GPU, real film, libaom, Docker | GPU, real film, Docker, Tdarr DB |
 | catches | logic and arithmetic errors in the model solver, the table parser, and the descriptor mathematics | analyzer regressions visible only on real film; texture substitution; metric-gaming | grain destruction and grain substitution in shipped library output |
-| blind to | anything requiring a real encode | anything not in the four covered titles | anything the deployed binary does not do on the sampled files |
+| blind to | anything requiring a real encode | anything not in the three current fixture titles | anything the deployed binary does not do on the sampled files |
 | runtime | ~30 s | ~3.5 min quick, tens of minutes full | ~10 min |
 
 ## Why the GPU tier cannot be hosted
@@ -47,11 +47,12 @@ an otherwise-green run is the same failure in a different costume.
 | check | subject |
 |---|---|
 | `solver_test.cpp` | `NVEncFilmGrainModel.cpp` — AR normal equations, scaling-curve fitting, chroma correlation clamping, strength LUT, stratified sample coverage |
-| `parser_test.cpp` | `NVEncFilmGrain.cpp` — `filmgrn1` table parsing, entry inheritance, interval and ordering validation |
+| `parser_test.cpp` | `NVEncFilmGrain.cpp` — table parsing, atomic replacement, clean-source reset, and write/flush failures |
 | `test_filmgrn.py` | table comparison in normalised synthesis units |
 | `test_quality_metrics.py` | radial spectrum, high-pass, spatial autocorrelation |
 | `test_texture_metrics.py` | flat-block selection, luma banding, amplitude independence, the labelled-negative gate logic |
 | `test_model_gate.py` | AR synthesis, held-out descriptors, and the accept/reject asymmetry |
+| `test_gate.py`, `test_fixtures.py` | exact pushed-commit selection, explicit production denoiser, and missing/changed fixture rejection |
 
 `docker-apps/.github/workflows/pipeline_cpu_tests.yml` runs the monitor alert
 logic: percentile handling, reference-hash pinning, and
@@ -85,14 +86,16 @@ silent skip. If you move the code, move the mutation.
 | stage | what it establishes |
 |---|---|
 | `tools` | pins libaom by revision and both NVEncC references by SHA-256, into a persistent cache |
-| `kat` | 18 bilateral GPU fixtures. Bounds synthetic behaviour. **Passed throughout both production regressions** |
+| `kat` | 21 GPU fixtures, including 8/10-bit chroma clipping and correlated chroma. The original 18 passed both historical production regressions |
+| `export` | GPU checks for successful export, clean-source replacement, initialization/flush errors, and failed video output |
 | `synthetic_oracle` | `reference_compare.py` — model fitting against libaom on generated fixtures |
 | `model_negative` | the texture model gate against the adversarial specimen (offline; no GPU needed, but needs the raw Taxi pair) |
 | `real_oracle` | `reference_compare_real.py --texture` — occupancy-weighted libaom comparison on real film. **This is the stage that caught the sampling defect** |
 | `texture_negative` | the r4047-versus-r4050 texture pair must separate |
-| `canary_negative` | the base-fidelity canary must alert on r4047 and stay clean on r4050; the widened Casino encode must read as base-degraded |
+| `canary_negative` | the base-fidelity canary must alert on r4047 and stay clean on r4050; the pinned widened Taxi encode must read as base-degraded |
+| `canary_candidate` | the selected candidate must pass the bilateral production base-fidelity canary |
 
-`--quick` runs `tools kat model_negative` (~3.5 min) and is what the pre-push
+`--quick` runs `tools kat export model_negative` (minutes plus a candidate build) and is what the pre-push
 hook uses. It is honestly labelled in the hook's own output: **the quick gate
 would not have caught either production regression.** Only `--full` runs the
 stages that did.
@@ -117,14 +120,25 @@ numbers comparable across runs. The gate therefore caches under
 ### Building a candidate
 
 `--candidate-commit <sha>` clones **with tags** (meson runs
-`git describe --tags` and exits 128 without them), copies the submodules from
-the live tree (`dtl`, `cppcodec`, `build_pkg` — a plain clone has them empty
-and the build dies ~78 files in on `dtl/dtl.hpp`), and uses a fresh timestamped
+`git describe --tags` and exits 128 without them), checks out the submodule
+revisions pinned by that commit with `git submodule update --init --recursive`,
+and uses a fresh timestamped
 path every time because the container writes the build directory as root and a
 failed attempt cannot be removed afterwards. Never builds from the live
 worktree: two builds were discarded on 2026-07-29 when HEAD moved mid-compile,
 and the result of that is not a failed build — it is a plausible-looking binary
 whose measurements are attributed to the wrong commit.
+
+The gate requires `--candidate-commit`, `--candidate-nvencc`, or the explicit
+`--reference-control r4050`; it never silently selects r4050. The pre-push hook
+archives and runs CPU tests from every distinct pushed commit, including tags
+and non-HEAD branches. GPU tests use a snapshot of the current committed harness
+and build the actual pushed commit. `FGS_PREPUSH=full` enables the full gate.
+Candidate and harness identity are recorded in `candidate.json`.
+
+Real-film inputs are hash-checked against `fixtures.json` before testing. See
+[FIXTURES.md](FIXTURES.md) for durable storage, provenance, and the 2026-09-05
+recovery of missing fixtures.
 
 ## The three labelled negatives, and where each is asserted
 
@@ -136,10 +150,11 @@ not mistaken for "works".
 | negative | asserted in | expected |
 |---|---|---|
 | r4047 `-grainfix` image (contains the rejected widening) | `local_gate.sh` stage `canary_negative` | base-fidelity canary **ALERT**, exit 1. Positive control: r4050 exits 0 |
-| `casino_widened_r4047.mkv` (retention 1.035/0.979/1.034 — perfect — on a degraded base) | `local_gate.sh` stage `canary_negative` | SSIMULACRA2 mean delta **negative** against the original download. Retention passes this file; base fidelity must not |
+| `taxi-widened-r4047.mkv` (recovered 2026-09-05) | `local_gate.sh` stage `canary_negative` | SSIMULACRA2 mean delta **negative** against a corrected encode of the pinned original-source clip |
 | `taxi_ceiling_q.json` (deliberate metric-gamer) | `local_gate.sh` stage `model_negative`, logic in `test_model_gate.py` | model gate **REJECT**. Positive control: the shipping model is accepted |
 
-Measured on 2026-07-30 by this gate, reproducing the published numbers:
+Historical measurements on the original fixture, 2026-07-30 (not the current
+Taxi fixture; current control results are in `fixtures.json`):
 
 ```
 r4047 canary   SSIMULACRA2 mean -0.872   p5 -0.798   Butteraugli +0.030   ALERT
@@ -190,6 +205,11 @@ specimen should be regenerated against the new loss.
 
 ## Nightly cron
 
+These are the intended schedules from the original setup. Restoring fixtures
+does not establish that either schedule is installed; inspect the host scheduler
+separately. The canary now writes a fresh running/error report when a fixture or
+measurement fails, so an old successful report cannot survive a failed run.
+
 | job | schedule | what it answers |
 |---|---|---|
 | `grain-watch.py` | `45 8 * * *` | did shipped library output lose grain? (destruction) — runs the base canary as its pre-step |
@@ -225,4 +245,6 @@ Never collapse these into one score. Casino is the worked example: retention
   flat-patch mask while the NVEnc-versus-libaom differential barely moves.
 - **Coarse grain at 1080p is uncovered.** Ju-on is fine grain, Taxi is coarse
   4K; neither covers coarse 1080p.
-- **Only four titles.** Taxi Driver, Silo, Casino, The Shining.
+- **Only three current titles.** Taxi Driver and Alien (coarse 4K), Silo (fine 1080p).
+  Historical Casino and The Shining inputs are unavailable. The replacement
+  fixtures validate the existing negative controls without lowering thresholds.

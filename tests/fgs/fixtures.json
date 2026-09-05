@@ -1,0 +1,329 @@
+{
+  "schema": 1,
+  "created_at_utc": "2026-09-05",
+  "default_root": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1",
+  "artifacts": {
+    "taxi_clip": {
+      "file": "taxi-coarse-24f.mkv",
+      "sha256": "ccda916bd8585c2daacff6db9d7329f99e1e2f0260c4316d8e8036b09e39d30f",
+      "bytes": 139421830
+    },
+    "silo_clip": {
+      "file": "silo-fine-24f.mkv",
+      "sha256": "040468f686dc66c753c2a2899261b3434fda6f33e257d5047bfda14bd241607b",
+      "bytes": 14893385
+    },
+    "alien_clip": {
+      "file": "alien-coarse-24f.mkv",
+      "sha256": "eb1956a549ad48f382c2d7c4062f7e0657252545b2cb6c0b6458e45399b2fd70",
+      "bytes": 99194244
+    },
+    "model_source": {
+      "file": "taxi-source-6f.y4m",
+      "sha256": "3d3a5f7e581052d75a90961ff28ee3c65a4239083e2c48c3f938a8eb4997ed3e",
+      "bytes": 149299320
+    },
+    "model_clean": {
+      "file": "taxi-clean-6f.y4m",
+      "sha256": "3260dd8c7aba1a85ae8105b9a28ba051aea7b9842a2397ced22f394d802817d2",
+      "bytes": 149299300
+    },
+    "model_reference": {
+      "file": "taxi-reference.tbl",
+      "sha256": "6b935bd145b6fa7e8b13c534a5834ca0ff47224ce2161546b25043a12f69e3b0",
+      "bytes": 534
+    },
+    "model_negative": {
+      "file": "taxi-metric-gamer.json",
+      "sha256": "00096654cbc0ab49c1ed34e8d8cb1ee4b1b072e9399697d3d432d77ab15d0c1e",
+      "bytes": 904
+    },
+    "substitution_encode": {
+      "file": "taxi-widened-r4047.mkv",
+      "sha256": "9d2ad6e750a6d89ff9d58ee990102895a1fe745264e5cfd50cd1a2bd00da9e54",
+      "bytes": 2298830
+    }
+  },
+  "provenance": {
+    "taxi": {
+      "original": "/media/merged-storage/media/movies/Taxi Driver (1976) [tmdbid-103]/Taxi Driver (1976) [tmdbid-103] - [Remux-2160p Proper][DTS-HD MA 5.1][DV HDR10][HEVC]-FraMeSToR.mkv",
+      "original_size": 65237114607,
+      "seek_seconds": 1365.5658,
+      "command": [
+        "ffmpeg",
+        "-nostdin",
+        "-v",
+        "error",
+        "-ss",
+        "1365.5658",
+        "-i",
+        "/media/merged-storage/media/movies/Taxi Driver (1976) [tmdbid-103]/Taxi Driver (1976) [tmdbid-103] - [Remux-2160p Proper][DTS-HD MA 5.1][DV HDR10][HEVC]-FraMeSToR.mkv",
+        "-map",
+        "0:v:0",
+        "-an",
+        "-sn",
+        "-frames:v",
+        "24",
+        "-c:v",
+        "ffv1",
+        "-level",
+        "3",
+        "-pix_fmt",
+        "yuv420p10le",
+        "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/taxi-coarse-24f.mkv"
+      ]
+    },
+    "alien_and_silo": {
+      "alien_coarse": {
+        "original": "/media/merged-storage/media/downloads/long-term-seeding/movies/Alien.1979.Directors.Cut.UHD.BluRay.2160p.DTS-HD.MA.5.1.HEVC.REMUX-FraMeSToR/Alien.1979.Directors.Cut.UHD.BluRay.2160p.DTS-HD.MA.5.1.HEVC.REMUX-FraMeSToR.mkv",
+        "seek_seconds": 1200,
+        "frames": 24,
+        "clip": "/tmp/nvenc-933-validation-20260904/fixtures/alien_coarse.mkv",
+        "command": [
+          "ffmpeg",
+          "-nostdin",
+          "-v",
+          "error",
+          "-ss",
+          "1200",
+          "-threads",
+          "4",
+          "-i",
+          "/media/merged-storage/media/downloads/long-term-seeding/movies/Alien.1979.Directors.Cut.UHD.BluRay.2160p.DTS-HD.MA.5.1.HEVC.REMUX-FraMeSToR/Alien.1979.Directors.Cut.UHD.BluRay.2160p.DTS-HD.MA.5.1.HEVC.REMUX-FraMeSToR.mkv",
+          "-map",
+          "0:v:0",
+          "-frames:v",
+          "24",
+          "-an",
+          "-sn",
+          "-c:v",
+          "ffv1",
+          "-threads",
+          "4",
+          "-pix_fmt",
+          "yuv420p10le",
+          "/tmp/nvenc-933-validation-20260904/fixtures/alien_coarse.mkv"
+        ],
+        "returncode": 0,
+        "error": ""
+      },
+      "silo_fine": {
+        "original": "/media/merged-storage/media/downloads/long-term-seeding/cross-seed-links/BroadcasTheNet/Silo.S03E01.Who.Are.You.1080p.ATVP.WEB-DL.DDP5.1.H.264-NTb.mkv",
+        "seek_seconds": 1200,
+        "frames": 24,
+        "clip": "/tmp/nvenc-933-validation-20260904/fixtures/silo_fine.mkv",
+        "command": [
+          "ffmpeg",
+          "-nostdin",
+          "-v",
+          "error",
+          "-ss",
+          "1200",
+          "-threads",
+          "4",
+          "-i",
+          "/media/merged-storage/media/downloads/long-term-seeding/cross-seed-links/BroadcasTheNet/Silo.S03E01.Who.Are.You.1080p.ATVP.WEB-DL.DDP5.1.H.264-NTb.mkv",
+          "-map",
+          "0:v:0",
+          "-frames:v",
+          "24",
+          "-an",
+          "-sn",
+          "-c:v",
+          "ffv1",
+          "-threads",
+          "4",
+          "-pix_fmt",
+          "yuv420p10le",
+          "/tmp/nvenc-933-validation-20260904/fixtures/silo_fine.mkv"
+        ],
+        "returncode": 0,
+        "error": ""
+      }
+    },
+    "model_pair": "First 6 frames of taxi_clip, decoded with ffmpeg (yuv420p10le, yuv4mpegpipe -strict -1); clean and table from pinned r4050 with bilateral auto/chroma auto, 10-bit raw output.",
+    "model_negative": "Unmodified historical taxi_ceiling_q.json; revalidated on recovered source pair: both fitted descriptors improve, both held-out descriptors regress.",
+    "substitution_encode": "Pinned r4047, AV1 QVBR 29, output-depth 10, denoise=auto,chroma=auto,denoiser=bilateral, all 24 taxi_clip frames.",
+    "reference_r4050_sha256": "5a8e198a4ab5da3167278d340de038ae5a5606de5be49eb7f6bcc26a4d570edd",
+    "negative_r4047_sha256": "28c1cae74f5e9002ce0d0d54240398df59098ea6f3f8e7f7f75ae61806145338"
+  },
+  "canary_revalidation": {
+    "negative": {
+      "mode": "binary-canary",
+      "source": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/taxi-coarse-24f.mkv",
+      "candidate_nvencc": "/home/bardie/.cache/fgs-gate/bin/nvencc-r4047",
+      "candidate_sha256": "28c1cae74f5e9002ce0d0d54240398df59098ea6f3f8e7f7f75ae61806145338",
+      "candidate_version": "NVEnc (x64) 9.27 (r4047) by rigaya, Jul 29 2026 23:20:46 (gcc 13.3.0/Linux)\n  [NVENC API v13.0, CUDA 13.3]\n reader: raw, y4m, avs, vpy, avsw, avhw [H.264/AVC, H.265/HEVC, MPEG2, VP8, VP9, VC-1, MPEG1, MPEG4, AV1]\n others\n  nvml       : yes\n  nvrtc      : yes\n  nvvfx      : no\n  ngx        : no\n  nvof fruc  : no\n  libass     : yes\n  libdovi    : yes\n  vulkan     : yes\n  libplacebo : no\n  vmaf       : no",
+      "seek_seconds": 0.0,
+      "seek_fraction": 0.0,
+      "frames": 24,
+      "qvbr": 29,
+      "fgs": "denoise=auto,chroma=auto,denoiser=bilateral",
+      "reference_nvencc": "/tmp/grain-base-image-ioh35zv5/nvencc",
+      "reference_sha256": "642a130430df0a3148beea9189c60e5f23fa0162cef0f863ec2a521212eb7a48",
+      "reference_version": "NVEnc (x64) 9.27 (r4033) by rigaya, Jul 29 2026 18:34:30 (gcc 13.3.0/Linux)\n  [NVENC API v13.0, CUDA 13.3]\n reader: raw, y4m, avs, vpy, avsw, avhw [H.264/AVC, H.265/HEVC, MPEG2, VP8, VP9, VC-1, MPEG1, MPEG4, AV1]\n others\n  nvml       : yes\n  nvrtc      : yes\n  nvvfx      : no\n  ngx        : no\n  nvof fruc  : no\n  libass     : yes\n  libdovi    : yes\n  vulkan     : yes\n  libplacebo : no\n  vmaf       : no",
+      "metrics_image": "docker-apps/video-metrics:latest",
+      "target": {
+        "ssimu2": {
+          "frames": 24,
+          "mean": 76.23251851399739,
+          "median": 76.55907821655276,
+          "min": 72.5208511352539,
+          "max": 83.6734466552734,
+          "p5": 72.66858978271485
+        },
+        "butteraugli_2norm": {
+          "frames": 24,
+          "mean": 1.0077611804008486,
+          "median": 0.997063219547272,
+          "min": 0.696710228919983,
+          "max": 1.15319156646729,
+          "p95": 1.1445516467094425
+        }
+      },
+      "control": {
+        "ssimu2": {
+          "frames": 24,
+          "mean": 78.6681137084961,
+          "median": 79.04676055908205,
+          "min": 74.9542770385742,
+          "max": 86.9010543823242,
+          "p5": 75.15920639038087
+        },
+        "butteraugli_2norm": {
+          "frames": 24,
+          "mean": 0.931847838064034,
+          "median": 0.922081708908081,
+          "min": 0.593844652175903,
+          "max": 1.07724332809448,
+          "p95": 1.0713788032531717
+        }
+      },
+      "delta": {
+        "ssimu2_mean": -2.4355951944987027,
+        "ssimu2_p5": -2.490616607666027,
+        "butteraugli_2norm_mean": 0.07591334233681457,
+        "butteraugli_2norm_p95": 0.07317284345627084
+      },
+      "verdict": "ALERT"
+    },
+    "r4050": {
+      "mode": "binary-canary",
+      "source": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/taxi-coarse-24f.mkv",
+      "candidate_nvencc": "/home/bardie/.cache/fgs-gate/bin/nvencc-r4050",
+      "candidate_sha256": "5a8e198a4ab5da3167278d340de038ae5a5606de5be49eb7f6bcc26a4d570edd",
+      "candidate_version": "NVEnc (x64) 9.27 (r4050) by rigaya, Jul 30 2026 05:05:46 (gcc 13.3.0/Linux)\n  [NVENC API v13.0, CUDA 13.3]\n reader: raw, y4m, avs, vpy, avsw, avhw [H.264/AVC, H.265/HEVC, MPEG2, VP8, VP9, VC-1, MPEG1, MPEG4, AV1]\n others\n  nvml       : yes\n  nvrtc      : yes\n  nvvfx      : no\n  ngx        : no\n  nvof fruc  : no\n  libass     : yes\n  libdovi    : yes\n  vulkan     : yes\n  libplacebo : no\n  vmaf       : no",
+      "seek_seconds": 0.0,
+      "seek_fraction": 0.0,
+      "frames": 24,
+      "qvbr": 29,
+      "fgs": "denoise=auto,chroma=auto,denoiser=bilateral",
+      "reference_nvencc": "/tmp/grain-base-image-y1abnhzx/nvencc",
+      "reference_sha256": "642a130430df0a3148beea9189c60e5f23fa0162cef0f863ec2a521212eb7a48",
+      "reference_version": "NVEnc (x64) 9.27 (r4033) by rigaya, Jul 29 2026 18:34:30 (gcc 13.3.0/Linux)\n  [NVENC API v13.0, CUDA 13.3]\n reader: raw, y4m, avs, vpy, avsw, avhw [H.264/AVC, H.265/HEVC, MPEG2, VP8, VP9, VC-1, MPEG1, MPEG4, AV1]\n others\n  nvml       : yes\n  nvrtc      : yes\n  nvvfx      : no\n  ngx        : no\n  nvof fruc  : no\n  libass     : yes\n  libdovi    : yes\n  vulkan     : yes\n  libplacebo : no\n  vmaf       : no",
+      "metrics_image": "docker-apps/video-metrics:latest",
+      "target": {
+        "ssimu2": {
+          "frames": 24,
+          "mean": 78.69130134582521,
+          "median": 79.02988052368164,
+          "min": 74.9998626708984,
+          "max": 86.9015045166016,
+          "p5": 75.19671897888183
+        },
+        "butteraugli_2norm": {
+          "frames": 24,
+          "mean": 0.9309163490931193,
+          "median": 0.9221750199794769,
+          "min": 0.593962550163269,
+          "max": 1.07759892940521,
+          "p95": 1.0712314307689694
+        }
+      },
+      "control": {
+        "ssimu2": {
+          "frames": 24,
+          "mean": 78.6681137084961,
+          "median": 79.04676055908205,
+          "min": 74.9542770385742,
+          "max": 86.9010543823242,
+          "p5": 75.15920639038087
+        },
+        "butteraugli_2norm": {
+          "frames": 24,
+          "mean": 0.931847838064034,
+          "median": 0.922081708908081,
+          "min": 0.593844652175903,
+          "max": 1.07724332809448,
+          "p95": 1.0713788032531717
+        }
+      },
+      "delta": {
+        "ssimu2_mean": 0.023187637329115773,
+        "ssimu2_p5": 0.03751258850095951,
+        "butteraugli_2norm_mean": -0.0009314889709147733,
+        "butteraugli_2norm_p95": -0.00014737248420226834
+      },
+      "verdict": "ok"
+    },
+    "production": {
+      "mode": "binary-canary",
+      "source": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/taxi-coarse-24f.mkv",
+      "candidate_nvencc": "/tmp/nvenc-933-validation-20260904/nvencc-production",
+      "candidate_sha256": "3aecaae670680319dc11c1c499ee04df2d1ba4c2a4eaee8c0f9193b76c9c3bd7",
+      "candidate_version": "NVEnc (x64) 9.31 (r4141) by rigaya, Aug 11 2026 07:57:40 (gcc 13.3.0/Linux)\n  [NVENC API v13.1, CUDA 13.3]\n reader: raw, y4m, avs, vpy, avsw, avhw [H.264/AVC, H.265/HEVC, MPEG2, VP8, VP9, VC-1, MPEG1, MPEG4, AV1]\n others\n  nvml       : yes\n  nvrtc      : yes\n  nvvfx      : no\n  ngx        : no\n  nvof fruc  : no\n  libass     : yes\n  libdovi    : yes\n  vulkan     : yes\n  libplacebo : no\n  vmaf       : no",
+      "seek_seconds": 0.0,
+      "seek_fraction": 0.0,
+      "frames": 24,
+      "qvbr": 29,
+      "fgs": "denoise=auto,chroma=auto,denoiser=bilateral",
+      "reference_nvencc": "/tmp/grain-base-image-sjx9wh4t/nvencc",
+      "reference_sha256": "642a130430df0a3148beea9189c60e5f23fa0162cef0f863ec2a521212eb7a48",
+      "reference_version": "NVEnc (x64) 9.27 (r4033) by rigaya, Jul 29 2026 18:34:30 (gcc 13.3.0/Linux)\n  [NVENC API v13.0, CUDA 13.3]\n reader: raw, y4m, avs, vpy, avsw, avhw [H.264/AVC, H.265/HEVC, MPEG2, VP8, VP9, VC-1, MPEG1, MPEG4, AV1]\n others\n  nvml       : yes\n  nvrtc      : yes\n  nvvfx      : no\n  ngx        : no\n  nvof fruc  : no\n  libass     : yes\n  libdovi    : yes\n  vulkan     : yes\n  libplacebo : no\n  vmaf       : no",
+      "metrics_image": "docker-apps/video-metrics:latest",
+      "target": {
+        "ssimu2": {
+          "frames": 24,
+          "mean": 78.69130134582521,
+          "median": 79.02988052368164,
+          "min": 74.9998626708984,
+          "max": 86.9015045166016,
+          "p5": 75.19671897888183
+        },
+        "butteraugli_2norm": {
+          "frames": 24,
+          "mean": 0.9309163490931193,
+          "median": 0.9221750199794769,
+          "min": 0.593962550163269,
+          "max": 1.07759892940521,
+          "p95": 1.0712314307689694
+        }
+      },
+      "control": {
+        "ssimu2": {
+          "frames": 24,
+          "mean": 78.6681137084961,
+          "median": 79.04676055908205,
+          "min": 74.9542770385742,
+          "max": 86.9010543823242,
+          "p5": 75.15920639038087
+        },
+        "butteraugli_2norm": {
+          "frames": 24,
+          "mean": 0.931847838064034,
+          "median": 0.922081708908081,
+          "min": 0.593844652175903,
+          "max": 1.07724332809448,
+          "p95": 1.0713788032531717
+        }
+      },
+      "delta": {
+        "ssimu2_mean": 0.023187637329115773,
+        "ssimu2_p5": 0.03751258850095951,
+        "butteraugli_2norm_mean": -0.0009314889709147733,
+        "butteraugli_2norm_p95": -0.00014737248420226834
+      },
+      "verdict": "ok"
+    }
+  }
+}

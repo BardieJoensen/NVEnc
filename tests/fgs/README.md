@@ -1,7 +1,8 @@
 # AV1 film-grain analyzer tests
 
-These tests exercise the CUDA AV1 film-grain analyzer without requiring any
-copyrighted media. Set `NVENCC` when the binary is not at
+The synthetic tests exercise the CUDA AV1 film-grain analyzer without private
+media. The full local gate also requires the pinned real-film fixtures documented
+in [FIXTURES.md](FIXTURES.md). Set `NVENCC` when the binary is not at
 `build-fgs-cuda/nvencc`.
 
 **Read `TIERS.md` first.** It says which tier catches which class of defect,
@@ -13,8 +14,14 @@ and why the GPU tier is not and cannot be hosted in CI.
 |---|---|---|
 | tier 1 | `bash tests/fgs/run_cpu_tests.sh` | GitHub Actions, every push |
 | tier 1 meta-check | `bash tests/fgs/selftest_can_fail.sh` | GitHub Actions, every push |
-| tier 2 quick | `tests/fgs/local_gate.sh --quick` | this box; pre-push hook |
-| tier 2 full | `tests/fgs/local_gate.sh --full` | this box, before shipping a build |
+| tier 2 quick | `tests/fgs/local_gate.sh --quick --candidate-commit HEAD` | this box; pre-push hook |
+| tier 2 full | `tests/fgs/local_gate.sh --full --candidate-commit HEAD` | this box, before shipping a build |
+
+The gate requires an explicit candidate and defaults to the production bilateral
+denoiser. `--candidate-commit` builds that exact commit and its pinned dependencies;
+`--candidate-nvencc /path/to/nvencc` tests an existing binary. Reports record the
+commit (when supplied), binary SHA-256, version, fixture hashes, and denoiser.
+`--reference-control r4050` is only for validating the historical control.
 
 Install the pre-push hook with:
 
@@ -225,5 +232,5 @@ with `--expect` it is 0 when the verdict matches and 1 when it does not.
 
 The unit-testable core runs in CI (`test_model_gate.py`); the media-backed
 assertion against
-`/media/merged-storage/media/test-encodes/ceiling/taxi_ceiling_q.json` is stage
+`taxi-metric-gamer.json` from the [pinned fixture set](FIXTURES.md) is stage
 `model_negative` of the local gate.

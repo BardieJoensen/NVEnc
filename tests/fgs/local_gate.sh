@@ -27,10 +27,10 @@
 # USAGE
 #   tests/fgs/local_gate.sh [--quick|--full] [--stage NAME]... [options]
 #
-#   --quick   GPU fixtures, synthetic oracle and both offline model negatives.
+#   --quick   GPU fixtures, table export and both offline model controls.
 #             Minutes. This is what the pre-push hook runs.
 #   --full    Everything, including real-film oracle, texture negative and the
-#             base-fidelity canary negatives. Tens of minutes.
+#             base-fidelity canary controls and candidate. Tens of minutes.
 #   --stage   Run only the named stage; repeatable. Overrides --quick/--full.
 #   --candidate-commit SHA
 #             Build NVEncC from a pinned clone at SHA and test that binary.
@@ -76,26 +76,20 @@ BUILD_IMAGE="${FGS_GATE_BUILD_IMAGE:-nvenc-fgs-build:cuda13.3-deps}"
 DOCKER_APPS="${DOCKER_APPS:-/opt/docker-apps}"
 CANARY="$DOCKER_APPS/scripts/grain-base-canary.sh"
 
-MEDIA="${FGS_GATE_MEDIA:-/media/merged-storage/media/test-encodes}"
-CEILING_DIR="$MEDIA/ceiling"
-TAXI_SRC="$CEILING_DIR/taxi_src.y4m"
-TAXI_CLEAN="$CEILING_DIR/taxi_clean.y4m"
-TAXI_MODEL="$CEILING_DIR/taxi.tbl"
-CEILING_MODEL="$CEILING_DIR/taxi_ceiling_q.json"
-TAXI_CLIP="$MEDIA/keep-original/ms_Taxi_Driver_20.mkv"
-CASINO_WIDENED="$MEDIA/widening-evidence/casino_widened_r4047.mkv"
-# The ORIGINAL download, never the library copy. Scoring an encode against a
-# library file measures two stacked lossy generations instead of one and
-# flattens every metric, which would quietly turn this negative control into a
-# pass.
-CASINO_SOURCE="${FGS_GATE_CASINO_SOURCE:-/media/merged-storage/media/downloads/keep-original-holds/Casino (1995) [tmdbid-524] - [Remux-2160p][DTS-X 7.1][HDR10][HEVC]-EPSiLON.mkv}"
+FIXTURE_ROOT="${FGS_GATE_FIXTURES:-/media/merged-storage/validation-fixtures/nvenc-fgs/v1}"
+TAXI_SRC="$FIXTURE_ROOT/taxi-source-6f.y4m"
+TAXI_CLEAN="$FIXTURE_ROOT/taxi-clean-6f.y4m"
+TAXI_MODEL="$FIXTURE_ROOT/taxi-reference.tbl"
+CEILING_MODEL="$FIXTURE_ROOT/taxi-metric-gamer.json"
+TAXI_CLIP="$FIXTURE_ROOT/taxi-coarse-24f.mkv"
+SUBSTITUTION_ENCODE="$FIXTURE_ROOT/taxi-widened-r4047.mkv"
 
-ALL_STAGES=(tools kat synthetic_oracle model_negative real_oracle texture_negative canary_negative)
-# ~3.5 minutes on this box: the 18 GPU fixtures plus the offline adversarial
+ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate)
+# The GPU fixtures and export tests plus the offline adversarial
 # specimen. Deliberately excludes the libaom oracles and the canary, which need
 # real-film encodes. A pre-push hook long enough to be bypassed with
 # --no-verify protects nothing, so the slow stages belong to the full run.
-QUICK_STAGES=(tools kat model_negative)
+QUICK_STAGES=(tools kat export model_negative)
 
 CANDIDATE_NVENCC=""
 CANDIDATE_COMMIT=""
@@ -223,6 +217,24 @@ info "cache   : $CACHE"
 info "reports : $REPORT_DIR"
 info "stages  : ${STAGES[*]}"
 
+required_fixtures=()
+if want_stage model_negative; then
+    required_fixtures+=(model_source model_clean model_reference model_negative)
+fi
+if want_stage real_oracle; then
+    required_fixtures+=(taxi_clip silo_clip alien_clip)
+fi
+if want_stage texture_negative || want_stage canary_candidate; then
+    required_fixtures+=(taxi_clip)
+fi
+if want_stage canary_negative; then
+    required_fixtures+=(taxi_clip substitution_encode)
+fi
+if [ "${#required_fixtures[@]}" -gt 0 ]; then
+    python3 "$HERE/fixtures.py" --root "$FIXTURE_ROOT" --check "${required_fixtures[@]}" \
+        > "$REPORT_DIR/fixtures.json" || die "pinned fixture verification failed"
+fi
+
 # ---------------------------------------------------------------------------
 # stage: tools
 # ---------------------------------------------------------------------------
@@ -248,7 +260,7 @@ build_candidate_from_pin() {
     #   * a clone WITHOUT tags breaks meson (`git describe` exits 128 and
     #     build.ninja is never written);
     #   * a plain clone has empty submodules and dies ~78 files in on
-    #     dtl/dtl.hpp, so they are copied from the live tree;
+    #     dtl/dtl.hpp, so check out the dependencies pinned by this commit;
     #   * the container writes the build dir as root, so a retry must use a
     #     FRESH path rather than reusing the old one.
     local commit="$1"
@@ -314,13 +326,14 @@ info "candidate commit: ${CANDIDATE_COMMIT:-external binary; see hash}"
 info "candidate sha256: $(sha256sum "$CANDIDATE_NVENCC" | awk '{print $1}')"
 info "denoiser        : $DENOISER"
 python3 - "$CANDIDATE_NVENCC" "$CANDIDATE_COMMIT" "$REFERENCE_CONTROL" "$DENOISER" "$REPORT_DIR/candidate.json" <<'PY'
-import datetime, hashlib, json, pathlib, subprocess, sys
+import datetime, hashlib, json, os, pathlib, subprocess, sys
 binary, commit, control, denoiser, output = sys.argv[1:]
 path = pathlib.Path(binary).resolve()
 version = subprocess.run([str(path), "--version"], capture_output=True, text=True, check=True)
 pathlib.Path(output).write_text(json.dumps({
     "started_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     "candidate_commit": commit or None,
+    "harness_commit": os.environ.get("FGS_GATE_HARNESS_COMMIT"),
     "candidate_nvencc": str(path),
     "candidate_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
     "candidate_version": version.stdout.strip(),
@@ -331,7 +344,7 @@ PY
 [ "$?" -eq 0 ] || die "could not record candidate identity"
 
 # ---------------------------------------------------------------------------
-# stage: kat -- 18 bilateral GPU fixtures
+# stage: kat -- synthetic GPU fixtures, including chroma clipping boundaries
 # ---------------------------------------------------------------------------
 if want_stage kat; then
     log "stage: kat (GPU known-answer fixtures)"
@@ -339,10 +352,23 @@ if want_stage kat; then
     info "synthetic behaviour only, and cannot see real-film aliasing"
     if NVENCC="$CANDIDATE_NVENCC" FGS_KAT_DENOISER="$DENOISER" FGS_KAT_DIR="$REPORT_DIR/kat" \
             python3 "$HERE/fgs_kat.py" > "$REPORT_DIR/kat.log" 2>&1; then
-        record pass "kat: 18 GPU fixtures"
+        record pass "kat: GPU fixtures ($DENOISER)"
     else
-        record fail "kat: 18 GPU fixtures (see $REPORT_DIR/kat.log)"
+        record fail "kat: GPU fixtures ($DENOISER; see $REPORT_DIR/kat.log)"
         tail -25 "$REPORT_DIR/kat.log"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# stage: export -- table finalization and runtime failure propagation
+# ---------------------------------------------------------------------------
+if want_stage export; then
+    log "stage: table export (GPU finalization and failure paths)"
+    if NVENCC="$CANDIDATE_NVENCC" python3 "$HERE/test_export.py" > "$REPORT_DIR/export.log" 2>&1; then
+        record pass "export: table finalization and failure paths"
+    else
+        record fail "export: table finalization (see $REPORT_DIR/export.log)"
+        tail -30 "$REPORT_DIR/export.log"
     fi
 fi
 
@@ -420,7 +446,7 @@ if want_stage real_oracle; then
     log "stage: real-film oracle (libaom, occupancy-weighted)"
     [ -x "$AOM_NOISE_MODEL" ] || die "libaom oracle missing; run the tools stage"
     require_file "$TAXI_CLIP"
-    if python3 "$HERE/reference_compare_real.py" \
+    if FGS_GATE_FIXTURES="$FIXTURE_ROOT" python3 "$HERE/reference_compare_real.py" \
             --nvencc "$CANDIDATE_NVENCC" \
             --aom-noise-model "$AOM_NOISE_MODEL" \
             --frames 24 --denoiser "$DENOISER" --texture \
@@ -514,14 +540,15 @@ fi
 # stage: canary_negative -- LABELLED NEGATIVES 1 and 2 (base-fidelity half)
 # ---------------------------------------------------------------------------
 if want_stage canary_negative; then
-    log "stage: base-fidelity canary (labelled negatives: r4047, Casino)"
+    log "stage: base-fidelity canary (labelled negatives: r4047 and its retained output)"
     [ -x "$CANARY" ] || die "base-fidelity canary not found at $CANARY"
 
     run_canary() {  # image -> exit status, output on stdout
         local image="$1" label="$2" container status
         container="$(docker create "$image" 2>/dev/null)" \
             || { echo "cannot create container from $image" >&2; return 3; }
-        GRAIN_CANARY_CONTAINER="$container" \
+        GRAIN_CANARY_NVENCC="" GRAIN_CANARY_CONTAINER="$container" \
+        GRAIN_CANARY_FIXTURE="$TAXI_CLIP" \
         GRAIN_CANARY_REPORT_DIR="$REPORT_DIR/canary-$label" \
             "$CANARY" > "$REPORT_DIR/canary-$label.log" 2>&1
         status=$?
@@ -530,7 +557,7 @@ if want_stage canary_negative; then
     }
 
     info "negative control: r4047 contains the rejected widening and must ALERT"
-    info "(measured: SSIMULACRA2 -0.872, Butteraugli +0.030, exit 1)"
+    info "(Taxi recovery: SSIMULACRA2 -2.436, Butteraugli +0.076, exit 1)"
     run_canary "$NEG_R4047_IMAGE" r4047
     status=$?
     if [ "$status" -eq 1 ] && grep -q "ALERT" "$REPORT_DIR/canary-r4047.log"; then
@@ -555,51 +582,58 @@ if want_stage canary_negative; then
         tail -20 "$REPORT_DIR/canary-r4050.log"
     fi
 
-    # LABELLED NEGATIVE 2. Casino's measured grain retention is 1.035/0.979/
-    # 1.034 across three scenes -- as good as anything in the library -- on a
-    # file whose base had been smoothed and its texture substituted. Retention
-    # passes it; base fidelity must not. This is file mode, which deliberately
-    # has no universal alert threshold, so the assertion is on the direction of
-    # the delta rather than on a bound.
-    if [ -f "$CASINO_WIDENED" ] && [ -f "$CASINO_SOURCE" ]; then
-        info "forensic control: the widened Casino encode has PERFECT retention"
+    # Exercise file mode too, on retained output from the known-bad encoder.
+    # The historical Casino original is gone; the recovered Taxi pair is pinned
+    # and revalidated. Do not compare a transcode against a library generation.
+    if [ -f "$SUBSTITUTION_ENCODE" ] && [ -f "$TAXI_CLIP" ]; then
+        info "file control: the retained widened encode must have a degraded base"
         if python3 "$DOCKER_APPS/scripts/grain-base-fidelity.py" \
-                "$CASINO_SOURCE" "$CASINO_WIDENED" \
+                "$TAXI_CLIP" "$SUBSTITUTION_ENCODE" \
+                --seek-fraction 0 \
                 --reference-image "$REF_R4050_IMAGE" \
                 --expect-reference-sha256 "$REF_R4050_SHA256" \
-                --json "$REPORT_DIR/casino-base-fidelity.json" \
-                > "$REPORT_DIR/casino-base-fidelity.log" 2>&1; then
-            if python3 - "$REPORT_DIR/casino-base-fidelity.json" <<'PY'
+                --json "$REPORT_DIR/substitution-base-fidelity.json" \
+                > "$REPORT_DIR/substitution-base-fidelity.log" 2>&1; then
+            if python3 - "$REPORT_DIR/substitution-base-fidelity.json" <<'PY'
 import json, sys
 report = json.load(open(sys.argv[1]))
 delta = report.get("delta", report)
 ssimu2 = delta.get("ssimu2_mean")
 if ssimu2 is None:
     print("no ssimu2_mean in the report", file=sys.stderr); sys.exit(2)
-print(f"casino SSIMULACRA2 mean delta {ssimu2:+.3f}")
-# Negative means the library base is worse than the freshly encoded control,
-# which is the substitution signature. A positive delta here would mean base
-# fidelity agrees with retention that the file is fine, and the axis that
-# caught this regression has stopped working.
+print(f"retained negative SSIMULACRA2 mean delta {ssimu2:+.3f}")
+# Negative means the retained widened base is worse than the freshly encoded
+# corrected control. This validates the file-mode detector on the recovered
+# source; historical Casino retention measurements do not apply to this clip.
 sys.exit(0 if ssimu2 < 0 else 1)
 PY
             then
-                record pass "base fidelity sees the widened Casino base as worse"
+                record pass "base fidelity sees the retained widened base as worse"
             else
-                record fail "base fidelity did NOT see the widened Casino base
-        as worse -- retention already passes this file, so nothing would catch
-        it (see $REPORT_DIR/casino-base-fidelity.json)"
+                record fail "base fidelity did NOT see the retained widened base as worse (see $REPORT_DIR/substitution-base-fidelity.json)"
             fi
         else
-            record fail "casino base-fidelity measurement failed (see $REPORT_DIR/casino-base-fidelity.log)"
-            tail -20 "$REPORT_DIR/casino-base-fidelity.log"
+            record fail "retained negative base-fidelity measurement failed (see $REPORT_DIR/substitution-base-fidelity.log)"
+            tail -20 "$REPORT_DIR/substitution-base-fidelity.log"
         fi
     else
-        record fail "the Casino negative control is not available:
-          encode: $CASINO_WIDENED
-          source: $CASINO_SOURCE
+        record fail "the retained negative control is not available:
+          encode: $SUBSTITUTION_ENCODE
+          source: $TAXI_CLIP
         Keep rejected builds and bad outputs; they are the only honest negative
         controls a quality monitor gets."
+    fi
+fi
+
+if want_stage canary_candidate; then
+    log "stage: candidate base-fidelity canary"
+    if GRAIN_CANARY_NVENCC="$CANDIDATE_NVENCC" GRAIN_CANARY_FIXTURE="$TAXI_CLIP" \
+       GRAIN_CANARY_REPORT_DIR="$REPORT_DIR/canary-candidate" \
+       "$CANARY" > "$REPORT_DIR/canary-candidate.log" 2>&1; then
+        record pass "candidate base-fidelity canary"
+    else
+        record fail "candidate base-fidelity canary (see $REPORT_DIR/canary-candidate.log)"
+        tail -30 "$REPORT_DIR/canary-candidate.log"
     fi
 fi
 

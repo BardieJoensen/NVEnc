@@ -128,6 +128,19 @@ class GateTests(unittest.TestCase):
         self.assertEqual((self.root / 'gpu-calls').read_text(),
                          f'--full --candidate-commit {new} --denoiser bilateral\n')
 
+    def test_older_candidate_uses_current_committed_gpu_harness(self):
+        _, candidate = self.prepare_history()
+        self.executable(self.repo / 'tests/fgs/local_gate.sh',
+                        '#!/bin/sh\nprintf "current %s %s\\n" "$FGS_GATE_HARNESS_COMMIT" "$*" '
+                        '>> "$FGS_TEST_GPU_CALLS"\n')
+        self.git('add', '.')
+        self.git('commit', '-qm', 'updated GPU harness')
+        harness = self.git('rev-parse', 'HEAD')
+        result = self.hook(f'refs/heads/candidate {candidate} refs/heads/candidate {"0"*40}\n')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((self.root / 'gpu-calls').read_text(),
+                         f'current {harness} --quick --candidate-commit {candidate} --denoiser bilateral\n')
+
     def test_deletion_does_not_test_head(self):
         _, new = self.prepare_history()
         result = self.hook(f'(delete) {"0"*40} refs/heads/old {new}\n')
