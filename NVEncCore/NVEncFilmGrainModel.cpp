@@ -43,7 +43,7 @@
 #include "NVEncFilmGrainModel.h"
 
 NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
-    flatBlocks(0), totalBlocks(0), modelFrames(0), noiseStdDev(), observations(),
+    flatBlocks(0), totalBlocks(0), modelFrames(0), noiseStdDev(), templateGain{1.0f, 1.0f, 1.0f}, observations(),
     detailRisk(0.0f), residualRetain(0.0f), grainCorrelation(0.0f),
     reliable(false), sceneReset(false), modelHeld(false) {
 }
@@ -337,6 +337,7 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
         diagnostics.observations[c] = stats.plane[c].observations;
         if (!solved[c].valid) continue;
         double weightedVariance = 0.0;
+        diagnostics.templateGain[c] = static_cast<float>(solved[c].templateGain);
         uint64_t total = 0;
         for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
             weightedVariance += solved[c].strength[bin] * solved[c].strength[bin] * solved[c].strengthWeight[bin];
@@ -405,8 +406,13 @@ bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC
     return maxCoeffDiff <= coefficientTolerance;
 }
 
-void build_strength_lut(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bitDepth, float lut[FGS_STRENGTH_LUT_SIZE]) {
-    if (!params.applyGrain || params.numYPoints == 0) {
+void build_strength_lut(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bitDepth,
+    float lut[FGS_STRENGTH_LUT_SIZE], const int plane, const double templateGain) {
+    const bool fromLuma = plane == 0 || params.chromaScalingFromLuma;
+    const auto count = fromLuma ? params.numYPoints : (plane == 1 ? params.numCbPoints : params.numCrPoints);
+    const auto values = fromLuma ? params.pointYValue : (plane == 1 ? params.pointCbValue : params.pointCrValue);
+    const auto scalings = fromLuma ? params.pointYScaling : (plane == 1 ? params.pointCbScaling : params.pointCrScaling);
+    if (!params.applyGrain || count == 0) {
         std::fill(lut, lut + FGS_STRENGTH_LUT_SIZE, 0.0f);
         return;
     }
@@ -417,8 +423,8 @@ void build_strength_lut(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bi
     const double depthScale = static_cast<double>(1 << (bitDepth - 8));
     for (int x = 0; x < FGS_STRENGTH_LUT_SIZE; ++x) {
         lut[x] = static_cast<float>(
-            eval_scaling_curve(params.pointYValue, params.pointYScaling, params.numYPoints, x)
-            * sigmaScale * depthScale);
+            eval_scaling_curve(values, scalings, count, x)
+            * sigmaScale * depthScale * templateGain);
     }
 }
 

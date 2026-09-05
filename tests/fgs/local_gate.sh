@@ -37,12 +37,16 @@
 #             Never builds from the live worktree; see robustness backlog 12.
 #   --candidate-nvencc PATH
 #             Test an already-built binary instead of building one.
+#   --reference-control r4050
+#             Explicitly test the historical reference (never a release gate).
+#   --denoiser bilateral|fft3d|motion
+#             Candidate denoiser; defaults to the production bilateral path.
 #   --list    Print the stages and exit.
 
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$HERE/../.." && pwd)"
+REPO="${FGS_GATE_REPO:-$(cd "$HERE/../.." && pwd)}"
 
 # ---------------------------------------------------------------------------
 # Persistent locations.
@@ -67,7 +71,7 @@ REF_R4050_SHA256="5a8e198a4ab5da3167278d340de038ae5a5606de5be49eb7f6bcc26a4d570e
 NEG_R4047_IMAGE="${FGS_GATE_R4047_IMAGE:-docker-apps/tdarr-node:2.85.01-nvencc927-grainfix}"
 NEG_R4047_SHA256="28c1cae74f5e9002ce0d0d54240398df59098ea6f3f8e7f7f75ae61806145338"
 NVENCC_IMAGE_PATH="/usr/bin/nvencc"
-BUILD_IMAGE="${FGS_GATE_BUILD_IMAGE:-nvenc-fgs-build:cuda13.3}"
+BUILD_IMAGE="${FGS_GATE_BUILD_IMAGE:-nvenc-fgs-build:cuda13.3-deps}"
 
 DOCKER_APPS="${DOCKER_APPS:-/opt/docker-apps}"
 CANARY="$DOCKER_APPS/scripts/grain-base-canary.sh"
@@ -95,6 +99,8 @@ QUICK_STAGES=(tools kat model_negative)
 
 CANDIDATE_NVENCC=""
 CANDIDATE_COMMIT=""
+REFERENCE_CONTROL=""
+DENOISER="bilateral"
 STAGES=()
 MODE="full"
 
@@ -105,11 +111,34 @@ while [ $# -gt 0 ]; do
         --stage) STAGES+=("$2"); shift 2 ;;
         --candidate-nvencc) CANDIDATE_NVENCC="$2"; shift 2 ;;
         --candidate-commit) CANDIDATE_COMMIT="$2"; shift 2 ;;
+        --reference-control) REFERENCE_CONTROL="$2"; shift 2 ;;
+        --denoiser) DENOISER="$2"; shift 2 ;;
         --list) printf '%s\n' "${ALL_STAGES[@]}"; exit 0 ;;
         -h|--help) sed -n '1,50p' "${BASH_SOURCE[0]}"; exit 0 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
 done
+
+selections=0
+[ -z "$CANDIDATE_NVENCC" ] || selections=$((selections + 1))
+[ -z "$CANDIDATE_COMMIT" ] || selections=$((selections + 1))
+[ -z "$REFERENCE_CONTROL" ] || selections=$((selections + 1))
+if [ "$selections" -ne 1 ]; then
+    echo "select exactly one candidate: --candidate-commit SHA or --candidate-nvencc PATH" >&2
+    echo "use --reference-control r4050 only to test the historical control" >&2
+    exit 2
+fi
+if [ -n "$REFERENCE_CONTROL" ] && [ "$REFERENCE_CONTROL" != "r4050" ]; then
+    echo "unknown reference control: $REFERENCE_CONTROL" >&2
+    exit 2
+fi
+case "$DENOISER" in
+    bilateral|fft3d|motion) ;;
+    *) echo "unknown denoiser: $DENOISER" >&2; exit 2 ;;
+esac
+if [ -n "$CANDIDATE_COMMIT" ]; then
+    CANDIDATE_COMMIT="$(git -C "$REPO" rev-parse --verify "$CANDIDATE_COMMIT^{commit}")" || exit 2
+fi
 
 if [ "${#STAGES[@]}" -eq 0 ]; then
     if [ "$MODE" = "quick" ]; then STAGES=("${QUICK_STAGES[@]}");
@@ -227,11 +256,8 @@ build_candidate_from_pin() {
     log "building candidate from pinned clone $commit"
     git clone --quiet "$REPO" "$pin" || die "clone failed"
     git -C "$pin" checkout --quiet "$commit" || die "no such commit: $commit"
-    local path
-    while read -r _ path; do
-        [ -n "$path" ] || continue
-        cp -a "$REPO/$path" "$pin/$(dirname "$path")/"
-    done < <(git -C "$REPO" config --file .gitmodules --get-regexp path)
+    git -C "$pin" submodule update --init --recursive \
+        || die "could not check out the candidate's pinned dependencies"
     docker run --rm --gpus all -v "$pin:/work" -w /work "$BUILD_IMAGE" \
         bash -lc 'git config --global --add safe.directory /work
                   apt-get update -qq
@@ -269,22 +295,40 @@ if want_stage tools; then
     [ -x "$AOM_NOISE_MODEL" ] || die "libaom noise_model missing after build"
     info "libaom oracle   : $AOM_NOISE_MODEL ($AOM_REVISION)"
 
-    if [ -n "$CANDIDATE_COMMIT" ]; then
-        build_candidate_from_pin "$CANDIDATE_COMMIT"
-    fi
-    if [ -z "$CANDIDATE_NVENCC" ]; then
-        CANDIDATE_NVENCC="$R4050"
-        info "candidate       : none given, testing the pinned r4050 reference"
-    fi
-    [ -x "$CANDIDATE_NVENCC" ] || die "candidate binary is not executable: $CANDIDATE_NVENCC"
-    info "candidate       : $CANDIDATE_NVENCC"
-    info "candidate sha256: $(sha256sum "$CANDIDATE_NVENCC" | awk '{print $1}')"
 else
     R4050="$BIN_DIR/nvencc-r4050"
     R4047="$BIN_DIR/nvencc-r4047"
     AOM_NOISE_MODEL="$AOM_DIR/build/noise_model"
-    [ -n "$CANDIDATE_NVENCC" ] || CANDIDATE_NVENCC="$R4050"
 fi
+
+# --candidate-commit also applies when --stage omits the tools stage.
+if [ -n "$CANDIDATE_COMMIT" ]; then
+    build_candidate_from_pin "$CANDIDATE_COMMIT"
+fi
+if [ "$REFERENCE_CONTROL" = "r4050" ]; then
+    CANDIDATE_NVENCC="$R4050"
+fi
+[ -x "$CANDIDATE_NVENCC" ] || die "candidate binary is not executable: $CANDIDATE_NVENCC"
+info "candidate       : $CANDIDATE_NVENCC"
+info "candidate commit: ${CANDIDATE_COMMIT:-external binary; see hash}"
+info "candidate sha256: $(sha256sum "$CANDIDATE_NVENCC" | awk '{print $1}')"
+info "denoiser        : $DENOISER"
+python3 - "$CANDIDATE_NVENCC" "$CANDIDATE_COMMIT" "$REFERENCE_CONTROL" "$DENOISER" "$REPORT_DIR/candidate.json" <<'PY'
+import datetime, hashlib, json, pathlib, subprocess, sys
+binary, commit, control, denoiser, output = sys.argv[1:]
+path = pathlib.Path(binary).resolve()
+version = subprocess.run([str(path), "--version"], capture_output=True, text=True, check=True)
+pathlib.Path(output).write_text(json.dumps({
+    "started_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    "candidate_commit": commit or None,
+    "candidate_nvencc": str(path),
+    "candidate_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    "candidate_version": version.stdout.strip(),
+    "reference_control": control or None,
+    "denoiser": denoiser,
+}, indent=2) + "\n")
+PY
+[ "$?" -eq 0 ] || die "could not record candidate identity"
 
 # ---------------------------------------------------------------------------
 # stage: kat -- 18 bilateral GPU fixtures
@@ -293,7 +337,7 @@ if want_stage kat; then
     log "stage: kat (GPU known-answer fixtures)"
     info "these passed throughout both shipped regressions; they bound the"
     info "synthetic behaviour only, and cannot see real-film aliasing"
-    if NVENCC="$CANDIDATE_NVENCC" FGS_KAT_DIR="$REPORT_DIR/kat" \
+    if NVENCC="$CANDIDATE_NVENCC" FGS_KAT_DENOISER="$DENOISER" FGS_KAT_DIR="$REPORT_DIR/kat" \
             python3 "$HERE/fgs_kat.py" > "$REPORT_DIR/kat.log" 2>&1; then
         record pass "kat: 18 GPU fixtures"
     else
@@ -313,6 +357,7 @@ if want_stage synthetic_oracle; then
        python3 "$HERE/reference_compare.py" \
             --nvencc "$CANDIDATE_NVENCC" \
             --aom-noise-model "$AOM_NOISE_MODEL" \
+            --denoiser "$DENOISER" \
             --aom-revision "$AOM_REVISION" \
             --output "$REPORT_DIR/reference-synthetic.json" \
             > "$REPORT_DIR/reference-synthetic.log" 2>&1; then
@@ -378,7 +423,7 @@ if want_stage real_oracle; then
     if python3 "$HERE/reference_compare_real.py" \
             --nvencc "$CANDIDATE_NVENCC" \
             --aom-noise-model "$AOM_NOISE_MODEL" \
-            --frames 24 --denoiser bilateral --texture \
+            --frames 24 --denoiser "$DENOISER" --texture \
             --work "$REPORT_DIR/real-oracle-work" \
             --json-out "$REPORT_DIR/reference-real.json" \
             > "$REPORT_DIR/reference-real.log" 2>&1; then

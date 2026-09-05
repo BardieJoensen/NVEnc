@@ -171,14 +171,19 @@ def generate(test, spec, path, clean_path=None):
             actual_y = y.astype(np.float64) - base
             actual_c = []
             for _ in range(2):  # U then V
-                c = np.full((H // 2, W // 2), 128.0 * DS)
+                base_c = np.full((H // 2, W // 2), 128.0 * DS)
+                if "chroma_levels" in spec:
+                    for b, level in enumerate(spec["chroma_levels"]):
+                        base_c[:, b * (BAND_W // 2):(b + 1) * (BAND_W // 2)] = level
+                c = base_c.copy()
                 if grainy and spec.get("corr_c", 0.0) != 0.0:
                     c += spec["corr_c"] * avg2x2(noise_y)
                 if grainy and spec.get("sigma_c", 0.0) > 0.0:
                     c += rng.normal(0.0, spec["sigma_c"] * DS, (H // 2, W // 2))
-                cq = np.clip(np.rint(c), 0, MAXVAL).astype(DTYPE)
+                c_lo, c_hi = spec.get("chroma_clip", (0, MAXVAL))
+                cq = np.clip(np.rint(c), c_lo, c_hi).astype(DTYPE)
                 planes.append(cq)
-                actual_c.append(cq.astype(np.float64) - 128.0 * DS)
+                actual_c.append(cq.astype(np.float64) - base_c)
             f.write(b"FRAME\n")
             for plane in planes:
                 f.write(plane.tobytes())
@@ -303,13 +308,14 @@ def measure(on_path, off_path, frames):
     return sigma, (float(np.mean(corr_uv)) if corr_uv else 0.0)
 
 
-def band_means(path, frames):
+def band_means(path, frames, plane=0):
     """Per-band luma mean of a decoded stream, same band interior as measure()."""
     v = YUV(path)
     acc = np.zeros(BANDS)
     for n in frames:
-        y = v.planes(n)[0]
-        for b, sl in enumerate(band_slices(24, BAND_W, H)):
+        y = v.planes(n)[plane]
+        scale = 2 if plane else 1
+        for b, sl in enumerate(band_slices(24 // scale, BAND_W // scale, H // scale)):
             acc[b] += float(y[sl].mean())
     return acc / max(len(frames), 1)
 
@@ -392,6 +398,18 @@ TESTS = {
     "dark_luma":     {"sigma_y_mode": "const", "sigma_y": 6.0, "bits": 10, "limited": True,
                       "levels": [70, 82, 96, 115, 140, 175, 220, 280, 360, 460, 580, 720],
                       "clip": (64, 940)},
+    "clipped_chroma_10bit": {"sigma_y_mode": "const", "sigma_y": 6.0, "sigma_c": 6.0,
+                      "width": 768, "height": 432, "bits": 10, "limited": True,
+                      "levels": [512] * BANDS, "clip": (64, 940), "chroma_clip": (64, 960),
+                      "chroma_levels": [70, 82, 96, 140, 256, 512, 768, 880, 912, 928, 942, 954]},
+    "clipped_chroma_corr": {"sigma_y_mode": "const", "sigma_y": 6.0, "sigma_c": 4.0, "corr_c": 0.8,
+                      "width": 768, "height": 432, "bits": 10, "limited": True,
+                      "levels": [512] * BANDS, "clip": (64, 940), "chroma_clip": (64, 960),
+                      "chroma_levels": [70, 82, 96, 140, 256, 512, 768, 880, 912, 928, 942, 954]},
+    "clipped_chroma_8bit": {"sigma_y_mode": "const", "sigma_y": 6.0, "sigma_c": 6.0,
+                      "width": 768, "height": 432, "bits": 8, "limited": True,
+                      "levels": [128] * BANDS, "clip": (16, 235), "chroma_clip": (16, 240),
+                      "chroma_levels": [18, 21, 24, 35, 64, 128, 192, 220, 228, 232, 236, 238]},
     "retain_luma":   {"sigma_y_mode": "const", "sigma_y": 6.0, "retain": 0.6},
     "retain_10bit":  {"sigma_y_mode": "const", "sigma_y": 6.0, "bits": 10, "retain": 0.6},
     # SUBTLE hard cut between two grainy scenes: the post-cut shot differs only
@@ -468,6 +486,24 @@ def run_test(test, keep):
         n_reliable = len([f for f in reliable if f >= SKIP])
         ok &= check("model reliable after warm-up", n_reliable >= nframes - SKIP - 1,
                     f"{n_reliable}/{nframes - SKIP} frames")
+    elif test.startswith("clipped_chroma_"):
+        src_raw = os.path.join(d, "src.yuv")
+        pix = "yuv420p" if BITS == 8 else "yuv420p10le"
+        run(["ffmpeg", "-v", "error", "-y", "-i", src, "-pix_fmt", pix, "-f", "rawvideo", src_raw])
+        frames = range(SKIP, nframes)
+        for plane, label in enumerate(("Y", "U", "V")):
+            delta = band_means(on, frames, plane) - band_means(src_raw, frames, plane)
+            # At 10 bits, this is the existing dark-luma mean-preservation
+            # tolerance. Eight-bit rounding needs half an 8-bit code value.
+            tolerance = 1.5 if BITS == 10 else 0.5
+            ok &= check(f"{label} mean preserved near chroma clipping boundaries",
+                        bool(np.abs(delta).max() <= tolerance),
+                        f"max |mean delta| {np.abs(delta).max():.3f}, limit {tolerance}")
+        sigma, _ = measure(on, off, frames)
+        ok &= check("chroma synthesis remains active", bool(sigma[1:].mean() > 0.5 * expected[1:].mean()),
+                    f"synth {sigma[1:].mean() / DS:.2f} vs source {expected[1:].mean() / DS:.2f}")
+        if not keep:
+            os.remove(src_raw)
     elif test == "cut_grainy":
         expected_post = np.roll(LEVELS, spec.get("cut_roll", 6)) + spec.get("cut_offset", 0)
         off_cut = band_means(off, [CUT_FRAME])

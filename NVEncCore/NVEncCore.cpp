@@ -6658,8 +6658,16 @@ RGY_ERR NVEncCore::Encode() {
 
     //vpp-perf-monitor
     std::vector<std::pair<tstring, double>> filter_result;
+    const bool encodeCompleted = err == RGY_ERR_NONE || err == RGY_ERR_MORE_DATA
+        || err == RGY_ERR_MORE_SURFACE || err == RGY_ERR_MORE_BITSTREAM || err > RGY_ERR_NONE;
     for (auto& vppblock : m_vpFilters) {
         for (auto& filter : vppblock.vppnv) {
+            if (encodeCompleted) {
+                if (auto *filmGrain = dynamic_cast<NVEncFilterFilmGrain *>(filter.get())) {
+                    const auto tableStatus = filmGrain->finishTable();
+                    if (tableStatus != RGY_ERR_NONE) err = tableStatus;
+                }
+            }
             auto avgtime = filter->GetAvgTimeElapsed();
             if (avgtime > 0.0) {
                 filter_result.push_back({ filter->name(), avgtime });

@@ -135,6 +135,9 @@ public:
     virtual RGY_ERR init(std::shared_ptr<NVEncFilterParam> pParam, std::shared_ptr<RGYLog> pPrintMes) override;
     virtual void resetTemporalState() override;
     virtual bool mayEmitOnDrain() const override;
+    // Called after a successful pipeline drain, while failures can still be
+    // reflected in the encode result. Destruction never publishes a table.
+    RGY_ERR finishTable();
 
 protected:
     virtual RGY_ERR run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames,
@@ -145,7 +148,6 @@ private:
     struct AnalyzerState;
 
     void recordTableEntry(int64_t timestamp, int64_t duration, const NV_ENC_FILM_GRAIN_PARAMS_AV1& params);
-    void writeTableFile();
 
     std::unique_ptr<CUFrameBuf> m_denoiseWork;
     std::unique_ptr<NVEncFilterDenoiseFFT3D> m_fft3d;
@@ -164,7 +166,7 @@ private:
     rgy_rational<int> m_tableTimebase;
     int64_t m_tableFrameDuration10MHz;
     std::vector<NVEncFilmGrainTableEntry> m_tableEntries;
-    bool m_tableWritten;
+    std::unique_ptr<NVEncFilmGrainTableWriter> m_tableWriter;
     int m_blocksX;
     int m_blocksY;
 };

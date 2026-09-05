@@ -54,6 +54,7 @@ struct NVEncFilmGrainDiagnostics {
     int totalBlocks;
     int modelFrames;
     std::array<float, 3> noiseStdDev;
+    std::array<float, 3> templateGain; // AR/correlation gain associated with this model
     std::array<uint64_t, 3> observations;
     float detailRisk;
     float residualRetain;
@@ -161,7 +162,8 @@ bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC
 // decoder's grain-plus-clip synthesis introduces near the legal range floor
 // and ceiling.
 constexpr int FGS_STRENGTH_LUT_SIZE = 256;
-void build_strength_lut(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int bitDepth, float lut[FGS_STRENGTH_LUT_SIZE]);
+void build_strength_lut(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int bitDepth,
+    float lut[FGS_STRENGTH_LUT_SIZE], int plane = 0, double templateGain = 1.0);
 
 } // namespace fgsmodel
 

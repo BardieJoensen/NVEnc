@@ -719,6 +719,88 @@ static RGY_ERR launch_level_compensate(const RGYFrameInfo& luma, const int range
     return err_to_rgy(cudaGetLastError());
 }
 
+struct FilmGrainChromaScale {
+    int mult;
+    int lumaMult;
+    int offset;
+};
+
+template<typename Type, int shift, int components>
+__global__ void kernel_fgs_chroma_level_compensate(uint8_t *__restrict__ chroma, const int pitch,
+    const uint8_t *__restrict__ luma, const int lumaPitch, const int lumaWidth,
+    const int width, const int height, const int rangeMin, const int rangeMax, const int bitDepth,
+    const FilmGrainChromaScale scale0, const FilmGrainChromaScale scale1,
+    const float *__restrict__ strengthLut) {
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+    if (x >= width || y >= height) return;
+    const int depthShift = bitDepth - 8;
+    // AV1's 4:2:0 chroma scaling index averages the horizontal pair on the
+    // upper luma row, before luma synthesis (specification 7.18.3.5).
+    const int averageLuma = (load_code<Type, shift>(luma, lumaPitch, x * 2, y * 2)
+        + load_code<Type, shift>(luma, lumaPitch, min(x * 2 + 1, lumaWidth - 1), y * 2) + 1) >> 1;
+    for (int component = 0; component < components; ++component) {
+        const int value = load_code<Type, shift>(chroma, pitch, x, y, component, components);
+        if (value <= rangeMin || value >= rangeMax) continue;
+        const auto scale = component == 0 ? scale0 : scale1;
+        const int merged = min((1 << bitDepth) - 1, max(0,
+            ((averageLuma * scale.lumaMult + value * scale.mult) >> 6) + scale.offset));
+        const int index = merged >> depthShift;
+        const auto lut = strengthLut + component * FGS_STRENGTH_LUT_SIZE;
+        const float fraction = static_cast<float>(merged & ((1 << depthShift) - 1)) / (1 << depthShift);
+        const float sigma = lut[index] + (lut[min(index + 1, 255)] - lut[index]) * fraction;
+        if (sigma <= 0.01f) continue;
+        auto clipLift = [](const float d) {
+            return d > 3.5f ? 0.0f
+                : 0.39894228f * __expf(-0.5f * d * d) - d * 0.5f * erfcf(d * 0.70710678f);
+        };
+        float compensated = static_cast<float>(value);
+        for (int iter = 0; iter < 2; ++iter) {
+            const float lo = (compensated - rangeMin) / sigma;
+            const float hi = (rangeMax - compensated) / sigma;
+            compensated = static_cast<float>(value) - sigma * (clipLift(lo) - clipLift(hi));
+        }
+        store_code<Type, shift>(chroma, pitch, x, y,
+            min(rangeMax, max(rangeMin, __float2int_rn(compensated))), component, components);
+    }
+}
+
+template<typename Type, int shift>
+static RGY_ERR launch_chroma_level_compensate(RGYFrameInfo *output,
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bitDepth, const float *lut, cudaStream_t stream) {
+    if (!params.numCbPoints && !params.numCrPoints && !params.chromaScalingFromLuma) return RGY_ERR_NONE;
+    const int rangeMin = params.clipToRestrictedRange ? (16 << (bitDepth - 8)) : 0;
+    const int rangeMax = params.clipToRestrictedRange ? (240 << (bitDepth - 8)) : ((1 << bitDepth) - 1);
+    const FilmGrainChromaScale scale[2] = {
+        {params.chromaScalingFromLuma ? 0 : static_cast<int>(params.cbMult) - 128,
+         params.chromaScalingFromLuma ? 64 : static_cast<int>(params.cbLumaMult) - 128,
+         params.chromaScalingFromLuma ? 0 : (static_cast<int>(params.cbOffset) - 256) * (1 << (bitDepth - 8))},
+        {params.chromaScalingFromLuma ? 0 : static_cast<int>(params.crMult) - 128,
+         params.chromaScalingFromLuma ? 64 : static_cast<int>(params.crLumaMult) - 128,
+         params.chromaScalingFromLuma ? 0 : (static_cast<int>(params.crOffset) - 256) * (1 << (bitDepth - 8))}
+    };
+    const auto luma = getPlane(output, RGY_PLANE_Y);
+    const dim3 block(32, 8);
+    const dim3 grid(divCeil(output->width / 2, 32), divCeil(output->height / 2, 8));
+    if (output->csp == RGY_CSP_NV12 || output->csp == RGY_CSP_P010) {
+        const auto chroma = getPlane(output, RGY_PLANE_U);
+        kernel_fgs_chroma_level_compensate<Type, shift, 2><<<grid, block, 0, stream>>>(
+            chroma.ptr[0], chroma.pitch[0], luma.ptr[0], luma.pitch[0], luma.width,
+            output->width / 2, output->height / 2, rangeMin, rangeMax, bitDepth, scale[0], scale[1], lut);
+    } else {
+        for (int c = 0; c < 2; ++c) {
+            const auto chroma = getPlane(output, static_cast<RGY_PLANE>(RGY_PLANE_U + c));
+            kernel_fgs_chroma_level_compensate<Type, shift, 1><<<grid, block, 0, stream>>>(
+                chroma.ptr[0], chroma.pitch[0], luma.ptr[0], luma.pitch[0], luma.width,
+                chroma.width, chroma.height, rangeMin, rangeMax, bitDepth, scale[c], scale[c],
+                lut + c * FGS_STRENGTH_LUT_SIZE);
+            const auto sts = err_to_rgy(cudaGetLastError());
+            if (sts != RGY_ERR_NONE) return sts;
+        }
+    }
+    return err_to_rgy(cudaGetLastError());
+}
+
 // Blend a fraction of the measured residual (source - clean base) back into
 // the base layer's luma.  The retained residual and the decoder's synthesis
 // are statistically independent, so the caller scales the signalled luma
@@ -786,6 +868,8 @@ struct NVEncFilterFilmGrain::AnalyzerState {
     int64_t lastTimestamp;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 lastParams;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 pendingParams;
+    std::array<float, 3> lastTemplateGain;
+    std::array<float, 3> pendingTemplateGain;
     bool lastParamsValid;
     bool pendingParamsValid;
     bool modelWindowSettled;
@@ -795,6 +879,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
 
     AnalyzerState() : history(), previousBlockMeans(), stableNoise(0.0f), autoRetain(0.0f),
         lastTimestamp(std::numeric_limits<int64_t>::min()), lastParams(), pendingParams(),
+        lastTemplateGain{1.0f, 1.0f, 1.0f}, pendingTemplateGain{1.0f, 1.0f, 1.0f},
         lastParamsValid(false), pendingParamsValid(false), modelWindowSettled(false),
         pendingStreak(0), framesSinceModelUpdate(0), heldStreak(0) {}
     void advanceModelAge() {
@@ -808,6 +893,8 @@ struct NVEncFilterFilmGrain::AnalyzerState {
         lastTimestamp = std::numeric_limits<int64_t>::min();
         std::memset(&lastParams, 0, sizeof(lastParams));
         std::memset(&pendingParams, 0, sizeof(pendingParams));
+        lastTemplateGain.fill(1.0f);
+        pendingTemplateGain.fill(1.0f);
         lastParamsValid = false;
         pendingParamsValid = false;
         modelWindowSettled = false;
@@ -898,7 +985,7 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_denoiseWork(), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
-    m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWritten(false),
+    m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWriter(),
     m_state(std::make_unique<AnalyzerState>()), m_blocksX(0), m_blocksY(0) {
     m_name = _T("film-grain");
     m_pathThrough = FILTER_PATHTHROUGH_NONE;
@@ -1070,7 +1157,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(FilmGrainBlockMetric));
     m_blockMask = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY);
     m_sigmaMap = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(float));
-    m_strengthLut = std::make_unique<CUMemBufPair>(FGS_STRENGTH_LUT_SIZE * sizeof(float));
+    m_strengthLut = std::make_unique<CUMemBufPair>(3 * FGS_STRENGTH_LUT_SIZE * sizeof(float));
     m_sceneCounts = std::make_unique<CUMemBufPair>(8 * sizeof(uint32_t));
     m_modelStats = std::make_unique<CUMemBufPair>(sizeof(FilmGrainGpuStats));
     if ((sts = m_blockMetrics->alloc()) != RGY_ERR_NONE
@@ -1168,7 +1255,15 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     m_tableFrameDuration10MHz = std::max<int64_t>(1,
         rational_rescale(1, rgy_rational<int>(prm->baseFps.d(), prm->baseFps.n()), rgy_rational<int>(1, 10000000)));
     m_tableEntries.clear();
-    m_tableWritten = false;
+    m_tableWriter.reset();
+    if (!m_tableOutPath.empty()) {
+        tstring error;
+        m_tableWriter = NVEncFilmGrainTableWriter::create(m_tableOutPath, error);
+        if (!m_tableWriter) {
+            AddMessage(RGY_LOG_ERROR, _T("film-grain: %s\n"), error.c_str());
+            return RGY_ERR_FILE_OPEN;
+        }
+    }
     if (!m_state) m_state = std::make_unique<AnalyzerState>();
     m_state->clear();
     setFilterInfo(prm->print());
@@ -1202,20 +1297,18 @@ void NVEncFilterFilmGrain::recordTableEntry(const int64_t timestamp, const int64
     m_tableEntries.push_back(entry);
 }
 
-void NVEncFilterFilmGrain::writeTableFile() {
-    if (m_tableOutPath.empty() || m_tableWritten) return;
-    m_tableWritten = true;
-    if (m_tableEntries.empty()) {
-        AddMessage(RGY_LOG_WARN, _T("film-grain: no grain was detected, table not written: %s\n"), m_tableOutPath.c_str());
-        return;
-    }
+RGY_ERR NVEncFilterFilmGrain::finishTable() {
+    if (!m_tableWriter) return RGY_ERR_NONE;
     tstring error;
-    if (nvenc_film_grain_table_write(m_tableOutPath, m_tableEntries, error)) {
-        AddMessage(RGY_LOG_INFO, _T("film-grain: wrote grain table (%d entries): %s\n"),
-            static_cast<int>(m_tableEntries.size()), m_tableOutPath.c_str());
-    } else {
+    const bool written = m_tableWriter->write(m_tableEntries, error);
+    m_tableWriter.reset();
+    if (!written) {
         AddMessage(RGY_LOG_ERROR, _T("film-grain: %s\n"), error.c_str());
+        return RGY_ERR_UNKNOWN;
     }
+    AddMessage(RGY_LOG_INFO, _T("film-grain: wrote grain table (%d active entries): %s\n"),
+        static_cast<int>(m_tableEntries.size()), m_tableOutPath.c_str());
+    return RGY_ERR_NONE;
 }
 
 bool NVEncFilterFilmGrain::mayEmitOnDrain() const {
@@ -1590,6 +1683,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         const double modelTolerance = prm->filmGrain.denoiser == FGS_DENOISE_MOTION ? 0.10 : 0.05;
         if (!m_state->lastParamsValid) {
             m_state->lastParams = params;
+            m_state->lastTemplateGain = diagnostics.templateGain;
             m_state->lastParamsValid = true;
             m_state->pendingParamsValid = false;
             m_state->modelWindowSettled = diagnostics.modelFrames >= prm->filmGrain.modelWindow;
@@ -1608,10 +1702,12 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             if (film_grain_params_close(
                 params, m_state->lastParams, modelTolerance, modelTolerance)) {
                 params = m_state->lastParams;
+                diagnostics.templateGain = m_state->lastTemplateGain;
                 diagnostics.modelHeld = true;
                 m_state->advanceModelAge();
             } else {
                 m_state->lastParams = params;
+                m_state->lastTemplateGain = diagnostics.templateGain;
                 m_state->framesSinceModelUpdate = 0;
             }
         } else if (film_grain_params_close(
@@ -1620,6 +1716,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             // jitters around it; requantizing every frame makes the grain
             // character twinkle.  NVENC still varies the grain seed per frame.
             params = m_state->lastParams;
+            diagnostics.templateGain = m_state->lastTemplateGain;
             diagnostics.modelHeld = true;
             m_state->pendingParamsValid = false;
             m_state->pendingStreak = 0;
@@ -1634,21 +1731,26 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             if (m_state->pendingParamsValid && film_grain_params_close(
                 params, m_state->pendingParams, candidateTolerance, candidateTolerance)) {
                 m_state->pendingParams = params;
+                m_state->pendingTemplateGain = diagnostics.templateGain;
                 ++m_state->pendingStreak;
             } else {
                 m_state->pendingParams = params;
+                m_state->pendingTemplateGain = diagnostics.templateGain;
                 m_state->pendingParamsValid = true;
                 m_state->pendingStreak = 1;
             }
             if (m_state->pendingStreak >= FGS_MODEL_CANDIDATE_FRAMES
                 && m_state->framesSinceModelUpdate >= FGS_MODEL_MIN_UPDATE_FRAMES) {
                 params = m_state->pendingParams;
+                diagnostics.templateGain = m_state->pendingTemplateGain;
                 m_state->lastParams = params;
+                m_state->lastTemplateGain = diagnostics.templateGain;
                 m_state->pendingParamsValid = false;
                 m_state->pendingStreak = 0;
                 m_state->framesSinceModelUpdate = 0;
             } else {
                 params = m_state->lastParams;
+                diagnostics.templateGain = m_state->lastTemplateGain;
                 diagnostics.modelHeld = true;
                 m_state->advanceModelAge();
             }
@@ -1659,6 +1761,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // dropping grain for a single frame; bounded so a persistent failure
         // cannot pin a stale model.
         params = m_state->lastParams;
+        diagnostics.templateGain = m_state->lastTemplateGain;
         diagnostics.modelHeld = true;
         modelValid = true;
         m_state->pendingParamsValid = false;
@@ -1711,6 +1814,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     }
     if (modelValid && params.applyGrain) {
         build_strength_lut(params, bitDepth, static_cast<float *>(m_strengthLut->ptrHost));
+        for (int plane = 1; plane < 3; ++plane) {
+            build_strength_lut(params, bitDepth,
+                static_cast<float *>(m_strengthLut->ptrHost) + plane * FGS_STRENGTH_LUT_SIZE,
+                plane, diagnostics.templateGain[plane]);
+        }
         if ((sts = m_strengthLut->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
         const int rangeMin = prm->filmGrain.clipToRestrictedRange ? (16 << (bitDepth - 8)) : 0;
         const int rangeMax = prm->filmGrain.clipToRestrictedRange ? (235 << (bitDepth - 8)) : ((1 << bitDepth) - 1);
@@ -1720,12 +1828,18 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         case RGY_CSP_NV12:
         case RGY_CSP_YV12:
             sts = launch_level_compensate<uint8_t, 0>(lumaOut, rangeMin, rangeMax, bitDepth, lut, stream);
+            if (sts == RGY_ERR_NONE) sts = launch_chroma_level_compensate<uint8_t, 0>(
+                output, params, bitDepth, lut + FGS_STRENGTH_LUT_SIZE, stream);
             break;
         case RGY_CSP_YV12_10:
             sts = launch_level_compensate<uint16_t, 0>(lumaOut, rangeMin, rangeMax, bitDepth, lut, stream);
+            if (sts == RGY_ERR_NONE) sts = launch_chroma_level_compensate<uint16_t, 0>(
+                output, params, bitDepth, lut + FGS_STRENGTH_LUT_SIZE, stream);
             break;
         case RGY_CSP_P010:
             sts = launch_level_compensate<uint16_t, 6>(lumaOut, rangeMin, rangeMax, bitDepth, lut, stream);
+            if (sts == RGY_ERR_NONE) sts = launch_chroma_level_compensate<uint16_t, 6>(
+                output, params, bitDepth, lut + FGS_STRENGTH_LUT_SIZE, stream);
             break;
         default:
             sts = RGY_ERR_UNSUPPORTED;
@@ -1765,7 +1879,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
 }
 
 void NVEncFilterFilmGrain::close() {
-    writeTableFile();
+    m_tableWriter.reset();
     m_motionDegrain.reset();
     m_motionDegrainParam.reset();
     m_fft3d.reset();

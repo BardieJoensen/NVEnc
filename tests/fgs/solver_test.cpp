@@ -254,6 +254,15 @@ void testStrengthLut() {
     NV_ENC_FILM_GRAIN_PARAMS_AV1 off = {};
     build_strength_lut(off, 10, lut);
     expect(lut[64] == 0.0f, "lut is zero with grain disabled");
+    build_strength_lut(params, 10, lut, 1);
+    expect(lut[128] == 0.0f, "unmodelled chroma must not inherit the luma correction");
+    fillWhitePlane(stats.plane[1], 4.0, true);
+    fillWhitePlane(stats.plane[2], 8.0, true);
+    expect(build_film_grain_params(stats, 8, true, true, params, diag), "chroma lut model solves");
+    build_strength_lut(params, 10, lut, 1, diag.templateGain[1]);
+    expectNear(lut[128], 16.0, 1.6, "Cb lut uses its own strength in native units");
+    build_strength_lut(params, 10, lut, 2, diag.templateGain[2]);
+    expectNear(lut[128], 32.0, 1.6, "Cr lut uses its own strength in native units");
 }
 
 } // namespace

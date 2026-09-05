@@ -10,8 +10,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <csignal>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include "NVEncFilmGrain.h"
 
@@ -156,6 +162,54 @@ int main() {
     expectInvalid(_T("invalid-asymmetric-chroma.filmgrn1"),
         _T("both be zero or both be non-zero"));
 
-    std::cout << "all filmgrn1 parser behavior tests passed\n";
+    const auto output = path(_T("export.filmgrn1"));
+    assert(nvenc_film_grain_table_write(output, table->entries(), error));
+    auto roundtrip = NVEncFilmGrainTable::load(output, false, error);
+    assert(roundtrip && roundtrip->entries().size() == 2);
+    assert(std::memcmp(&roundtrip->lookup(10000000).params, &inheritedModel.params,
+        sizeof(inheritedModel.params)) == 0);
+    // Cancelling an encode must not publish a partial or empty table.
+    {
+        auto pending = NVEncFilmGrainTableWriter::create(output, error);
+        assert(pending);
+    }
+    roundtrip = NVEncFilmGrainTable::load(output, false, error);
+    assert(roundtrip && roundtrip->lookup(0).params.applyGrain);
+
+    // A clean encode replaces stale grain with an explicit, readable off model.
+    assert(nvenc_film_grain_table_write(output, {}, error));
+    roundtrip = NVEncFilmGrainTable::load(output, false, error);
+    assert(roundtrip && !roundtrip->empty());
+    assert(!roundtrip->lookup(0).params.applyGrain);
+    assert(!roundtrip->lookup(INT64_MAX - 1).params.applyGrain);
+
+    assert(!nvenc_film_grain_table_write(path(_T("absent/table")), {}, error));
+    assert(!nvenc_film_grain_table_write(g_dir, {}, error));
+    assert(!nvenc_film_grain_table_write(_T("/dev/full"), {}, error));
+    assert(std::filesystem::is_character_file("/dev/full"));
+
+    // A buffered fwrite can succeed before its flush fails. Impose a real
+    // filesystem write limit in a child, and prove that the previous output
+    // survives and the temporary file is cleaned up.
+    const pid_t child = fork();
+    assert(child >= 0);
+    if (child == 0) {
+        signal(SIGXFSZ, SIG_IGN);
+        const rlimit limit{0, 0};
+        assert(setrlimit(RLIMIT_FSIZE, &limit) == 0);
+        assert(!nvenc_film_grain_table_write(output, table->entries(), error));
+        assert(error.find(_T("flush")) != tstring::npos);
+        _exit(0);
+    }
+    int childStatus = 0;
+    assert(waitpid(child, &childStatus, 0) == child);
+    assert(WIFEXITED(childStatus) && WEXITSTATUS(childStatus) == 0);
+    roundtrip = NVEncFilmGrainTable::load(output, false, error);
+    assert(roundtrip && !roundtrip->lookup(0).params.applyGrain);
+    for (const auto& item : std::filesystem::directory_iterator(g_dir)) {
+        assert(item.path().filename().string().find(".fgs-") == std::string::npos);
+    }
+    std::filesystem::remove_all(g_dir);
+    std::cout << "all filmgrn1 parser and atomic writer behavior tests passed\n";
     return 0;
 }

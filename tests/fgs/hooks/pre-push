@@ -1,66 +1,47 @@
 #!/bin/bash
-# Pre-push gate for the film-grain analyzer.
-#
-# Install with:
-#     ln -sf ../../tests/fgs/hooks/pre-push .git/hooks/pre-push
-#
-# WHAT THIS DOES AND DOES NOT COVER
-# It runs tier 1 (CPU, seconds) and the quick half of tier 2 (18 GPU fixtures
-# plus the offline adversarial texture specimen, ~3.5 minutes). It does NOT run
-# the libaom real-film oracle, the texture negative or the base-fidelity
-# canary: those need real-film encodes and take tens of minutes.
-#
-# That is a deliberate trade, and it has a consequence worth stating plainly:
-# BOTH regressions that reached production on 2026-07-29/30 passed all 18 GPU
-# fixtures. This hook would not have stopped either of them. Only
-#     tests/fgs/local_gate.sh --full
-# runs the stages that did catch them, and that is the gate to run before
-# building an image for the library.
-#
-# Set FGS_PREPUSH=full to run everything, or FGS_PREPUSH=off to skip the GPU
-# tier entirely (tier 1 still runs).
-
-set -uo pipefail
+# Install: ln -s ../../tests/fgs/hooks/pre-push .git/hooks/pre-push
+# Test every distinct commit being pushed, including non-HEAD refs and tags.
+# FGS_PREPUSH=full includes real-film oracles and known-bad controls.
+# FGS_PREPUSH=off explicitly skips GPU tests; pushed-commit CPU tests still run.
+set -euo pipefail
 
 REPO="$(git rev-parse --show-toplevel)"
 MODE="${FGS_PREPUSH:-quick}"
+case "$MODE" in
+    quick|full|off) ;;
+    *) echo "pre-push: invalid FGS_PREPUSH mode: $MODE" >&2; exit 2 ;;
+esac
 
-printf '\n== pre-push: film grain tier 1 (CPU)\n'
-if ! bash "$REPO/tests/fgs/run_cpu_tests.sh"; then
-    echo "pre-push: CPU test suite failed" >&2
-    exit 1
-fi
+declare -A seen=()
+commits=()
+while read -r local_ref local_oid remote_ref remote_oid; do
+    [[ "$local_oid" =~ ^0+$ ]] && continue
+    commit="$(git -C "$REPO" rev-parse --verify "$local_oid^{commit}")" || exit 2
+    if [ -z "${seen[$commit]:-}" ]; then
+        commits+=("$commit")
+        seen[$commit]=1
+    fi
+done
+[ "${#commits[@]}" -gt 0 ] || exit 0
 
-if [ "$MODE" = "off" ]; then
-    printf '\npre-push: FGS_PREPUSH=off, skipping the GPU tier.\n'
-    printf 'Run tests/fgs/local_gate.sh --full before shipping a build.\n'
-    exit 0
-fi
-
-if ! command -v nvidia-smi >/dev/null 2>&1 || ! nvidia-smi -L >/dev/null 2>&1; then
-    # Never let a missing GPU turn into a silent pass.
-    echo "
-pre-push: no GPU on this machine, so the tier-2 gate cannot run here.
-The GPU tier is not optional coverage -- it is the only tier that caught either
-production regression. Push from the GPU box, or set FGS_PREPUSH=off if you
-have run tests/fgs/local_gate.sh --full elsewhere for this commit." >&2
-    exit 1
-fi
-
-if [ "$MODE" = "full" ]; then
-    printf '\n== pre-push: film grain tier 2 (full)\n'
-    exec bash "$REPO/tests/fgs/local_gate.sh" --full
-fi
-
-printf '\n== pre-push: film grain tier 2 (quick)\n'
-if ! bash "$REPO/tests/fgs/local_gate.sh" --quick; then
-    echo "pre-push: quick GPU gate failed" >&2
-    exit 1
-fi
-
-printf '
-pre-push: quick gate passed. It does NOT cover the real-film libaom oracle,
-the r4047 texture negative or the base-fidelity canary. Run
-    tests/fgs/local_gate.sh --full
-before building an image that will touch the library.
-'
+snapshot="$(mktemp -d "${TMPDIR:-/tmp}/fgs-prepush-XXXXXX")"
+trap 'rm -rf -- "$snapshot"' EXIT
+for commit in "${commits[@]}"; do
+    tree="$snapshot/$commit"
+    mkdir "$tree"
+    git -C "$REPO" archive "$commit" tests/fgs NVEncCore NVEncSDK | tar -x -C "$tree"
+    printf '\n== pre-push: CPU tests for %s\n' "$commit"
+    TMPDIR="$tree" bash "$tree/tests/fgs/run_cpu_tests.sh"
+    if [ "$MODE" = "off" ]; then
+        echo "pre-push: FGS_PREPUSH=off; GPU tests skipped for $commit" >&2
+        continue
+    fi
+    if ! command -v nvidia-smi >/dev/null 2>&1 || ! nvidia-smi -L >/dev/null 2>&1; then
+        echo "pre-push: GPU tests cannot run here; run the full gate on the GPU host for $commit" >&2
+        exit 1
+    fi
+    printf '\n== pre-push: %s GPU gate for %s\n' "$MODE" "$commit"
+    FGS_GATE_REPO="$REPO" bash "$tree/tests/fgs/local_gate.sh" \
+        "--$MODE" --candidate-commit "$commit" --denoiser bilateral
+done
+printf '\npre-push: selected checks passed for every pushed commit.\n'

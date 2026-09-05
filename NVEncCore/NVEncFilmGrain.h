@@ -30,6 +30,7 @@
 #define __NVENC_FILM_GRAIN_H__
 
 #include <cstdint>
+#include <cstdio>
 #include <memory>
 #include <vector>
 
@@ -74,10 +75,27 @@ private:
     bool m_clipToRestrictedRange;
 };
 
-// Writes entries as an AOM filmgrn1 table readable by NVEncFilmGrainTable::load
-// (and by other consumers of the format, e.g. SvtAv1EncApp --fgs-table).
-// Entries must be apply_grain=1 with increasing, non-overlapping [start,end)
-// in the 10 MHz timebase; grain-off periods are represented by gaps.
+// Reserve a temporary file next to the destination during initialization.
+// Only write() publishes it; destruction after an aborted encode discards it.
+class NVEncFilmGrainTableWriter {
+public:
+    static std::unique_ptr<NVEncFilmGrainTableWriter> create(const tstring& path, tstring& error);
+    ~NVEncFilmGrainTableWriter();
+    bool write(const std::vector<NVEncFilmGrainTableEntry>& entries, tstring& error);
+    NVEncFilmGrainTableWriter(const NVEncFilmGrainTableWriter&) = delete;
+    NVEncFilmGrainTableWriter& operator=(const NVEncFilmGrainTableWriter&) = delete;
+
+private:
+    NVEncFilmGrainTableWriter(const tstring& path, const tstring& temporary, FILE *file);
+    tstring m_path;
+    tstring m_temporary;
+    FILE *m_file;
+};
+
+// Atomically replace a regular file with a standard AOM filmgrn1 table.
+// Entries use increasing, non-overlapping [start,end) 10 MHz intervals.
+// An empty model list writes one explicit grain-off interval, so reusing an
+// output path for clean footage cannot leave an earlier source's model behind.
 bool nvenc_film_grain_table_write(const tstring& path,
     const std::vector<NVEncFilmGrainTableEntry>& entries, tstring& error);
 

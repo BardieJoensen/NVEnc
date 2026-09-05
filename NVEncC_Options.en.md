@@ -954,6 +954,8 @@ This option is AV1-only and incompatible with parallel encoding. For meaningful 
 ### --film-grain-table-out &lt;path&gt;
 Write the film grain measured by `--av1-film-grain` as a standard AOM `filmgrn1` table. Consecutive frames holding the same model are merged into one `[start,end)` interval in the table's 10 MHz timebase; periods without detected grain become gaps.
 
+The table is replaced atomically after a successful encode. Write or flush failures fail the encode; an aborted encode leaves an existing table intact. If the source contains no detectable grain, the output is an explicit grain-off table, replacing any previous model at that path. The destination must be a regular file, not a device or symbolic link.
+
 Combined with `--codec raw`, the same run outputs the denoised base video while writing the table, so an external AV1 encoder can consume both:
 
 ```
