@@ -29,11 +29,23 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
+#include <cerrno>
 #include <charconv>
 #include <cstdio>
+#include <filesystem>
+#include <fcntl.h>
 #include <sstream>
 #include <string>
 #include <utility>
+#if defined(_WIN32)
+#include <io.h>
+#include <process.h>
+#include <share.h>
+#include <sys/stat.h>
+#else
+#include <unistd.h>
+#endif
 
 // The filmgrn1 grammar and AV1 field semantics follow libaom's grain table
 // implementation:
@@ -548,22 +560,101 @@ bool NVEncFilmGrainTable::clipToRestrictedRange() const noexcept {
     return m_clipToRestrictedRange;
 }
 
-bool nvenc_film_grain_table_write(const tstring& path,
+static bool tableOutputIsRegular(const tstring& path, tstring& error) {
+    std::error_code ec;
+    const auto status = std::filesystem::symlink_status(path, ec);
+    if (ec && ec != std::errc::no_such_file_or_directory) {
+        error = _T("cannot inspect film grain table destination: ") + path;
+        return false;
+    }
+    // Never atomically replace a device, directory, or symlink such as /dev/full.
+    if (std::filesystem::exists(status) && !std::filesystem::is_regular_file(status)) {
+        error = _T("film grain table destination must be a regular file: ") + path;
+        return false;
+    }
+    return true;
+}
+
+NVEncFilmGrainTableWriter::NVEncFilmGrainTableWriter(
+    const tstring& path, const tstring& temporary, FILE *file) :
+    m_path(path), m_temporary(temporary), m_file(file) {
+}
+
+NVEncFilmGrainTableWriter::~NVEncFilmGrainTableWriter() {
+    if (m_file) fclose(m_file);
+    if (!m_temporary.empty()) _tremove(m_temporary.c_str());
+}
+
+std::unique_ptr<NVEncFilmGrainTableWriter> NVEncFilmGrainTableWriter::create(
+    const tstring& path, tstring& error) {
+    error.clear();
+    if (!tableOutputIsRegular(path, error)) return nullptr;
+    static std::atomic<uint64_t> serial{0};
+    for (int attempt = 0; attempt < 100; ++attempt) {
+#if defined(_WIN32)
+        const auto processId = _getpid();
+#else
+        const auto processId = getpid();
+#endif
+        std::basic_ostringstream<TCHAR> suffix;
+        suffix << _T(".fgs-") << processId << _T("-") << serial++ << _T(".tmp");
+        const auto temporary = path + suffix.str();
+        int fd = -1;
+#if defined(_WIN32)
+        const auto openError = _tsopen_s(&fd, temporary.c_str(),
+            _O_WRONLY | _O_CREAT | _O_EXCL | _O_BINARY, _SH_DENYRW, _S_IREAD | _S_IWRITE);
+#else
+        fd = open(temporary.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
+        const int openError = fd < 0 ? errno : 0;
+#endif
+        if (openError == EEXIST) continue;
+        if (fd < 0) {
+            error = _T("failed to create temporary film grain table beside: ") + path;
+            return nullptr;
+        }
+#if defined(_WIN32)
+        FILE *file = _tfdopen(fd, _T("wb"));
+        if (!file) _close(fd);
+#else
+        FILE *file = fdopen(fd, "wb");
+        if (!file) ::close(fd);
+#endif
+        if (!file) {
+            _tremove(temporary.c_str());
+            error = _T("failed to open temporary film grain table: ") + path;
+            return nullptr;
+        }
+        return std::unique_ptr<NVEncFilmGrainTableWriter>(
+            new NVEncFilmGrainTableWriter(path, temporary, file));
+    }
+    error = _T("could not reserve a temporary film grain table: ") + path;
+    return nullptr;
+}
+
+bool NVEncFilmGrainTableWriter::write(
     const std::vector<NVEncFilmGrainTableEntry>& entries, tstring& error) {
+    error.clear();
+    if (!m_file) {
+        error = _T("film grain table has already been finalized: ") + m_path;
+        return false;
+    }
     std::ostringstream out;
     out << "filmgrn1\n";
+    if (entries.empty()) {
+        out << "E 0 " << INT64_MAX << " 0 0 0\n";
+    }
     int64_t previousEnd = -1;
     for (const auto& entry : entries) {
-        if (!entry.params.applyGrain) {
-            error = _T("table writer only accepts apply_grain=1 entries; represent grain-off periods as gaps");
-            return false;
-        }
-        if (entry.endTime <= entry.startTime || entry.startTime < previousEnd) {
+        if (entry.startTime < 0 || entry.endTime <= entry.startTime || entry.startTime < previousEnd) {
             error = _T("table entries must have increasing, non-overlapping [start,end) intervals");
             return false;
         }
         previousEnd = entry.endTime;
         const auto& p = entry.params;
+        if (!p.applyGrain) {
+            out << "E " << entry.startTime << " " << entry.endTime << " 0 0 0\n";
+            continue;
+        }
         out << "E " << entry.startTime << " " << entry.endTime << " 1 "
             << entry.randomSeed << " 1\n";
         out << "p " << p.arCoeffLag << " " << (p.arCoeffShiftMinus6 + 6) << " "
@@ -595,16 +686,31 @@ bool nvenc_film_grain_table_write(const tstring& path,
         writeCoefficients("cCb", lumaCoefficients + 1, p.arCoeffsCbPlus128);
         writeCoefficients("cCr", lumaCoefficients + 1, p.arCoeffsCrPlus128);
     }
-    FILE *file = _tfopen(path.c_str(), _T("wb"));
-    if (!file) {
-        error = _T("failed to open film grain table for writing: ") + path;
+    const auto text = out.str();
+    bool ok = fwrite(text.data(), 1, text.size(), m_file) == text.size();
+    if (fflush(m_file) != 0) ok = false;
+    if (fclose(m_file) != 0) ok = false;
+    m_file = nullptr;
+    if (!ok) {
+        error = _T("failed to write or flush film grain table: ") + m_path;
         return false;
     }
-    const auto text = out.str();
-    const bool ok = fwrite(text.data(), 1, text.size(), file) == text.size();
-    fclose(file);
+    if (!tableOutputIsRegular(m_path, error)) return false;
+#if defined(_WIN32)
+    ok = MoveFileEx(m_temporary.c_str(), m_path.c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
+#else
+    ok = rename(m_temporary.c_str(), m_path.c_str()) == 0;
+#endif
     if (!ok) {
-        error = _T("failed to write film grain table: ") + path;
+        error = _T("failed to replace film grain table: ") + m_path;
+        return false;
     }
-    return ok;
+    m_temporary.clear();
+    return true;
+}
+
+bool nvenc_film_grain_table_write(const tstring& path,
+    const std::vector<NVEncFilmGrainTableEntry>& entries, tstring& error) {
+    auto writer = NVEncFilmGrainTableWriter::create(path, error);
+    return writer && writer->write(entries, error);
 }
