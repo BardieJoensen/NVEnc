@@ -20,6 +20,8 @@ namespace {
 struct Model {
     std::array<std::array<uint8_t, 24>, 3> coeff;
     std::array<int, 3> points{};
+    std::array<int, 3> maxScaling{};
+    std::array<int, 3> lumaCoupling{};
     unsigned lag = 0, shift = 6;
     bool fromLuma = false;
     Model() { for (auto& c : coeff) c.fill(128); }
@@ -30,18 +32,29 @@ int grainPresent = -1, unsafePlane = -1, errors = 0;
 int64_t packetPts = AV_NOPTS_VALUE, badPts = AV_NOPTS_VALUE, packets = 0, models = 0;
 AVRational timeBase{1, 1000};
 char firstError[300]{};
+bool stabilityOnly = false;
 
 void checkModel() {
     if (unsafePlane >= 0) return;
+    const bool chromaActive[2] = {
+        current.fromLuma ? current.maxScaling[0] > 0 : current.maxScaling[1] > 0,
+        current.fromLuma ? current.maxScaling[0] > 0 : current.maxScaling[2] > 0};
     for (int plane = 0; plane < 3; ++plane) {
         if (!current.points[plane] && !(plane && current.fromLuma)) continue;
+        if (plane == 0) {
+            if (!current.maxScaling[0] && !(chromaActive[0] && current.lumaCoupling[1])
+                && !(chromaActive[1] && current.lumaCoupling[2])) continue;
+        } else if (!chromaActive[plane - 1]) continue;
         const auto& c = current.coeff[plane];
         std::string key(reinterpret_cast<const char *>(c.data()), c.size());
         key.push_back(static_cast<char>(current.lag));
         key.push_back(static_cast<char>(current.shift));
         if (!checked.insert(key).second) continue;
         ++models;
-        if (!fgsmodel::film_grain_ar_stable(c.data(), current.lag, current.shift)) {
+        const bool accepted = stabilityOnly
+            ? fgsmodel::film_grain_ar_stable(c.data(), current.lag, current.shift)
+            : fgsmodel::film_grain_ar_synthesis_safe(c.data(), current.lag, current.shift);
+        if (!accepted) {
             unsafePlane = plane; badPts = packetPts; bad = current; return;
         }
     }
@@ -71,15 +84,27 @@ void logCallback(void *, int level, const char *fmt, va_list ap) {
     else if (!strcmp(field, "clip_to_restricted_range")) checkModel();
     else {
         int index = -1;
-        if (sscanf(field, "ar_coeffs_y_plus_128[%d]", &index) == 1 && index >= 0 && index < 24) current.coeff[0][index] = value;
-        else if (sscanf(field, "ar_coeffs_cb_plus_128[%d]", &index) == 1 && index >= 0 && index < 24) current.coeff[1][index] = value;
-        else if (sscanf(field, "ar_coeffs_cr_plus_128[%d]", &index) == 1 && index >= 0 && index < 24) current.coeff[2][index] = value;
+        const int spatial = 2 * current.lag * (current.lag + 1);
+        if (sscanf(field, "point_y_scaling[%d]", &index) == 1) current.maxScaling[0] = std::max(current.maxScaling[0], value);
+        else if (sscanf(field, "point_cb_scaling[%d]", &index) == 1) current.maxScaling[1] = std::max(current.maxScaling[1], value);
+        else if (sscanf(field, "point_cr_scaling[%d]", &index) == 1) current.maxScaling[2] = std::max(current.maxScaling[2], value);
+        else if (sscanf(field, "ar_coeffs_y_plus_128[%d]", &index) == 1 && index >= 0 && index < spatial) current.coeff[0][index] = value;
+        else if (sscanf(field, "ar_coeffs_cb_plus_128[%d]", &index) == 1 && index >= 0 && index <= spatial) {
+            if (index == spatial) current.lumaCoupling[1] = value - 128;
+            else current.coeff[1][index] = value;
+        } else if (sscanf(field, "ar_coeffs_cr_plus_128[%d]", &index) == 1 && index >= 0 && index <= spatial) {
+            if (index == spatial) current.lumaCoupling[2] = value - 128;
+            else current.coeff[2][index] = value;
+        }
     }
 }
 }
 
 int main(int argc, char **argv) {
-    if (argc != 2) { fprintf(stderr, "usage: scan_bitstream FILE\n"); return 2; }
+    if (argc == 3 && !strcmp(argv[1], "--stability-only")) {
+        stabilityOnly = true; --argc; ++argv;
+    }
+    if (argc != 2) { fprintf(stderr, "usage: scan_bitstream [--stability-only] FILE\n"); return 2; }
     auto start = std::chrono::steady_clock::now();
     av_log_set_callback(logCallback);
     av_log_set_level(AV_LOG_TRACE);
@@ -137,10 +162,13 @@ int main(int argc, char **argv) {
     const char *verdict = unsafePlane >= 0 ? "unsafe_model" : eof && errors == 0 ? "stable" : "error";
     printf("{\"verdict\":\"%s\",\"packets\":%lld,\"unique_plane_models\":%lld,\"grain_present\":%d,\"complete\":%s,\"errors\":%d,\"metadata_obus_skipped\":%u,\"elapsed_seconds\":%.3f", verdict,
         static_cast<long long>(packets), static_cast<long long>(models), grainPresent, eof ? "true" : "false", errors, metadataSkipped, seconds);
+    printf(",\"criterion\":\"%s\",\"max_pole_radius\":%.2f",
+        stabilityOnly ? "stability" : "synthesis_decay",
+        stabilityOnly ? 1.0 : fgsmodel::film_grain_max_synthesis_pole_radius);
     if (unsafePlane >= 0) {
         printf(",\"first_unsafe_seconds\":%.6f,\"plane\":%d,\"lag\":%u,\"shift\":%u,\"coefficients\":[", badPts * av_q2d(timeBase), unsafePlane, bad.lag, bad.shift);
         for (unsigned i = 0; i < 2 * bad.lag * (bad.lag + 1); ++i) printf("%s%d", i ? "," : "", static_cast<int>(bad.coeff[unsafePlane][i]) - 128);
-        printf("]");
+        printf("],\"max_scaling\":[%d,%d,%d],\"luma_coupling\":[%d,%d]", bad.maxScaling[0], bad.maxScaling[1], bad.maxScaling[2], bad.lumaCoupling[1], bad.lumaCoupling[2]);
     }
     printf("}\n");
     if (errors || (!eof && unsafePlane < 0)) fprintf(stderr, "scan error %d: %s\n", status, firstError);

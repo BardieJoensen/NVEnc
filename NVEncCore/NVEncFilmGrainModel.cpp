@@ -46,7 +46,7 @@
 NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     flatBlocks(0), totalBlocks(0), modelFrames(0), noiseStdDev(), templateGain{1.0f, 1.0f, 1.0f}, observations(),
     detailRisk(0.0f), residualRetain(0.0f), grainCorrelation(0.0f),
-    reliable(false), unstableModel(false), sceneReset(false), modelHeld(false) {
+    reliable(false), rejectedModel(false), sceneReset(false), modelHeld(false) {
 }
 
 namespace fgsmodel {
@@ -233,7 +233,7 @@ void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& 
 bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     const bool analyzeChroma, const bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
     NVEncFilmGrainDiagnostics& diagnostics) {
-    diagnostics.unstableModel = false;
+    diagnostics.rejectedModel = false;
     std::array<FilmGrainSolvedPlane, 3> solved;
     solved[0] = solve_plane(stats.plane[0], false, nullptr);
     if (!solved[0].valid) return false;
@@ -341,12 +341,14 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     // producing repeating stripes even in an otherwise valid AV1 stream.
     // Reject the actual signalled model, so the caller preserves the source
     // rather than denoising it and attaching an unsafe synthesis layer.
-    if (!film_grain_ar_stable(params.arCoeffsYPlus128, params.arCoeffLag, arShift)
-        || (params.numCbPoints && !film_grain_ar_stable(
+    // Stable but slowly decaying feedback also produces visible periodic
+    // texture, so require the synthesis decay margin as well as stability.
+    if (!film_grain_ar_synthesis_safe(params.arCoeffsYPlus128, params.arCoeffLag, arShift)
+        || (params.numCbPoints && !film_grain_ar_synthesis_safe(
             params.arCoeffsCbPlus128, params.arCoeffLag, arShift))
-        || (params.numCrPoints && !film_grain_ar_stable(
+        || (params.numCrPoints && !film_grain_ar_synthesis_safe(
             params.arCoeffsCrPlus128, params.arCoeffLag, arShift))) {
-        diagnostics.unstableModel = true;
+        diagnostics.rejectedModel = true;
         std::memset(&params, 0, sizeof(params));
         return false;
     }

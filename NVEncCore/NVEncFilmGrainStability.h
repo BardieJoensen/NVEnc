@@ -87,28 +87,39 @@ inline bool horizontalStable(std::array<double, 4> a, int degree) {
 // Schur inequality is a trigonometric polynomial; interval bounds certify it
 // over ALL horizontal frequencies, including between frequency-grid points.
 // Test the quantized coefficients that the decoder will actually use.
-inline bool film_grain_ar_stable(const uint8_t *coeffsPlus128, unsigned lag, unsigned shift) {
+inline bool film_grain_ar_within_radius(const uint8_t *coeffsPlus128, unsigned lag,
+    unsigned shift, double radius) {
     using namespace stability_detail;
-    if (lag > 3 || shift < 6 || shift > 9 || !coeffsPlus128) return false;
+    if (lag > 3 || shift < 6 || shift > 9 || !coeffsPlus128
+        || !std::isfinite(radius) || radius <= 0.0 || radius > 1.0) return false;
     if (lag == 0) return true;
     const int d = static_cast<int>(lag);
     // Absolute contraction is a cheap, rigorous sufficient condition. It
     // also avoids ill-conditioned repeated Schur products for simple models
     // close to the unit boundary (for example a lone coefficient 63/64).
-    unsigned absoluteSum = 0;
-    for (unsigned i = 0; i < 2 * lag * (lag + 1); ++i) {
-        absoluteSum += std::abs(static_cast<int>(coeffsPlus128[i]) - 128);
+    double verticalSum = 0.0, horizontalSum = 0.0;
+    unsigned index = 0;
+    for (int y = -d; y <= 0; ++y) {
+        for (int x = -d; x <= d && (y < 0 || x < 0); ++x) {
+            const double c = std::abs(static_cast<int>(coeffsPlus128[index++]) - 128)
+                / static_cast<double>(1U << shift);
+            verticalSum += c / std::pow(radius, -y);
+            if (y == 0) horizontalSum += c / std::pow(radius, -x);
+        }
     }
-    if (absoluteSum < (1U << shift)) return true;
+    if (verticalSum < 1.0 && horizontalSum < 1.0) return true;
     std::vector<Polynomial> a(d + 1, Polynomial(d));
     a[0].at(0) = 1.0;
     std::array<double, 4> horizontal{1.0, 0.0, 0.0, 0.0};
-    int index = 0;
+    index = 0;
     for (int y = -d; y <= 0; ++y) {
         for (int x = -d; x <= d && (y < 0 || x < 0); ++x) {
             const double c = (static_cast<int>(coeffsPlus128[index++]) - 128) / static_cast<double>(1U << shift);
-            a[-y].at(x) -= c;
-            if (y == 0) horizontal[-x] = -c;
+            // z = radius*w turns a radius bound into the unit-circle test.
+            // Horizontal feedback needs its own bound: same-row taps are
+            // part of the leading coefficient in the between-row test.
+            a[-y].at(x) -= c / std::pow(radius, -y);
+            if (y == 0) horizontal[-x] = -c / std::pow(radius, -x);
         }
     }
     if (!horizontalStable(horizontal, d)) return false;
@@ -130,5 +141,22 @@ inline bool film_grain_ar_stable(const uint8_t *coeffsPlus128, unsigned lag, uns
         a = std::move(next);
     }
     return true;
+}
+
+inline bool film_grain_ar_stable(const uint8_t *coeffsPlus128, unsigned lag, unsigned shift) {
+    return film_grain_ar_within_radius(coeffsPlus128, lag, shift, 1.0);
+}
+
+// Stability alone permits almost undamped oscillation. The reported jacket
+// model has a pole at 0.993737 and synthesizes a visible diagonal mesh, despite
+// being strictly stable. Use a conservative synthesis policy: every feedback
+// mode must decay below 0.95^32 = 0.194 over one 32-pixel grain block. A rejected
+// fit keeps the source picture; it is not a malformed AV1 model. This bound
+// limits ringing, not all possible perceptual errors, so decoded real-film
+// comparisons remain necessary.
+constexpr double film_grain_max_synthesis_pole_radius = 0.95;
+inline bool film_grain_ar_synthesis_safe(const uint8_t *coeffsPlus128, unsigned lag, unsigned shift) {
+    return film_grain_ar_within_radius(coeffsPlus128, lag, shift,
+        film_grain_max_synthesis_pole_radius);
 }
 } // namespace fgsmodel

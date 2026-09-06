@@ -41,13 +41,21 @@ plus the Python descriptor and model-gate tests.
 The feedback-stability regression uses AV1 coefficient vectors from the
 September 2026 ripple report, a neighbouring stable model, and unit-pole
 boundaries. The solver test also constructs finite-gain training equations
-whose synthesized recurrence is unstable. The production guard checks the
+whose synthesized recurrence is unstable. The 34:06 jacket regression is
+strictly stable but produces a diagonal mesh: stability alone was insufficient.
+The production guard also bounds every horizontal and between-row pole below
+0.95, conservatively rejecting slowly decaying feedback and preserving the
+source frame. This is a synthesis policy, not a bitstream-conformance rule or
+a guarantee against all perceptual defects. The guard checks the
 quantized coefficients on all active planes; failed certification preserves
 the original frame and bypasses the temporal model-hold fallback.
 
 For an existing AV1 file, `scan_bitstream.cpp` inspects its emitted grain
 headers without decoding pixels. It exits 1 on the first uncertified model,
-0 after a complete error-free stable scan, and 2 on a parsing error. The
+0 after a complete error-free scan meeting the synthesis decay policy, and 2
+on a parsing error. Use `--stability-only` for the mathematical unit-circle
+criterion. Zero-strength planes are ignored unless their raw grain contributes
+to an active coupled plane. The
 scanner omits unrelated metadata OBUs from its packet copies (some older
 files contain invalid timecodes); the media file is never modified, and
 every sequence/frame header is retained. An

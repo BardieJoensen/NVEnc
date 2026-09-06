@@ -60,7 +60,7 @@ struct NVEncFilmGrainDiagnostics {
     float residualRetain;
     float grainCorrelation;
     bool reliable;
-    bool unstableModel; // quantized AR feedback could not be certified stable
+    bool rejectedModel; // quantized AR feedback could not be certified stable
     bool sceneReset;
     bool modelHeld;
 

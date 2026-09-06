@@ -128,14 +128,24 @@ void testUnstableFeedbackRejected() {
     NVEncFilmGrainDiagnostics diag;
     expect(!build_film_grain_params(stats, 8, false, true, params, diag),
         "unstable quantized model is not emitted");
-    expect(diag.unstableModel && !params.applyGrain,
+    expect(diag.rejectedModel && !params.applyGrain,
         "unsafe fit requests immediate source preservation");
     fillWhitePlane(stats.plane[0], 6.0, false);
     stats.plane[0].atb[17] = stats.plane[0].atb[23] = 0;
     expect(build_film_grain_params(stats, 8, false, true, params, diag),
         "a subsequent white-grain fit recovers");
-    expect(!diag.unstableModel && params.applyGrain,
+    expect(!diag.rejectedModel && params.applyGrain,
         "stable grain remains enabled after rejection");
+    // This fit is stationary, yet its long spatial memory is inappropriate
+    // for synthesis. It must trigger the same source-preserving path as an
+    // unstable fit, rather than leaving a prior model available for reuse.
+    stats.plane[0].atb[23] = static_cast<int64_t>(N_OBS * 36.0 * 0.98);
+    const auto resonant = solve_plane(stats.plane[0], false, nullptr);
+    expect(resonant.valid && resonant.arGain < 16.0,
+        "slowly decaying recurrence passes the fitted-gain check");
+    expect(!build_film_grain_params(stats, 8, false, true, params, diag)
+        && diag.rejectedModel && !params.applyGrain,
+        "stable resonant fit requests source preservation");
 }
 
 void testRampLuma() {
