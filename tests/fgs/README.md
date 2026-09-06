@@ -47,7 +47,10 @@ the original frame and bypasses the temporal model-hold fallback.
 
 For an existing AV1 file, `scan_bitstream.cpp` inspects its emitted grain
 headers without decoding pixels. It exits 1 on the first uncertified model,
-0 after a complete error-free stable scan, and 2 on a parsing error. An
+0 after a complete error-free stable scan, and 2 on a parsing error. The
+scanner omits unrelated metadata OBUs from its packet copies (some older
+files contain invalid timecodes); the media file is never modified, and
+every sequence/frame header is retained. An
 uncertified model identifies a file for further inspection; it does not by
 itself measure the visible strength of an artifact. Build it with FFmpeg
 development libraries and the `trace_headers` bitstream filter available:

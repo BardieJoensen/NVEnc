@@ -14,6 +14,7 @@ extern "C" {
 #include <libavutil/log.h>
 }
 #include "NVEncFilmGrainStability.h"
+#include "av1_scan_packet.h"
 
 namespace {
 struct Model {
@@ -101,11 +102,29 @@ int main(int argc, char **argv) {
         status = av_bsf_init(filter);
     }
     bool eof = false;
+    unsigned metadataSkipped = 0;
     if (status >= 0) {
         while ((status = av_read_frame(format, packet)) >= 0) {
             if (packet->stream_index != video) { av_packet_unref(packet); continue; }
             packetPts = packet->pts;
             ++packets;
+            // Some older encodes have malformed timecode metadata that strict
+            // CBS rejects although ordinary decoders ignore it. It cannot
+            // contain grain parameters. Strip only this unrelated OBU from
+            // our in-memory copy, retaining every sequence/frame header.
+            status = av_packet_make_writable(packet);
+            if (status < 0) break;
+            size_t packetSize = packet->size;
+            bool hasSequence = false;
+            if (!prepare_av1_scan_packet(packet->data, packetSize, hasSequence, metadataSkipped)) {
+                status = AVERROR_INVALIDDATA; break;
+            }
+            av_shrink_packet(packet, static_cast<int>(packetSize));
+            // A sequence that declares no grain cannot signal grain in any
+            // frame. Still inspect every packet for a new sequence header.
+            if (!packetSize || (grainPresent == 0 && !hasSequence)) {
+                av_packet_unref(packet); continue;
+            }
             status = av_bsf_send_packet(filter, packet);
             if (status < 0) break;
             while ((status = av_bsf_receive_packet(filter, out)) >= 0) av_packet_unref(out);
@@ -116,8 +135,8 @@ int main(int argc, char **argv) {
     }
     const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
     const char *verdict = unsafePlane >= 0 ? "unsafe_model" : eof && errors == 0 ? "stable" : "error";
-    printf("{\"verdict\":\"%s\",\"packets\":%lld,\"unique_plane_models\":%lld,\"grain_present\":%d,\"complete\":%s,\"errors\":%d,\"elapsed_seconds\":%.3f", verdict,
-        static_cast<long long>(packets), static_cast<long long>(models), grainPresent, eof ? "true" : "false", errors, seconds);
+    printf("{\"verdict\":\"%s\",\"packets\":%lld,\"unique_plane_models\":%lld,\"grain_present\":%d,\"complete\":%s,\"errors\":%d,\"metadata_obus_skipped\":%u,\"elapsed_seconds\":%.3f", verdict,
+        static_cast<long long>(packets), static_cast<long long>(models), grainPresent, eof ? "true" : "false", errors, metadataSkipped, seconds);
     if (unsafePlane >= 0) {
         printf(",\"first_unsafe_seconds\":%.6f,\"plane\":%d,\"lag\":%u,\"shift\":%u,\"coefficients\":[", badPts * av_q2d(timeBase), unsafePlane, bad.lag, bad.shift);
         for (unsigned i = 0; i < 2 * bad.lag * (bad.lag + 1); ++i) printf("%s%d", i ? "," : "", static_cast<int>(bad.coeff[unsafePlane][i]) - 128);

@@ -32,36 +32,40 @@ inline Polynomial product(const Polynomial& a, const Polynomial& b, bool conjuga
 }
 
 // Certify positivity over an interval, rather than just sampling frequencies.
-// The derivative bound encloses every point between samples. Near a boundary
+// A Taylor bound using the local slope and a global curvature bound encloses
+// every point between samples, including flat minima. Near a boundary
 // or the recursion limit, reject conservatively instead of accepting an
 // unproven model. The caller can retain the original picture in that case.
-inline bool positiveInterval(const Polynomial& p, double derivativeBound,
+inline bool positiveInterval(const Polynomial& p, double curvatureBound,
     double left, double right, int depth) {
     const double mid = (left + right) * 0.5;
-    double value = p.get(0);
+    double value = p.get(0), slope = 0.0;
     for (int k = 1; k <= p.degree; ++k) {
-        value += (p.get(k) + p.get(-k)) * std::cos(k * mid);
+        const double pair = p.get(k) + p.get(-k);
+        value += pair * std::cos(k * mid);
+        slope -= k * pair * std::sin(k * mid);
     }
     constexpr double tolerance = 1e-10;
     if (!std::isfinite(value) || value <= tolerance) return false;
-    if (value - derivativeBound * (right - left) * 0.5 > tolerance) return true;
+    const double radius = (right - left) * 0.5;
+    if (value - std::abs(slope) * radius - 0.5 * curvatureBound * radius * radius > tolerance) return true;
     if (depth == 0) return false;
-    return positiveInterval(p, derivativeBound, left, mid, depth - 1)
-        && positiveInterval(p, derivativeBound, mid, right, depth - 1);
+    return positiveInterval(p, curvatureBound, left, mid, depth - 1)
+        && positiveInterval(p, curvatureBound, mid, right, depth - 1);
 }
 
 inline bool positiveEverywhere(const Polynomial& p) {
-    double derivativeBound = 0.0;
+    double curvatureBound = 0.0;
     double endpoint0 = p.get(0), endpointPi = p.get(0);
     for (int k = 1; k <= p.degree; ++k) {
         const double pair = p.get(k) + p.get(-k);
-        derivativeBound += k * (std::abs(p.get(k)) + std::abs(p.get(-k)));
+        curvatureBound += k * k * (std::abs(p.get(k)) + std::abs(p.get(-k)));
         endpoint0 += pair;
         endpointPi += (k & 1) ? -pair : pair;
     }
-    if (!std::isfinite(derivativeBound) || endpoint0 <= 1e-10 || endpointPi <= 1e-10) return false;
+    if (!std::isfinite(curvatureBound) || endpoint0 <= 1e-10 || endpointPi <= 1e-10) return false;
     constexpr double pi = 3.14159265358979323846;
-    return positiveInterval(p, derivativeBound, 0.0, pi, 16);
+    return positiveInterval(p, curvatureBound, 0.0, pi, 24);
 }
 
 inline bool horizontalStable(std::array<double, 4> a, int degree) {

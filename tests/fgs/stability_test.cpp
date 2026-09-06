@@ -30,6 +30,12 @@ int main() {
     const std::array<int, 24> cleanScene = {
         -5,-3,-7,14,2,-1,-2,0,2,-11,-23,-14,1,-5,-5,-6,-14,80,5,-14,1,24,-21,78};
     expect(stable(cleanScene, 8), "neighbouring stable real-scene model is retained");
+    expect(stable({-3,-1,-7,-8,17,-18,11,6,9,-13,6,-4,-11,1,-15,22,-38,49,-20,26,-11,1,-16,86}),
+        "stable oscillatory model with a flat Schur minimum is retained");
+    expect(stable({0,0,-3,4,-1,-3,-1,-3,6,-5,-5,-12,2,-1,-1,-4,-30,54,4,-7,-5,7,-7,74}),
+        "stable chroma model with a flat Schur minimum is retained");
+    expect(stable({-3,4,-2,7,6,-6,2,2,5,-2,-27,-13,5,-1,-6,1,-21,67,11,-5,-4,15,-30,71}),
+        "stable mixed-sign high-order model is retained");
     auto single = std::array<int, 24>{};
     single[23] = 63;
     expect(stable(single, 6), "strong stable same-row correlation is retained");
