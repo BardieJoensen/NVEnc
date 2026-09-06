@@ -14,8 +14,11 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
     tests/fgs/solver_test.cpp NVEncCore/NVEncFilmGrainModel.cpp -o "$OUT/fgs_solver_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
     tests/fgs/parser_test.cpp NVEncCore/NVEncFilmGrain.cpp -o "$OUT/fgs_parser_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore \
+    tests/fgs/stability_test.cpp -o "$OUT/fgs_stability_test"
 "$OUT/fgs_solver_test"
 "$OUT/fgs_parser_test"
+"$OUT/fgs_stability_test"
 python3 tests/fgs/test_filmgrn.py
 python3 tests/fgs/test_quality_metrics.py
 python3 tests/fgs/test_texture_metrics.py

@@ -111,6 +111,33 @@ void testWhiteLuma() {
     expectNear(diag.noiseStdDev[0], 6.0, 0.05, "diag luma sigma");
 }
 
+void testUnstableFeedbackRejected() {
+    FilmGrainGpuStats stats = {};
+    fillWhitePlane(stats.plane[0], 6.0, false);
+    // Positive-definite training equations with a finite fitted gain can
+    // still describe a nonstationary feedback model: left + previous row
+    // each predict 0.6 of the current residual. The combined DC feedback is
+    // 1.2 and grows on synthesis. The old variance-only guard accepted this.
+    const auto covariance = static_cast<int64_t>(N_OBS * 36.0 * 0.6);
+    stats.plane[0].atb[17] = covariance;
+    stats.plane[0].atb[23] = covariance;
+    const auto fitted = solve_plane(stats.plane[0], false, nullptr);
+    expect(fitted.valid && fitted.arGain < 2.0,
+        "unsafe recurrence passes the old fit/gain checks");
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 params{};
+    NVEncFilmGrainDiagnostics diag;
+    expect(!build_film_grain_params(stats, 8, false, true, params, diag),
+        "unstable quantized model is not emitted");
+    expect(diag.unstableModel && !params.applyGrain,
+        "unsafe fit requests immediate source preservation");
+    fillWhitePlane(stats.plane[0], 6.0, false);
+    stats.plane[0].atb[17] = stats.plane[0].atb[23] = 0;
+    expect(build_film_grain_params(stats, 8, false, true, params, diag),
+        "a subsequent white-grain fit recovers");
+    expect(!diag.unstableModel && params.applyGrain,
+        "stable grain remains enabled after rejection");
+}
+
 void testRampLuma() {
     FilmGrainGpuStats stats = {};
     auto& plane = stats.plane[0];
@@ -270,6 +297,7 @@ void testStrengthLut() {
 int main() {
     testStratifiedSampling();
     testWhiteLuma();
+    testUnstableFeedbackRejected();
     testRampLuma();
     testChromaCorrelationClamp();
     testSingularChromaFallsBackToLumaOnly();

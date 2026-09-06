@@ -38,6 +38,26 @@ bash tests/fgs/run_cpu_tests.sh
 This builds and runs the model-solver and `filmgrn1` parser behavior tests,
 plus the Python descriptor and model-gate tests.
 
+The feedback-stability regression uses AV1 coefficient vectors from the
+September 2026 ripple report, a neighbouring stable model, and unit-pole
+boundaries. The solver test also constructs finite-gain training equations
+whose synthesized recurrence is unstable. The production guard checks the
+quantized coefficients on all active planes; failed certification preserves
+the original frame and bypasses the temporal model-hold fallback.
+
+For an existing AV1 file, `scan_bitstream.cpp` inspects its emitted grain
+headers without decoding pixels. It exits 1 on the first uncertified model,
+0 after a complete error-free stable scan, and 2 on a parsing error. An
+uncertified model identifies a file for further inspection; it does not by
+itself measure the visible strength of an artifact. Build it with FFmpeg
+development libraries and the `trace_headers` bitstream filter available:
+
+```sh
+g++ -std=c++17 -O2 -I NVEncCore tests/fgs/scan_bitstream.cpp \
+    -o /tmp/fgs-scan $(pkg-config --cflags --libs --static libavformat libavcodec libavutil)
+/tmp/fgs-scan /path/to/episode.mkv
+```
+
 ## GPU known-answer tests
 
 ```sh
