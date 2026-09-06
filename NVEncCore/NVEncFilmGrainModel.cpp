@@ -41,11 +41,12 @@
 #include <limits>
 
 #include "NVEncFilmGrainModel.h"
+#include "NVEncFilmGrainStability.h"
 
 NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     flatBlocks(0), totalBlocks(0), modelFrames(0), noiseStdDev(), templateGain{1.0f, 1.0f, 1.0f}, observations(),
     detailRisk(0.0f), residualRetain(0.0f), grainCorrelation(0.0f),
-    reliable(false), sceneReset(false), modelHeld(false) {
+    reliable(false), unstableModel(false), sceneReset(false), modelHeld(false) {
 }
 
 namespace fgsmodel {
@@ -232,6 +233,7 @@ void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& 
 bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     const bool analyzeChroma, const bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
     NVEncFilmGrainDiagnostics& diagnostics) {
+    diagnostics.unstableModel = false;
     std::array<FilmGrainSolvedPlane, 3> solved;
     solved[0] = solve_plane(stats.plane[0], false, nullptr);
     if (!solved[0].valid) return false;
@@ -332,6 +334,21 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
         params.crMult = 128;
         params.crLumaMult = 192;
         params.crOffset = 256;
+    }
+    // A small training residual and a finite fitted gain do not establish
+    // stability of the decoder's feedback process. Non-stationary statistics
+    // (and coefficient quantization) can put poles outside the unit circle,
+    // producing repeating stripes even in an otherwise valid AV1 stream.
+    // Reject the actual signalled model, so the caller preserves the source
+    // rather than denoising it and attaching an unsafe synthesis layer.
+    if (!film_grain_ar_stable(params.arCoeffsYPlus128, params.arCoeffLag, arShift)
+        || (params.numCbPoints && !film_grain_ar_stable(
+            params.arCoeffsCbPlus128, params.arCoeffLag, arShift))
+        || (params.numCrPoints && !film_grain_ar_stable(
+            params.arCoeffsCrPlus128, params.arCoeffLag, arShift))) {
+        diagnostics.unstableModel = true;
+        std::memset(&params, 0, sizeof(params));
+        return false;
     }
     for (int c = 0; c < 3; ++c) {
         diagnostics.observations[c] = stats.plane[c].observations;
