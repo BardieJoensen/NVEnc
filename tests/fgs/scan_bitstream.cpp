@@ -101,10 +101,21 @@ void logCallback(void *, int level, const char *fmt, va_list ap) {
 }
 
 int main(int argc, char **argv) {
-    if (argc == 3 && !strcmp(argv[1], "--stability-only")) {
-        stabilityOnly = true; --argc; ++argv;
+    int selectedVideo = -1;
+    while (argc > 2) {
+        if (!strcmp(argv[1], "--stability-only")) {
+            stabilityOnly = true; --argc; ++argv;
+        } else if (argc > 3 && !strcmp(argv[1], "--stream-index")) {
+            char *end = nullptr;
+            const long index = strtol(argv[2], &end, 10);
+            if (!*argv[2] || *end || index < 0 || index > INT32_MAX) return 2;
+            selectedVideo = static_cast<int>(index); argc -= 2; argv += 2;
+        } else break;
     }
-    if (argc != 2) { fprintf(stderr, "usage: scan_bitstream [--stability-only] FILE\n"); return 2; }
+    if (argc != 2) {
+        fprintf(stderr, "usage: scan_bitstream [--stability-only] [--stream-index N] FILE\n");
+        return 2;
+    }
     auto start = std::chrono::steady_clock::now();
     av_log_set_callback(logCallback);
     av_log_set_level(AV_LOG_TRACE);
@@ -116,7 +127,9 @@ int main(int argc, char **argv) {
     if (status >= 0) {
         // Matroska codec parameters are available from its track headers.
         for (unsigned i = 0; i < format->nb_streams; ++i) {
-            if (format->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) { video = i; break; }
+            if (selectedVideo >= 0 && i != static_cast<unsigned>(selectedVideo)) continue;
+            if (format->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO
+                && format->streams[i]->codecpar->codec_id == AV_CODEC_ID_AV1) { video = i; break; }
         }
         if (video < 0 || format->streams[video]->codecpar->codec_id != AV_CODEC_ID_AV1) status = AVERROR_INVALIDDATA;
     }
