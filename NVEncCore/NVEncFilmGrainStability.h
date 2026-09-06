@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <utility>
 #include <vector>
+#include "NVEncFilmGrainSpectrum.h"
 
 namespace fgsmodel {
 namespace stability_detail {
@@ -157,6 +158,7 @@ inline bool film_grain_ar_stable(const uint8_t *coeffsPlus128, unsigned lag, uns
 constexpr double film_grain_max_synthesis_pole_radius = 0.95;
 inline bool film_grain_ar_synthesis_safe(const uint8_t *coeffsPlus128, unsigned lag, unsigned shift) {
     return film_grain_ar_within_radius(coeffsPlus128, lag, shift,
-        film_grain_max_synthesis_pole_radius);
+        film_grain_max_synthesis_pole_radius)
+        && film_grain_ar_spectrum_safe(coeffsPlus128, lag, shift);
 }
 } // namespace fgsmodel
