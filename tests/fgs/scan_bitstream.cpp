@@ -176,12 +176,18 @@ int main(int argc, char **argv) {
     printf("{\"verdict\":\"%s\",\"packets\":%lld,\"unique_plane_models\":%lld,\"grain_present\":%d,\"complete\":%s,\"errors\":%d,\"metadata_obus_skipped\":%u,\"elapsed_seconds\":%.3f", verdict,
         static_cast<long long>(packets), static_cast<long long>(models), grainPresent, eof ? "true" : "false", errors, metadataSkipped, seconds);
     printf(",\"criterion\":\"%s\",\"max_pole_radius\":%.2f",
-        stabilityOnly ? "stability" : "synthesis_decay",
+        stabilityOnly ? "stability" : "synthesis_texture_v1",
         stabilityOnly ? 1.0 : fgsmodel::film_grain_max_synthesis_pole_radius);
     if (unsafePlane >= 0) {
         printf(",\"first_unsafe_seconds\":%.6f,\"plane\":%d,\"lag\":%u,\"shift\":%u,\"coefficients\":[", badPts * av_q2d(timeBase), unsafePlane, bad.lag, bad.shift);
         for (unsigned i = 0; i < 2 * bad.lag * (bad.lag + 1); ++i) printf("%s%d", i ? "," : "", static_cast<int>(bad.coeff[unsafePlane][i]) - 128);
         printf("],\"max_scaling\":[%d,%d,%d],\"luma_coupling\":[%d,%d]", bad.maxScaling[0], bad.maxScaling[1], bad.maxScaling[2], bad.lumaCoupling[1], bad.lumaCoupling[2]);
+        if (!stabilityOnly) {
+            const bool decay = fgsmodel::film_grain_ar_within_radius(
+                bad.coeff[unsafePlane].data(), bad.lag, bad.shift,
+                fgsmodel::film_grain_max_synthesis_pole_radius);
+            printf(",\"rejection_reason\":\"%s\"", decay ? "periodic_spectrum" : "feedback_decay");
+        }
     }
     printf("}\n");
     if (errors || (!eof && unsafePlane < 0)) fprintf(stderr, "scan error %d: %s\n", status, firstError);

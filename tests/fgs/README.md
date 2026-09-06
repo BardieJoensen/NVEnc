@@ -45,7 +45,10 @@ whose synthesized recurrence is unstable. The 34:06 jacket regression is
 strictly stable but produces a diagonal mesh: stability alone was insufficient.
 The production guard also bounds every horizontal and between-row pole below
 0.95, conservatively rejecting slowly decaying feedback and preserving the
-source frame. This is a synthesis policy, not a bitstream-conformance rule or
+source frame. The 34:24 regression also requires a spectral check: a strongly
+directional peak away from DC must not exceed both 16 times the spectrum mean
+and 4 times its radial-band mean. Broad fine/coarse grain remains eligible.
+This is a synthesis policy, not a bitstream-conformance rule or
 a guarantee against all perceptual defects. The guard checks the
 quantized coefficients on all active planes; failed certification preserves
 the original frame and bypasses the temporal model-hold fallback.
@@ -54,7 +57,11 @@ For an existing AV1 file, `scan_bitstream.cpp` inspects its emitted grain
 headers without decoding pixels. It exits 1 on the first uncertified model,
 0 after a complete error-free scan meeting the synthesis decay policy, and 2
 on a parsing error. Use `--stability-only` for the mathematical unit-circle
-criterion. Zero-strength planes are ignored unless their raw grain contributes
+criterion. The full local gate encodes the pinned 150-second Gentlemen source,
+requires a known visible mesh to fail, decodes every candidate frame, and
+checks source-preserving grain-off behavior at all three reported/reproduced
+scenes. It also retains the ordinary-grain KAT and libaom positive controls.
+Zero-strength planes are ignored unless their raw grain contributes
 to an active coupled plane. The
 scanner omits unrelated metadata OBUs from its packet copies (some older
 files contain invalid timecodes); the media file is never modified, and

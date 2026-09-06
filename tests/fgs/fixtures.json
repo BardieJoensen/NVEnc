@@ -42,6 +42,16 @@
       "file": "taxi-widened-r4047.mkv",
       "sha256": "9d2ad6e750a6d89ff9d58ee990102895a1fe745264e5cfd50cd1a2bd00da9e54",
       "bytes": 2298830
+    },
+    "gentlemen_clip": {
+      "file": "gentlemen-source-33m-150s.mkv",
+      "sha256": "e41e63a94dd19bb3c6ff584d1872008fb84c196e5d1b33689869e33a5d5f9e5a",
+      "bytes": 1824998502
+    },
+    "gentlemen_mesh_negative": {
+      "file": "gentlemen-decay-33m-150s.mkv",
+      "sha256": "95fd75995df4d345e821f34d41b0cc54b87aea59f59c232eac01e33ea4f6b0bc",
+      "bytes": 46886725
     }
   },
   "provenance": {
@@ -145,7 +155,16 @@
     "model_negative": "Unmodified historical taxi_ceiling_q.json; revalidated on recovered source pair: both fitted descriptors improve, both held-out descriptors regress.",
     "substitution_encode": "Pinned r4047, AV1 QVBR 29, output-depth 10, denoise=auto,chroma=auto,denoiser=bilateral, all 24 taxi_clip frames.",
     "reference_r4050_sha256": "5a8e198a4ab5da3167278d340de038ae5a5606de5be49eb7f6bcc26a4d570edd",
-    "negative_r4047_sha256": "28c1cae74f5e9002ce0d0d54240398df59098ea6f3f8e7f7f75ae61806145338"
+    "negative_r4047_sha256": "28c1cae74f5e9002ce0d0d54240398df59098ea6f3f8e7f7f75ae61806145338",
+    "gentlemen": {
+      "source": "Retained H.264 FLUX S01E01 original",
+      "seek_seconds": 1980,
+      "duration_seconds": 150,
+      "source_encoding": "FFV1 lossless, original 8-bit pixel format, full 24fps",
+      "negative_encoder_commit": "d3008e74b18992a83b2cdaf03ad3631928853b5e",
+      "negative_encoder_sha256": "e38388ac6c2f458cf00299d52c695c486c8a7e05181778b46a1be0de2cc40183",
+      "negative": "Production AV1 QVBR30/bilateral settings; all poles <0.95 but visible diagonal mesh at clip 84.5s (episode 34:24.5)."
+    }
   },
   "canary_revalidation": {
     "negative": {

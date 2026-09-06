@@ -11,7 +11,7 @@ the reason matters more than the arrangement.
 | where | GitHub Actions, every push | this box, manually and pre-push | this box, 08:45 and 20:15 |
 | needs | g++, python, numpy | GPU, real film, libaom, Docker | GPU, real film, Docker, Tdarr DB |
 | catches | logic and arithmetic errors in the model solver, the table parser, and the descriptor mathematics | analyzer regressions visible only on real film; texture substitution; metric-gaming | grain destruction and grain substitution in shipped library output |
-| blind to | anything requiring a real encode | anything not in the three current fixture titles | anything the deployed binary does not do on the sampled files |
+| blind to | anything requiring a real encode | anything not in the pinned fixture titles | anything the deployed binary does not do on the sampled files |
 | runtime | ~30 s | ~3.5 min quick, tens of minutes full | ~10 min |
 
 ## Why the GPU tier cannot be hosted
@@ -94,6 +94,7 @@ silent skip. If you move the code, move the mutation.
 | `texture_negative` | the r4047-versus-r4050 texture pair must separate |
 | `canary_negative` | the base-fidelity canary must alert on r4047 and stay clean on r4050; the pinned widened Taxi encode must read as base-degraded |
 | `canary_candidate` | the selected candidate must pass the bilateral production base-fidelity canary |
+| `periodic_regression` | a 150-second Gentlemen scene with growing and stable periodic-grain failures; rejects the known mesh, scans and decodes the whole candidate, and verifies source preservation at three regression timestamps |
 
 `--quick` runs `tools kat export model_negative` (minutes plus a candidate build) and is what the pre-push
 hook uses. It is honestly labelled in the hook's own output: **the quick gate

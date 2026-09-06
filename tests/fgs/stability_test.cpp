@@ -16,6 +16,11 @@ static bool stable(const std::array<int, 24>& values, unsigned shift = 7, unsign
     for (size_t i = 0; i < values.size(); ++i) encoded[i] = static_cast<uint8_t>(values[i] + 128);
     return fgsmodel::film_grain_ar_within_radius(encoded.data(), lag, shift, radius);
 }
+static bool synthesisSafe(const std::array<int, 24>& values, unsigned shift = 7) {
+    std::array<uint8_t, 24> encoded{};
+    for (size_t i = 0; i < values.size(); ++i) encoded[i] = static_cast<uint8_t>(values[i] + 128);
+    return fgsmodel::film_grain_ar_synthesis_safe(encoded.data(), 3, shift);
+}
 int main() {
     expect(stable({}), "white grain is stable");
     expect(stable({}, 6, 0), "lag-zero grain is stable");
@@ -36,6 +41,12 @@ int main() {
         -22,12,-12,1,6,-1,-14,23,-12,15,-55,14,-25,21,0,18,-33,69,5,-11,15,25,-80,82};
     expect(stable(jacket), "34:06 diagonal mesh is mathematically stable");
     expect(!stable(jacket, 7, 3, 0.95), "stable but resonant jacket model is rejected for synthesis");
+    const std::array<int, 24> jacketLater = {
+        -12,17,-28,26,-12,10,-9,12,-18,31,-52,-2,-5,13,1,30,-52,69,-2,-9,6,26,-83,86};
+    expect(stable(jacketLater, 7, 3, 0.95), "34:24 periodic mesh passes the decay-only guard");
+    expect(!synthesisSafe(jacketLater), "spectral guard rejects the later diagonal mesh");
+    expect(synthesisSafe({}), "white grain passes the complete synthesis policy");
+    expect(synthesisSafe(cleanScene, 8), "ordinary real grain passes spectral and decay checks");
     expect(stable({-3,-1,-7,-8,17,-18,11,6,9,-13,6,-4,-11,1,-15,22,-38,49,-20,26,-11,1,-16,86}),
         "stable oscillatory model with a flat Schur minimum is retained");
     expect(stable({0,0,-3,4,-1,-3,-1,-3,6,-5,-5,-12,2,-1,-1,-4,-30,54,4,-7,-5,7,-7,74}),

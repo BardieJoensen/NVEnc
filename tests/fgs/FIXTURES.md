@@ -57,3 +57,11 @@ Its helper publishes a fresh running/error record if validation or measurement
 fails, replacing any old successful result. It defaults to the deployed
 `tdarr-node` binary; `GRAIN_CANARY_NVENCC` selects the exact local candidate for
 the full gate. Canary encoding always uses the production bilateral settings.
+
+The September 6 ripple fixtures add a lossless 150-second Gentlemen source
+(starting at episode 33:00) and the d3008e74 candidate as a labelled negative.
+That candidate passes the 0.95 pole-radius test but visibly synthesizes a
+diagonal mesh at 34:24.5. `periodic_regression.py` must reject it and verify
+that the tested candidate preserves source frames at 33:24, 34:06 and 34:24.5.
+These private media files are stored only under the fixture root, with hashes
+and extraction/encoder provenance in fixtures.json.
