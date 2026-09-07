@@ -9,6 +9,13 @@ int main() {
     coefficients.fill(128);
     if (!cache.check(coefficients.data(), 3, 7)) return 1;
     if (!cache.check(coefficients.data(), 3, 7) || cache.hits() != 1) return 2;
+    // Two flips of bit 6 cancel in FNV modulo 128: this unsafe
+    // unit-pole model and the white-grain model occupy the SAME cache slot.
+    // Different full keys must still produce their different answers.
+    coefficients[0] = coefficients[23] = 192;
+    if (cache.check(coefficients.data(), 3, 7)) return 7;
+    coefficients[0] = coefficients[23] = 128;
+    if (!cache.check(coefficients.data(), 3, 7)) return 8;
     // Alter one quantized tap after a cached acceptance: the new rejection must
     // not inherit the old result. Changing shift changes the physical model.
     coefficients[23] = 192;

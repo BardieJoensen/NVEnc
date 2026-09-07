@@ -88,11 +88,12 @@ class GateTests(unittest.TestCase):
         self.git('init', '-q')
         self.git('config', 'user.name', 'FGS gate test')
         self.git('config', 'user.email', 'fgs-test@example.invalid')
-        for directory in ['NVEncCore', 'NVEncSDK']:
-            (self.repo / directory).mkdir()
+        for directory in ['NVEncCore', 'NVEncSDK', 'tools/fgs']:
+            (self.repo / directory).mkdir(parents=True)
             (self.repo / directory / 'fixture').write_text('fixture\n')
         self.executable(self.repo / 'tests/fgs/local_gate.sh',
-                        '#!/bin/sh\nprintf "%s\\n" "$*" >> "$FGS_TEST_GPU_CALLS"\n')
+                        '#!/bin/sh\ntest -f "$(dirname "$0")/../../tools/fgs/fixture" || exit 2\n'
+                        'printf "%s\\n" "$*" >> "$FGS_TEST_GPU_CALLS"\n')
         self.executable(self.repo / 'tests/fgs/run_cpu_tests.sh',
                         '#!/bin/sh\necho old >> "$FGS_TEST_CPU_CALLS"\nexit 1\n')
         self.git('add', '.')
