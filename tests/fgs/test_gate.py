@@ -100,7 +100,8 @@ class GateTests(unittest.TestCase):
         self.git('commit', '-qm', 'failing old candidate')
         old = self.git('rev-parse', 'HEAD')
         self.executable(self.repo / 'tests/fgs/run_cpu_tests.sh',
-                        '#!/bin/sh\necho new >> "$FGS_TEST_CPU_CALLS"\n')
+                        '#!/bin/sh\ntest -f "$(dirname "$0")/../../tools/fgs/fixture" || exit 2\n'
+                        'echo new >> "$FGS_TEST_CPU_CALLS"\n')
         self.git('add', '.')
         self.git('commit', '-qm', 'passing new candidate')
         new = self.git('rev-parse', 'HEAD')
@@ -169,6 +170,17 @@ class GateTests(unittest.TestCase):
         result = self.hook(f'(delete) {"0"*40} refs/heads/old {new}\n')
         self.assertEqual(result.returncode, 0)
         self.assertFalse((self.root / 'cpu-calls').exists())
+
+    def test_mutation_selfcheck_rejects_a_broken_unmodified_baseline(self):
+        self.prepare_history()
+        target = self.repo / 'tests/fgs/selftest_can_fail.sh'
+        shutil.copy2(HERE / 'selftest_can_fail.sh', target)
+        self.executable(self.repo / 'tests/fgs/run_cpu_tests.sh',
+                        '#!/bin/sh\necho missing prerequisite >&2\nexit 2\n')
+        result = self.run_command(['bash', str(target)])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('baseline failed before mutation', result.stderr)
+        self.assertNotIn('caught (suite exited non-zero)', result.stdout)
 
 
 if __name__ == '__main__':

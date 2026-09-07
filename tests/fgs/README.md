@@ -105,7 +105,7 @@ g++ -std=c++17 -O2 -Wall tools/fgs/grain_inspect.cpp -o /tmp/fgs-grain-inspect \
 /tmp/fgs-grain-inspect --correlations input.mkv all-offsets.csv
 ```
 
-The method samples nine native 48x48 patches per frame. It converts grain-on
+The default compatibility method samples nine native 48x48 patches per frame. It converts grain-on
 and grain-off pictures to approximate clipped RGB8 display values, subtracts
 each patch mean, and measures RMS and directional autocorrelation. Red and blue
 are display channels, not raw chroma planes. The output is a review index; it
@@ -120,6 +120,14 @@ channel (`acf_0` through `acf_11`), in offset order `(1,0), (0,1), (1,1), (-1,1)
 (2,0), (0,2), (2,2), (-2,2), (3,0), (0,3), (3,3), (-3,3)`. Release tests compare
 this vector: the strongest offset can swap at a near-tie without a meaningful
 texture change. The default compact audit CSV remains unchanged.
+
+`--extended` adds complete spatial coverage and SDR/PQ/HLG reference-display
+measurements, including a separate green channel and local directional scores.
+The new scores use PU21 units and must not reuse the legacy thresholds.
+The [review tool guide](../../tools/fgs/README.md) includes bounded/resumable
+window and batch commands, interactive heatmaps, display assumptions, performance
+limits and calibration evidence. These diagnostics do not add pixel analysis to
+ordinary Tdarr validation.
 
 ## GPU known-answer tests
 
