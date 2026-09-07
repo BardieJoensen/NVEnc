@@ -59,8 +59,12 @@ headers without decoding pixels. It exits 1 on the first uncertified model,
 on a parsing error. Use `--stability-only` for the mathematical unit-circle
 criterion. The full local gate encodes the pinned 150-second Gentlemen source,
 requires a known visible mesh to fail, decodes every candidate frame, and
-checks source-preserving grain-off behavior at all three reported/reproduced
-scenes. It also retains the ordinary-grain KAT and libaom positive controls.
+checks source fidelity at all three reported/reproduced scenes. The two
+jacket fits must emit no synthesized luma grain; an earlier shot may acquire
+a fresh ordinary-grain fit after the rejected temporal state is cleared.
+An independent decoded-grain concentration check must accept that shot and
+reject the retained visible mesh. It also retains the ordinary-grain KAT and
+libaom positive controls.
 Zero-strength planes are ignored unless their raw grain contributes
 to an active coupled plane. The
 scanner omits unrelated metadata OBUs from its packet copies (some older

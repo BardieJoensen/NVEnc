@@ -27,6 +27,24 @@ def frame(path, seconds, grain=None):
     return np.frombuffer(data, dtype='<u2')[:1920 * 1080].astype(np.int16)
 
 
+def grain_concentration(on, off):
+    """Measure decoded grain, independently of the fitted AR coefficients.
+
+    Average Hann-windowed 64x64 periodograms over the active picture, then
+    report the energy in the strongest 1% of frequency bins. The pinned
+    visible mesh concentrates over 10%; the reviewed ordinary-grain shot
+    is below 4%. Eight percent is a fixture regression limit, not a general
+    perceptual-quality threshold (coarse film grain needs other controls).
+    """
+    delta = (on - off).reshape(1080, 1920).astype(float)
+    blocks = delta[160:928].reshape(12, 64, 30, 64).transpose(0, 2, 1, 3).reshape(-1, 64, 64)
+    blocks -= blocks.mean(axis=(1, 2), keepdims=True)
+    window = np.hanning(64)
+    power = (abs(np.fft.fft2(blocks * window[None, :, None]
+                           * window[None, None, :])) ** 2).mean(axis=0)
+    return float(np.sort(power.ravel())[-41:].sum() / power.sum()) if power.sum() else 0.0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--nvencc', type=Path, required=True)
@@ -65,20 +83,28 @@ def main():
     for seconds in [24, 66, 84.5]:
         reference = frame(source, seconds)
         on = frame(output, seconds, 1); off = frame(output, seconds, 0)
-        # These three known contaminated fits must preserve the source instead
-        # of synthesizing grain. Ordinary-grain positive controls live in KAT
-        # and the libaom oracle stages, so disabling all synthesis cannot pass.
-        if not np.array_equal(on, off):
+        # Rejecting a bad fit changes the temporal hold state: the earlier
+        # 24-second shot can acquire a fresh, ordinary-grain fit. Check its
+        # decoded texture rather than requiring every old bad shot to be silent.
+        # The two jacket fits must still preserve the source without synthesis.
+        identical = np.array_equal(on, off)
+        if seconds in (66, 84.5) and not identical:
             raise RuntimeError(f'Rejected scene still synthesizes luma grain at {seconds}s')
+        concentration = grain_concentration(on, off)
+        if concentration > 0.08:
+            raise RuntimeError(f'Decoded periodic grain at {seconds}s: concentration={concentration}')
         mae = float(np.abs(on.astype(float) - reference).mean())
         if mae > 8.0:
             raise RuntimeError(f'Source picture was not preserved at {seconds}s: 10-bit MAE={mae}')
-        samples.append({'seconds': seconds, 'luma_grain_on_off_identical': True, 'luma_mae_10bit': mae})
-    if np.array_equal(frame(negative, 84.5, 1), frame(negative, 84.5, 0)):
-        raise RuntimeError('Negative did not render its known mesh; decoder check is ineffective')
+        samples.append({'seconds': seconds, 'luma_grain_on_off_identical': bool(identical),
+                        'luma_mae_10bit': mae, 'decoded_grain_top_1pct_energy': concentration})
+    negative_concentration = grain_concentration(frame(negative, 84.5, 1), frame(negative, 84.5, 0))
+    if negative_concentration <= 0.08:
+        raise RuntimeError('Known mesh did not fail the decoded-texture check')
     report = {'candidate_sha256': hashlib.sha256(args.nvencc.read_bytes()).hexdigest(),
               'fixtures': pinned, 'negative_scan': negative_report, 'candidate_scan': scan,
-              'source_preservation': samples, 'encode_command': command}
+              'source_preservation': samples, 'negative_decoded_grain_top_1pct_energy': negative_concentration,
+              'encode_command': command}
     (args.output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report, indent=2))
 
