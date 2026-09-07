@@ -71,9 +71,15 @@ def compare(candidate, reference):
     for c in CHANNELS:
         score, previous = candidate[c + '_score'], reference[c + '_score']
         texture = (score > 2.) | (score > previous * 1.10 + .10)
+        # Equal RMS and absolute correlation can still hide a changed sign or
+        # dominant direction/lag. Keep those separately from scalar strength.
+        correlation = abs(candidate[c + '_correlation'] - reference[c + '_correlation']) > .10
+        direction = ((candidate[c + '_dx'] != reference[c + '_dx']) |
+                     (candidate[c + '_dy'] != reference[c + '_dy'])) & (previous > .25)
         amplitude = abs(candidate[c + '_rms'] - reference[c + '_rms']) > reference[c + '_rms'] * .10 + .15
         temporal = abs(np.diff(candidate[c + '_rms']) - np.diff(reference[c + '_rms'])) > .25
         for check, mask in [('texture changed', texture), ('amplitude changed', amplitude),
+                            ('correlation sign/strength changed', correlation), ('dominant offset changed', direction),
                             ('adjacent-frame grain change', temporal)]:
             if mask.any():
                 failures.append(dict(check=check, channel=c, **runs(mask)))

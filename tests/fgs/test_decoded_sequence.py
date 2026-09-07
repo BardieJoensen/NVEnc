@@ -12,6 +12,9 @@ class WholeSequenceChecks(unittest.TestCase):
         for c in sequence.CHANNELS:
             data[c + '_score'] = np.full(48, .5)
             data[c + '_rms'] = np.ones(48)
+            data[c + '_correlation'] = np.full(48, .5)
+            data[c + '_dx'] = np.ones(48)
+            data[c + '_dy'] = np.zeros(48)
         return data
 
     def test_late_chroma_only_burst_is_not_hidden_by_luma_or_percentiles(self):
@@ -33,6 +36,14 @@ class WholeSequenceChecks(unittest.TestCase):
         candidate = self.fixture(); candidate['grain_present'][20:24] = 0
         self.assertTrue(any(f['check'] == 'grain scheduling changed'
                             for f in sequence.compare(candidate, self.fixture())['failures']))
+
+    def test_equal_amplitude_and_score_do_not_hide_changed_texture_direction(self):
+        reference = self.fixture(); candidate = self.fixture()
+        candidate['red_correlation'][-1] *= -1
+        candidate['blue_dx'][-1] = 0; candidate['blue_dy'][-1] = 1
+        failures = sequence.compare(candidate, reference)['failures']
+        self.assertTrue(any(f['check'] == 'correlation sign/strength changed' for f in failures))
+        self.assertTrue(any(f['check'] == 'dominant offset changed' for f in failures))
 
     def test_duration_distinguishes_single_frame_from_sustained_failure(self):
         mask = np.zeros(240, dtype=bool); mask[[0, 20, 40]] = True; mask[120:168] = True
