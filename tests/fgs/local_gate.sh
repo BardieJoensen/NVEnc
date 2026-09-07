@@ -273,7 +273,7 @@ build_candidate_from_pin() {
     git -C "$pin" checkout --quiet "$commit" || die "no such commit: $commit"
     git -C "$pin" submodule update --init --recursive \
         || die "could not check out the candidate's pinned dependencies"
-    docker run --rm --gpus all -v "$pin:/work" -w /work "$BUILD_IMAGE" \
+    docker run --rm --gpus all -e FGS_BUILD_JOBS="${FGS_BUILD_JOBS:-4}" -v "$pin:/work" -w /work "$BUILD_IMAGE" \
         bash -lc 'git config --global --add safe.directory /work
                   apt-get update -qq
                   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
@@ -281,7 +281,7 @@ build_candidate_from_pin() {
                   export PATH=/usr/local/cuda/bin:$PATH
                   meson setup build-gate . --buildtype=release \
                       -Denable_vmaf=disabled -Denable_libvship=disabled \
-                  && ninja -C build-gate' \
+                  && ninja -C build-gate -j "$FGS_BUILD_JOBS"' \
         || die "candidate build failed; retry with a fresh path (the container
 writes the build directory as root, so the old one cannot be removed as you)"
     CANDIDATE_NVENCC="$pin/build-gate/nvencc"
