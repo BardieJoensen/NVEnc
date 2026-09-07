@@ -65,3 +65,12 @@ diagonal mesh at 34:24.5. `periodic_regression.py` must reject it and verify
 that the tested candidate preserves source frames at 33:24, 34:06 and 34:24.5.
 These private media files are stored only under the fixture root, with hashes
 and extraction/encoder provenance in fixtures.json.
+
+The September 7 whole-sequence regression also pins
+`gentlemen-guard-positive-33m-150s.mkv`, the complete e778a88b output from the
+September 6 release gate. Candidate and positive are independently rendered
+through dav1d for all 3,600 displayed frames. Luma/red/blue patch measurements
+check texture, amplitude and temporal changes, while the retained negative must
+fail. The positive is a reviewed regression reference, not proof of perfect
+texture everywhere. Changing its grain scheduling or amplitude requires explicit
+review of a new baseline; do not regenerate it automatically from a candidate.

@@ -8,6 +8,7 @@ import shlex
 import subprocess
 import numpy as np
 import fixtures
+import decoded_sequence
 
 
 def run(command, log):
@@ -24,7 +25,10 @@ def frame(path, seconds, grain=None):
     data = subprocess.run(command, capture_output=True, check=True).stdout
     if len(data) != 1920 * 1080 * 3:
         raise RuntimeError('Missing or incorrectly sized regression frame')
-    return np.frombuffer(data, dtype='<u2')[:1920 * 1080].astype(np.int16)
+    pixels = np.frombuffer(data, dtype='<u2').astype(np.int16)
+    ysize = 1920 * 1080; csize = ysize // 4
+    return {'luma': pixels[:ysize], 'chroma_u': pixels[ysize:ysize+csize],
+            'chroma_v': pixels[ysize+csize:]}
 
 
 def grain_concentration(on, off):
@@ -52,15 +56,21 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args(); args.output.mkdir(parents=True, exist_ok=True)
     pinned = fixtures.verify(args.root, json.loads(fixtures.MANIFEST.read_text()),
-                             ['gentlemen_clip', 'gentlemen_mesh_negative'])
+                             ['gentlemen_clip', 'gentlemen_mesh_negative', 'gentlemen_guard_positive'])
     source = Path(pinned['gentlemen_clip']['path'])
     negative = Path(pinned['gentlemen_mesh_negative']['path'])
+    positive = Path(pinned['gentlemen_guard_positive']['path'])
     repo = Path(__file__).resolve().parents[2]
     scanner = args.output / 'scan'
     flags = shlex.split(subprocess.check_output(
         ['pkg-config', '--cflags', '--libs', '--static', 'libavformat', 'libavcodec', 'libavutil'], text=True))
     run(['g++', '-std=c++17', '-O2', '-I', str(repo / 'NVEncCore'),
          str(repo / 'tests/fgs/scan_bitstream.cpp'), '-o', str(scanner), *flags], args.output / 'build-scan.log')
+    inspector = args.output / 'fgs-grain-inspect'
+    display_flags = shlex.split(subprocess.check_output(
+        ['pkg-config', '--cflags', '--libs', 'libavformat', 'libavcodec', 'libavutil', 'dav1d'], text=True))
+    run(['g++', '-std=c++17', '-O2', '-Wall', str(repo / 'tools/fgs/grain_inspect.cpp'),
+         '-o', str(inspector), *display_flags], args.output / 'build-inspector.log')
     rejected = subprocess.run([str(scanner), str(negative)], capture_output=True, text=True)
     if rejected.returncode != 1:
         raise RuntimeError('Known visible periodic mesh was not rejected: ' + rejected.stdout)
@@ -79,6 +89,24 @@ def main():
         raise RuntimeError('Candidate did not pass the complete 3600-frame grain scan')
     run(['ffmpeg', '-v', 'error', '-xerror', '-threads', '4', '-c:v', 'libdav1d', '-i', str(output),
          '-map', '0:v:0', '-an', '-f', 'null', '-'], args.output / 'decode.log')
+    sequences = {}; decoders = {}
+    for name, path in [('positive', positive), ('negative', negative), ('candidate', output)]:
+        measurements = args.output / (name + '-display.csv')
+        run([str(inspector), str(path), str(measurements)], args.output / (name + '-display.log'))
+        # Progress JSON goes to stderr as well; completion is the final line.
+        decoder = json.loads((args.output / (name + '-display.log')).read_text().splitlines()[-1])
+        if not decoder.get('complete') or decoder.get('measured_frames') != 3600:
+            raise RuntimeError(name + ' decoded picture measurement was incomplete')
+        decoders[name] = decoder
+        sequences[name] = decoded_sequence.load(measurements)
+    whole_sequence = decoded_sequence.compare(sequences['candidate'], sequences['positive'])
+    negative_sequence = decoded_sequence.compare(sequences['negative'], sequences['positive'])
+    (args.output / 'decoded-sequence.json').write_text(json.dumps(
+        dict(candidate=whole_sequence, negative=negative_sequence, decoders=decoders), indent=2) + '\n')
+    if negative_sequence['passed']:
+        raise RuntimeError('Known mesh did not fail the whole-sequence decoded check')
+    if not whole_sequence['passed']:
+        raise RuntimeError('Whole-sequence texture/temporal change requires review; see decoded-sequence.json')
     samples = []
     for seconds in [24, 66, 84.5]:
         reference = frame(source, seconds)
@@ -87,23 +115,27 @@ def main():
         # 24-second shot can acquire a fresh, ordinary-grain fit. Check its
         # decoded texture rather than requiring every old bad shot to be silent.
         # The two jacket fits must still preserve the source without synthesis.
-        identical = np.array_equal(on, off)
-        if seconds in (66, 84.5) and not identical:
-            raise RuntimeError(f'Rejected scene still synthesizes luma grain at {seconds}s')
-        concentration = grain_concentration(on, off)
+        planes = {}
+        for plane in reference:
+            identical = np.array_equal(on[plane], off[plane])
+            if seconds in (66, 84.5) and not identical:
+                raise RuntimeError(f'Rejected scene still synthesizes {plane} grain at {seconds}s')
+            mae = float(np.abs(on[plane].astype(float) - reference[plane]).mean())
+            if mae > 8.0:
+                raise RuntimeError(f'Source {plane} was not preserved at {seconds}s: 10-bit MAE={mae}')
+            planes[plane] = dict(grain_on_off_identical=bool(identical), mae_10bit=mae)
+        concentration = grain_concentration(on['luma'], off['luma'])
         if concentration > 0.08:
             raise RuntimeError(f'Decoded periodic grain at {seconds}s: concentration={concentration}')
-        mae = float(np.abs(on.astype(float) - reference).mean())
-        if mae > 8.0:
-            raise RuntimeError(f'Source picture was not preserved at {seconds}s: 10-bit MAE={mae}')
-        samples.append({'seconds': seconds, 'luma_grain_on_off_identical': bool(identical),
-                        'luma_mae_10bit': mae, 'decoded_grain_top_1pct_energy': concentration})
-    negative_concentration = grain_concentration(frame(negative, 84.5, 1), frame(negative, 84.5, 0))
+        samples.append({'seconds': seconds, 'planes': planes, 'decoded_grain_top_1pct_energy': concentration})
+    negative_concentration = grain_concentration(frame(negative, 84.5, 1)['luma'], frame(negative, 84.5, 0)['luma'])
     if negative_concentration <= 0.08:
         raise RuntimeError('Known mesh did not fail the decoded-texture check')
     report = {'candidate_sha256': hashlib.sha256(args.nvencc.read_bytes()).hexdigest(),
               'fixtures': pinned, 'negative_scan': negative_report, 'candidate_scan': scan,
               'source_preservation': samples, 'negative_decoded_grain_top_1pct_energy': negative_concentration,
+              'decoded_sequence': whole_sequence, 'negative_decoded_sequence': negative_sequence,
+              'inspector_sha256': hashlib.sha256(inspector.read_bytes()).hexdigest(),
               'encode_command': command}
     (args.output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report, indent=2))

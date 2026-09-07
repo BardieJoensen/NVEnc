@@ -6,7 +6,7 @@ the reason matters more than the arrangement.
 
 ## The short version
 
-| | tier 1 | tier 2 | nightly cron |
+| | tier 1 | tier 2 | scheduled local monitors |
 |---|---|---|---|
 | where | GitHub Actions, every push | this box, manually and pre-push | this box, 08:45 and 20:15 |
 | needs | g++, python, numpy | GPU, real film, libaom, Docker | GPU, real film, Docker, Tdarr DB |
@@ -48,6 +48,8 @@ an otherwise-green run is the same failure in a different costume.
 |---|---|
 | `solver_test.cpp` | `NVEncFilmGrainModel.cpp` — AR normal equations, scaling-curve fitting, chroma correlation clamping, strength LUT, stratified sample coverage |
 | `parser_test.cpp` | `NVEncFilmGrain.cpp` — table parsing, atomic replacement, clean-source reset, and write/flush failures |
+| `validation_cache_test.cpp` | exact-key certification reuse; changed coefficients/lag/shift, rejected models, and eviction versus the unchanged policy |
+| `test_decoded_sequence.py` | late chroma-only bursts, temporal rearrangement with unchanged mean, duration, and missing/nonfinite measurement rows |
 | `test_filmgrn.py` | table comparison in normalised synthesis units |
 | `test_quality_metrics.py` | radial spectrum, high-pass, spatial autocorrelation |
 | `test_texture_metrics.py` | flat-block selection, luma banding, amplitude independence, the labelled-negative gate logic |
@@ -94,7 +96,7 @@ silent skip. If you move the code, move the mutation.
 | `texture_negative` | the r4047-versus-r4050 texture pair must separate |
 | `canary_negative` | the base-fidelity canary must alert on r4047 and stay clean on r4050; the pinned widened Taxi encode must read as base-degraded |
 | `canary_candidate` | the selected candidate must pass the bilateral production base-fidelity canary |
-| `periodic_regression` | a 150-second Gentlemen scene with growing and stable periodic-grain failures; rejects the known mesh, scans and decodes the whole candidate, and verifies source preservation at three regression timestamps |
+| `periodic_regression` | a 150-second Gentlemen scene with growing and stable periodic-grain failures; rejects the known mesh, compares luma/red/blue grain on every displayed frame to a pinned reviewed positive (including temporal changes), and checks source Y/U/V preservation at three regression timestamps |
 
 `--quick` runs `tools kat export model_negative` (minutes plus a candidate build) and is what the pre-push
 hook uses. It is honestly labelled in the hook's own output: **the quick gate

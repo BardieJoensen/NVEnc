@@ -63,8 +63,14 @@ checks source fidelity at all three reported/reproduced scenes. The two
 jacket fits must emit no synthesized luma grain; an earlier shot may acquire
 a fresh ordinary-grain fit after the rejected temporal state is cleared.
 An independent decoded-grain concentration check must accept that shot and
-reject the retained visible mesh. It also retains the ordinary-grain KAT and
-libaom positive controls.
+reject the retained visible mesh. All 3,600 displayed frames are additionally
+measured in luma, red and blue display channels against a pinned reviewed
+positive. This detects relocated/repeated texture, amplitude changes, and
+changes in when grain switches on or off; source comparisons at the three
+regression timestamps include the raw U/V planes too. These are fixture-specific
+change detectors: an intentional model change requires fresh baseline review.
+They do not provide universal visibility thresholds. The gate retains the
+ordinary-grain KAT and libaom positive controls.
 Zero-strength planes are ignored unless their raw grain contributes
 to an active coupled plane. The
 scanner omits unrelated metadata OBUs from its packet copies (some older
@@ -79,6 +85,36 @@ g++ -std=c++17 -O2 -I NVEncCore tests/fgs/scan_bitstream.cpp \
     -o /tmp/fgs-scan $(pkg-config --cflags --libs --static libavformat libavcodec libavutil)
 /tmp/fgs-scan /path/to/episode.mkv
 ```
+
+The encoder memoizes certification of identical quantized coefficient/lag/shift
+tuples in a bounded, per-thread cache. Every hit compares the full tuple; a hash
+collision only triggers recomputation. The mathematical guard and the standalone
+header scanner remain unchanged. `validation_cache_test.cpp` compares cached and
+uncached answers through accepted/rejected models and collision/eviction cases.
+
+## Read-only decoded grain inspector
+
+`tools/fgs/grain_inspect.cpp` measures decoder grain applied to the same decoded
+picture, using dav1d's grain-off decode followed by `dav1d_apply_grain`. It writes
+one CSV row per displayed frame, plus an explicit completion record. The tool
+requires FFmpeg and dav1d development libraries:
+
+```sh
+g++ -std=c++17 -O2 -Wall tools/fgs/grain_inspect.cpp -o /tmp/fgs-grain-inspect \
+    $(pkg-config --cflags --libs libavformat libavcodec libavutil dav1d)
+/tmp/fgs-grain-inspect input.mkv output.csv
+/tmp/fgs-grain-inspect input.mkv excerpt.csv 390 405
+```
+
+The method samples nine native 48x48 patches per frame. It converts grain-on
+and grain-off pictures to approximate clipped RGB8 display values, subtracts
+each patch mean, and measures RMS and directional autocorrelation. Red and blue
+are display channels, not raw chroma planes. The output is a review index; it
+cannot establish whether a whole film is damaged or justify replacing it.
+HDR/BT2020 and non-I420 inputs need different display calibration and are
+rejected. This does not measure lost source detail, and grain outside the sampled
+patches can be missed. It is intended for background auditing and release tests,
+not full-duration validation on every Tdarr job.
 
 ## GPU known-answer tests
 

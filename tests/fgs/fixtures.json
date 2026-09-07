@@ -52,6 +52,11 @@
       "file": "gentlemen-decay-33m-150s.mkv",
       "sha256": "95fd75995df4d345e821f34d41b0cc54b87aea59f59c232eac01e33ea4f6b0bc",
       "bytes": 46886725
+    },
+    "gentlemen_guard_positive": {
+      "file": "gentlemen-guard-positive-33m-150s.mkv",
+      "sha256": "249023f0dccc8a325dd46b9272982c7da0e1e64ff690df03706c84d4b9c54220",
+      "bytes": 47254864
     }
   },
   "provenance": {
@@ -163,6 +168,9 @@
       "source_encoding": "FFV1 lossless, original 8-bit pixel format, full 24fps",
       "negative_encoder_commit": "d3008e74b18992a83b2cdaf03ad3631928853b5e",
       "negative_encoder_sha256": "e38388ac6c2f458cf00299d52c695c486c8a7e05181778b46a1be0de2cc40183",
+      "positive_encoder_commit": "e778a88b3f825a51e9f91122e29d99ec6a2dca4e",
+      "positive_encoder_sha256": "5423d8abda1d2c248f25508c311ed4ca0eda08462e1ebc6bce95fba22e830249",
+      "positive": "Complete 3600-frame production-setting output from the September 6 full gate, after the reviewed synthesis_texture_v1 repair. Same pinned source and settings as periodic_regression.py.",
       "negative": "Production AV1 QVBR30/bilateral settings; all poles <0.95 but visible diagonal mesh at clip 84.5s (episode 34:24.5)."
     }
   },

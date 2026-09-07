@@ -231,7 +231,7 @@ if want_stage canary_negative; then
     required_fixtures+=(taxi_clip substitution_encode)
 fi
 if want_stage periodic_regression; then
-    required_fixtures+=(gentlemen_clip gentlemen_mesh_negative)
+    required_fixtures+=(gentlemen_clip gentlemen_mesh_negative gentlemen_guard_positive)
 fi
 if [ "${#required_fixtures[@]}" -gt 0 ]; then
     python3 "$HERE/fixtures.py" --root "$FIXTURE_ROOT" --check "${required_fixtures[@]}" \
