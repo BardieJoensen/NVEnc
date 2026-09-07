@@ -15,6 +15,8 @@ class WholeSequenceChecks(unittest.TestCase):
             data[c + '_correlation'] = np.full(48, .5)
             data[c + '_dx'] = np.ones(48)
             data[c + '_dy'] = np.zeros(48)
+            for i in range(12):
+                data[c + '_acf_' + str(i)] = np.full(48, .5 if i == 0 else 0.)
         return data
 
     def test_late_chroma_only_burst_is_not_hidden_by_luma_or_percentiles(self):
@@ -39,11 +41,16 @@ class WholeSequenceChecks(unittest.TestCase):
 
     def test_equal_amplitude_and_score_do_not_hide_changed_texture_direction(self):
         reference = self.fixture(); candidate = self.fixture()
-        candidate['red_correlation'][-1] *= -1
-        candidate['blue_dx'][-1] = 0; candidate['blue_dy'][-1] = 1
+        candidate['red_acf_0'][-1] *= -1
+        candidate['blue_acf_0'][-1] = 0; candidate['blue_acf_1'][-1] = .5
         failures = sequence.compare(candidate, reference)['failures']
-        self.assertTrue(any(f['check'] == 'correlation sign/strength changed' for f in failures))
-        self.assertTrue(any(f['check'] == 'dominant offset changed' for f in failures))
+        self.assertEqual({f['channel'] for f in failures if f['check'] == 'signed correlation vector changed'}, {'red', 'blue'})
+
+    def test_near_tied_dominant_offset_is_not_a_false_texture_failure(self):
+        reference = self.fixture(); candidate = self.fixture()
+        candidate['red_dx'][-1] = 0; candidate['red_dy'][-1] = 1
+        candidate['red_correlation'][-1] *= -1
+        self.assertTrue(sequence.compare(candidate, reference)['passed'])
 
     def test_duration_distinguishes_single_frame_from_sustained_failure(self):
         mask = np.zeros(240, dtype=bool); mask[[0, 20, 40]] = True; mask[120:168] = True

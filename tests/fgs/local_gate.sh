@@ -84,7 +84,7 @@ CEILING_MODEL="$FIXTURE_ROOT/taxi-metric-gamer.json"
 TAXI_CLIP="$FIXTURE_ROOT/taxi-coarse-24f.mkv"
 SUBSTITUTION_ENCODE="$FIXTURE_ROOT/taxi-widened-r4047.mkv"
 
-ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression)
+ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression grain_syntax)
 # The GPU fixtures and export tests plus the offline adversarial
 # specimen. Deliberately excludes the libaom oracles and the canary, which need
 # real-film encodes. A pre-push hook long enough to be bypassed with
@@ -232,6 +232,9 @@ if want_stage canary_negative; then
 fi
 if want_stage periodic_regression; then
     required_fixtures+=(gentlemen_clip gentlemen_mesh_negative gentlemen_guard_positive)
+fi
+if want_stage grain_syntax; then
+    required_fixtures+=(invalid_chroma_negative gentlemen_guard_positive)
 fi
 if [ "${#required_fixtures[@]}" -gt 0 ]; then
     python3 "$HERE/fixtures.py" --root "$FIXTURE_ROOT" --check "${required_fixtures[@]}" \
@@ -641,6 +644,17 @@ if want_stage canary_candidate; then
 fi
 
 # ---------------------------------------------------------------------------
+if want_stage grain_syntax; then
+    log "stage: grain-header syntax controls"
+    if python3 "$HERE/grain_syntax_regression.py" --root "$FIXTURE_ROOT" --output "$REPORT_DIR/grain-syntax" \
+        > "$REPORT_DIR/grain-syntax.log" 2>&1; then
+        record pass "malformed chroma grain rejected and complete positive accepted"
+    else
+        record fail "grain syntax controls (see $REPORT_DIR/grain-syntax.log)"
+        tail -20 "$REPORT_DIR/grain-syntax.log"
+    fi
+fi
+
 if want_stage periodic_regression; then
     log "stage: real-film periodic-grain regression"
     if python3 "$HERE/periodic_regression.py" --nvencc "$CANDIDATE_NVENCC" \

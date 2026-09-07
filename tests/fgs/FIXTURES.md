@@ -74,3 +74,10 @@ check texture, amplitude and temporal changes, while the retained negative must
 fail. The positive is a reviewed regression reference, not proof of perfect
 texture everywhere. Changing its grain scheduling or amplitude requires explicit
 review of a new baseline; do not regenerate it automatically from a candidate.
+
+`hornets-invalid-chroma-1495-35s.mkv` retains original AV1 packets from an older
+library output. Both dav1d and libaom reject a one-sided chroma grain model in
+the passage. The syntax gate requires the specific chroma-rule failure, rather
+than accepting an unrelated decode or model-quality error as its negative
+control. The source encoder version is not established. The current encoder
+and table parser already enforce paired 4:2:0 chroma; the scanner now does too.

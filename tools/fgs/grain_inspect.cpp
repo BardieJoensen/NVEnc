@@ -24,6 +24,7 @@ static void checked(int result, const char *operation) {
 struct Metrics {
     double rms = 0, max_patch_rms = 0, correlation = 0, score = 0;
     int dx = 0, dy = 0;
+    std::array<double, 12> acf{};
 };
 
 template <typename Pixel>
@@ -98,6 +99,7 @@ static std::array<Metrics, 3> measure(const Dav1dPicture& off, const Dav1dPictur
         for (int k = 0; k < 12; ++k) {
             const double corr = left[channel][k]*right[channel][k] > 0
                 ? cross[channel][k]/std::sqrt(left[channel][k]*right[channel][k]) : 0;
+            m.acf[k] = corr;
             if (std::abs(corr) > std::abs(m.correlation)) {
                 m.correlation = corr; m.dx = offsets[k][0]; m.dy = offsets[k][1];
             }
@@ -109,7 +111,9 @@ static std::array<Metrics, 3> measure(const Dav1dPicture& off, const Dav1dPictur
 
 int main(int argc, char **argv) {
     try {
-        if (argc != 3 && argc != 5) throw std::runtime_error("usage: fgs-grain-inspect FILE OUTPUT_CSV [START STOP]");
+        const bool correlations = argc > 1 && !std::strcmp(argv[1], "--correlations");
+        if (correlations) { --argc; ++argv; }
+        if (argc != 3 && argc != 5) throw std::runtime_error("usage: fgs-grain-inspect [--correlations] FILE OUTPUT_CSV [START STOP]");
         const double start = argc == 5 ? std::stod(argv[3]) : 0;
         const double stop = argc == 5 ? std::stod(argv[4]) : 1e12;
         if (!std::isfinite(start) || !std::isfinite(stop) || start < 0 || stop <= start)
@@ -118,7 +122,10 @@ int main(int argc, char **argv) {
         std::ofstream output(argv[2]);
         if (!output) throw std::runtime_error("cannot create output CSV");
         output << "seconds,grain_present";
-        for (const auto* plane : {"luma", "red", "blue"}) for (const auto* field : {"rms", "max_patch_rms", "correlation", "score", "dx", "dy"}) output << ',' << plane << '_' << field;
+        for (const auto* plane : {"luma", "red", "blue"}) {
+            for (const auto* field : {"rms", "max_patch_rms", "correlation", "score", "dx", "dy"}) output << ',' << plane << '_' << field;
+            if (correlations) for (int i = 0; i < 12; ++i) output << ',' << plane << "_acf_" << i;
+        }
         output << '\n' << std::setprecision(9);
         av_log_set_level(AV_LOG_ERROR);
         AVFormatContext *format = nullptr;
@@ -181,6 +188,7 @@ int main(int argc, char **argv) {
                     : off.p.bpc > 8 ? measure<uint16_t>(off,on) : measure<uint8_t>(off,on);
                 for (const auto& m : metrics) {
                     output << ',' << m.rms << ',' << m.max_patch_rms << ',' << m.correlation << ',' << m.score << ',' << m.dx << ',' << m.dy;
+                    if (correlations) for (const auto value : m.acf) output << ',' << value;
                 }
                 output << '\n'; ++measured;
                 if (present) dav1d_picture_unref(&on);

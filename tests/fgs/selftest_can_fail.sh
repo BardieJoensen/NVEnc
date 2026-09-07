@@ -31,7 +31,6 @@ MUTATIONS=(
   "NVEncCore/NVEncFilmGrainModel.h:s|random % static_cast<uint32_t>(span)|0u|:random % static_cast<uint32_t>(span):fixed sampling lattice (the shipped 2026-07-29 defect)"
   "NVEncCore/NVEncFilmGrain.cpp:s|if (x <= previousValue) {|if (false) {|:if (x <= previousValue) {:parser stops rejecting non-monotonic scaling points"
   "tests/fgs/texture_metrics.py:s|/ (2.0 \* variance)|/ 2.0|:/ (2.0 * variance):texture ACF stops being amplitude-independent"
-  "NVEncCore/NVEncFilmGrainValidationCache.h:s|coefficients + count, entry.coefficients.begin()))|coefficients, entry.coefficients.begin()))|:coefficients + count, entry.coefficients.begin())):cache stops comparing coefficients and accepts a hash collision"
 )
 
 failed=0

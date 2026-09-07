@@ -11,11 +11,12 @@ import numpy as np
 CHANNELS = ('luma', 'red', 'blue')
 
 
-def load(path, frames=3600, fps=24):
+def load(path, frames=3600, fps=24, correlations=False):
     with Path(path).open() as source:
         rows = list(csv.DictReader(source))
-    fields = ('seconds', 'grain_present') + tuple(c + '_' + f for c in CHANNELS
-              for f in ('rms', 'max_patch_rms', 'correlation', 'score', 'dx', 'dy'))
+    suffixes = ('rms', 'max_patch_rms', 'correlation', 'score', 'dx', 'dy') + (
+                tuple('acf_' + str(i) for i in range(12)) if correlations else ())
+    fields = ('seconds', 'grain_present') + tuple(c + '_' + f for c in CHANNELS for f in suffixes)
     if len(rows) != frames or not rows or tuple(rows[0]) != fields:
         raise ValueError('incomplete or unexpected decoded measurement stream')
     data = {field: np.array([float(row[field]) for row in rows]) for field in fields}
@@ -71,15 +72,14 @@ def compare(candidate, reference):
     for c in CHANNELS:
         score, previous = candidate[c + '_score'], reference[c + '_score']
         texture = (score > 2.) | (score > previous * 1.10 + .10)
-        # Equal RMS and absolute correlation can still hide a changed sign or
-        # dominant direction/lag. Keep those separately from scalar strength.
-        correlation = abs(candidate[c + '_correlation'] - reference[c + '_correlation']) > .10
-        direction = ((candidate[c + '_dx'] != reference[c + '_dx']) |
-                     (candidate[c + '_dy'] != reference[c + '_dy'])) & (previous > .25)
+        # Compare all signed offsets. The strongest offset can switch at a
+        # near-tie without a meaningful texture change, even on unchanged code.
+        correlation = np.any([abs(candidate[c + '_acf_' + str(i)] - reference[c + '_acf_' + str(i)]) > .10
+                              for i in range(12)], axis=0)
         amplitude = abs(candidate[c + '_rms'] - reference[c + '_rms']) > reference[c + '_rms'] * .10 + .15
         temporal = abs(np.diff(candidate[c + '_rms']) - np.diff(reference[c + '_rms'])) > .25
         for check, mask in [('texture changed', texture), ('amplitude changed', amplitude),
-                            ('correlation sign/strength changed', correlation), ('dominant offset changed', direction),
+                            ('signed correlation vector changed', correlation),
                             ('adjacent-frame grain change', temporal)]:
             if mask.any():
                 failures.append(dict(check=check, channel=c, **runs(mask)))

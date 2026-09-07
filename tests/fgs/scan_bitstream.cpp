@@ -15,27 +15,35 @@ extern "C" {
 }
 #include "NVEncFilmGrainStability.h"
 #include "av1_scan_packet.h"
+#include "av1_grain_syntax.h"
 
 namespace {
-struct Model {
+struct Model : Av1GrainSyntax {
     std::array<std::array<uint8_t, 24>, 3> coeff;
-    std::array<int, 3> points{};
     std::array<int, 3> maxScaling{};
     std::array<int, 3> lumaCoupling{};
     unsigned lag = 0, shift = 6;
-    bool fromLuma = false;
     Model() { for (auto& c : coeff) c.fill(128); }
 };
 Model current, bad;
+Av1GrainLayout layout;
 std::set<std::string> checked;
 int grainPresent = -1, unsafePlane = -1, errors = 0;
 int64_t packetPts = AV_NOPTS_VALUE, badPts = AV_NOPTS_VALUE, packets = 0, models = 0;
 AVRational timeBase{1, 1000};
 char firstError[300]{};
 bool stabilityOnly = false;
+bool syntaxOnly = false;
+const char *invalidGrain = nullptr;
+int64_t invalidPts = AV_NOPTS_VALUE;
 
 void checkModel() {
-    if (unsafePlane >= 0) return;
+    if (const char *problem = current.error(layout.is420())) {
+        if (!invalidGrain) { invalidGrain = problem; invalidPts = packetPts; }
+        ++errors;
+        return;
+    }
+    if (unsafePlane >= 0 || errors || syntaxOnly) return;
     const bool chromaActive[2] = {
         current.fromLuma ? current.maxScaling[0] > 0 : current.maxScaling[1] > 0,
         current.fromLuma ? current.maxScaling[0] > 0 : current.maxScaling[2] > 0};
@@ -73,7 +81,11 @@ void logCallback(void *, int level, const char *fmt, va_list ap) {
     char field[100];
     if (sscanf(line, "%u %99s", &bit, field) != 2) return;
     const int value = static_cast<int>(strtol(eq + 1, nullptr, 10));
-    if (!strcmp(field, "film_grain_params_present")) grainPresent = value;
+    if (!strcmp(field, "seq_profile")) layout.sequence(value);
+    else if (!strcmp(field, "mono_chrome")) layout.monochrome = value;
+    else if (!strcmp(field, "subsampling_x")) layout.subsamplingX = value;
+    else if (!strcmp(field, "subsampling_y")) layout.subsamplingY = value;
+    else if (!strcmp(field, "film_grain_params_present")) grainPresent = value;
     else if (!strcmp(field, "apply_grain")) current = Model();
     else if (!strcmp(field, "num_y_points")) current.points[0] = value;
     else if (!strcmp(field, "num_cb_points")) current.points[1] = value;
@@ -85,7 +97,10 @@ void logCallback(void *, int level, const char *fmt, va_list ap) {
     else {
         int index = -1;
         const int spatial = 2 * current.lag * (current.lag + 1);
-        if (sscanf(field, "point_y_scaling[%d]", &index) == 1) current.maxScaling[0] = std::max(current.maxScaling[0], value);
+        if (sscanf(field, "point_y_value[%d]", &index) == 1) current.point(0, value);
+        else if (sscanf(field, "point_cb_value[%d]", &index) == 1) current.point(1, value);
+        else if (sscanf(field, "point_cr_value[%d]", &index) == 1) current.point(2, value);
+        else if (sscanf(field, "point_y_scaling[%d]", &index) == 1) current.maxScaling[0] = std::max(current.maxScaling[0], value);
         else if (sscanf(field, "point_cb_scaling[%d]", &index) == 1) current.maxScaling[1] = std::max(current.maxScaling[1], value);
         else if (sscanf(field, "point_cr_scaling[%d]", &index) == 1) current.maxScaling[2] = std::max(current.maxScaling[2], value);
         else if (sscanf(field, "ar_coeffs_y_plus_128[%d]", &index) == 1 && index >= 0 && index < spatial) current.coeff[0][index] = value;
@@ -105,6 +120,8 @@ int main(int argc, char **argv) {
     while (argc > 2) {
         if (!strcmp(argv[1], "--stability-only")) {
             stabilityOnly = true; --argc; ++argv;
+        } else if (!strcmp(argv[1], "--syntax-only")) {
+            syntaxOnly = true; --argc; ++argv;
         } else if (argc > 3 && !strcmp(argv[1], "--stream-index")) {
             char *end = nullptr;
             const long index = strtol(argv[2], &end, 10);
@@ -112,8 +129,8 @@ int main(int argc, char **argv) {
             selectedVideo = static_cast<int>(index); argc -= 2; argv += 2;
         } else break;
     }
-    if (argc != 2) {
-        fprintf(stderr, "usage: scan_bitstream [--stability-only] [--stream-index N] FILE\n");
+    if (argc != 2 || (stabilityOnly && syntaxOnly)) {
+        fprintf(stderr, "usage: scan_bitstream [--stability-only|--syntax-only] [--stream-index N] FILE\n");
         return 2;
     }
     auto start = std::chrono::steady_clock::now();
@@ -167,18 +184,21 @@ int main(int argc, char **argv) {
             if (status < 0) break;
             while ((status = av_bsf_receive_packet(filter, out)) >= 0) av_packet_unref(out);
             if (status != AVERROR(EAGAIN) && status != AVERROR_EOF) break;
-            if (unsafePlane >= 0) break;
+            if (unsafePlane >= 0 || errors) break;
         }
         eof = status == AVERROR_EOF;
     }
     const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
-    const char *verdict = unsafePlane >= 0 ? "unsafe_model" : eof && errors == 0 ? "stable" : "error";
+    const char *verdict = invalidGrain ? "invalid_grain" : errors ? "error" : unsafePlane >= 0 ? "unsafe_model" : eof ? (syntaxOnly ? "valid_syntax" : "stable") : "error";
     printf("{\"verdict\":\"%s\",\"packets\":%lld,\"unique_plane_models\":%lld,\"grain_present\":%d,\"complete\":%s,\"errors\":%d,\"metadata_obus_skipped\":%u,\"elapsed_seconds\":%.3f", verdict,
         static_cast<long long>(packets), static_cast<long long>(models), grainPresent, eof ? "true" : "false", errors, metadataSkipped, seconds);
-    printf(",\"criterion\":\"%s\",\"max_pole_radius\":%.2f",
-        stabilityOnly ? "stability" : "synthesis_texture_v1",
-        stabilityOnly ? 1.0 : fgsmodel::film_grain_max_synthesis_pole_radius);
-    if (unsafePlane >= 0) {
+    printf(",\"criterion\":\"%s\"", syntaxOnly ? "av1_grain_syntax_v1" : stabilityOnly ? "stability" : "synthesis_texture_v1");
+    if (!syntaxOnly) printf(",\"max_pole_radius\":%.2f", stabilityOnly ? 1.0 : fgsmodel::film_grain_max_synthesis_pole_radius);
+    if (invalidGrain) {
+        printf(",\"rejection_reason\":\"%s\",\"first_invalid_seconds\":", invalidGrain);
+        if (invalidPts == AV_NOPTS_VALUE) printf("null"); else printf("%.6f", invalidPts * av_q2d(timeBase));
+    }
+    if (unsafePlane >= 0 && !errors) {
         printf(",\"first_unsafe_seconds\":%.6f,\"plane\":%d,\"lag\":%u,\"shift\":%u,\"coefficients\":[", badPts * av_q2d(timeBase), unsafePlane, bad.lag, bad.shift);
         for (unsigned i = 0; i < 2 * bad.lag * (bad.lag + 1); ++i) printf("%s%d", i ? "," : "", static_cast<int>(bad.coeff[unsafePlane][i]) - 128);
         printf("],\"max_scaling\":[%d,%d,%d],\"luma_coupling\":[%d,%d]", bad.maxScaling[0], bad.maxScaling[1], bad.maxScaling[2], bad.lumaCoupling[1], bad.lumaCoupling[2]);
@@ -190,7 +210,7 @@ int main(int argc, char **argv) {
         }
     }
     printf("}\n");
-    if (errors || (!eof && unsafePlane < 0)) fprintf(stderr, "scan error %d: %s\n", status, firstError);
+    if (errors || (!eof && unsafePlane < 0)) fprintf(stderr, "scan error %d: %s\n", status, invalidGrain ? invalidGrain : firstError);
     av_packet_free(&packet); av_packet_free(&out); av_bsf_free(&filter); avformat_close_input(&format);
-    return unsafePlane >= 0 ? 1 : eof && errors == 0 ? 0 : 2;
+    return errors ? 2 : unsafePlane >= 0 ? 1 : eof ? 0 : 2;
 }

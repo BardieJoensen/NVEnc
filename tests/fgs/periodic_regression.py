@@ -92,13 +92,13 @@ def main():
     sequences = {}; decoders = {}
     for name, path in [('positive', positive), ('negative', negative), ('candidate', output)]:
         measurements = args.output / (name + '-display.csv')
-        run([str(inspector), str(path), str(measurements)], args.output / (name + '-display.log'))
+        run([str(inspector), '--correlations', str(path), str(measurements)], args.output / (name + '-display.log'))
         # Progress JSON goes to stderr as well; completion is the final line.
         decoder = json.loads((args.output / (name + '-display.log')).read_text().splitlines()[-1])
         if not decoder.get('complete') or decoder.get('measured_frames') != 3600:
             raise RuntimeError(name + ' decoded picture measurement was incomplete')
         decoders[name] = decoder
-        sequences[name] = decoded_sequence.load(measurements)
+        sequences[name] = decoded_sequence.load(measurements, correlations=True)
     whole_sequence = decoded_sequence.compare(sequences['candidate'], sequences['positive'])
     negative_sequence = decoded_sequence.compare(sequences['negative'], sequences['positive'])
     (args.output / 'decoded-sequence.json').write_text(json.dumps(

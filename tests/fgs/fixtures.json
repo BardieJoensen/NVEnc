@@ -57,9 +57,19 @@
       "file": "gentlemen-guard-positive-33m-150s.mkv",
       "sha256": "249023f0dccc8a325dd46b9272982c7da0e1e64ff690df03706c84d4b9c54220",
       "bytes": 47254864
+    },
+    "invalid_chroma_negative": {
+      "file": "hornets-invalid-chroma-1495-35s.mkv",
+      "sha256": "9068d9fe536d0d45fe7a38979855e56e7bd824e256cdcfb3a82aab61cba4453d",
+      "bytes": 27543006
     }
   },
   "provenance": {
+    "invalid_chroma_negative": {
+      "source": "Existing AV1 library output of The Girl Who Kicked the Hornets Nest (2009), Extended Cut, Hybrid FraMeSToR release",
+      "extraction": "ffmpeg -ss 1495 -i SOURCE -t 35 -map 0:v:0 -c copy OUTPUT.mkv; original packets retained, no decode or re-encode",
+      "diagnosis": "Both libaom and dav1d reject a one-sided chroma grain model. A dav1d 1.4.1 diagnostic build identifies the paired-chroma syntax check in parse_frame_hdr. The historical encoder build for this file is not established."
+    },
     "taxi": {
       "original": "/media/merged-storage/media/movies/Taxi Driver (1976) [tmdbid-103]/Taxi Driver (1976) [tmdbid-103] - [Remux-2160p Proper][DTS-HD MA 5.1][DV HDR10][HEVC]-FraMeSToR.mkv",
       "original_size": 65237114607,

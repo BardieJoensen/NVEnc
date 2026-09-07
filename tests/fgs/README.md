@@ -56,7 +56,11 @@ the original frame and bypasses the temporal model-hold fallback.
 For an existing AV1 file, `scan_bitstream.cpp` inspects its emitted grain
 headers without decoding pixels. It exits 1 on the first uncertified model,
 0 after a complete error-free scan meeting the synthesis decay policy, and 2
-on a parsing error. Use `--stability-only` for the mathematical unit-circle
+on a parsing or grain-syntax error. Scaling points must be strictly ordered,
+and 4:2:0 must enable both chroma components or neither. These checks also cover
+zero-strength models, because a decoder can reject their syntax regardless of
+visible strength. `--syntax-only` checks grain headers without evaluating AR
+quality and reports `valid_syntax`, never a quality verdict. Use `--stability-only` for the mathematical unit-circle
 criterion. The full local gate encodes the pinned 150-second Gentlemen source,
 requires a known visible mesh to fail, decodes every candidate frame, and
 checks source fidelity at all three reported/reproduced scenes. The two
@@ -86,12 +90,6 @@ g++ -std=c++17 -O2 -I NVEncCore tests/fgs/scan_bitstream.cpp \
 /tmp/fgs-scan /path/to/episode.mkv
 ```
 
-The encoder memoizes certification of identical quantized coefficient/lag/shift
-tuples in a bounded, per-thread cache. Every hit compares the full tuple; a hash
-collision only triggers recomputation. The mathematical guard and the standalone
-header scanner remain unchanged. `validation_cache_test.cpp` compares cached and
-uncached answers through accepted/rejected models and collision/eviction cases.
-
 ## Read-only decoded grain inspector
 
 `tools/fgs/grain_inspect.cpp` measures decoder grain applied to the same decoded
@@ -104,6 +102,7 @@ g++ -std=c++17 -O2 -Wall tools/fgs/grain_inspect.cpp -o /tmp/fgs-grain-inspect \
     $(pkg-config --cflags --libs libavformat libavcodec libavutil dav1d)
 /tmp/fgs-grain-inspect input.mkv output.csv
 /tmp/fgs-grain-inspect input.mkv excerpt.csv 390 405
+/tmp/fgs-grain-inspect --correlations input.mkv all-offsets.csv
 ```
 
 The method samples nine native 48x48 patches per frame. It converts grain-on
@@ -115,6 +114,12 @@ HDR/BT2020 and non-I420 inputs need different display calibration and are
 rejected. This does not measure lost source detail, and grain outside the sampled
 patches can be missed. It is intended for background auditing and release tests,
 not full-duration validation on every Tdarr job.
+
+`--correlations` additionally emits all twelve signed autocorrelations per
+channel (`acf_0` through `acf_11`), in offset order `(1,0), (0,1), (1,1), (-1,1),
+(2,0), (0,2), (2,2), (-2,2), (3,0), (0,3), (3,3), (-3,3)`. Release tests compare
+this vector: the strongest offset can swap at a near-tie without a meaningful
+texture change. The default compact audit CSV remains unchanged.
 
 ## GPU known-answer tests
 
