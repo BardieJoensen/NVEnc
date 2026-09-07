@@ -41,7 +41,7 @@
 #include <limits>
 
 #include "NVEncFilmGrainModel.h"
-#include "NVEncFilmGrainStability.h"
+#include "NVEncFilmGrainValidationCache.h"
 
 NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     flatBlocks(0), totalBlocks(0), modelFrames(0), noiseStdDev(), templateGain{1.0f, 1.0f, 1.0f}, observations(),
@@ -343,10 +343,10 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     // rather than denoising it and attaching an unsafe synthesis layer.
     // Stable but slowly decaying feedback also produces visible periodic
     // texture, so require the synthesis decay margin as well as stability.
-    if (!film_grain_ar_synthesis_safe(params.arCoeffsYPlus128, params.arCoeffLag, arShift)
-        || (params.numCbPoints && !film_grain_ar_synthesis_safe(
+    if (!film_grain_ar_synthesis_safe_cached(params.arCoeffsYPlus128, params.arCoeffLag, arShift)
+        || (params.numCbPoints && !film_grain_ar_synthesis_safe_cached(
             params.arCoeffsCbPlus128, params.arCoeffLag, arShift))
-        || (params.numCrPoints && !film_grain_ar_synthesis_safe(
+        || (params.numCrPoints && !film_grain_ar_synthesis_safe_cached(
             params.arCoeffsCrPlus128, params.arCoeffLag, arShift))) {
         diagnostics.rejectedModel = true;
         std::memset(&params, 0, sizeof(params));
