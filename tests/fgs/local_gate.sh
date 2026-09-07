@@ -84,7 +84,7 @@ CEILING_MODEL="$FIXTURE_ROOT/taxi-metric-gamer.json"
 TAXI_CLIP="$FIXTURE_ROOT/taxi-coarse-24f.mkv"
 SUBSTITUTION_ENCODE="$FIXTURE_ROOT/taxi-widened-r4047.mkv"
 
-ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate)
+ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression grain_syntax)
 # The GPU fixtures and export tests plus the offline adversarial
 # specimen. Deliberately excludes the libaom oracles and the canary, which need
 # real-film encodes. A pre-push hook long enough to be bypassed with
@@ -230,6 +230,12 @@ fi
 if want_stage canary_negative; then
     required_fixtures+=(taxi_clip substitution_encode)
 fi
+if want_stage periodic_regression; then
+    required_fixtures+=(gentlemen_clip gentlemen_mesh_negative gentlemen_guard_positive)
+fi
+if want_stage grain_syntax; then
+    required_fixtures+=(invalid_chroma_negative gentlemen_guard_positive)
+fi
 if [ "${#required_fixtures[@]}" -gt 0 ]; then
     python3 "$HERE/fixtures.py" --root "$FIXTURE_ROOT" --check "${required_fixtures[@]}" \
         > "$REPORT_DIR/fixtures.json" || die "pinned fixture verification failed"
@@ -270,7 +276,7 @@ build_candidate_from_pin() {
     git -C "$pin" checkout --quiet "$commit" || die "no such commit: $commit"
     git -C "$pin" submodule update --init --recursive \
         || die "could not check out the candidate's pinned dependencies"
-    docker run --rm --gpus all -v "$pin:/work" -w /work "$BUILD_IMAGE" \
+    docker run --rm --gpus all -e FGS_BUILD_JOBS="${FGS_BUILD_JOBS:-4}" -v "$pin:/work" -w /work "$BUILD_IMAGE" \
         bash -lc 'git config --global --add safe.directory /work
                   apt-get update -qq
                   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
@@ -278,7 +284,7 @@ build_candidate_from_pin() {
                   export PATH=/usr/local/cuda/bin:$PATH
                   meson setup build-gate . --buildtype=release \
                       -Denable_vmaf=disabled -Denable_libvship=disabled \
-                  && ninja -C build-gate' \
+                  && ninja -C build-gate -j "$FGS_BUILD_JOBS"' \
         || die "candidate build failed; retry with a fresh path (the container
 writes the build directory as root, so the old one cannot be removed as you)"
     CANDIDATE_NVENCC="$pin/build-gate/nvencc"
@@ -638,6 +644,29 @@ if want_stage canary_candidate; then
 fi
 
 # ---------------------------------------------------------------------------
+if want_stage grain_syntax; then
+    log "stage: grain-header syntax controls"
+    if python3 "$HERE/grain_syntax_regression.py" --root "$FIXTURE_ROOT" --output "$REPORT_DIR/grain-syntax" \
+        > "$REPORT_DIR/grain-syntax.log" 2>&1; then
+        record pass "malformed chroma grain rejected and complete positive accepted"
+    else
+        record fail "grain syntax controls (see $REPORT_DIR/grain-syntax.log)"
+        tail -20 "$REPORT_DIR/grain-syntax.log"
+    fi
+fi
+
+if want_stage periodic_regression; then
+    log "stage: real-film periodic-grain regression"
+    if python3 "$HERE/periodic_regression.py" --nvencc "$CANDIDATE_NVENCC" \
+        --root "$FIXTURE_ROOT" --output "$REPORT_DIR/periodic-regression" \
+        > "$REPORT_DIR/periodic-regression.log" 2>&1; then
+        record pass "periodic grain negative rejected and source-preserving candidate rendered"
+    else
+        record fail "periodic grain regression (see $REPORT_DIR/periodic-regression.log)"
+        tail -20 "$REPORT_DIR/periodic-regression.log"
+    fi
+fi
+
 log "summary"
 for name in "${PASSES[@]}"; do printf '   \033[32mPASS\033[0m %s\n' "$name"; done
 for name in "${FAILURES[@]}"; do printf '   \033[31mFAIL\033[0m %s\n' "$name"; done

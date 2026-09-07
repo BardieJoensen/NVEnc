@@ -42,9 +42,34 @@
       "file": "taxi-widened-r4047.mkv",
       "sha256": "9d2ad6e750a6d89ff9d58ee990102895a1fe745264e5cfd50cd1a2bd00da9e54",
       "bytes": 2298830
+    },
+    "gentlemen_clip": {
+      "file": "gentlemen-source-33m-150s.mkv",
+      "sha256": "e41e63a94dd19bb3c6ff584d1872008fb84c196e5d1b33689869e33a5d5f9e5a",
+      "bytes": 1824998502
+    },
+    "gentlemen_mesh_negative": {
+      "file": "gentlemen-decay-33m-150s.mkv",
+      "sha256": "95fd75995df4d345e821f34d41b0cc54b87aea59f59c232eac01e33ea4f6b0bc",
+      "bytes": 46886725
+    },
+    "gentlemen_guard_positive": {
+      "file": "gentlemen-guard-positive-33m-150s.mkv",
+      "sha256": "249023f0dccc8a325dd46b9272982c7da0e1e64ff690df03706c84d4b9c54220",
+      "bytes": 47254864
+    },
+    "invalid_chroma_negative": {
+      "file": "hornets-invalid-chroma-1495-35s.mkv",
+      "sha256": "9068d9fe536d0d45fe7a38979855e56e7bd824e256cdcfb3a82aab61cba4453d",
+      "bytes": 27543006
     }
   },
   "provenance": {
+    "invalid_chroma_negative": {
+      "source": "Existing AV1 library output of The Girl Who Kicked the Hornets Nest (2009), Extended Cut, Hybrid FraMeSToR release",
+      "extraction": "ffmpeg -ss 1495 -i SOURCE -t 35 -map 0:v:0 -c copy OUTPUT.mkv; original packets retained, no decode or re-encode",
+      "diagnosis": "Both libaom and dav1d reject a one-sided chroma grain model. A dav1d 1.4.1 diagnostic build identifies the paired-chroma syntax check in parse_frame_hdr. The historical encoder build for this file is not established."
+    },
     "taxi": {
       "original": "/media/merged-storage/media/movies/Taxi Driver (1976) [tmdbid-103]/Taxi Driver (1976) [tmdbid-103] - [Remux-2160p Proper][DTS-HD MA 5.1][DV HDR10][HEVC]-FraMeSToR.mkv",
       "original_size": 65237114607,
@@ -145,7 +170,19 @@
     "model_negative": "Unmodified historical taxi_ceiling_q.json; revalidated on recovered source pair: both fitted descriptors improve, both held-out descriptors regress.",
     "substitution_encode": "Pinned r4047, AV1 QVBR 29, output-depth 10, denoise=auto,chroma=auto,denoiser=bilateral, all 24 taxi_clip frames.",
     "reference_r4050_sha256": "5a8e198a4ab5da3167278d340de038ae5a5606de5be49eb7f6bcc26a4d570edd",
-    "negative_r4047_sha256": "28c1cae74f5e9002ce0d0d54240398df59098ea6f3f8e7f7f75ae61806145338"
+    "negative_r4047_sha256": "28c1cae74f5e9002ce0d0d54240398df59098ea6f3f8e7f7f75ae61806145338",
+    "gentlemen": {
+      "source": "Retained H.264 FLUX S01E01 original",
+      "seek_seconds": 1980,
+      "duration_seconds": 150,
+      "source_encoding": "FFV1 lossless, original 8-bit pixel format, full 24fps",
+      "negative_encoder_commit": "d3008e74b18992a83b2cdaf03ad3631928853b5e",
+      "negative_encoder_sha256": "e38388ac6c2f458cf00299d52c695c486c8a7e05181778b46a1be0de2cc40183",
+      "positive_encoder_commit": "e778a88b3f825a51e9f91122e29d99ec6a2dca4e",
+      "positive_encoder_sha256": "5423d8abda1d2c248f25508c311ed4ca0eda08462e1ebc6bce95fba22e830249",
+      "positive": "Complete 3600-frame production-setting output from the September 6 full gate, after the reviewed synthesis_texture_v1 repair. Same pinned source and settings as periodic_regression.py.",
+      "negative": "Production AV1 QVBR30/bilateral settings; all poles <0.95 but visible diagonal mesh at clip 84.5s (episode 34:24.5)."
+    }
   },
   "canary_revalidation": {
     "negative": {

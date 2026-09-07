@@ -38,6 +38,97 @@ bash tests/fgs/run_cpu_tests.sh
 This builds and runs the model-solver and `filmgrn1` parser behavior tests,
 plus the Python descriptor and model-gate tests.
 
+The feedback-stability regression uses AV1 coefficient vectors from the
+September 2026 ripple report, a neighbouring stable model, and unit-pole
+boundaries. The solver test also constructs finite-gain training equations
+whose synthesized recurrence is unstable. The 34:06 jacket regression is
+strictly stable but produces a diagonal mesh: stability alone was insufficient.
+The production guard also bounds every horizontal and between-row pole below
+0.95, conservatively rejecting slowly decaying feedback and preserving the
+source frame. The 34:24 regression also requires a spectral check: a strongly
+directional peak away from DC must not exceed both 16 times the spectrum mean
+and 4 times its radial-band mean. Broad fine/coarse grain remains eligible.
+This is a synthesis policy, not a bitstream-conformance rule or
+a guarantee against all perceptual defects. The guard checks the
+quantized coefficients on all active planes; failed certification preserves
+the original frame and bypasses the temporal model-hold fallback.
+
+For an existing AV1 file, `scan_bitstream.cpp` inspects its emitted grain
+headers without decoding pixels. It exits 1 on the first uncertified model,
+0 after a complete error-free scan meeting the synthesis decay policy, and 2
+on a parsing or grain-syntax error. Scaling points must be strictly ordered,
+and 4:2:0 must enable both chroma components or neither. These checks also cover
+zero-strength models, because a decoder can reject their syntax regardless of
+visible strength. `--syntax-only` checks grain headers without evaluating AR
+quality and reports `valid_syntax`, never a quality verdict. Use `--stability-only` for the mathematical unit-circle
+criterion. The full local gate encodes the pinned 150-second Gentlemen source,
+requires a known visible mesh to fail, decodes every candidate frame, and
+checks source fidelity at all three reported/reproduced scenes. The two
+jacket fits must emit no synthesized luma grain; an earlier shot may acquire
+a fresh ordinary-grain fit after the rejected temporal state is cleared.
+An independent decoded-grain concentration check must accept that shot and
+reject the retained visible mesh. All 3,600 displayed frames are additionally
+measured in luma, red and blue display channels against a pinned reviewed
+positive. This detects relocated/repeated texture, amplitude changes, and
+changes in when grain switches on or off; source comparisons at the three
+regression timestamps include the raw U/V planes too. These are fixture-specific
+change detectors: an intentional model change requires fresh baseline review.
+They do not provide universal visibility thresholds. The gate retains the
+ordinary-grain KAT and libaom positive controls.
+Zero-strength planes are ignored unless their raw grain contributes
+to an active coupled plane. The
+scanner omits unrelated metadata OBUs from its packet copies (some older
+files contain invalid timecodes); the media file is never modified, and
+every sequence/frame header is retained. An
+uncertified model identifies a file for further inspection; it does not by
+itself measure the visible strength of an artifact. Build it with FFmpeg
+development libraries and the `trace_headers` bitstream filter available:
+
+```sh
+g++ -std=c++17 -O2 -I NVEncCore tests/fgs/scan_bitstream.cpp \
+    -o /tmp/fgs-scan $(pkg-config --cflags --libs --static libavformat libavcodec libavutil)
+/tmp/fgs-scan /path/to/episode.mkv
+```
+
+## Read-only decoded grain inspector
+
+`tools/fgs/grain_inspect.cpp` measures decoder grain applied to the same decoded
+picture, using dav1d's grain-off decode followed by `dav1d_apply_grain`. It writes
+one CSV row per displayed frame, plus an explicit completion record. The tool
+requires FFmpeg and dav1d development libraries:
+
+```sh
+g++ -std=c++17 -O2 -Wall tools/fgs/grain_inspect.cpp -o /tmp/fgs-grain-inspect \
+    $(pkg-config --cflags --libs libavformat libavcodec libavutil dav1d)
+/tmp/fgs-grain-inspect input.mkv output.csv
+/tmp/fgs-grain-inspect input.mkv excerpt.csv 390 405
+/tmp/fgs-grain-inspect --correlations input.mkv all-offsets.csv
+```
+
+The default compatibility method samples nine native 48x48 patches per frame. It converts grain-on
+and grain-off pictures to approximate clipped RGB8 display values, subtracts
+each patch mean, and measures RMS and directional autocorrelation. Red and blue
+are display channels, not raw chroma planes. The output is a review index; it
+cannot establish whether a whole film is damaged or justify replacing it.
+HDR/BT2020 and non-I420 inputs need different display calibration and are
+rejected. This does not measure lost source detail, and grain outside the sampled
+patches can be missed. It is intended for background auditing and release tests,
+not full-duration validation on every Tdarr job.
+
+`--correlations` additionally emits all twelve signed autocorrelations per
+channel (`acf_0` through `acf_11`), in offset order `(1,0), (0,1), (1,1), (-1,1),
+(2,0), (0,2), (2,2), (-2,2), (3,0), (0,3), (3,3), (-3,3)`. Release tests compare
+this vector: the strongest offset can swap at a near-tie without a meaningful
+texture change. The default compact audit CSV remains unchanged.
+
+`--extended` adds complete spatial coverage and SDR/PQ/HLG reference-display
+measurements, including a separate green channel and local directional scores.
+The new scores use PU21 units and must not reuse the legacy thresholds.
+The [review tool guide](../../tools/fgs/README.md) includes bounded/resumable
+window and batch commands, interactive heatmaps, display assumptions, performance
+limits and calibration evidence. These diagnostics do not add pixel analysis to
+ordinary Tdarr validation.
+
 ## GPU known-answer tests
 
 ```sh

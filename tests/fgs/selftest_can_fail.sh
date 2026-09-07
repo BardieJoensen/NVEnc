@@ -20,11 +20,23 @@
 # pattern no longer matches is a hard error, never a silent skip: that is
 # exactly how a check quietly stops checking.
 
-set -u
+set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/fgs-selftest-XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
+
+# Prove the scratch tree is complete before treating a nonzero exit as a
+# detected mutation. Missing shared diagnostic headers must not make every
+# deliberately broken case look successfully caught.
+baseline="$WORK/baseline"
+mkdir -p "$baseline"
+cp -a "$REPO/NVEncCore" "$REPO/NVEncSDK" "$REPO/tests" "$REPO/tools" "$baseline/"
+if ! TMPDIR="$baseline" bash "$baseline/tests/fgs/run_cpu_tests.sh" > "$baseline/output.log" 2>&1; then
+    echo "meta-check baseline failed before mutation; no rejection evidence is valid" >&2
+    tail -20 "$baseline/output.log" >&2
+    exit 1
+fi
 
 # file : sed expression : literal pattern that must be present : description
 MUTATIONS=(
@@ -49,7 +61,7 @@ for mutation in "${MUTATIONS[@]}"; do
 
     tree="$WORK/mutation-$index"
     mkdir -p "$tree"
-    cp -a "$REPO/NVEncCore" "$REPO/NVEncSDK" "$REPO/tests" "$tree/"
+    cp -a "$REPO/NVEncCore" "$REPO/NVEncSDK" "$REPO/tests" "$REPO/tools" "$tree/"
 
     if ! grep -qF -- "$pattern" "$tree/$file"; then
         echo "      ERROR: mutation site not found in $file" >&2

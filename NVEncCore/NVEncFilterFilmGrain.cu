@@ -1679,6 +1679,15 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     bool modelValid = diagnostics.modelFrames >= prm->filmGrain.minModelFrames
         && build_film_grain_params(combined, bitDepth, prm->filmGrain.analyzeChroma,
             prm->filmGrain.clipToRestrictedRange, params, diagnostics);
+    if (diagnostics.rejectedModel) {
+        // A rejected feedback model must not borrow an unrelated previous
+        // scene's grain through the normal transient-fit fallback. Preserve
+        // this source frame, and accept a fresh stable fit when one is ready.
+        m_state->lastParamsValid = false;
+        m_state->pendingParamsValid = false;
+        m_state->pendingStreak = 0;
+        m_state->heldStreak = 0;
+    }
     if (modelValid) {
         const double modelTolerance = prm->filmGrain.denoiser == FGS_DENOISE_MOTION ? 0.10 : 0.05;
         if (!m_state->lastParamsValid) {

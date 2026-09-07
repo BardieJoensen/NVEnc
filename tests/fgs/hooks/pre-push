@@ -30,11 +30,15 @@ trap 'rm -rf -- "$snapshot"' EXIT
 # commits may have the faulty gate or lack its current command-line options.
 harness_commit="$(git -C "$REPO" rev-parse HEAD)"
 mkdir "$snapshot/harness"
-git -C "$REPO" archive "$harness_commit" tests/fgs | tar -x -C "$snapshot/harness"
+git -C "$REPO" archive "$harness_commit" tests/fgs tools/fgs | tar -x -C "$snapshot/harness"
 for commit in "${commits[@]}"; do
     tree="$snapshot/$commit"
     mkdir "$tree"
-    git -C "$REPO" archive "$commit" tests/fgs NVEncCore NVEncSDK | tar -x -C "$tree"
+    paths=(tests/fgs NVEncCore NVEncSDK)
+    if git -C "$REPO" cat-file -e "$commit:tools/fgs" 2>/dev/null; then
+        paths+=(tools/fgs)
+    fi
+    git -C "$REPO" archive "$commit" "${paths[@]}" | tar -x -C "$tree"
     printf '\n== pre-push: CPU tests for %s\n' "$commit"
     TMPDIR="$tree" bash "$tree/tests/fgs/run_cpu_tests.sh"
     if [ "$MODE" = "off" ]; then

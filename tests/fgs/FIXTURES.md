@@ -57,3 +57,27 @@ Its helper publishes a fresh running/error record if validation or measurement
 fails, replacing any old successful result. It defaults to the deployed
 `tdarr-node` binary; `GRAIN_CANARY_NVENCC` selects the exact local candidate for
 the full gate. Canary encoding always uses the production bilateral settings.
+
+The September 6 ripple fixtures add a lossless 150-second Gentlemen source
+(starting at episode 33:00) and the d3008e74 candidate as a labelled negative.
+That candidate passes the 0.95 pole-radius test but visibly synthesizes a
+diagonal mesh at 34:24.5. `periodic_regression.py` must reject it and verify
+that the tested candidate preserves source frames at 33:24, 34:06 and 34:24.5.
+These private media files are stored only under the fixture root, with hashes
+and extraction/encoder provenance in fixtures.json.
+
+The September 7 whole-sequence regression also pins
+`gentlemen-guard-positive-33m-150s.mkv`, the complete e778a88b output from the
+September 6 release gate. Candidate and positive are independently rendered
+through dav1d for all 3,600 displayed frames. Luma/red/blue patch measurements
+check texture, amplitude and temporal changes, while the retained negative must
+fail. The positive is a reviewed regression reference, not proof of perfect
+texture everywhere. Changing its grain scheduling or amplitude requires explicit
+review of a new baseline; do not regenerate it automatically from a candidate.
+
+`hornets-invalid-chroma-1495-35s.mkv` retains original AV1 packets from an older
+library output. Both dav1d and libaom reject a one-sided chroma grain model in
+the passage. The syntax gate requires the specific chroma-rule failure, rather
+than accepting an unrelated decode or model-quality error as its negative
+control. The source encoder version is not established. The current encoder
+and table parser already enforce paired 4:2:0 chroma; the scanner now does too.
