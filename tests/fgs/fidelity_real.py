@@ -45,11 +45,13 @@ def main():
     parser.add_argument('--candidate', type=Path, required=True)
     parser.add_argument('--scanner', type=Path, required=True)
     parser.add_argument('--root', type=Path, default=fixtures.DEFAULT_ROOT)
+    parser.add_argument('--clips', nargs='+', choices=['taxi_clip', 'silo_clip', 'alien_clip', 'gentlemen_clip'],
+                        default=['taxi_clip', 'silo_clip', 'alien_clip', 'gentlemen_clip'])
     parser.add_argument('--output-dir', type=Path, required=True)
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=False)
     manifest = json.loads(fixtures.MANIFEST.read_text())
-    names = ['taxi_clip', 'silo_clip', 'alien_clip', 'gentlemen_clip']
+    names = list(dict.fromkeys(args.clips))
     pinned = fixtures.verify(args.root, manifest, names)
     source_probes = {name: probe(pinned[name]['path']) for name in names}
     report = dict(complete=False, started_at=time.time(), fixtures=pinned, runs=[],
@@ -64,9 +66,11 @@ def main():
     save()
     # Run the longer timing sample first, in ABBA order. No decoding/scanning
     # from this experiment runs concurrently with these four encodes.
-    schedule = [('gentlemen_clip', arm, auto) for arm, auto in
-                [('old-auto-a', True), ('new-auto-a', True), ('new-auto-b', True), ('old-auto-b', True)]]
-    for name in names[:-1]:
+    schedule = []
+    if 'gentlemen_clip' in names:
+        schedule = [('gentlemen_clip', arm, True) for arm in
+                    ['old-auto-a', 'new-auto-a', 'new-auto-b', 'old-auto-b']]
+    for name in [name for name in names if name != 'gentlemen_clip']:
         schedule += [(name, arm, auto) for arm, auto in
                      [('old-default', False), ('new-default', False), ('old-auto', True), ('new-auto', True)]]
     for name, arm, auto in schedule:
@@ -79,6 +83,8 @@ def main():
                 '--output-depth', '10', '--qvbr', '30', '--max-bitrate', '50000',
                 '--preset', 'quality', '--tune', 'hq', '--lookahead', '32',
                 '--lookahead-level', '3', '--aq', '--aq-temporal', '--av1-film-grain', opts,
+                '--colormatrix', 'auto', '--colorprim', 'auto', '--transfer', 'auto',
+                '--colorrange', 'auto', '--chromaloc', 'auto', '--master-display', 'copy', '--max-cll', 'copy',
                 '--log-level', 'debug', '-o', str(output)]
         elapsed = run(argv, directory / 'encode.log')
         log = (directory / 'encode.log').read_text()
@@ -106,7 +112,9 @@ def main():
                 raise RuntimeError('Source property changed: ' + key + ' in ' + str(output))
         run([str(args.scanner), str(output)], directory / 'scan.json')
         scan = json.loads((directory / 'scan.json').read_text())
-        if not scan.get('complete') or scan.get('verdict') != 'stable' or scan.get('packets') != row['frames']:
+        if (not scan.get('complete') or scan.get('verdict') != 'stable'
+                or scan.get('packets') != row['frames']
+                or scan.get('criterion') != 'synthesis_texture_v1'):
             raise RuntimeError('Incomplete or unsafe grain scan: ' + str(output))
         row['scan'] = scan
         # Hash decoded planes in both playback modes; this also rejects a
@@ -141,7 +149,7 @@ def main():
                 row['jacket_samples'].append(sample)
         save()
 
-    for name in names[:-1]:
+    for name in [name for name in names if name != 'gentlemen_clip']:
         defaults = [r for r in report['runs'] if r['clip'] == name and r['arm'].endswith('default')]
         if defaults[0]['decoded_sha256'] != defaults[1]['decoded_sha256']:
             raise RuntimeError('Default decoded output changed: ' + name)

@@ -93,6 +93,48 @@ the strength transition. Its controlled report fails four assertions in the
 new decoded regression check; the final candidate passes. A detector that
 only accepts the final candidate would not establish this negative control.
 
+The local quick gate passes all 21 bilateral GPU fixtures, including HDR,
+scene changes, chroma boundaries, fixed retention and automatic retention;
+table export/failure-path checks and both model-gate controls pass. The
+additional automatic-retention detail/flat checks also pass with FFT3D and
+motion denoisers (four checks). These are development checks, not extra
+production validation.
+
+## Real-film pilot and speed
+
+The corrected pilot verifies four real clips. The 150-second Gentlemen
+fixture is encoded in old/new/new/old order; the other three fixtures contain
+24 frames each. All 16 outputs pass the full `synthesis_texture_v1` scan,
+full decoding with grain on and off, and frame-count checks. The three short
+clips' default-mode decoded pixels are identical before and after. Silo and
+Alien also produce identical decoded pixels between the two auto modes.
+
+| Input | Old auto bytes | New auto bytes | Size change |
+|---|---:|---:|---:|
+| The Gentlemen (150 seconds) | 48,004,693 | 48,354,868 | +0.73% |
+| Taxi Driver (24 frames, PQ) | 2,978,460 | 2,987,804 | +0.31% |
+| Silo (24 frames, SDR) | 179,138 | 179,138 | +0.00% |
+| Alien (24 frames, PQ) | 1,982,178 | 1,982,178 | +0.00% |
+
+The candidate adds source-fidelity fallback on 191 of 3,600 Gentlemen frames
+(5.3%); this is separate from the existing unsafe-model fallback. Both
+candidate repeats decode identically. The known jacket scenes at episode
+34:06 and 34:24.5 still disable synthesis on all planes and preserve the
+source to the same measured encoding error as the old auto output.
+
+Gentlemen wall times were 118.7s / 89.8s for old auto and
+90.0s / 105.9s for new auto. Their ranges overlap substantially;
+shared-server contention prevents a defensible small speedup/slowdown claim.
+No other experiment used the GPU during these four timing runs. Short-clip
+sizes are not forecasts for a whole title.
+
+The initial short-clip benchmark omitted explicit colour-copy flags and
+failed its colour-tag check on the baseline HDR output. Those encodes were
+excluded and rerun with the same colour/chroma/mastering copy flags already
+present in the Tdarr flow. The corrected SDR/PQ colour checks pass. The
+completed Gentlemen checks were preserved in a separate, verified report.
+This was a benchmark-command correction, not a production-flow change.
+
 ## Scope and remaining limits
 
 The fallback checks the amplitude of the removed residual, not whether that
