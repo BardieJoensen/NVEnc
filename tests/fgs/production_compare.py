@@ -7,6 +7,7 @@ validation run sequentially; outputs never enter a library replacement flow.
 File-size ratios are measured against current default retention, not old auto.
 """
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import copy
 import hashlib
 import json
@@ -48,14 +49,15 @@ def grain_arguments(arguments, auto, extra=()):
     return args
 
 
-def reuse_baseline_encoding(prior, case, expected_command, directory, report_path):
+def reuse_baseline_encoding(prior, case, expected_command, directory, report_path,
+                            arm='old-default-a'):
     """Reuse only an exact completed encode; all validation runs again below.
 
     A stopped experiment may contain a completed baseline and an incomplete
     candidate. The baseline row is written only after encoder completion and
     hashing. Its flags, source identity, frame count and bytes must still match.
     """
-    matches = [r for r in prior['runs'] if r['case'] == case['name'] and r['arm'] == 'old-default-a']
+    matches = [r for r in prior['runs'] if r['case'] == case['name'] and r['arm'] == arm]
     if not matches:
         return None
     if len(matches) != 1:
@@ -87,6 +89,31 @@ def reuse_baseline_encoding(prior, case, expected_command, directory, report_pat
     return row
 
 
+def decode_validation(directory, grain, frames, timeout, threads):
+    """One independent full decode; only the caller updates the shared report."""
+    md5 = directory / f'grain-{grain}.framemd5'
+    seconds = run(['ffmpeg', '-v', 'error', '-xerror', '-nostdin', '-c:v', 'libdav1d',
+                   '-threads', str(threads), '-filmgrain', str(grain),
+                   '-i', str(directory / 'output.mkv'), '-map', '0:v:0', '-an', '-sn',
+                   '-pix_fmt', 'yuv420p10le', '-fps_mode', 'passthrough',
+                   '-f', 'framemd5', str(md5)], directory / f'decode-{grain}.log', timeout)
+    lines = [line for line in md5.read_text().splitlines() if line and not line.startswith('#')]
+    if len(lines) != frames:
+        raise RuntimeError('Decoded frame count mismatch: ' + str(directory))
+    pixels = [line.rsplit(',', 1)[1].strip() for line in lines]
+    timeline = [','.join(line.split(',')[:4]) for line in lines]
+    return dict(grain=str(grain), seconds=seconds,
+                decoded_sha256=hashlib.sha256('\n'.join(pixels).encode()).hexdigest(),
+                timeline_sha256=hashlib.sha256('\n'.join(timeline).encode()).hexdigest())
+
+
+def check_reuse_binaries(prior, baseline_sha256, candidate_sha256, all_arms):
+    if prior['baseline_sha256'] != baseline_sha256:
+        raise RuntimeError('Cached baseline encoder changed')
+    if all_arms and prior['candidate_sha256'] != candidate_sha256:
+        raise RuntimeError('Cached candidate encoder changed')
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--manifest', type=Path, required=True)
@@ -95,20 +122,30 @@ def main():
     p.add_argument('--scanner', type=Path, required=True)
     p.add_argument('--output-dir', type=Path, required=True)
     p.add_argument('--timeout', type=int, default=14400)
-    p.add_argument('--reuse-baseline', type=Path,
+    reuse = p.add_mutually_exclusive_group()
+    reuse.add_argument('--reuse-baseline', type=Path,
                    help='Reuse exact completed baseline encodes; rerun their validation')
+    reuse.add_argument('--reuse-encodes', type=Path,
+                       help='Reuse exact completed encodes of either binary; rerun all validation')
+    p.add_argument('--validation-workers', type=int, default=1,
+                   help='Independent CPU decode jobs, 1..4; encodes remain sequential')
+    p.add_argument('--decode-threads', type=int, default=2)
     args = p.parse_args()
+    if not 1 <= args.validation_workers <= 4 or not 1 <= args.decode_threads <= 8:
+        p.error('Use 1..4 validation workers and 1..8 decoder threads')
     manifest = json.loads(args.manifest.read_text())
     args.output_dir.mkdir(parents=True, exist_ok=False)
     report = dict(complete=False, started_at=time.time(), manifest=manifest,
                   manifest_sha256=sha(args.manifest), harness_sha256=sha(__file__),
                   baseline_sha256=sha(args.baseline), candidate_sha256=sha(args.candidate),
-                  scanner_sha256=sha(args.scanner), runs=[], comparisons=[])
-    prior = json.loads(args.reuse_baseline.read_text()) if args.reuse_baseline else None
+                  scanner_sha256=sha(args.scanner), validation_workers=args.validation_workers,
+                  decode_threads=args.decode_threads, runs=[], comparisons=[], case_validations=[])
+    reuse_path = args.reuse_baseline or args.reuse_encodes
+    prior = json.loads(reuse_path.read_text()) if reuse_path else None
     if prior:
-        if prior['baseline_sha256'] != report['baseline_sha256']:
-            raise RuntimeError('Cached baseline encoder changed')
-        report['reuse_baseline_report_sha256'] = sha(args.reuse_baseline)
+        check_reuse_binaries(prior, report['baseline_sha256'], report['candidate_sha256'],
+                             bool(args.reuse_encodes))
+        report['reuse_encoding_report_sha256'] = sha(reuse_path)
 
     def save():
         temp = args.output_dir / 'report.tmp'
@@ -137,8 +174,8 @@ def main():
                         *grain_arguments(case['arguments'], '-auto-' in arm,
                                          case.get('candidate_grain_options', [])),
                         '--log-level', 'debug', '-o', str(output)]
-                if prior and arm == 'old-default-a':
-                    row = reuse_baseline_encoding(prior, case, argv, directory, args.reuse_baseline)
+                if prior and (args.reuse_encodes or arm == 'old-default-a'):
+                    row = reuse_baseline_encoding(prior, case, argv, directory, reuse_path, arm)
                     if row is not None:
                         report['runs'].append(row)
                         save()
@@ -162,6 +199,7 @@ def main():
                 print(json.dumps({k: row[k] for k in ['case', 'arm', 'seconds', 'frames', 'bytes']}), flush=True)
             # Do not interleave CPU decoding with timed encodes of the same case.
             rows = [r for r in report['runs'] if r['case'] == case['name']]
+            validation_started = time.monotonic()
             for row in rows:
                 directory = args.output_dir / row['case'] / row['arm']
                 output = directory / 'output.mkv'
@@ -181,22 +219,22 @@ def main():
                         raise RuntimeError('Changed video property ' + key + ': ' + str(directory))
                 row['decoded_sha256'] = {}
                 row['timeline_sha256'] = {}
-                for grain in [0, 1]:
-                    md5 = directory / f'grain-{grain}.framemd5'
-                    run(['ffmpeg', '-v', 'error', '-xerror', '-nostdin', '-c:v', 'libdav1d',
-                         '-threads', '2', '-filmgrain', str(grain), '-i', str(output),
-                         '-map', '0:v:0', '-an', '-sn', '-pix_fmt', 'yuv420p10le',
-                         '-fps_mode', 'passthrough', '-f', 'framemd5', str(md5)],
-                        directory / f'decode-{grain}.log', args.timeout)
-                    lines = [x for x in md5.read_text().splitlines() if x and not x.startswith('#')]
-                    if len(lines) != case['frames']:
-                        raise RuntimeError('Decoded frame count mismatch: ' + str(directory))
-                    # Compare pixel payloads separately from timestamp/container identity.
-                    hashes = [x.rsplit(',', 1)[1].strip() for x in lines]
-                    row['decoded_sha256'][str(grain)] = hashlib.sha256('\n'.join(hashes).encode()).hexdigest()
-                    timeline = [','.join(x.split(',')[:4]) for x in lines]
-                    row['timeline_sha256'][str(grain)] = hashlib.sha256('\n'.join(timeline).encode()).hexdigest()
-                save()
+                row['decode_seconds'] = {}
+            with ThreadPoolExecutor(max_workers=args.validation_workers) as workers:
+                futures = {workers.submit(decode_validation,
+                    args.output_dir / row['case'] / row['arm'], grain, case['frames'],
+                    args.timeout, args.decode_threads): row for row in rows for grain in [0, 1]}
+                for future in as_completed(futures):
+                    row, result = futures[future], future.result()
+                    grain = result['grain']
+                    row['decoded_sha256'][grain] = result['decoded_sha256']
+                    row['timeline_sha256'][grain] = result['timeline_sha256']
+                    row['decode_seconds'][grain] = result['seconds']
+                    save()
+                    print(case['name'], row['arm'], 'full decode grain=' + grain,
+                          'complete', flush=True)
+            report['case_validations'].append(dict(case=case['name'],
+                seconds=time.monotonic() - validation_started, workers=args.validation_workers))
             baseline = next(r for r in rows if r['arm'] == 'old-default-a')
             for row in rows:
                 pause = case.get('baseline_pause_seconds', 0.0) if row is baseline else 0.0
@@ -204,7 +242,8 @@ def main():
                     raise RuntimeError('Invalid recorded timing exclusion')
                 row['intentional_pause_seconds'] = pause
                 row['active_seconds'] = row['seconds'] - pause
-                row['timing_comparison_paired'] = not bool(baseline.get('reused_encoding_from'))
+                row['timing_comparison_paired'] = not bool(
+                    baseline.get('reused_encoding_from') or row.get('reused_encoding_from'))
             for row in rows:
                 row['bytes_vs_production_percent'] = 100 * (row['bytes'] / baseline['bytes'] - 1)
                 row['seconds_vs_production_percent'] = 100 * (row['active_seconds'] / baseline['active_seconds'] - 1)

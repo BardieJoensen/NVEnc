@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from production_compare import grain_arguments, reuse_baseline_encoding, sha
+from production_compare import check_reuse_binaries, grain_arguments, reuse_baseline_encoding, sha
 
 
 class BaselineReuseTests(unittest.TestCase):
@@ -58,6 +58,28 @@ class BaselineReuseTests(unittest.TestCase):
                          ['--av1-film-grain', 'denoise=auto'])
         self.assertEqual(grain_arguments(argv, True, ['retain-max=0.1']),
                          ['--av1-film-grain', 'denoise=auto,retain=auto,retain-max=0.1'])
+
+    def test_completed_candidate_cannot_reuse_validation(self):
+        self.prior['runs'][0].update(arm='new-auto-a', decoded_sha256={'0':'old'},
+                                    timeline_sha256={'0':'old'}, video={'width':768})
+        row = reuse_baseline_encoding(self.prior, self.case, self.argv,
+                                      self.output, self.root/'report.json', 'new-auto-a')
+        for field in ['scan', 'video', 'decoded_sha256', 'timeline_sha256']:
+            self.assertNotIn(field, row)
+        self.assertFalse(row['validation_reused'])
+
+    def test_changed_candidate_binary_cannot_reuse_old_encodes(self):
+        prior = dict(baseline_sha256='baseline', candidate_sha256='old-candidate')
+        with self.assertRaisesRegex(RuntimeError, 'candidate encoder changed'):
+            check_reuse_binaries(prior, 'baseline', 'new-candidate', True)
+        check_reuse_binaries(prior, 'baseline', 'new-candidate', False)
+
+    def test_candidate_changed_retention_ceiling_is_not_reused(self):
+        self.prior['runs'][0]['arm'] = 'new-auto-a'
+        argv = self.argv[:-2] + ['--av1-film-grain', 'retain=auto,retain-max=0.1'] + self.argv[-2:]
+        with self.assertRaisesRegex(RuntimeError, 'arguments changed'):
+            reuse_baseline_encoding(self.prior, self.case, argv,
+                                    self.output, self.root/'report.json', 'new-auto-a')
 
 
 if __name__ == '__main__':
