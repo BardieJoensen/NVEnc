@@ -340,7 +340,7 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
     const uint8_t *__restrict__ src, const int srcPitch, const int width, const int height,
     const int maxValue, const float sigma, const float *__restrict__ sigmaMap,
     const FilmGrainBlockMetric *__restrict__ detailMetrics,
-    const int blocksX, const int blocksY, const int planeBlockSize) {
+    const int blocksX, const int blocksY, const int planeBlockSize, const float detailProtectionScale) {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
     constexpr int tileWidth = FGS_BILATERAL_BLOCK_X + FGS_BILATERAL_RADIUS * 2;
@@ -407,7 +407,7 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
         // threshold is strongly directional picture detail.  Fade the local
         // correction between the two instead of making the block classifier
         // a hard render boundary.
-        refinementWeight = 1.0f - fminf(1.0f, fmaxf(0.0f,
+        refinementWeight = 1.0f - detailProtectionScale * fminf(1.0f, fmaxf(0.0f,
             (coherence - FGS_DETAIL_COHERENCE_LOW)
             / (FGS_DETAIL_COHERENCE_HIGH - FGS_DETAIL_COHERENCE_LOW)));
     }
@@ -834,12 +834,13 @@ template<typename Type, int shift, int components>
 static RGY_ERR launch_bilateral(const RGYFrameInfo& dst, const RGYFrameInfo& src,
     const int width, const int height, const int bitDepth, const float sigma,
     const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
-    const int blocksX, const int blocksY, const int planeBlockSize, cudaStream_t stream) {
+    const int blocksX, const int blocksY, const int planeBlockSize, cudaStream_t stream,
+    const float detailProtectionScale = 1.0f) {
     const dim3 block(FGS_BILATERAL_BLOCK_X, FGS_BILATERAL_BLOCK_Y);
     const dim3 grid(divCeil(width, static_cast<int>(block.x)), divCeil(height, static_cast<int>(block.y)));
     kernel_fgs_bilateral<Type, shift, components><<<grid, block, 0, stream>>>(
         dst.ptr[0], dst.pitch[0], src.ptr[0], src.pitch[0], width, height, (1 << bitDepth) - 1, sigma,
-        sigmaMap, detailMetrics, blocksX, blocksY, planeBlockSize);
+        sigmaMap, detailMetrics, blocksX, blocksY, planeBlockSize, detailProtectionScale);
     return err_to_rgy(cudaGetLastError());
 }
 
@@ -876,12 +877,15 @@ struct NVEncFilterFilmGrain::AnalyzerState {
     int pendingStreak;
     int framesSinceModelUpdate;
     int heldStreak;
+    bool sourceFallbackActive;
+    int fidelityRecoveryFrames;
 
     AnalyzerState() : history(), previousBlockMeans(), stableNoise(0.0f), autoRetain(0.0f),
         lastTimestamp(std::numeric_limits<int64_t>::min()), lastParams(), pendingParams(),
         lastTemplateGain{1.0f, 1.0f, 1.0f}, pendingTemplateGain{1.0f, 1.0f, 1.0f},
         lastParamsValid(false), pendingParamsValid(false), modelWindowSettled(false),
-        pendingStreak(0), framesSinceModelUpdate(0), heldStreak(0) {}
+        pendingStreak(0), framesSinceModelUpdate(0), heldStreak(0),
+        sourceFallbackActive(false), fidelityRecoveryFrames(0) {}
     void advanceModelAge() {
         if (framesSinceModelUpdate < std::numeric_limits<int>::max()) ++framesSinceModelUpdate;
     }
@@ -901,6 +905,8 @@ struct NVEncFilterFilmGrain::AnalyzerState {
         pendingStreak = 0;
         framesSinceModelUpdate = 0;
         heldStreak = 0;
+        sourceFallbackActive = false;
+        fidelityRecoveryFrames = 0;
     }
 };
 
@@ -1010,7 +1016,7 @@ template<typename Type, int shift>
 static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFrameInfo *src,
     const bool chroma, const bool includeLuma, const int passes, const int bitDepth, const float sigma,
     const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
-    const int blocksX, const int blocksY, cudaStream_t stream) {
+    const int blocksX, const int blocksY, cudaStream_t stream, const float detailProtectionScale) {
     for (int pass = 0; pass < passes; ++pass) {
         const RGYFrameInfo *passSrc = pass == 0 ? src : work;
         RGYFrameInfo *passDst = pass + 1 == passes ? dst : work;
@@ -1018,7 +1024,7 @@ static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const 
             auto srcY = getPlane(passSrc, RGY_PLANE_Y);
             auto dstY = getPlane(passDst, RGY_PLANE_Y);
             auto sts = launch_bilateral<Type, shift, 1>(dstY, srcY, srcY.width, srcY.height, bitDepth, sigma,
-                sigmaMap, detailMetrics, blocksX, blocksY, FGS_BLOCK_SIZE, stream);
+                sigmaMap, detailMetrics, blocksX, blocksY, FGS_BLOCK_SIZE, stream, detailProtectionScale);
             if (sts != RGY_ERR_NONE) return sts;
         }
         if (!chroma) continue;
@@ -1045,15 +1051,15 @@ static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const 
 static RGY_ERR denoise_frame(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFrameInfo *src,
     const bool chroma, const bool includeLuma, const int passes, const int bitDepth, const float sigma,
     const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
-    const int blocksX, const int blocksY, cudaStream_t stream) {
+    const int blocksX, const int blocksY, cudaStream_t stream, const float detailProtectionScale = 1.0f) {
     switch (src->csp) {
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
-        return denoise_frame_typed<uint8_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream);
+        return denoise_frame_typed<uint8_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale);
     case RGY_CSP_YV12_10:
-        return denoise_frame_typed<uint16_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream);
+        return denoise_frame_typed<uint16_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale);
     case RGY_CSP_P010:
-        return denoise_frame_typed<uint16_t, 6>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream);
+        return denoise_frame_typed<uint16_t, 6>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale);
     default:
         return RGY_ERR_UNSUPPORTED;
     }
@@ -1580,15 +1586,20 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             m_blocksX, m_blocksY, stream);
         if (sts != RGY_ERR_NONE) return sts;
     } else {
+        // Weak grain already needs little smoothing; preserving its remaining
+        // random residual can spend many bits for negligible detail benefit.
+        // Ramp protection with the observed 8-bit-equivalent noise level.
+        const float autoDetailProtection = prm->filmGrain.residualRetain < 0.0f
+            ? clamp((denoiseSigma / depthScale - 2.5f) / 3.5f, 0.0f, 1.0f) : 0.0f;
         sts = denoise_frame(output, &m_denoiseWork->frame, source, prm->filmGrain.analyzeChroma, true,
             prm->filmGrain.denoisePasses, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
             // Auto retention is the opt-in source-fidelity mode. Protect
             // structured luma before fitting its removed residual, rather
             // than relying only on the later whole-frame residual blend.
-            prm->filmGrain.residualRetain < 0.0f
+            autoDetailProtection > 0.0f
                 ? static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice) : nullptr,
-            m_blocksX, m_blocksY, stream);
+            m_blocksX, m_blocksY, stream, autoDetailProtection);
         if (sts != RGY_ERR_NONE) return sts;
     }
 
@@ -1795,6 +1806,25 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             diagnostics.strengthFitError[plane] = static_cast<float>(fidelity.relativeRmsError[plane]);
         }
         if (fidelity.needsSource()) {
+            m_state->sourceFallbackActive = true;
+            m_state->fidelityRecoveryFrames = 0;
+        }
+        if (m_state->sourceFallbackActive) {
+            // Re-entry needs a settled, consistently closer fit. A single
+            // threshold otherwise alternates encoded source and synthesis
+            // during a strength transition, making the grain pump.
+            if (diagnostics.modelFrames >= prm->filmGrain.modelWindow
+                && !fidelity.needsSource(0.10, 0.25)) {
+                ++m_state->fidelityRecoveryFrames;
+            } else {
+                m_state->fidelityRecoveryFrames = 0;
+            }
+            if (m_state->fidelityRecoveryFrames >= 3) {
+                m_state->sourceFallbackActive = false;
+                m_state->fidelityRecoveryFrames = 0;
+            }
+        }
+        if (m_state->sourceFallbackActive) {
             diagnostics.sourceFidelityFallback = true;
             diagnostics.modelHeld = false;
             modelValid = false;
@@ -1805,6 +1835,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             std::memset(&params, 0, sizeof(params));
             if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
         }
+    } else if (prm->filmGrain.residualRetain < 0.0f) {
+        m_state->fidelityRecoveryFrames = 0;
     }
     diagnostics.reliable = modelValid;
     if (modelValid && params.applyGrain && diagnostics.residualRetain > 0.0f) {
