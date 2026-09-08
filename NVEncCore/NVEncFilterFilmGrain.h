@@ -62,6 +62,7 @@ struct NVEncFilmGrainAnalyzerConfig {
     float residualRetain;      // fraction of the measured luma residual kept in the base layer (0.0 - 0.9),
                                // or -1.0 for content-adaptive auto retention; signalled luma synthesis
                                // is scaled by sqrt(1 - retain^2) so total grain variance is preserved
+    float autoRetainMax;       // caps automatic residual blending; source fallback remains independent
     float denoiseLevel;
     int denoisePasses;
     int modelWindow;
