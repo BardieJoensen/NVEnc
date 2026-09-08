@@ -2,8 +2,9 @@
 """Offline comparison using explicit production arguments and retained sources.
 
 The manifest pins source identities and supplies the actual flow arguments.
-Only the film-grain retention option changes between arms. Encodes and their
-validation run sequentially; outputs never enter a library replacement flow.
+Only the film-grain retention option changes between arms. Encodes run
+sequentially; independent CPU validation can overlap with a bounded worker
+count. Outputs never enter a library replacement flow.
 File-size ratios are measured against current default retention, not old auto.
 """
 import argparse
@@ -56,6 +57,8 @@ def reuse_baseline_encoding(prior, case, expected_command, directory, report_pat
     A stopped experiment may contain a completed baseline and an incomplete
     candidate. The baseline row is written only after encoder completion and
     hashing. Its flags, source identity, frame count and bytes must still match.
+    The optional arm extends the original baseline-only interface to candidates;
+    the caller must also verify the appropriate binary hash before reuse.
     """
     matches = [r for r in prior['runs'] if r['case'] == case['name'] and r['arm'] == arm]
     if not matches:

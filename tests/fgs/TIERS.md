@@ -55,6 +55,7 @@ an otherwise-green run is the same failure in a different costume.
 | `test_texture_metrics.py` | flat-block selection, luma banding, amplitude independence, the labelled-negative gate logic |
 | `test_model_gate.py` | AR synthesis, held-out descriptors, and the accept/reject asymmetry |
 | `test_gate.py`, `test_fixtures.py` | exact pushed-commit selection, explicit production denoiser, and missing/changed fixture rejection |
+| `test_production_compare.py` | reuse only exact completed encodes, reject changed binaries/input/arguments/output, and require fresh validation |
 
 `docker-apps/.github/workflows/pipeline_cpu_tests.yml` runs the monitor alert
 logic: percentile handling, reference-hash pinning, and
@@ -143,6 +144,51 @@ Candidate and harness identity are recorded in `candidate.json`.
 Real-film inputs are hash-checked against `fixtures.json` before testing. See
 [FIXTURES.md](FIXTURES.md) for durable storage, provenance, and the 2026-09-05
 recovery of missing fixtures.
+
+### Optional fidelity mode: cost and residual checks
+
+Before enabling bilateral `retain=auto`, also run the offline comparisons in
+[FINDINGS-2026-09-08-COST.md](FINDINGS-2026-09-08-COST.md). They compare with the
+deployed encoder's **default** retention and use known clean textures to
+separate detail from excess noise. They are not part of Tdarr's per-file
+validator or the quick pre-push gate.
+
+With `cost_reference` pointing to the retained 16-case `fidelity_compare.py`
+dataset/report, `cost_candidate` to an immutable candidate binary,
+`cost_scanner` to the synthesis-texture scanner, and `cost_output` to a new
+scratch directory:
+
+```bash
+set -e
+python3 tests/fgs/cost_compare.py --reference "$cost_reference" \
+  --candidate "$cost_candidate" --scanner "$cost_scanner" \
+  --max-qp 36 --output-dir "$cost_output"
+python3 tests/fgs/texture_residual.py --reference "$cost_reference" \
+  --report "$cost_output/report.json" --output "$cost_output/residual.json"
+python3 tests/fgs/directional_cost_regression.py \
+  "$cost_output/report.json" "$cost_output/residual.json"
+```
+
+Missing/changed reference artifacts fail instead of being silently skipped.
+The regression check requires all 16 unique controlled cases and all eight
+texture cases. A pass does not mean every case meets the byte budget: inspect
+`within_production_size` and the fixed-QP costs. A missing size match remains
+an unresolved cost. The measured grain and texture bounds are fixture-specific.
+
+Follow this with `production_compare.py` using a source-pinned manifest and
+the actual production flags/quality bucket. Full decoding and synthesis scans
+are required even when `--reuse-baseline` or `--reuse-encodes` saves an earlier
+completed encode. `--validation-workers 1..4` controls independent CPU decode
+jobs after encoding; the default is 1. More workers spend additional CPU cores
+to reduce validation wall time. They do not reduce coverage or overlap encodes.
+Use complete episodes to assess accumulated fallback cost; one-second clips
+cannot forecast film size. The report labels reused timing as unpaired.
+
+For repeat variability, `carrier_repeat.py` consumes an explicit manifest
+pinning a raw Y4M base, active grain table, encoder binary, hashes, frame count
+and compression arguments. It repeats compression with the analyzer disabled,
+checks every decoded frame, and distinguishes base pixels from synthesized
+grain. Matching repeats do not prove universal determinism.
 
 ## The three labelled negatives, and where each is asserted
 
