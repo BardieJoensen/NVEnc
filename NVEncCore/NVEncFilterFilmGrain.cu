@@ -1044,7 +1044,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
 
 NVEncFilmGrainAnalyzerConfig::NVEncFilmGrainAnalyzerConfig() :
     enable(true), analyzeChroma(true), clipToRestrictedRange(true),
-    denoiser(FGS_DENOISE_FFT3D), fft3dTemporal(1), motionRefs(2), residualRetain(0.0f), denoiseLevel(0.0f),
+    denoiser(FGS_DENOISE_FFT3D), fft3dTemporal(1), motionRefs(2), residualRetain(0.0f), autoRetainMax(0.5f), denoiseLevel(0.0f),
     denoisePasses(2), modelWindow(8), minModelFrames(1), minFlatBlocks(8),
     minFlatFraction(0.02f), minNoiseLevel(0.5f), maxNoiseLevel(50.0f) {
 }
@@ -1057,6 +1057,7 @@ bool NVEncFilmGrainAnalyzerConfig::operator==(const NVEncFilmGrainAnalyzerConfig
         && fft3dTemporal == other.fft3dTemporal
         && motionRefs == other.motionRefs
         && residualRetain == other.residualRetain
+        && autoRetainMax == other.autoRetainMax
         && denoiseLevel == other.denoiseLevel
         && denoisePasses == other.denoisePasses
         && modelWindow == other.modelWindow
@@ -1076,7 +1077,7 @@ tstring NVEncFilmGrainAnalyzerConfig::print() const {
             : (denoiser == FGS_DENOISE_MOTION ? _T("motion") : _T("bilateral")),
         analyzeChroma ? _T("on") : _T("off"), modelWindow,
         denoiser == FGS_DENOISE_MOTION ? strsprintf(_T(", motion-refs=%d"), motionRefs).c_str() : _T(""),
-        residualRetain < 0.0f ? _T(", retain=auto")
+        residualRetain < 0.0f ? strsprintf(_T(", retain=auto, retain-max=%.2f"), autoRetainMax).c_str()
             : (residualRetain > 0.0f ? strsprintf(_T(", retain=%.2f"), residualRetain).c_str() : _T("")));
 }
 
@@ -1278,6 +1279,10 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     config.maxNoiseLevel = std::max(config.minNoiseLevel, config.maxNoiseLevel);
     config.denoiseLevel = clamp(config.denoiseLevel, 0.0f, 50.0f);
     config.motionRefs = clamp(config.motionRefs, 1, 2);
+    if (!(config.autoRetainMax >= 0.0f && config.autoRetainMax <= FGS_AUTO_RETAIN_MAX)) {
+        AddMessage(RGY_LOG_ERROR, _T("Automatic film-grain retain-max must be finite and in 0.0 - 0.5.\n"));
+        return RGY_ERR_INVALID_PARAM;
+    }
     config.residualRetain = config.residualRetain < 0.0f
         ? -1.0f : clamp(config.residualRetain, 0.0f, 0.9f);
 
@@ -1846,7 +1851,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     diagnostics.detailRisk /= m_state->history.size();
     diagnostics.grainCorrelation /= m_state->history.size();
     if (prm->filmGrain.residualRetain < 0.0f) {
-        const float target = auto_retain_from_detail_risk(diagnostics.detailRisk);
+        const float target = std::min(prm->filmGrain.autoRetainMax,
+            auto_retain_from_detail_risk(diagnostics.detailRisk));
         // The rolling model window removes frame noise; an additional two-step
         // deadband prevents a single quantization boundary from changing the
         // base/synthesis split on adjacent frames.  A fresh scene adopts its

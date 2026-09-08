@@ -3512,6 +3512,7 @@ RGY_ERR NVEncCore::InitFilters(const InEncodeVideoParam *inputParam) {
         param->timebase = m_outputTimebase;
         param->filmGrain.motionRefs = inputParam->av1.filmGrainMotionRefs;
         param->filmGrain.residualRetain = inputParam->av1.filmGrainRetain;
+        param->filmGrain.autoRetainMax = inputParam->av1.filmGrainRetainMax;
         auto filmGrainVui = inputParam->common.out_vui;
         filmGrainVui.apply_auto(VuiFiltered, inputFrame.height);
         param->filmGrain.clipToRestrictedRange = filmGrainVui.colorrange != RGY_COLORRANGE_FULL;
