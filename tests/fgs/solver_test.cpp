@@ -302,6 +302,32 @@ void testStrengthLut() {
     expectNear(lut[128], 32.0, 1.6, "Cr lut uses its own strength in native units");
 }
 
+void testStrengthFitCenters() {
+    for (const int bits : {8, 10}) {
+        FilmGrainSolvedPlane solved;
+        const double scale = 1 << (bits - 8);
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            const double x = (bin + 0.5) * 256.0 / FGS_STRENGTH_BINS;
+            solved.strength[bin] = scale * (2.0 + 0.025 * x);
+            solved.strengthWeight[bin] = 100;
+        }
+        // A linear physical curve remains linear when reduced to two knots.
+        const auto points = fit_strength_points(solved, bits, 2, true);
+        expect(points.size() == 2, "linear strength fit reduces to two knots");
+        expectNear(points.front().first, 6.4, 1e-9, "strength fit starts at first interval centre");
+        expectNear(points.back().first, 249.6, 1e-9, "strength fit ends at last interval centre");
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            const double x = (bin + 0.5) * 256.0 / FGS_STRENGTH_BINS;
+            const double mix = (x - points.front().first) / (points.back().first - points.front().first);
+            const double y = points.front().second * (1.0 - mix) + points.back().second * mix;
+            expectNear(y, 2.0 + 0.025 * x, 1e-9, "reduced curve fits the measured physical intensities");
+        }
+        const auto legacy = fit_strength_points(solved, bits, 2);
+        expectNear(legacy.front().first, 0.0, 1e-9, "fixed retention keeps legacy first knot");
+        expectNear(legacy.back().first, ((1 << bits) - 1) / scale, 1e-9, "fixed retention keeps legacy last knot");
+    }
+}
+
 void testStrengthFidelity() {
     // GPU bins cover equal intensity intervals. Their centres do not lie
     // on an endpoint-inclusive grid; a sloping model exposes that error.
@@ -389,6 +415,7 @@ int main() {
     testParamsClose();
     testEvalScalingCurve();
     testStrengthLut();
+    testStrengthFitCenters();
     testStrengthFidelity();
     if (failures) {
         std::cerr << failures << " solver test(s) failed\n";

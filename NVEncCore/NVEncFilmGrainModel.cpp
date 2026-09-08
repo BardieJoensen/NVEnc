@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------------------
 // NVEnc by rigaya
 // -----------------------------------------------------------------------------------------
 //
@@ -194,13 +194,19 @@ FilmGrainSolvedPlane solve_plane(const FilmGrainGpuPlaneStats& stats, const bool
     return solved;
 }
 
-std::vector<StrengthPoint> fit_strength_points(const FilmGrainSolvedPlane& solved, const int bitDepth, const int maxPoints) {
+std::vector<StrengthPoint> fit_strength_points(const FilmGrainSolvedPlane& solved, const int bitDepth, const int maxPoints,
+    const bool useBinCenters) {
     std::vector<StrengthPoint> points;
     const double maxValue = static_cast<double>((1 << bitDepth) - 1);
     const double depthScale = static_cast<double>(1 << (bitDepth - 8));
     points.reserve(FGS_STRENGTH_BINS);
     for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
-        points.emplace_back(bin * maxValue / (FGS_STRENGTH_BINS - 1) / depthScale,
+        // Collection uses floor(mean * bins / (maxValue + 1)). A bin
+        // estimates an interval, not an endpoint on a 0..maxValue grid.
+        const double intensity = useBinCenters
+            ? (bin + 0.5) * 256.0 / FGS_STRENGTH_BINS
+            : bin * maxValue / (FGS_STRENGTH_BINS - 1) / depthScale;
+        points.emplace_back(intensity,
             std::max(0.0, solved.strength[bin] / depthScale));
     }
     while (static_cast<int>(points.size()) > maxPoints) {
@@ -232,7 +238,7 @@ void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& 
 
 bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     const bool analyzeChroma, const bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
-    NVEncFilmGrainDiagnostics& diagnostics) {
+    NVEncFilmGrainDiagnostics& diagnostics, const bool useBinCenters) {
     diagnostics.rejectedModel = false;
     std::array<FilmGrainSolvedPlane, 3> solved;
     solved[0] = solve_plane(stats.plane[0], false, nullptr);
@@ -250,9 +256,9 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
         }
     }
     std::array<std::vector<StrengthPoint>, 3> points = {
-        fit_strength_points(solved[0], bitDepth, 14),
-        solved[1].valid ? fit_strength_points(solved[1], bitDepth, 10) : std::vector<StrengthPoint>(),
-        solved[2].valid ? fit_strength_points(solved[2], bitDepth, 10) : std::vector<StrengthPoint>()
+        fit_strength_points(solved[0], bitDepth, 14, useBinCenters),
+        solved[1].valid ? fit_strength_points(solved[1], bitDepth, 10, useBinCenters) : std::vector<StrengthPoint>(),
+        solved[2].valid ? fit_strength_points(solved[2], bitDepth, 10, useBinCenters) : std::vector<StrengthPoint>()
     };
     double maxScaling = 1e-4;
     for (const auto& planePoints : points) {

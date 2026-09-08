@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------------------
 // NVEnc by rigaya
 // -----------------------------------------------------------------------------------------
 //
@@ -163,11 +163,14 @@ using StrengthPoint = std::pair<double, double>;
 
 bool solve_linear_system(std::vector<double> matrix, std::vector<double> rhs, std::vector<double>& solution, int n);
 FilmGrainSolvedPlane solve_plane(const FilmGrainGpuPlaneStats& stats, bool chroma, const FilmGrainSolvedPlane *lumaSolved);
-std::vector<StrengthPoint> fit_strength_points(const FilmGrainSolvedPlane& solved, int bitDepth, int maxPoints);
+// Auto fidelity mode fits at the centres of the actual GPU intensity
+// intervals. The default preserves existing fixed-retention tables.
+std::vector<StrengthPoint> fit_strength_points(const FilmGrainSolvedPlane& solved, int bitDepth, int maxPoints,
+    bool useBinCenters = false);
 void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& src);
 bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,
     bool analyzeChroma, bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
-    NVEncFilmGrainDiagnostics& diagnostics);
+    NVEncFilmGrainDiagnostics& diagnostics, bool useBinCenters = false);
 double eval_scaling_curve(const uint8_t *values, const uint8_t *scalings, uint32_t count, double x);
 bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC_FILM_GRAIN_PARAMS_AV1& b,
     double relativeSigmaTolerance = 0.05, double coefficientTolerance = 0.05);
