@@ -526,7 +526,10 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
         const float repeatedBottom = detailMetrics[iy1 * blocksX + ix].repeatability * (1.0f - wx)
             + detailMetrics[iy1 * blocksX + ix1].repeatability * wx;
         const float repeated = repeatedTop * (1.0f - wy) + repeatedBottom * wy;
-        refinementWeight = 1.0f - detailProtectionScale * fmaxf(directional, repeated);
+        // Full source retention also retains independent grain and is costly
+        // to compress. Keep repeatability a modest correction to the existing
+        // spatial filter; directionally unambiguous detail keeps its guard.
+        refinementWeight = 1.0f - detailProtectionScale * fmaxf(directional, 0.2f * repeated);
     }
     for (int component = 0; component < components; ++component) {
         const int centerIndex = (
