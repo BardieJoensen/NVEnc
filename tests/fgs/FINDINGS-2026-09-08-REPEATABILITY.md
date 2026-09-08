@@ -146,8 +146,17 @@ established by the implementation, while runtime benefit remains uncertain.
 The profiling wrapper's first attempt failed to parse ANSI colour prefixes;
 that attempt was labelled and excluded, then the four-run sequence repeated.
 
-The cached real-film check replays the three short auto encodes and the full
-Gentlemen sequence. Final results are pending completion of that last check.
+The cached real-film check passes on all four sources. The three short auto
+encodes are pixel-identical to their previously validated equivalents; the
+complete Gentlemen output is pixel-identical to the earlier `new-auto-a`
+repeat. All complete synthesis/texture scans, grain-on/off decodes, colour tags,
+frame counts and jacket checks pass. The cached Gentlemen encode took 88.9
+seconds in this single run; the changing shared workload prevents interpreting
+that as a measured speedup over the earlier runs.
+
+The cached real-film wrapper initially supplied a string instead of a Path
+to fixture verification and stopped before encoding. Only that stage was
+corrected and rerun; the already successful replay and GPU gate were retained.
 
 Private sources, commands, reports, logs and immutable binaries are under
 `/opt/docker-apps/logs/fgs-ripple-repair-20260906/unfinished-20260908/`.
