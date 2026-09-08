@@ -117,9 +117,9 @@ def encode(binary, directory, source, spec, qp, retain, expected_frames):
                 fit_errors=[[float(v) for v in m] for m in re.findall(r'fitError=([\d.]+)/([\d.]+)/([\d.]+)', log)])
 
 
-def measure(directory, root, info):
+def measure(directory, root, info, decode=True):
     pix = 'yuv420p' if info['bits'] == 8 else 'yuv420p10le'
-    for grain in [0, 1]:
+    for grain in [0, 1] if decode else []:
         command(['ffmpeg','-v','error','-nostdin','-c:v','libdav1d','-threads','2','-filmgrain',str(grain),
                  '-i',str(directory/'output.mkv'),'-map','0:v:0','-an','-sn','-pix_fmt',pix,
                  '-fps_mode','passthrough','-f','rawvideo',str(directory/f'grain-{grain}.yuv')],
@@ -198,11 +198,11 @@ def main():
         info=generate(root,spec,args.frames)
         case=dict(name=name,spec=spec,source=info,arms={})
         report['cases'].append(case)
+        original = next((c for c in prior['cases'] if c['name'] == name), None) if prior else None
         for arm,binary,retain in [('old-default',args.baseline,False),('old-auto',args.baseline,True),
                                  ('new-auto',args.candidate,True)]:
             directory=root/arm
-            if prior and arm.startswith('old-'):
-                original = next(c for c in prior['cases'] if c['name'] == name)
+            if original and arm.startswith('old-'):
                 if original['source'] != info:
                     raise RuntimeError('baseline reuse source identity/geometry changed')
                 result = original['arms'][arm].copy()
@@ -215,6 +215,11 @@ def main():
                         raise RuntimeError('baseline decoded pixels changed')
                 directory.symlink_to(original_directory,target_is_directory=True)
                 result['reused_from'] = str(original_directory)
+                # The new moving-detail projection can be recomputed from
+                # verified decoded baselines without re-encoding or decoding.
+                if ('frame_detail_transfer_gain' not in result['separation']
+                    or 'texture_gain' not in result['flat_trace'][0]):
+                    result.update(measure(directory, root, info, decode=False))
             else:
                 result=encode(binary,directory,root/'source.y4m',spec,20,retain,args.frames)
                 result.update(measure(directory,root,info))
