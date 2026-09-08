@@ -24,14 +24,18 @@ def main():
     p.add_argument('--cases', help='Comma-separated subset; default all reference cases')
     p.add_argument('--limits', default='0.5,0.1,0')
     p.add_argument('--match-limit', type=float, default=0.1)
+    p.add_argument('--max-qp', type=int, default=32)
     args = p.parse_args()
+    if not 20 <= args.max_qp <= 51:
+        p.error('--max-qp must be in 20..51')
     prior = json.loads((args.reference / 'report.json').read_text())
     if not prior.get('complete'):
         raise RuntimeError('Incomplete reference')
     args.output_dir.mkdir(parents=True, exist_ok=False)
     report = dict(complete=False, reference_sha256=fc.sha(args.reference / 'report.json'),
                   candidate_sha256=fc.sha(args.candidate), scanner_sha256=fc.sha(args.scanner),
-                  harness_sha256=fc.sha(__file__), started_at=time.time(), cases=[])
+                  harness_sha256=fc.sha(__file__), max_qp=args.max_qp,
+                  started_at=time.time(), cases=[])
 
     def save():
         temp = args.output_dir / 'report.tmp'
@@ -89,7 +93,7 @@ def main():
                 key, row = encode(limit, 20, True)
                 print(old['name'],key,'size%',round(row['bytes_vs_production_percent'],2),
                       'fallback',row['source_fallbacks'],'fresh',len(row['fresh_model_frames']),flush=True)
-            for qp in range(20, 33):
+            for qp in range(20, args.max_qp + 1):
                 key, row = encode(args.match_limit, qp, False)
                 if row['bytes'] <= baseline['bytes']:
                     if 'separation' not in row:
