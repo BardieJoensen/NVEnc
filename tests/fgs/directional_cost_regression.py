@@ -41,14 +41,25 @@ def check(report, residual):
         if key:
             matched=c['arms'][key]
             require(matched['bytes']<=baseline['bytes'],name+': false size-bound claim')
+            matched_ratio=statistics.median(t['output_sigma']/t['source_sigma'] for t in matched['flat_trace'][8:])
+            require(matched_ratio>=old_ratio-.03 and matched_ratio<1.10,
+                    name+': matched-size grain amplitude regressed')
             if name in ['detail_fine','detail_coarse','detail_weak','woven_detail','woven_motion',
                         'woven_motion_odd','woven_coarse','pq_woven','pq_detail']:
                 require(matched['separation']['frame_detail_transfer_gain']>=baseline['separation']['frame_detail_transfer_gain']-.01,
                         name+': matched-size detail regressed')
     for c in residual.get('cases',[]):
-        new=c['arms']['max-0.1-qp20']['median_hf_residual_ratio']
         old=c['arms']['production']['median_hf_residual_ratio']
-        require(new<=1.10 and new>=old-.05,c['name']+': texture-region residual excess or loss')
+        controlled=next(row for row in report['cases'] if row['name']==c['name'])
+        keys={'max-0.1-qp20'}
+        if controlled.get('within_production_size'):
+            keys.add(controlled['within_production_size'])
+        for key in sorted(keys):
+            require(key in c['arms'],c['name']+': missing matched-size texture measurement')
+            if key not in c['arms']: continue
+            new=c['arms'][key]['median_hf_residual_ratio']
+            require(new<=1.10 and new>=old-.05,
+                    c['name']+': '+key+': texture-region residual excess or loss')
     return errors
 
 

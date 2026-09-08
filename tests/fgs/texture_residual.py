@@ -57,6 +57,9 @@ def measure(report, root, reference):
         entries += [(key, root / name / key, case['arms'][key])
                     for key in ['max-0.5-qp20', 'max-0.1-qp20', 'max-0-qp20']
                     if key in case['arms']]
+        matched = case.get('within_production_size')
+        if matched and matched not in {entry[0] for entry in entries}:
+            entries.append((matched, root / name / matched, case['arms'][matched]))
         row = dict(name=name, arms={})
         for arm, directory, evidence in entries:
             off, on = [checked_reader(directory / f'grain-{grain}.yuv', info,
