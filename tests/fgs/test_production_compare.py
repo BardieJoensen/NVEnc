@@ -2,8 +2,9 @@ import copy
 import tempfile
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
-from production_compare import check_reuse_binaries, grain_arguments, reuse_baseline_encoding, sha
+from production_compare import check_reuse_binaries, grain_arguments, identity, reuse_baseline_encoding, sha, verify_source
 
 
 class BaselineReuseTests(unittest.TestCase):
@@ -21,6 +22,21 @@ class BaselineReuseTests(unittest.TestCase):
         self.prior = dict(complete=False, manifest={'cases':[self.case]}, runs=[dict(
             case='clip', arm='old-default-a', command=oldargv, frames=48,
             bytes=self.original.stat().st_size, sha256=sha(self.original), scan={'verdict':'stable'})])
+
+    def test_repeated_unchanged_source_is_hashed_once(self):
+        case = dict(name='source', source=str(self.original), identity=identity(self.original),
+                    sha256=sha(self.original))
+        verified = {}
+        with patch('production_compare.sha', wraps=sha) as hasher:
+            verify_source(case, verified)
+            verify_source(case, verified)
+            self.assertEqual(hasher.call_count, 1)
+        bad = dict(case, sha256='a' * 64)
+        with self.assertRaisesRegex(RuntimeError, 'Conflicting source hash'):
+            verify_source(bad, verified)
+        self.original.write_bytes(b'replaced during the study')
+        with self.assertRaisesRegex(RuntimeError, 'identity changed'):
+            verify_source(case, verified)
 
     def reuse(self, prior=None, case=None, argv=None):
         return reuse_baseline_encoding(prior or self.prior, case or self.case,

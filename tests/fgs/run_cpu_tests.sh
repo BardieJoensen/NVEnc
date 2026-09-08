@@ -35,3 +35,5 @@ python3 tests/fgs/test_decoded_sequence.py
 python3 tests/fgs/test_review_window.py
 python3 tests/fgs/test_review_batch.py
 python3 tests/fgs/test_production_compare.py
+python3 tests/fgs/test_trial_admission.py
+python3 tests/fgs/test_hdr_metadata_trace.py

@@ -30,6 +30,25 @@ def identity(path):
     return dict(size=st.st_size, mtime_ns=st.st_mtime_ns, inode=st.st_ino, device=st.st_dev)
 
 
+def verify_source(case, verified):
+    """Hash a repeated UHD source once, retaining per-case identity checks."""
+    path = Path(case['source'])
+    before = identity(path)
+    if before != case['identity']:
+        raise RuntimeError('Source identity changed: ' + case['name'])
+    expected = case.get('sha256')
+    key = str(path.resolve())
+    prior = verified.get(key)
+    if expected:
+        if prior and prior['identity'] == before:
+            if prior['sha256'] != expected:
+                raise RuntimeError('Conflicting source hash: ' + case['name'])
+        else:
+            if sha(path) != expected or identity(path) != before:
+                raise RuntimeError('Source hash or identity changed: ' + case['name'])
+            verified[key] = dict(identity=before, sha256=expected)
+
+
 def run(argv, log, timeout):
     start = time.monotonic()
     with log.open('w') as handle:
@@ -157,12 +176,10 @@ def main():
 
     save()
     try:
+        verified_sources = {}
         for case in manifest['cases']:
             path = Path(case['source'])
-            if identity(path) != case['identity']:
-                raise RuntimeError('Source identity changed: ' + case['name'])
-            if case.get('sha256') and sha(path) != case['sha256']:
-                raise RuntimeError('Source hash changed: ' + case['name'])
+            verify_source(case, verified_sources)
             schedule = case.get('schedule', ['old-default-a', 'new-auto-a'])
             for arm in schedule:
                 if arm not in ['old-default-a', 'old-default-b', 'new-auto-a', 'new-auto-b', 'new-default-a']:

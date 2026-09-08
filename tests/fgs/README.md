@@ -381,3 +381,57 @@ The unit-testable core runs in CI (`test_model_gate.py`); the media-backed
 assertion against
 `taxi-metric-gamer.json` from the [pinned fixture set](FIXTURES.md) is stage
 `model_negative` of the local gate.
+
+### Measured size admission for fidelity trials
+
+`trial_admission.py` consumes a **completed** `production_compare.py` report.
+It verifies the expected candidate build, source and encoded-file hashes, both
+full decodes, synthesis scans, timestamps and declared video properties. It also
+probes both containers to require video-only AV1. The default byte limit is 10%
+above the complete production-baseline encode of that same input.
+
+```sh
+python3 tests/fgs/trial_admission.py \
+  --report /scratch/trial/report.json --case episode \
+  --expected-candidate-sha256 CANDIDATE_BINARY_SHA256 \
+  --output-dir /scratch/admitted/episode
+```
+
+Within budget, it writes an independent candidate copy and a decision receipt
+in the new staging directory. Above budget, it writes `keep_source`, stages no
+candidate and exits 3. Missing or changed evidence fails closed. It never raises
+the quantizer, disables a fidelity safeguard, substitutes the cheaper baseline,
+or replaces a library file. The source remains available in either case.
+
+This is an additional **trial admission** gate, not a perceptual-quality score or
+an enabled Tdarr policy. It does not compare against the source's file size and
+does not extrapolate a clip to a whole title. A hard limit relative to the old
+encoder requires its complete measured output (or an independently verified,
+matching existing baseline); short samples and `retain-max` cannot supply that
+guarantee. Full paired trials have an extra encode cost. Reusing a pinned,
+completed baseline avoids that encode, while keeping fresh validation.
+
+### Full-frame HDR metadata traces
+
+`hdr_metadata_trace.py record` decodes every frame with FFprobe, requiring the
+expected source SHA-256 and frame count. Its streamed trace covers timestamps,
+mastering display and content light metadata, and parsed Dolby Vision/HDR10+
+fields exposed by the decoder. `compare` requires complete, unchanged traces and
+checks stream color properties and Dolby Vision configuration as well.
+
+```sh
+python3 tests/fgs/hdr_metadata_trace.py record \
+  --source /scratch/source.mkv --expected-sha256 SOURCE_SHA256 \
+  --frames FRAME_COUNT --output-dir /scratch/source-metadata
+python3 tests/fgs/hdr_metadata_trace.py compare \
+  --reference /scratch/source-metadata --candidate /scratch/candidate-metadata
+```
+
+MDCV coordinates and luminance are compared in AV1's specified fixed-point
+representations: 1/65536 for chromaticities, 1/16384 for minimum luminance, and
+1/256 for maximum luminance. This accepts the required format rounding without
+accepting missing metadata. HEVC's raw RPU side-data buffer is not emitted by the
+AV1 decoder; the comparison instead requires the parsed Dolby Vision fields.
+The tested cross-codec configuration mapping is HEVC profile 8 without an
+enhancement layer to AV1 profile 10. Other source-profile conversions require
+separate evidence. These offline traces add no work to normal Tdarr validation.
