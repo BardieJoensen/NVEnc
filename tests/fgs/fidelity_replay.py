@@ -86,8 +86,9 @@ def main():
                                     capture_output=True, text=True, timeout=120)
             (directory / 'syntax.json').write_text(result.stdout)
             row['syntax'] = json.loads(result.stdout)
-            if (result.returncode or not row['syntax'].get('complete') or row['syntax'].get('verdict') != 'stable'
-                    or row['syntax'].get('packets') != info['frames']):
+            if (result.returncode or not row['syntax'].get('complete') or row['syntax'].get('verdict') != 'valid_syntax'
+                    or row['syntax'].get('criterion') != 'av1_grain_syntax_v1'
+                    or row['syntax'].get('errors') != 0 or row['syntax'].get('packets') != info['frames']):
                 raise RuntimeError('Replay syntax check failed: ' + str(directory))
             report['runs'].append(row)
             save()
