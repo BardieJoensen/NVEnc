@@ -36,8 +36,14 @@ def check(report):
                     baseline['separation']['detail_transfer_gain'] + 0.06,
                     name + ': lost matched-size detail gain')
     weak = cases['detail_weak']['arms']
-    require(weak['old-auto']['decoded_hashes'] == weak['new-auto']['decoded_hashes'],
-            'weak grain: decoded output changed')
+    require(weak['old-auto']['decoded_hashes']['grain-0.yuv'] ==
+            weak['new-auto']['decoded_hashes']['grain-0.yuv'],
+            'weak grain: decoded base changed')
+    # Correcting strength-knot positions intentionally changes synthesized
+    # samples. Preserve the base exactly and bound amplitude change instead.
+    require(all(abs(new['output_sigma'] - old['output_sigma']) < 0.01 * old['source_sigma']
+                for old, new in zip(weak['old-auto']['flat_trace'], weak['new-auto']['flat_trace'])),
+            'weak grain: unnecessary synthesized-amplitude change')
     require(weak['new-auto']['bytes'] <= weak['old-auto']['bytes'] * 1.01,
             'weak grain: unnecessary size increase')
 
