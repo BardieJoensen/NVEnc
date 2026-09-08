@@ -174,21 +174,39 @@ The experimental fidelity branch has a controlled detail/size experiment:
 python3 tests/fgs/fidelity_compare.py --baseline /path/to/pinned-old-nvencc \
     --candidate /path/to/pinned-new-nvencc --output-dir /path/to/new-experiment
 python3 tests/fgs/fidelity_regression.py /path/to/new-experiment/report.json
+python3 tests/fgs/repeatability_regression.py /path/to/new-experiment/report.json
 ```
 
-It measures known clean detail separately from independent grain on ten
+It measures known clean detail separately from independent grain on sixteen
 deterministic sources, including a grain-strength transition, coarse grain,
-asymmetric chroma, weak grain and 10-bit PQ. Arms include the old default,
+asymmetric chroma, weak grain, moving/disappearing woven detail and 10-bit PQ. Arms include the old default,
 old `retain=auto`, and new `retain=auto`. The candidate QP search stops at the
 first encoding no larger than old auto, or reports that none fits by QP 32.
 That is a discrete size bound, not an exactly matched rate. Weak grain and
 temporal fallback checks reject the first prototype's observed regressions.
 The fixture-specific checks do not establish universal perceptual quality.
+The moving-detail projection is computed per frame before temporal aggregation;
+otherwise a moving pattern can cancel in the average reference and hide damage.
+Weak-grain controls require identical decoded bases and bound grain-amplitude
+change; corrected strength-knot positions may change synthesized samples.
 
 `--reuse-baseline /path/to/prior-experiment` reuses old arms only after checking
 the binary, source geometry and hashes, encoded file and decoded pixel hashes.
 Source files and all candidate encodes are retained. Do not compare small-frame
 execution times as a throughput benchmark.
+
+For an implementation change expected to preserve decoded pixels, replay all
+fixed-QP and selected size-bound arms from a completed experiment:
+
+```sh
+python3 tests/fgs/fidelity_replay.py --prior /path/to/completed-experiment \
+    --candidate /path/to/new-nvencc --scanner /path/to/fgs-scan \
+    --output-dir /path/to/new-replay
+```
+
+The replay verifies source/old-output identities, exact full decoded hashes in
+both grain modes and complete syntax scans. Its report links the two binary
+identities explicitly. It never relabels the original quality measurements.
 
 For the existing private real-film fixtures and a longer ABBA timing run:
 
@@ -203,7 +221,8 @@ the full grain syntax/texture scan, compares default decoded pixels, and checks
 the original jacket regression. Real-film grain has no known clean ground
 truth; the pilot does not infer better grain texture from lower pixel error.
 Timing on a shared GPU includes other workloads. See
-`FINDINGS-2026-09-08-FIDELITY.md` for the measured gains and trade-offs.
+`FINDINGS-2026-09-08-FIDELITY.md` and `FINDINGS-2026-09-08-REPEATABILITY.md`
+for the measured gains and trade-offs.
 
 ```sh
 python3 tests/fgs/benchmark.py --output /tmp/fgs-before.json --label before

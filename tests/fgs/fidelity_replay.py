@@ -76,6 +76,8 @@ def main():
             directory.parent.mkdir(exist_ok=True)
             row = encode(args.candidate, directory, root / 'source.y4m', case['spec'], old['qp'], True, info['frames'])
             row.update(case=case['name'], arm=arm, prior_encoded_sha256=old['file_sha256'], decoded_hashes={})
+            if arm == case['no_larger_arm'] and row['bytes'] > case['arms']['old-auto']['bytes']:
+                raise RuntimeError('Replay exceeds the original size bound: ' + str(directory))
             expected_bytes = info['frames'] * info['width'] * info['height'] * 3 // 2 * (1 if info['bits'] == 8 else 2)
             for grain in [0, 1]:
                 name = f'grain-{grain}.yuv'
