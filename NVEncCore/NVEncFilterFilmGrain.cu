@@ -1786,6 +1786,26 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         sts = copyFrameAsync(output, source, stream);
         if (sts != RGY_ERR_NONE) return sts;
     }
+    if (modelValid && prm->filmGrain.residualRetain < 0.0f) {
+        // Evaluate the model actually selected by temporal hysteresis against
+        // this frame's removed residual. A safe but badly fitting held model
+        // must not turn a source-amplitude change into synthetic replacement.
+        const auto fidelity = film_grain_strength_fidelity(current.gpu, params, bitDepth, diagnostics.templateGain);
+        for (int plane = 0; plane < 3; ++plane) {
+            diagnostics.strengthFitError[plane] = static_cast<float>(fidelity.relativeRmsError[plane]);
+        }
+        if (fidelity.needsSource()) {
+            diagnostics.sourceFidelityFallback = true;
+            diagnostics.modelHeld = false;
+            modelValid = false;
+            m_state->lastParamsValid = false;
+            m_state->pendingParamsValid = false;
+            m_state->pendingStreak = 0;
+            m_state->heldStreak = 0;
+            std::memset(&params, 0, sizeof(params));
+            if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
+        }
+    }
     diagnostics.reliable = modelValid;
     if (modelValid && params.applyGrain && diagnostics.residualRetain > 0.0f) {
         // Residual retention: keep retain * (source - clean) in the base luma
@@ -1875,13 +1895,15 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             pointsCr += strsprintf(_T(" %d:%d"), params.pointCrValue[i], params.pointCrScaling[i]);
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
-            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
+            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             modelValid ? 1 : 0, diagnostics.sceneReset ? 1 : 0, diagnostics.modelHeld ? 1 : 0,
             diagnostics.flatBlocks, diagnostics.totalBlocks, diagnostics.modelFrames,
             diagnostics.noiseStdDev[0], diagnostics.noiseStdDev[1], diagnostics.noiseStdDev[2],
             diagnostics.detailRisk, diagnostics.residualRetain, diagnostics.grainCorrelation,
+            diagnostics.strengthFitError[0], diagnostics.strengthFitError[1], diagnostics.strengthFitError[2],
+            diagnostics.sourceFidelityFallback ? 1 : 0,
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,
