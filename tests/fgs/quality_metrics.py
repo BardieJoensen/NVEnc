@@ -159,6 +159,8 @@ def separation_metrics(source_path, ideal_path, estimated_path,
     extracted_spectrum_frames = []
     temporal_correlations = []
     previous_extracted = None
+    frame_detail_energy = 0.0
+    frame_detail_error = 0.0
 
     for relative, frame in enumerate(range(first_frame, frame_count)):
         source_frame = source.luma(frame).astype(np.float64)
@@ -178,7 +180,12 @@ def separation_metrics(source_path, ideal_path, estimated_path,
         flat_error_energy += float(np.sum(clean_error[flat] ** 2))
         flat_samples += int(flat.sum())
         mean_error += clean_error
-        mean_detail += highpass(ideal_frame)
+        detail = highpass(ideal_frame)
+        mean_detail += detail
+        # Project before temporal averaging: moving or reversing detail can
+        # cancel in the average picture even when each frame loses texture.
+        frame_detail_energy += float(np.sum(detail * detail))
+        frame_detail_error += float(np.sum(highpass(clean_error) * detail))
         edge_weight += edge
         flat_weight += flat
         if relative % spectrum_step == 0:
@@ -218,6 +225,8 @@ def separation_metrics(source_path, ideal_path, estimated_path,
                       / max(float(flat_weight.sum()), 1.0)) / scale),
         "detail_loss_projection": detail_loss,
         "detail_transfer_gain": 1.0 - detail_loss,
+        "frame_detail_transfer_gain": (1.0 + frame_detail_error / frame_detail_energy
+                                        if frame_detail_energy else None),
         "extracted_temporal_correlation": (
             float(np.mean(temporal_correlations)) if temporal_correlations else 0.0),
         "true_spectrum": true_spectrum,

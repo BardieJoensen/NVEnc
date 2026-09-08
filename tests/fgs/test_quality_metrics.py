@@ -2,7 +2,9 @@
 
 import os
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 import numpy as np
 
@@ -11,6 +13,28 @@ import quality_metrics
 
 
 class QualityMetricsTest(unittest.TestCase):
+    def test_detail_projection_does_not_cancel_reversing_texture(self):
+        yy, xx = np.mgrid[:64, :64]
+        detail = 20 * ((xx // 2 + yy // 2) % 2 * 2 - 1)
+        ideal = [128 + detail, 128 - detail]
+        softened = [128 + detail // 2, 128 - detail // 2]
+        with tempfile.TemporaryDirectory() as tmp:
+            def write(name, frames):
+                path = Path(tmp) / name
+                with path.open('wb') as handle:
+                    for frame in frames:
+                        handle.write(frame.astype(np.uint8).tobytes())
+                        handle.write(bytes([128]) * (64 * 64 // 2))
+                return path
+            reference = write('ideal.yuv', ideal)
+            candidate = write('soft.yuv', softened)
+            identity = quality_metrics.separation_metrics(reference, reference, reference, 64, 64, 8)
+            damaged = quality_metrics.separation_metrics(reference, reference, candidate, 64, 64, 8)
+        self.assertAlmostEqual(identity['frame_detail_transfer_gain'], 1.0)
+        self.assertAlmostEqual(damaged['frame_detail_transfer_gain'], 0.5)
+        # The old static-picture projection loses its denominator here.
+        self.assertAlmostEqual(damaged['detail_transfer_gain'], 1.0)
+
     def test_spectrum_identity(self):
         rng = np.random.default_rng(7)
         image = rng.normal(size=(64, 64))

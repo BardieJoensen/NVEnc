@@ -23,6 +23,12 @@ CASES = {
     'detail_weak': dict(sigma=2, detail=True),
     'detail_coarse': dict(sigma=6, detail=True, coarse=True),
     'woven_detail': dict(sigma=6, woven=True),
+    'woven_motion': dict(sigma=6, woven=True, motion=(2, 2)),
+    'woven_motion_odd': dict(sigma=6, woven=True, motion=(1, 0)),
+    'woven_disappear': dict(sigma=6, woven=True, disappear=True),
+    'woven_coarse': dict(sigma=6, woven=True, coarse=True),
+    'woven_weak': dict(sigma=2, woven=True),
+    'pq_woven': dict(sigma=6, woven=True, bits=10, color='pq'),
     'flat_fine': dict(sigma=6),
     'flat_coarse': dict(sigma=6, coarse=True),
     'asymmetric_chroma': dict(sigma=6, chroma=(3, 0)),
@@ -54,6 +60,7 @@ def generate(directory, spec, frames):
     if spec.get('detail') and ds != 1:
         flat = kat.base_luma()
         base = flat + ds * (base - flat)
+    plain_base = base.copy()
     if spec.get('woven'):
         yy, xx = np.mgrid[:height//2, 64:width-64]
         base[:height//2, 64:width-64] += ds * (5*np.sin(2*np.pi*xx/9) + 5*np.sin(2*np.pi*yy/9))
@@ -62,6 +69,13 @@ def generate(directory, spec, frames):
     with inputs[0].open('wb') as y4m, inputs[1].open('wb') as raw, inputs[2].open('wb') as ideal:
         y4m.write(f'YUV4MPEG2 W{width} H{height} F24:1 Ip A1:1 {"C420mpeg2" if bits == 8 else "C420p10"}\n'.encode())
         for n in range(frames):
+            if spec.get('motion') or spec.get('disappear'):
+                base = plain_base.copy()
+                dx, dy = spec.get('motion', (0, 0))
+                if not spec.get('disappear') or n < frames//2:
+                    base[:height//2, 64:width-64] += ds * (
+                        5*np.sin(2*np.pi*(xx - n*dx)/9) + 5*np.sin(2*np.pi*(yy - n*dy)/9))
+                clean_planes[0] = np.rint(base).astype(dtype)
             sigma = spec.get('later_sigma', spec['sigma']) if n >= frames//2 else spec['sigma']
             sigma_map = np.full((height, width), sigma * ds, dtype=np.float64)
             if spec.get('steps'):
@@ -134,6 +148,16 @@ def measure(directory, root, info):
         row = dict(frame=frame, source_sigma=float(residuals['source'].std()/ds),
                    base_sigma=float(residuals['off'].std()/ds), output_sigma=float(residuals['on'].std()/ds),
                    synth_sigma=float((values['on']-values['off'])[mask].std()/ds))
+        # Upper band interiors contain the known woven/directional detail.
+        # Per-frame measurements expose start-up and cut behaviour too.
+        detail_mask = np.zeros_like(mask)
+        for band in range(1, 11):
+            detail_mask[24:info['height']//2-24, band*64+16:(band+1)*64-16] = True
+        detail = quality_metrics.highpass(values['ideal'])[detail_mask]
+        error = quality_metrics.highpass(values['off'] - values['ideal'])[detail_mask]
+        denominator = float(np.sum(detail * detail))
+        row['texture_gain'] = 1.0 + float(np.sum(error * detail)) / denominator if denominator else None
+        row['texture_base_error_sigma'] = float((values['off']-values['ideal'])[detail_mask].std()/ds)
         for index, component in enumerate(['u','v']):
             sl = slice(luma_count + index*luma_count//4, luma_count + (index+1)*luma_count//4)
             samples = {name:mm[frame,sl].astype(np.float64) for name,mm in planes.items()}
@@ -195,7 +219,7 @@ def main():
                 result=encode(binary,directory,root/'source.y4m',spec,20,retain,args.frames)
                 result.update(measure(directory,root,info))
             case['arms'][arm]=result;save()
-            print(json.dumps(dict(case=name,arm=arm,bytes=result['bytes'],detail=result['separation']['detail_transfer_gain'],
+            print(json.dumps(dict(case=name,arm=arm,bytes=result['bytes'],detail=result['separation']['frame_detail_transfer_gain'],
                                   fallback=result['source_fallbacks'])),flush=True)
         target=case['arms']['old-auto']['bytes']
         candidate=case['arms']['new-auto']
