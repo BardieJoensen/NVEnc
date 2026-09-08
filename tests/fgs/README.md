@@ -168,6 +168,43 @@ not part of the automated suite.
 
 ## Reproducible before/after benchmark
 
+The experimental fidelity branch has a controlled detail/size experiment:
+
+```sh
+python3 tests/fgs/fidelity_compare.py --baseline /path/to/pinned-old-nvencc \
+    --candidate /path/to/pinned-new-nvencc --output-dir /path/to/new-experiment
+python3 tests/fgs/fidelity_regression.py /path/to/new-experiment/report.json
+```
+
+It measures known clean detail separately from independent grain on ten
+deterministic sources, including a grain-strength transition, coarse grain,
+asymmetric chroma, weak grain and 10-bit PQ. Arms include the old default,
+old `retain=auto`, and new `retain=auto`. The candidate QP search stops at the
+first encoding no larger than old auto, or reports that none fits by QP 32.
+That is a discrete size bound, not an exactly matched rate. Weak grain and
+temporal fallback checks reject the first prototype's observed regressions.
+The fixture-specific checks do not establish universal perceptual quality.
+
+`--reuse-baseline /path/to/prior-experiment` reuses old arms only after checking
+the binary, source geometry and hashes, encoded file and decoded pixel hashes.
+Source files and all candidate encodes are retained. Do not compare small-frame
+execution times as a throughput benchmark.
+
+For the existing private real-film fixtures and a longer ABBA timing run:
+
+```sh
+python3 tests/fgs/fidelity_real.py --baseline /path/to/pinned-old-nvencc \
+    --candidate /path/to/pinned-new-nvencc --scanner /path/to/fgs-scan \
+    --output-dir /path/to/new-real-experiment
+```
+
+This verifies source hashes, decodes every output with grain on and off, checks
+the full grain syntax/texture scan, compares default decoded pixels, and checks
+the original jacket regression. Real-film grain has no known clean ground
+truth; the pilot does not infer better grain texture from lower pixel error.
+Timing on a shared GPU includes other workloads. See
+`FINDINGS-2026-09-08-FIDELITY.md` for the measured gains and trade-offs.
+
 ```sh
 python3 tests/fgs/benchmark.py --output /tmp/fgs-before.json --label before
 python3 tests/fgs/benchmark.py --output /tmp/fgs-after.json --label after \

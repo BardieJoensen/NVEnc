@@ -149,6 +149,7 @@ def main():
     parser.add_argument('--baseline',type=Path,required=True)
     parser.add_argument('--candidate',type=Path,required=True)
     parser.add_argument('--output-dir',type=Path,required=True)
+    parser.add_argument('--reuse-baseline',type=Path,help='Prior experiment with the same baseline binary and exact sources')
     parser.add_argument('--cases',default=','.join(CASES))
     parser.add_argument('--frames',type=int,default=48)
     args = parser.parse_args()
@@ -159,6 +160,11 @@ def main():
                   harness_sha256=sha(__file__), cases=[], complete=False,
                   scope='Controlled sources, fixed QP plus a candidate encoding no larger than baseline auto. '
                         'Small-frame timings are not throughput benchmarks. No universal quality threshold.')
+    prior = None
+    if args.reuse_baseline:
+        prior = json.loads((args.reuse_baseline/'report.json').read_text())
+        if prior['baseline_sha256'] != report['baseline_sha256'] or not prior['complete']:
+            raise RuntimeError('baseline reuse needs the same binary and a completed prior experiment')
     def save():
         tmp = args.output_dir/'report.tmp'
         tmp.write_text(json.dumps(report,indent=2)+'\n');os.replace(tmp,args.output_dir/'report.json')
@@ -171,8 +177,24 @@ def main():
         for arm,binary,retain in [('old-default',args.baseline,False),('old-auto',args.baseline,True),
                                  ('new-auto',args.candidate,True)]:
             directory=root/arm
-            result=encode(binary,directory,root/'source.y4m',spec,20,retain,args.frames)
-            result.update(measure(directory,root,info));case['arms'][arm]=result;save()
+            if prior and arm.startswith('old-'):
+                original = next(c for c in prior['cases'] if c['name'] == name)
+                if original['source'] != info:
+                    raise RuntimeError('baseline reuse source identity/geometry changed')
+                result = original['arms'][arm].copy()
+                original_directory = (args.reuse_baseline/name/arm).resolve()
+                if (result['qp'] != 20 or result['retain_auto'] != retain
+                    or sha(original_directory/'output.mkv') != result['file_sha256']):
+                    raise RuntimeError('baseline encoding changed')
+                for filename,expected in result['decoded_hashes'].items():
+                    if sha(original_directory/filename) != expected:
+                        raise RuntimeError('baseline decoded pixels changed')
+                directory.symlink_to(original_directory,target_is_directory=True)
+                result['reused_from'] = str(original_directory)
+            else:
+                result=encode(binary,directory,root/'source.y4m',spec,20,retain,args.frames)
+                result.update(measure(directory,root,info))
+            case['arms'][arm]=result;save()
             print(json.dumps(dict(case=name,arm=arm,bytes=result['bytes'],detail=result['separation']['detail_transfer_gain'],
                                   fallback=result['source_fallbacks'])),flush=True)
         target=case['arms']['old-auto']['bytes']
