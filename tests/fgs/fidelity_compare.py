@@ -95,10 +95,12 @@ def generate(directory, spec, frames):
                 hashes={p.name:sha(p) for p in inputs})
 
 
-def encode(binary, directory, source, spec, qp, retain, expected_frames):
+def encode(binary, directory, source, spec, qp, retain, expected_frames, retain_max=None):
     directory.mkdir()
     output = directory / 'output.mkv'
     opts = 'denoise=auto,chroma=auto,denoiser=bilateral' + (',retain=auto' if retain else '')
+    if retain_max is not None:
+        opts += ',retain-max=' + str(retain_max)
     argv = [str(binary), '--codec', 'av1', '--preset', 'quality', '--tune', 'hq', '--cqp', str(qp),
             '--av1-film-grain', opts, '--log-level', 'debug', '-i', str(source), '-o', str(output)]
     if spec.get('bits') == 10:
@@ -114,6 +116,7 @@ def encode(binary, directory, source, spec, qp, retain, expected_frames):
                 seconds=elapsed, encoder_fps=float(finish[2]), command=argv,
                 model_frames=models, source_fallbacks=log.count('sourceFallback=1'),
                 source_fallback_frames=[int(v) for v in re.findall(r'fgs-model frame=(\d+)[^\n]*sourceFallback=1', log)],
+                fresh_model_frames=[int(v) for v in re.findall(r'fgs-model frame=(\d+)[^\n]*freshModel=1', log)],
                 fit_errors=[[float(v) for v in m] for m in re.findall(r'fitError=([\d.]+)/([\d.]+)/([\d.]+)', log)])
 
 

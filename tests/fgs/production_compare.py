@@ -34,7 +34,7 @@ def run(argv, log, timeout):
     return time.monotonic() - start
 
 
-def grain_arguments(arguments, auto):
+def grain_arguments(arguments, auto, extra=()):
     args = list(arguments)
     if args.count('--av1-film-grain') != 1:
         raise ValueError('Exactly one film-grain argument is required')
@@ -42,6 +42,7 @@ def grain_arguments(arguments, auto):
     options = [x for x in args[i].split(',') if not x.startswith('retain=')]
     if auto:
         options.append('retain=auto')
+        options.extend(extra)
     args[i] = ','.join(options)
     return args
 
@@ -86,7 +87,8 @@ def main():
                 output = directory / 'output.mkv'
                 binary = args.baseline if arm.startswith('old-') else args.candidate
                 argv = [str(binary), *case['prefix'], '-i', str(path),
-                        *grain_arguments(case['arguments'], '-auto-' in arm),
+                        *grain_arguments(case['arguments'], '-auto-' in arm,
+                                         case.get('candidate_grain_options', [])),
                         '--log-level', 'debug', '-o', str(output)]
                 elapsed = run(argv, directory / 'encode.log', args.timeout)
                 log = (directory / 'encode.log').read_text(errors='replace')
@@ -96,7 +98,9 @@ def main():
                 row = dict(case=case['name'], arm=arm, command=argv, seconds=elapsed,
                            frames=int(finish[1]), fps=float(finish[2]), bytes=output.stat().st_size,
                            sha256=sha(output), fallback_frames=[int(x) for x in re.findall(
-                               r'fgs-model frame=(\d+)[^\n]*sourceFallback=1', log)])
+                               r'fgs-model frame=(\d+)[^\n]*sourceFallback=1', log)],
+                           fresh_model_frames=[int(x) for x in re.findall(
+                               r'fgs-model frame=(\d+)[^\n]*freshModel=1', log)])
                 if row['frames'] != case['frames']:
                     raise RuntimeError('Encoder frame count mismatch: ' + str(directory))
                 report['runs'].append(row)
@@ -122,6 +126,7 @@ def main():
                     if row['video'].get(key) != value:
                         raise RuntimeError('Changed video property ' + key + ': ' + str(directory))
                 row['decoded_sha256'] = {}
+                row['timeline_sha256'] = {}
                 for grain in [0, 1]:
                     md5 = directory / f'grain-{grain}.framemd5'
                     run(['ffmpeg', '-v', 'error', '-xerror', '-nostdin', '-c:v', 'libdav1d',
@@ -135,6 +140,8 @@ def main():
                     # Compare pixel payloads separately from timestamp/container identity.
                     hashes = [x.rsplit(',', 1)[1].strip() for x in lines]
                     row['decoded_sha256'][str(grain)] = hashlib.sha256('\n'.join(hashes).encode()).hexdigest()
+                    timeline = [','.join(x.split(',')[:4]) for x in lines]
+                    row['timeline_sha256'][str(grain)] = hashlib.sha256('\n'.join(timeline).encode()).hexdigest()
                 save()
             baseline = next(r for r in rows if r['arm'] == 'old-default-a')
             for row in rows:
@@ -145,6 +152,8 @@ def main():
                                                    for v in [5, 10, 20]}
                 if row['arm'] == 'new-default-a' and row['decoded_sha256'] != baseline['decoded_sha256']:
                     raise RuntimeError('Default-mode decoded pixels changed')
+                if row['timeline_sha256'] != baseline['timeline_sha256']:
+                    raise RuntimeError('Candidate decoded timestamps changed')
             for name in ['old-default', 'new-auto']:
                 pair = [r for r in rows if r['arm'].startswith(name)]
                 if len(pair) == 2:
