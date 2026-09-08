@@ -7,6 +7,7 @@ validation run sequentially; outputs never enter a library replacement flow.
 File-size ratios are measured against current default retention, not old auto.
 """
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -47,6 +48,45 @@ def grain_arguments(arguments, auto, extra=()):
     return args
 
 
+def reuse_baseline_encoding(prior, case, expected_command, directory, report_path):
+    """Reuse only an exact completed encode; all validation runs again below.
+
+    A stopped experiment may contain a completed baseline and an incomplete
+    candidate. The baseline row is written only after encoder completion and
+    hashing. Its flags, source identity, frame count and bytes must still match.
+    """
+    matches = [r for r in prior['runs'] if r['case'] == case['name'] and r['arm'] == 'old-default-a']
+    if not matches:
+        return None
+    if len(matches) != 1:
+        raise RuntimeError('Ambiguous cached baseline')
+    source_cases = [c for c in prior['manifest']['cases'] if c['name'] == case['name']]
+    if len(source_cases) != 1:
+        raise RuntimeError('Ambiguous cached source')
+    for key in ['source', 'identity', 'sha256', 'frames', 'video_properties']:
+        if source_cases[0].get(key) != case.get(key):
+            raise RuntimeError('Cached baseline source changed: ' + key)
+    row = copy.deepcopy(matches[0])
+    def without_output(argv):
+        result = list(argv)
+        if result.count('-o') != 1:
+            raise RuntimeError('Ambiguous cached output argument')
+        result[result.index('-o') + 1] = '<output>'
+        return result
+    if without_output(row['command']) != without_output(expected_command):
+        raise RuntimeError('Cached baseline encode arguments changed')
+    original = Path(row['command'][row['command'].index('-o') + 1])
+    if (row['frames'] != case['frames'] or original.stat().st_size != row['bytes']
+            or sha(original) != row['sha256']):
+        raise RuntimeError('Cached baseline encoded artifact changed')
+    (directory / 'output.mkv').symlink_to(original.resolve())
+    row['reused_encoding_from'] = str(report_path)
+    row['validation_reused'] = False
+    for key in ['scan', 'video', 'decoded_sha256', 'timeline_sha256']:
+        row.pop(key, None)
+    return row
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--manifest', type=Path, required=True)
@@ -55,6 +95,8 @@ def main():
     p.add_argument('--scanner', type=Path, required=True)
     p.add_argument('--output-dir', type=Path, required=True)
     p.add_argument('--timeout', type=int, default=14400)
+    p.add_argument('--reuse-baseline', type=Path,
+                   help='Reuse exact completed baseline encodes; rerun their validation')
     args = p.parse_args()
     manifest = json.loads(args.manifest.read_text())
     args.output_dir.mkdir(parents=True, exist_ok=False)
@@ -62,6 +104,11 @@ def main():
                   manifest_sha256=sha(args.manifest), harness_sha256=sha(__file__),
                   baseline_sha256=sha(args.baseline), candidate_sha256=sha(args.candidate),
                   scanner_sha256=sha(args.scanner), runs=[], comparisons=[])
+    prior = json.loads(args.reuse_baseline.read_text()) if args.reuse_baseline else None
+    if prior:
+        if prior['baseline_sha256'] != report['baseline_sha256']:
+            raise RuntimeError('Cached baseline encoder changed')
+        report['reuse_baseline_report_sha256'] = sha(args.reuse_baseline)
 
     def save():
         temp = args.output_dir / 'report.tmp'
@@ -90,6 +137,13 @@ def main():
                         *grain_arguments(case['arguments'], '-auto-' in arm,
                                          case.get('candidate_grain_options', [])),
                         '--log-level', 'debug', '-o', str(output)]
+                if prior and arm == 'old-default-a':
+                    row = reuse_baseline_encoding(prior, case, argv, directory, args.reuse_baseline)
+                    if row is not None:
+                        report['runs'].append(row)
+                        save()
+                        print(case['name'], arm, 'reusing encode; validation pending', flush=True)
+                        continue
                 elapsed = run(argv, directory / 'encode.log', args.timeout)
                 log = (directory / 'encode.log').read_text(errors='replace')
                 finish = re.search(r'encoded (\d+) frames, ([\d.]+) fps', log)
@@ -145,8 +199,15 @@ def main():
                 save()
             baseline = next(r for r in rows if r['arm'] == 'old-default-a')
             for row in rows:
+                pause = case.get('baseline_pause_seconds', 0.0) if row is baseline else 0.0
+                if not 0 <= pause < row['seconds']:
+                    raise RuntimeError('Invalid recorded timing exclusion')
+                row['intentional_pause_seconds'] = pause
+                row['active_seconds'] = row['seconds'] - pause
+                row['timing_comparison_paired'] = not bool(baseline.get('reused_encoding_from'))
+            for row in rows:
                 row['bytes_vs_production_percent'] = 100 * (row['bytes'] / baseline['bytes'] - 1)
-                row['seconds_vs_production_percent'] = 100 * (row['seconds'] / baseline['seconds'] - 1)
+                row['seconds_vs_production_percent'] = 100 * (row['active_seconds'] / baseline['active_seconds'] - 1)
                 row['fallback_percent'] = 100 * len(row['fallback_frames']) / row['frames']
                 row['within_extra_size_percent'] = {str(v): row['bytes'] <= baseline['bytes'] * (1 + v / 100)
                                                    for v in [5, 10, 20]}
