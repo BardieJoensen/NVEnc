@@ -1759,9 +1759,23 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         bitDepth, static_cast<const uint8_t *>(m_blockMask->ptrDevice),
         static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
         static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice), stream);
-    if (sts != RGY_ERR_NONE || (sts = m_modelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
+    if (sts != RGY_ERR_NONE) return sts;
+    m_detailReferenceValid = false;
+    if (retainDetailReference) {
+        // Only luma is read by the repeatability kernel. Include its copy in
+        // the existing analysis barrier so a later call on another stream
+        // cannot read an unfinished reference. No additional host wait needed.
+        auto referenceLuma = getPlane(&m_detailReference->frame, RGY_PLANE_Y);
+        if ((sts = copyPlaneAsync(&referenceLuma, &luma, stream)) != RGY_ERR_NONE) return sts;
+    }
+    if ((sts = m_modelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     cudaerr = cudaStreamSynchronize(stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+    if (retainDetailReference) {
+        m_detailReference->frame.inputFrameId = source->inputFrameId;
+        m_detailReference->frame.timestamp = source->timestamp;
+        m_detailReferenceValid = true;
+    }
 
     bool sceneReset = false;
     bool motionSceneCut = false;
@@ -2090,13 +2104,6 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,
             pointsY.c_str(), pointsCb.c_str(), pointsCr.c_str());
-    }
-    m_detailReferenceValid = false;
-    if (retainDetailReference) {
-        if ((sts = copyFrameAsync(&m_detailReference->frame, source, stream)) != RGY_ERR_NONE) return sts;
-        m_detailReference->frame.inputFrameId = source->inputFrameId;
-        m_detailReference->frame.timestamp = source->timestamp;
-        m_detailReferenceValid = true;
     }
     attachResult();
     return RGY_ERR_NONE;
