@@ -11,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import tempfile
 import time
 
 from fidelity_compare import encode, sha
@@ -23,18 +24,13 @@ def decoded_hash(path, bits, grain, expected_bytes):
                '-fps_mode', 'passthrough', '-f', 'rawvideo', '-']
     digest = hashlib.sha256()
     count = 0
-    with path.with_name(f'replay-decode-{grain}.log').open('w') as log:
-        with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=log) as process:
-            try:
-                for chunk in iter(lambda: process.stdout.read(1 << 20), b''):
-                    count += len(chunk)
-                    digest.update(chunk)
-                result = process.wait(timeout=120)
-            except BaseException:
-                process.kill()
-                process.wait()
-                raise
-    if result != 0 or count != expected_bytes:
+    with path.with_name(f'replay-decode-{grain}.log').open('w') as log, tempfile.TemporaryFile(dir=path.parent) as raw:
+        result = subprocess.run(command, stdout=raw, stderr=log, timeout=120)
+        raw.seek(0)
+        for chunk in iter(lambda: raw.read(1 << 20), b''):
+            count += len(chunk)
+            digest.update(chunk)
+    if result.returncode != 0 or count != expected_bytes:
         raise RuntimeError('Incomplete replay decode: ' + str(path))
     return digest.hexdigest()
 
