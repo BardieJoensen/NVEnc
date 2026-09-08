@@ -302,6 +302,58 @@ void testStrengthLut() {
     expectNear(lut[128], 32.0, 1.6, "Cr lut uses its own strength in native units");
 }
 
+void testStrengthFidelity() {
+    FilmGrainGpuStats stats = {};
+    fillWhitePlane(stats.plane[0], 6.0, false);
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
+    NVEncFilmGrainDiagnostics diag;
+    expect(build_film_grain_params(stats, 8, false, true, params, diag), "fidelity control solves");
+    auto fit = film_grain_strength_fidelity(stats, params, 8, diag.templateGain);
+    expect(!fit.needsSource(), "matching white grain keeps synthesis");
+    expect(fit.relativeRmsError[0] < 0.05, "white-grain quantization error stays small");
+
+    auto changed = stats;
+    for (auto& variance : changed.plane[0].binVarSum) variance *= 4.0;
+    fit = film_grain_strength_fidelity(changed, params, 8, diag.templateGain);
+    expect(fit.needsSource(), "old safe model cannot represent doubled source amplitude");
+    expectNear(fit.relativeRmsError[0], 0.5, 0.04, "amplitude error is measured in sigma, not variance");
+    for (auto& variance : changed.plane[0].binVarSum) variance /= 16.0;
+    expect(film_grain_strength_fidelity(changed, params, 8, diag.templateGain).needsSource(),
+        "excess synthesis also requires source preservation");
+
+    auto tenBit = stats;
+    for (auto& variance : tenBit.plane[0].binVarSum) variance *= 16.0;
+    expect(!film_grain_strength_fidelity(tenBit, params, 10, diag.templateGain).needsSource(),
+        "ten-bit data and eight-bit strength curves use the same physical amplitude");
+
+    auto sparse = stats;
+    sparse.plane[0].binBlockCount[1] = 0;
+    sparse.plane[0].binVarSum[1] = 1e15;
+    expect(!film_grain_strength_fidelity(sparse, params, 8, diag.templateGain).needsSource(),
+        "an unoccupied intensity bin cannot dominate the decision");
+    sparse.plane[0].binBlockCount[1] = 1;
+    sparse.plane[0].binVarSum[1] = 144.0;
+    expect(!film_grain_strength_fidelity(sparse, params, 8, diag.templateGain).needsSource(),
+        "a rare sample is weighted by its actual occupancy");
+
+    fillWhitePlane(stats.plane[1], 4.0, true);
+    expect(film_grain_strength_fidelity(stats, params, 8, diag.templateGain).needsSource(),
+        "removed chroma with no signalled replacement is visible to the guard");
+    fillWhitePlane(stats.plane[2], 8.0, true);
+    expect(build_film_grain_params(stats, 8, true, true, params, diag), "all-plane fidelity control solves");
+    expect(!film_grain_strength_fidelity(stats, params, 8, diag.templateGain).needsSource(),
+        "each chroma curve is checked against its own observed amplitude");
+    stats.plane[2].binVarSum[0] = std::numeric_limits<double>::quiet_NaN();
+    expect(film_grain_strength_fidelity(stats, params, 8, diag.templateGain).needsSource(),
+        "non-finite occupied-bin evidence cannot establish fidelity");
+
+    stats = {};
+    fillWhitePlane(stats.plane[0], 0.25, false);
+    params = {};
+    expect(!film_grain_strength_fidelity(stats, params, 8, diag.templateGain).needsSource(),
+        "large relative errors below the absolute noise floor do not force fallback");
+}
+
 } // namespace
 
 int main() {
@@ -315,6 +367,7 @@ int main() {
     testParamsClose();
     testEvalScalingCurve();
     testStrengthLut();
+    testStrengthFidelity();
     if (failures) {
         std::cerr << failures << " solver test(s) failed\n";
         return 1;

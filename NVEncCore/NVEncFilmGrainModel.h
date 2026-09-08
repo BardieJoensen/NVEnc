@@ -59,6 +59,8 @@ struct NVEncFilmGrainDiagnostics {
     float detailRisk;
     float residualRetain;
     float grainCorrelation;
+    std::array<float, 3> strengthFitError;
+    bool sourceFidelityFallback;
     bool reliable;
     bool rejectedModel; // quantized AR feedback could not be certified stable
     bool sceneReset;
@@ -144,6 +146,18 @@ struct FilmGrainSolvedPlane {
 
     FilmGrainSolvedPlane() : coeffs(), strength(), strengthWeight(), arGain(1.0), templateGain(1.0), signalCorrelation(0.0), valid(false) {}
 };
+
+// Fidelity of this encoder's luma-indexed strength curves in occupied bins.
+// This measures amplitude fit, not decoded spatial texture or perceptual quality.
+struct FilmGrainStrengthFidelity {
+    std::array<double, 3> relativeRmsError = {};
+    std::array<double, 3> rmsError8bit = {};
+    std::array<uint64_t, 3> blocks = {};
+    bool needsSource(double relativeLimit = 0.25, double absoluteLimit8bit = 0.5) const;
+};
+FilmGrainStrengthFidelity film_grain_strength_fidelity(const FilmGrainGpuStats& stats,
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int bitDepth,
+    const std::array<float, 3>& templateGain);
 
 using StrengthPoint = std::pair<double, double>;
 

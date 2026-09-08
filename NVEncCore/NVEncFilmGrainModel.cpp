@@ -45,8 +45,8 @@
 
 NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     flatBlocks(0), totalBlocks(0), modelFrames(0), noiseStdDev(), templateGain{1.0f, 1.0f, 1.0f}, observations(),
-    detailRisk(0.0f), residualRetain(0.0f), grainCorrelation(0.0f),
-    reliable(false), rejectedModel(false), sceneReset(false), modelHeld(false) {
+    detailRisk(0.0f), residualRetain(0.0f), grainCorrelation(0.0f), strengthFitError(),
+    sourceFidelityFallback(false), reliable(false), rejectedModel(false), sceneReset(false), modelHeld(false) {
 }
 
 namespace fgsmodel {
@@ -445,6 +445,51 @@ void build_strength_lut(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bi
             eval_scaling_curve(values, scalings, count, x)
             * sigmaScale * depthScale * templateGain);
     }
+}
+
+bool FilmGrainStrengthFidelity::needsSource(const double relativeLimit, const double absoluteLimit8bit) const {
+    for (int plane = 0; plane < 3; ++plane) {
+        if (blocks[plane] == 0) continue;
+        if (!std::isfinite(relativeRmsError[plane]) || !std::isfinite(rmsError8bit[plane])
+            || (relativeRmsError[plane] > relativeLimit && rmsError8bit[plane] > absoluteLimit8bit)) return true;
+    }
+    return false;
+}
+
+FilmGrainStrengthFidelity film_grain_strength_fidelity(const FilmGrainGpuStats& stats,
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bitDepth,
+    const std::array<float, 3>& templateGain) {
+    FilmGrainStrengthFidelity result;
+    const double depthScale = static_cast<double>(1 << (bitDepth - 8));
+    const double maxIntensity8 = ((1 << bitDepth) - 1) / depthScale;
+    for (int plane = 0; plane < 3; ++plane) {
+        const auto& observed = stats.plane[plane];
+        float lut[FGS_STRENGTH_LUT_SIZE];
+        build_strength_lut(params, bitDepth, lut, plane, templateGain[plane]);
+        double squaredError = 0.0;
+        double observedEnergy = 0.0;
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            const auto count = observed.binBlockCount[bin];
+            if (count == 0) continue; // Empty bins cannot establish fidelity.
+            result.blocks[plane] += count;
+            const double actualVariance = observed.binVarSum[bin] / count;
+            if (!std::isfinite(actualVariance) || actualVariance < 0.0) {
+                squaredError = std::numeric_limits<double>::infinity();
+                continue;
+            }
+            const double x = bin * maxIntensity8 / (FGS_STRENGTH_BINS - 1);
+            const int left = std::clamp(static_cast<int>(std::floor(x)), 0, FGS_STRENGTH_LUT_SIZE - 1);
+            const int right = std::min(left + 1, FGS_STRENGTH_LUT_SIZE - 1);
+            const double modeledSigma = lut[left] * (1.0 - (x - left)) + lut[right] * (x - left);
+            const double difference = modeledSigma - std::sqrt(actualVariance);
+            squaredError += count * difference * difference;
+            observedEnergy += observed.binVarSum[bin];
+        }
+        if (result.blocks[plane] == 0) continue;
+        result.relativeRmsError[plane] = std::sqrt(squaredError / std::max(1e-12, observedEnergy));
+        result.rmsError8bit[plane] = std::sqrt(squaredError / result.blocks[plane]) / depthScale;
+    }
+    return result;
 }
 
 } // namespace fgsmodel
