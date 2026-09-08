@@ -461,7 +461,6 @@ FilmGrainStrengthFidelity film_grain_strength_fidelity(const FilmGrainGpuStats& 
     const std::array<float, 3>& templateGain) {
     FilmGrainStrengthFidelity result;
     const double depthScale = static_cast<double>(1 << (bitDepth - 8));
-    const double maxIntensity8 = ((1 << bitDepth) - 1) / depthScale;
     for (int plane = 0; plane < 3; ++plane) {
         const auto& observed = stats.plane[plane];
         float lut[FGS_STRENGTH_LUT_SIZE];
@@ -477,7 +476,10 @@ FilmGrainStrengthFidelity film_grain_strength_fidelity(const FilmGrainGpuStats& 
                 squaredError = std::numeric_limits<double>::infinity();
                 continue;
             }
-            const double x = bin * maxIntensity8 / (FGS_STRENGTH_BINS - 1);
+            // GPU collection uses floor(mean * bins / (maxValue + 1)).
+            // Evaluate at that interval's centre, not the legacy fitter's
+            // endpoint grid: those coordinates differ most near black/white.
+            const double x = (bin + 0.5) * 256.0 / FGS_STRENGTH_BINS;
             const int left = std::clamp(static_cast<int>(std::floor(x)), 0, FGS_STRENGTH_LUT_SIZE - 1);
             const int right = std::min(left + 1, FGS_STRENGTH_LUT_SIZE - 1);
             const double modeledSigma = lut[left] * (1.0 - (x - left)) + lut[right] * (x - left);

@@ -303,6 +303,28 @@ void testStrengthLut() {
 }
 
 void testStrengthFidelity() {
+    // GPU bins cover equal intensity intervals. Their centres do not lie
+    // on an endpoint-inclusive grid; a sloping model exposes that error.
+    for (const int bits : {8, 10}) {
+        NV_ENC_FILM_GRAIN_PARAMS_AV1 ramp = {};
+        ramp.applyGrain = 1;
+        ramp.numYPoints = 2;
+        ramp.pointYValue[0] = 0;
+        ramp.pointYValue[1] = 255;
+        ramp.pointYScaling[0] = 40;
+        ramp.pointYScaling[1] = 240;
+        FilmGrainGpuStats occupied = {};
+        const double scale = 1 << (bits - 8);
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            const double intensity = (bin + 0.5) * 256.0 / FGS_STRENGTH_BINS;
+            const double sigma = (40.0 + 200.0 * intensity / 255.0) / 8.0 * scale;
+            occupied.plane[0].binBlockCount[bin] = 100;
+            occupied.plane[0].binVarSum[bin] = sigma * sigma * 100;
+        }
+        const auto matching = film_grain_strength_fidelity(occupied, ramp, bits, {1.0f, 1.0f, 1.0f});
+        expect(matching.rmsError8bit[0] < 1e-5,
+            "strength fidelity evaluates occupied intensity intervals at their centres");
+    }
     FilmGrainGpuStats stats = {};
     fillWhitePlane(stats.plane[0], 6.0, false);
     NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
