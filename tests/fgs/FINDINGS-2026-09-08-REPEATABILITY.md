@@ -96,8 +96,58 @@ scans valid. The original measurement report retains its original binary SHA.
 The default encoder used for baseline comparison is `e778a88b`, SHA-256
 `5423d8abda1d2c248f25508c311ed4ca0eda08462e1ebc6bce95fba22e830249`.
 
-The full CPU suite passes. Real-film, colour, jacket and final GPU-gate results
-will be added after the current validation finishes.
+The full CPU suite passes. With `55d27813`, all 16 real-film outputs pass
+complete synthesis/texture scans, full grain-on/off decoding, frame-count and
+colour-tag checks. The three short clips' default decoded pixels remain
+identical to the deployed encoder. The two known jacket passages still disable
+synthesis on all planes and stay within the source-preservation bounds.
+
+The 150-second Gentlemen outputs are 48,271,914 / 48,273,224 bytes versus
+48,004,704 bytes for old auto, about +0.56%. Additional source-fidelity fallback
+occurs on 171 of 3,600 frames (4.75%). Taxi's 24-frame PQ sample increases from
+2,978,460 to 2,988,614 bytes (+0.34%). Silo and Alien retain their previous sizes;
+their auto grain samples change slightly because of the intended curve fix.
+
+Gentlemen wall times in old/new/new/old order are 99.7 / 155.0 / 104.4 / 97.0
+seconds. Both candidate runs are slower in this pass, with a large spread. This
+does not support a single reliable overhead percentage on the shared server.
+
+The two candidate repeats differ in decoded pixels on interframes 1–239 and
+241–479; their keyframes and all frames from 480 onward match. All 3,600 logged
+model rows agree. Five selected base frames show an initial maximum difference
+of one 10-bit code step, later interframe drift up to 8 code units in the
+8-bit-equivalent domain, and zero difference after the next matching GOP.
+This is compatible with small numerical differences propagating through lossy
+interframe coding, but its precise cause has not been established. It is not a
+bit-exact real-film result. Both complete outputs pass the independent syntax,
+texture, decoding and jacket checks. See the retained repeat comparison.
+
+The local quick gate passes all 21 bilateral GPU fixtures, export/failure-path
+checks and the positive/negative model controls. The four additional auto
+checks across FFT3D and motion also pass.
+
+## Shared-memory optimization
+
+Core commit `6e531477` stages both reference tiles once for the nine candidate
+translations, preserving integer samples and accumulation order. This reduces
+global sample loads in a full analysis block from 14,112 to 2,048, with two 4-KiB
+shared tiles. Binary SHA-256:
+`23e4da014bda4d84414e287d44312ab125b323d0ddcab555f631c10dab1b3d57`.
+
+The same 28-encode replay passes with all 1,344 frames identical in both grain
+modes, and all selected arms retain their original size bounds. The complete
+four-stage quick gate also passes with this binary.
+
+A 240-frame filter-profile comparison in old/cached/cached/old order measures
+5.194 / 3.365 / 2.929 / 2.501 ms per film-grain filter invocation; complete
+encode wall times are 9.85 / 9.55 / 10.45 / 10.65 seconds. The ranges overlap,
+so no measured end-to-end speedup is claimed. Lower global-memory traffic is
+established by the implementation, while runtime benefit remains uncertain.
+The profiling wrapper's first attempt failed to parse ANSI colour prefixes;
+that attempt was labelled and excluded, then the four-run sequence repeated.
+
+The cached real-film check replays the three short auto encodes and the full
+Gentlemen sequence. Final results are pending completion of that last check.
 
 Private sources, commands, reports, logs and immutable binaries are under
 `/opt/docker-apps/logs/fgs-ripple-repair-20260906/unfinished-20260908/`.
