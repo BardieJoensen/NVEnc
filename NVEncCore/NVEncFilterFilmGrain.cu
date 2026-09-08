@@ -141,6 +141,18 @@ __global__ void kernel_fgs_detail_repeatability(const uint8_t *__restrict__ src,
         }
         return;
     }
+    // All nine candidates reuse the same two 32x32 tiles. Stage each
+    // source sample once instead of issuing overlapping global loads for
+    // every candidate's 2x2 averages. Keep integer samples and sum order.
+    __shared__ int currentTile[FGS_BLOCK_SIZE * FGS_BLOCK_SIZE];
+    __shared__ int referenceTile[FGS_BLOCK_SIZE * FGS_BLOCK_SIZE];
+    for (int pixel = candidate * 32 + lane; pixel < FGS_BLOCK_SIZE * FGS_BLOCK_SIZE; pixel += 32 * 9) {
+        const int x = x0 + pixel % FGS_BLOCK_SIZE;
+        const int y = y0 + pixel / FGS_BLOCK_SIZE;
+        currentTile[pixel] = load_code<Type, shift>(src, pitch, x, y);
+        referenceTile[pixel] = load_code<Type, shift>(reference, referencePitch, x, y);
+    }
+    __syncthreads();
     const int dx = (candidate % 3 - 1) * 2;
     const int dy = (candidate / 3 - 1) * 2;
     // A 14x14 grid of 2x2 averages suppresses independent fine grain. Remove
@@ -151,15 +163,15 @@ __global__ void kernel_fgs_detail_repeatability(const uint8_t *__restrict__ src,
     for (int sample = lane; sample < samples; sample += 32) {
         const float x = static_cast<float>(sample % 14) - 6.5f;
         const float y = static_cast<float>(sample / 14) - 6.5f;
-        const int sx = x0 + 2 * (1 + sample % 14);
-        const int sy = y0 + 2 * (1 + sample / 14);
+        const int sx = 2 * (1 + sample % 14);
+        const int sy = 2 * (1 + sample / 14);
         float a = 0.0f, b = 0.0f;
 #pragma unroll
         for (int py = 0; py < 2; ++py) {
 #pragma unroll
             for (int px = 0; px < 2; ++px) {
-                a += load_code<Type, shift>(src, pitch, sx + px, sy + py);
-                b += load_code<Type, shift>(reference, referencePitch, sx + dx + px, sy + dy + py);
+                a += currentTile[(sy + py) * FGS_BLOCK_SIZE + sx + px];
+                b += referenceTile[(sy + dy + py) * FGS_BLOCK_SIZE + sx + dx + px];
             }
         }
         a = a * (0.25f / depthScale) - 128.0f;
