@@ -78,6 +78,9 @@ struct FilmGrainBlockMetric {
     float score;
     float coherence;
     float repeatability;
+    float tensorXX;
+    float tensorXY;
+    float tensorYY;
     float spatialCorrelation;
     uint32_t flat;
 };
@@ -416,6 +419,9 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     // this continuous confidence so the refinement mask can be interpolated
     // without introducing visible 32x32 block boundaries.
     out.coherence = (e1 - e2) / fmaxf(trace, 1e-12f);
+    out.tensorXX = gxx / fmaxf(trace, 1e-12f);
+    out.tensorXY = gxy / fmaxf(trace, 1e-12f);
+    out.tensorYY = gyy / fmaxf(trace, 1e-12f);
     // Lag-one correlation distinguishes fine, nearly white grain from coarse
     // grain whose spatial scale the compact AV1 AR model may not reproduce.
     // The symmetric energy denominator keeps the diagnostic bounded.
@@ -463,7 +469,7 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
     const uint8_t *__restrict__ src, const int srcPitch, const int width, const int height,
     const int maxValue, const float sigma, const float *__restrict__ sigmaMap,
     const FilmGrainBlockMetric *__restrict__ detailMetrics,
-    const int blocksX, const int blocksY, const int planeBlockSize, const float detailProtectionScale) {
+    const int blocksX, const int blocksY, const int planeBlockSize, const float detailProtectionScale, const bool directionalDenoise) {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
     constexpr int tileWidth = FGS_BILATERAL_BLOCK_X + FGS_BILATERAL_RADIUS * 2;
@@ -520,6 +526,7 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
     const float rangeSigma = fmaxf(1.0f, blockSigma * 2.35f);
     const float invRange2 = 1.0f / (rangeSigma * rangeSigma);
     float refinementWeight = 1.0f;
+    float normalXX = 0.0f, normalXY = 0.0f, normalYY = 0.0f, normalPrecision = 0.0f;
     if (detailMetrics != nullptr) {
         const float top = detailMetrics[iy * blocksX + ix].coherence * (1.0f - wx)
             + detailMetrics[iy * blocksX + ix1].coherence * wx;
@@ -541,7 +548,32 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
         // Full source retention also retains independent grain and is costly
         // to compress. Keep repeatability a modest correction to the existing
         // spatial filter; directionally unambiguous detail keeps its guard.
-        refinementWeight = 1.0f - detailProtectionScale * fmaxf(directional, 0.2f * repeated);
+        if (directionalDenoise) {
+            // Protect coherent structure by averaging along it, instead of
+            // blending the entire noisy source back into the clean picture.
+            // A frame-global synthesis model cannot compensate a local patch
+            // which retained much more random grain than the modeled flats.
+            refinementWeight = 1.0f - detailProtectionScale * 0.2f * repeated;
+            const float w00 = (1.0f-wx)*(1.0f-wy), w10 = wx*(1.0f-wy);
+            const float w01 = (1.0f-wx)*wy, w11 = wx*wy;
+            const auto& m00 = detailMetrics[iy*blocksX+ix];
+            const auto& m10 = detailMetrics[iy*blocksX+ix1];
+            const auto& m01 = detailMetrics[iy1*blocksX+ix];
+            const auto& m11 = detailMetrics[iy1*blocksX+ix1];
+            const float xx = w00*m00.tensorXX + w10*m10.tensorXX + w01*m01.tensorXX + w11*m11.tensorXX;
+            const float xy = w00*m00.tensorXY + w10*m10.tensorXY + w01*m01.tensorXY + w11*m11.tensorXY;
+            const float yy = w00*m00.tensorYY + w10*m10.tensorYY + w01*m01.tensorYY + w11*m11.tensorYY;
+            const float gap = sqrtf(fmaxf(0.0f, (xx-yy)*(xx-yy)+4.0f*xy*xy));
+            if (gap > FGS_DETAIL_COHERENCE_LOW) {
+                const float minor = (xx+yy-gap)*0.5f;
+                normalXX = (xx-minor)/gap;
+                normalXY = xy/gap;
+                normalYY = (yy-minor)/gap;
+                normalPrecision = 4.0f * detailProtectionScale * directional;
+            }
+        } else {
+            refinementWeight = 1.0f - detailProtectionScale * fmaxf(directional, 0.2f * repeated);
+        }
     }
     for (int component = 0; component < components; ++component) {
         const int centerIndex = (
@@ -564,7 +596,11 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
                 }
                 const float difference = static_cast<float>(sample - center);
                 const float rangeWeight = 1.0f / (1.0f + difference * difference * invRange2);
-                const float weight = spatial[dx + 2] * spatial[dy + 2] * rangeWeight;
+                float weight = spatial[dx + 2] * spatial[dy + 2] * rangeWeight;
+                if (normalPrecision > 0.0f) {
+                    const float cross = fmaxf(0.0f, dx*dx*normalXX + 2.0f*dx*dy*normalXY + dy*dy*normalYY);
+                    weight /= 1.0f + normalPrecision * cross;
+                }
                 weighted += weight * sample;
                 weightSum += weight;
             }
@@ -967,12 +1003,12 @@ static RGY_ERR launch_bilateral(const RGYFrameInfo& dst, const RGYFrameInfo& src
     const int width, const int height, const int bitDepth, const float sigma,
     const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
     const int blocksX, const int blocksY, const int planeBlockSize, cudaStream_t stream,
-    const float detailProtectionScale = 1.0f) {
+    const float detailProtectionScale = 1.0f, const bool directionalDenoise = false) {
     const dim3 block(FGS_BILATERAL_BLOCK_X, FGS_BILATERAL_BLOCK_Y);
     const dim3 grid(divCeil(width, static_cast<int>(block.x)), divCeil(height, static_cast<int>(block.y)));
     kernel_fgs_bilateral<Type, shift, components><<<grid, block, 0, stream>>>(
         dst.ptr[0], dst.pitch[0], src.ptr[0], src.pitch[0], width, height, (1 << bitDepth) - 1, sigma,
-        sigmaMap, detailMetrics, blocksX, blocksY, planeBlockSize, detailProtectionScale);
+        sigmaMap, detailMetrics, blocksX, blocksY, planeBlockSize, detailProtectionScale, directionalDenoise);
     return err_to_rgy(cudaGetLastError());
 }
 
@@ -1150,7 +1186,7 @@ template<typename Type, int shift>
 static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFrameInfo *src,
     const bool chroma, const bool includeLuma, const int passes, const int bitDepth, const float sigma,
     const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
-    const int blocksX, const int blocksY, cudaStream_t stream, const float detailProtectionScale) {
+    const int blocksX, const int blocksY, cudaStream_t stream, const float detailProtectionScale, const bool directionalDenoise) {
     for (int pass = 0; pass < passes; ++pass) {
         const RGYFrameInfo *passSrc = pass == 0 ? src : work;
         RGYFrameInfo *passDst = pass + 1 == passes ? dst : work;
@@ -1158,7 +1194,7 @@ static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const 
             auto srcY = getPlane(passSrc, RGY_PLANE_Y);
             auto dstY = getPlane(passDst, RGY_PLANE_Y);
             auto sts = launch_bilateral<Type, shift, 1>(dstY, srcY, srcY.width, srcY.height, bitDepth, sigma,
-                sigmaMap, detailMetrics, blocksX, blocksY, FGS_BLOCK_SIZE, stream, detailProtectionScale);
+                sigmaMap, detailMetrics, blocksX, blocksY, FGS_BLOCK_SIZE, stream, detailProtectionScale, directionalDenoise);
             if (sts != RGY_ERR_NONE) return sts;
         }
         if (!chroma) continue;
@@ -1185,15 +1221,15 @@ static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const 
 static RGY_ERR denoise_frame(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFrameInfo *src,
     const bool chroma, const bool includeLuma, const int passes, const int bitDepth, const float sigma,
     const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
-    const int blocksX, const int blocksY, cudaStream_t stream, const float detailProtectionScale = 1.0f) {
+    const int blocksX, const int blocksY, cudaStream_t stream, const float detailProtectionScale = 1.0f, const bool directionalDenoise = false) {
     switch (src->csp) {
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
-        return denoise_frame_typed<uint8_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale);
+        return denoise_frame_typed<uint8_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale, directionalDenoise);
     case RGY_CSP_YV12_10:
-        return denoise_frame_typed<uint16_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale);
+        return denoise_frame_typed<uint16_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale, directionalDenoise);
     case RGY_CSP_P010:
-        return denoise_frame_typed<uint16_t, 6>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale);
+        return denoise_frame_typed<uint16_t, 6>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale, directionalDenoise);
     default:
         return RGY_ERR_UNSUPPORTED;
     }
@@ -1766,7 +1802,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             // than relying only on the later whole-frame residual blend.
             autoDetailProtection > 0.0f
                 ? static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice) : nullptr,
-            m_blocksX, m_blocksY, stream, autoDetailProtection);
+            m_blocksX, m_blocksY, stream, autoDetailProtection, true);
         if (sts != RGY_ERR_NONE) return sts;
     }
 
