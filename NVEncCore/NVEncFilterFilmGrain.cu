@@ -1583,7 +1583,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         sts = denoise_frame(output, &m_denoiseWork->frame, source, prm->filmGrain.analyzeChroma, true,
             prm->filmGrain.denoisePasses, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
-            nullptr,
+            // Auto retention is the opt-in source-fidelity mode. Protect
+            // structured luma before fitting its removed residual, rather
+            // than relying only on the later whole-frame residual blend.
+            prm->filmGrain.residualRetain < 0.0f
+                ? static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice) : nullptr,
             m_blocksX, m_blocksY, stream);
         if (sts != RGY_ERR_NONE) return sts;
     }
