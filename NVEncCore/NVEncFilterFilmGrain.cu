@@ -77,6 +77,7 @@ struct FilmGrainBlockMetric {
     float sigma;
     float score;
     float coherence;
+    float repeatability;
     float spatialCorrelation;
     uint32_t flat;
 };
@@ -115,6 +116,116 @@ __device__ inline void store_code(uint8_t *ptr, const int pitch, const int x, co
     const int component = 0, const int components = 1) {
     auto row = reinterpret_cast<Type *>(ptr + static_cast<size_t>(y) * pitch);
     row[x * components + component] = static_cast<Type>(value << shift);
+}
+
+
+// Directional gradients miss balanced crosshatch/weave. Repeated structure in
+// adjacent source frames supplies a separate confidence signal. This never
+// blends historical pixels: confidence only reduces current-frame smoothing.
+// Nine small integer translations cover modest motion without a frame search.
+template<typename Type, int shift>
+__global__ void kernel_fgs_detail_repeatability(const uint8_t *__restrict__ src, const int pitch,
+    const uint8_t *__restrict__ reference, const int referencePitch,
+    const int width, const int height, const int blocksX, const int depthScale,
+    FilmGrainBlockMetric *__restrict__ metrics, float *__restrict__ previousConfidence) {
+    const int index = blockIdx.x;
+    const int lane = threadIdx.x;
+    const int candidate = threadIdx.y;
+    const int x0 = (index % blocksX) * FGS_BLOCK_SIZE;
+    const int y0 = (index / blocksX) * FGS_BLOCK_SIZE;
+    // Partial edge blocks retain the existing directional protection.
+    if (x0 + FGS_BLOCK_SIZE > width || y0 + FGS_BLOCK_SIZE > height) {
+        if (lane == 0 && candidate == 0) {
+            metrics[index].repeatability = 0.0f;
+            previousConfidence[index] = 0.0f;
+        }
+        return;
+    }
+    const int dx = (candidate % 3 - 1) * 2;
+    const int dy = (candidate / 3 - 1) * 2;
+    // A 14x14 grid of 2x2 averages suppresses independent fine grain. Remove
+    // the best-fit plane so a smooth ramp cannot masquerade as fine detail.
+    constexpr int samples = 14 * 14;
+    constexpr float planeNorm = 3185.0f; // sum(x*x) == sum(y*y) on that grid
+    float sums[9] = {};
+    for (int sample = lane; sample < samples; sample += 32) {
+        const float x = static_cast<float>(sample % 14) - 6.5f;
+        const float y = static_cast<float>(sample / 14) - 6.5f;
+        const int sx = x0 + 2 * (1 + sample % 14);
+        const int sy = y0 + 2 * (1 + sample / 14);
+        float a = 0.0f, b = 0.0f;
+#pragma unroll
+        for (int py = 0; py < 2; ++py) {
+#pragma unroll
+            for (int px = 0; px < 2; ++px) {
+                a += load_code<Type, shift>(src, pitch, sx + px, sy + py);
+                b += load_code<Type, shift>(reference, referencePitch, sx + dx + px, sy + dy + py);
+            }
+        }
+        a = a * (0.25f / depthScale) - 128.0f;
+        b = b * (0.25f / depthScale) - 128.0f;
+        sums[0] += a;       sums[1] += b;
+        sums[2] += a * x;   sums[3] += a * y;
+        sums[4] += b * x;   sums[5] += b * y;
+        sums[6] += a * a;   sums[7] += b * b;
+        sums[8] += a * b;
+    }
+#pragma unroll
+    for (int offset = 16; offset > 0; offset >>= 1) {
+#pragma unroll
+        for (int stat = 0; stat < 9; ++stat) {
+            sums[stat] += __shfl_down_sync(0xffffffffu, sums[stat], offset);
+        }
+    }
+    __shared__ float confidence[9];
+    if (lane == 0) {
+        const float va = (sums[6] - sums[0] * sums[0] / samples
+            - (sums[2] * sums[2] + sums[3] * sums[3]) / planeNorm) / samples;
+        const float vb = (sums[7] - sums[1] * sums[1] / samples
+            - (sums[4] * sums[4] + sums[5] * sums[5]) / planeNorm) / samples;
+        const float covariance = (sums[8] - sums[0] * sums[1] / samples
+            - (sums[2] * sums[4] + sums[3] * sums[5]) / planeNorm) / samples;
+        const bool compatible = va >= 4.0f && vb >= 4.0f && va <= 4.0f * vb && vb <= 4.0f * va
+            && fabsf(sums[0] - sums[1]) <= samples * FGS_SCENE_MEAN_DELTA_8BIT;
+        const float correlation = compatible ? covariance / sqrtf(va * vb) : 0.0f;
+        confidence[candidate] = fminf(1.0f, fmaxf(0.0f, (correlation - 0.4f) / 0.3f));
+    }
+    __syncthreads();
+    if (lane == 0 && candidate == 0) {
+        float best = 0.0f;
+        for (int i = 0; i < 9; ++i) best = fmaxf(best, confidence[i]);
+        // Require two consecutive agreeing frame pairs; drop protection at
+        // once when agreement disappears. This limits accidental grain matches.
+        metrics[index].repeatability = fminf(best, previousConfidence[index]);
+        previousConfidence[index] = best;
+    }
+}
+
+static RGY_ERR detail_repeatability(const RGYFrameInfo *source, const RGYFrameInfo *reference,
+    FilmGrainBlockMetric *metrics, float *confidence, const int blocksX, const int blocksY,
+    const int depthScale, cudaStream_t stream) {
+    const auto a = getPlane(source, RGY_PLANE_Y);
+    const auto b = getPlane(reference, RGY_PLANE_Y);
+    const dim3 threads(32, 9);
+    const int blocks = blocksX * blocksY;
+    switch (source->csp) {
+    case RGY_CSP_NV12:
+    case RGY_CSP_YV12:
+        kernel_fgs_detail_repeatability<uint8_t, 0><<<blocks, threads, 0, stream>>>(
+            a.ptr[0], a.pitch[0], b.ptr[0], b.pitch[0], a.width, a.height, blocksX, depthScale, metrics, confidence);
+        break;
+    case RGY_CSP_YV12_10:
+        kernel_fgs_detail_repeatability<uint16_t, 0><<<blocks, threads, 0, stream>>>(
+            a.ptr[0], a.pitch[0], b.ptr[0], b.pitch[0], a.width, a.height, blocksX, depthScale, metrics, confidence);
+        break;
+    case RGY_CSP_P010:
+        kernel_fgs_detail_repeatability<uint16_t, 6><<<blocks, threads, 0, stream>>>(
+            a.ptr[0], a.pitch[0], b.ptr[0], b.pitch[0], a.width, a.height, blocksX, depthScale, metrics, confidence);
+        break;
+    default:
+        return RGY_ERR_UNSUPPORTED;
+    }
+    return err_to_rgy(cudaGetLastError());
 }
 
 template<typename Type, int shift>
@@ -407,9 +518,15 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
         // threshold is strongly directional picture detail.  Fade the local
         // correction between the two instead of making the block classifier
         // a hard render boundary.
-        refinementWeight = 1.0f - detailProtectionScale * fminf(1.0f, fmaxf(0.0f,
+        const float directional = fminf(1.0f, fmaxf(0.0f,
             (coherence - FGS_DETAIL_COHERENCE_LOW)
             / (FGS_DETAIL_COHERENCE_HIGH - FGS_DETAIL_COHERENCE_LOW)));
+        const float repeatedTop = detailMetrics[iy * blocksX + ix].repeatability * (1.0f - wx)
+            + detailMetrics[iy * blocksX + ix1].repeatability * wx;
+        const float repeatedBottom = detailMetrics[iy1 * blocksX + ix].repeatability * (1.0f - wx)
+            + detailMetrics[iy1 * blocksX + ix1].repeatability * wx;
+        const float repeated = repeatedTop * (1.0f - wy) + repeatedBottom * wy;
+        refinementWeight = 1.0f - detailProtectionScale * fmaxf(directional, repeated);
     }
     for (int component = 0; component < components; ++component) {
         const int centerIndex = (
@@ -988,7 +1105,7 @@ tstring NVEncFilterParamFilmGrain::print() const {
 }
 
 NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
-    m_denoiseWork(), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
+    m_denoiseWork(), m_detailReference(), m_detailConfidence(), m_detailReferenceValid(false), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWriter(),
@@ -1002,6 +1119,7 @@ NVEncFilterFilmGrain::~NVEncFilterFilmGrain() {
 }
 
 void NVEncFilterFilmGrain::resetTemporalState() {
+    m_detailReferenceValid = false;
     if (m_state) m_state->clear();
     if (m_fft3d) m_fft3d->resetTemporalState();
     if (m_motionDegrain) m_motionDegrain->resetTemporalState();
@@ -1159,6 +1277,16 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
 
     m_blocksX = divCeil(prm->frameIn.width, FGS_BLOCK_SIZE);
     m_blocksY = divCeil(prm->frameIn.height, FGS_BLOCK_SIZE);
+    m_detailReference.reset();
+    m_detailConfidence.reset();
+    m_detailReferenceValid = false;
+    if (config.denoiser == FGS_DENOISE_BILATERAL && config.residualRetain < 0.0f) {
+        m_detailReference = std::make_unique<CUFrameBuf>(prm->frameIn);
+        m_detailReference->releasePtr();
+        m_detailConfidence = std::make_unique<CUMemBuf>(static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(float));
+        if ((sts = m_detailReference->alloc()) != RGY_ERR_NONE
+            || (sts = m_detailConfidence->alloc()) != RGY_ERR_NONE) return sts;
+    }
     m_blockMetrics = std::make_unique<CUMemBufPair>(
         static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(FilmGrainBlockMetric));
     m_blockMask = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY);
@@ -1380,6 +1508,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     copyFramePropWithoutRes(output, source);
     nvenc_film_grain_erase_frame_data(output->dataList);
 
+    bool retainDetailReference = false;
     NVEncFilmGrainDiagnostics diagnostics;
     diagnostics.totalBlocks = m_blocksX * m_blocksY;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
@@ -1389,6 +1518,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     };
     if (!prm->filmGrain.enable || interlaced(*source)
         || getCudaMemcpyKind(source->mem_type, output->mem_type) != cudaMemcpyDeviceToDevice) {
+        m_detailReferenceValid = false;
         if (cleanBase != source && (sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
         attachResult();
         return RGY_ERR_NONE;
@@ -1452,6 +1582,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     }
     diagnostics.flatBlocks = selected;
     if (selected < requiredBlocks) {
+        m_detailReferenceValid = false;
         // Do not allow a model from before a low-confidence gap to reappear on
         // later frames.  The next reliable region must build a fresh window.
         diagnostics.sceneReset = !m_state->history.empty();
@@ -1591,6 +1722,22 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // Ramp protection with the observed 8-bit-equivalent noise level.
         const float autoDetailProtection = prm->filmGrain.residualRetain < 0.0f
             ? clamp((denoiseSigma / depthScale - 2.5f) / 3.5f, 0.0f, 1.0f) : 0.0f;
+        retainDetailReference = m_detailReference && autoDetailProtection > 0.0f;
+        if (retainDetailReference) {
+            const auto& reference = m_detailReference->frame;
+            const bool adjacent = m_detailReferenceValid && reference.inputFrameId >= 0
+                && static_cast<int64_t>(source->inputFrameId) == static_cast<int64_t>(reference.inputFrameId) + 1
+                && source->timestamp > reference.timestamp;
+            if (adjacent) {
+                sts = detail_repeatability(source, &reference,
+                    static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
+                    static_cast<float *>(m_detailConfidence->ptr), m_blocksX, m_blocksY, depthScale, stream);
+                if (sts != RGY_ERR_NONE) return sts;
+            } else {
+                cudaerr = cudaMemsetAsync(m_detailConfidence->ptr, 0, m_detailConfidence->nSize, stream);
+                if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+            }
+        }
         sts = denoise_frame(output, &m_denoiseWork->frame, source, prm->filmGrain.analyzeChroma, true,
             prm->filmGrain.denoisePasses, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
@@ -1941,6 +2088,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,
             pointsY.c_str(), pointsCb.c_str(), pointsCr.c_str());
     }
+    m_detailReferenceValid = false;
+    if (retainDetailReference) {
+        if ((sts = copyFrameAsync(&m_detailReference->frame, source, stream)) != RGY_ERR_NONE) return sts;
+        m_detailReference->frame.inputFrameId = source->inputFrameId;
+        m_detailReference->frame.timestamp = source->timestamp;
+        m_detailReferenceValid = true;
+    }
     attachResult();
     return RGY_ERR_NONE;
 }
@@ -1954,6 +2108,9 @@ void NVEncFilterFilmGrain::close() {
     m_fft3dSigma = -1.0f;
     m_frameBuf.clear();
     m_denoiseWork.reset();
+    m_detailReference.reset();
+    m_detailConfidence.reset();
+    m_detailReferenceValid = false;
     m_blockMetrics.reset();
     m_blockMask.reset();
     m_sigmaMap.reset();

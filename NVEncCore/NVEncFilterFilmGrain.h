@@ -150,6 +150,9 @@ private:
     void recordTableEntry(int64_t timestamp, int64_t duration, const NV_ENC_FILM_GRAIN_PARAMS_AV1& params);
 
     std::unique_ptr<CUFrameBuf> m_denoiseWork;
+    std::unique_ptr<CUFrameBuf> m_detailReference;
+    std::unique_ptr<CUMemBuf> m_detailConfidence;
+    bool m_detailReferenceValid;
     std::unique_ptr<NVEncFilterDenoiseFFT3D> m_fft3d;
     std::shared_ptr<NVEncFilterParamDenoiseFFT3D> m_fft3dParam;
     float m_fft3dSigma;
