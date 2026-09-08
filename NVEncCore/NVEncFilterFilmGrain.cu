@@ -1843,7 +1843,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     }
     bool modelValid = diagnostics.modelFrames >= prm->filmGrain.minModelFrames
         && build_film_grain_params(combined, bitDepth, prm->filmGrain.analyzeChroma,
-            prm->filmGrain.clipToRestrictedRange, params, diagnostics);
+            prm->filmGrain.clipToRestrictedRange, params, diagnostics, prm->filmGrain.residualRetain < 0.0f);
     if (diagnostics.rejectedModel) {
         // A rejected feedback model must not borrow an unrelated previous
         // scene's grain through the normal transient-fit fallback. Preserve
