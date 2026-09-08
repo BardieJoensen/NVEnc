@@ -46,7 +46,7 @@
 NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     flatBlocks(0), totalBlocks(0), modelFrames(0), noiseStdDev(), templateGain{1.0f, 1.0f, 1.0f}, observations(),
     detailRisk(0.0f), residualRetain(0.0f), grainCorrelation(0.0f), strengthFitError(),
-    sourceFidelityFallback(false), reliable(false), rejectedModel(false), sceneReset(false), modelHeld(false) {
+    sourceFidelityFallback(false), freshModel(false), reliable(false), rejectedModel(false), sceneReset(false), modelHeld(false) {
 }
 
 namespace fgsmodel {
@@ -371,6 +371,28 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
         diagnostics.noiseStdDev[c] = total > 0
             ? static_cast<float>(std::sqrt(weightedVariance / total) * solved[c].templateGain) : 0.0f;
     }
+    return true;
+}
+
+bool build_fidelity_recovery_model(const FilmGrainGpuStats& stats, const int bitDepth,
+    const bool analyzeChroma, const bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
+    NVEncFilmGrainDiagnostics& diagnostics) {
+    if (bitDepth != 8 && bitDepth != 10) return false;
+    // Do not let a non-finite occupied observation reach quantization.
+    for (const auto& plane : stats.plane) {
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            if (plane.binBlockCount[bin] != 0
+                && (!std::isfinite(plane.binVarSum[bin]) || plane.binVarSum[bin] < 0.0)) return false;
+        }
+    }
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 fresh = {};
+    NVEncFilmGrainDiagnostics freshDiagnostics;
+    if (!build_film_grain_params(stats, bitDepth, analyzeChroma, limitedRange,
+            fresh, freshDiagnostics, true)) return false;
+    const auto fidelity = film_grain_strength_fidelity(stats, fresh, bitDepth, freshDiagnostics.templateGain);
+    if (fidelity.blocks[0] == 0 || fidelity.needsSource(0.10, 0.25)) return false;
+    params = fresh;
+    diagnostics = freshDiagnostics;
     return true;
 }
 

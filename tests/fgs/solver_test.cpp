@@ -402,6 +402,57 @@ void testStrengthFidelity() {
         "large relative errors below the absolute noise floor do not force fallback");
 }
 
+void testCurrentFrameRecovery() {
+    for (const int bits : {8, 10}) {
+        const double ds = 1 << (bits - 8);
+        FilmGrainGpuStats oldStats = {}, changed = {};
+        fillWhitePlane(oldStats.plane[0], 6.0 * ds, false);
+        fillWhitePlane(changed.plane[0], 10.0 * ds, false);
+        NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
+        NVEncFilmGrainDiagnostics diag;
+        expect(build_film_grain_params(oldStats, bits, false, true, params, diag, true),
+            "initial white model solves");
+        expect(film_grain_strength_fidelity(changed, params, bits, diag.templateGain).needsSource(),
+            "held model mismatches changed grain amplitude");
+        expect(build_fidelity_recovery_model(changed, bits, false, true, params, diag),
+            "current representable grain can recover without source fallback");
+        expect(!film_grain_strength_fidelity(changed, params, bits, diag.templateGain).needsSource(0.10, 0.25),
+            "recovery satisfies stricter per-plane fit");
+
+        const auto good = params;
+        auto unsafe = changed;
+        const auto covariance = static_cast<int64_t>(N_OBS * 100.0 * ds * ds * 0.6);
+        unsafe.plane[0].atb[17] = covariance;
+        unsafe.plane[0].atb[23] = covariance;
+        expect(!build_fidelity_recovery_model(unsafe, bits, false, true, params, diag),
+            "fresh retry cannot bypass periodic/unstable feedback rejection");
+        expect(std::memcmp(&params, &good, sizeof(params)) == 0,
+            "failed recovery does not mutate selected model");
+
+        auto invalid = changed;
+        invalid.plane[0].binVarSum[0] = std::numeric_limits<double>::quiet_NaN();
+        expect(!build_fidelity_recovery_model(invalid, bits, false, true, params, diag),
+            "fresh retry rejects non-finite occupied observations");
+        invalid = changed;
+        fillWhitePlane(invalid.plane[1], 4.0 * ds, true);
+        expect(!build_fidelity_recovery_model(invalid, bits, true, true, params, diag),
+            "paired-chroma fallback cannot silently discard observed one-sided chroma");
+
+        auto alternating = changed;
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            const double sigma = (bin % 2 ? 2.0 : 10.0) * ds;
+            alternating.plane[0].binVarSum[bin] = 100.0 * sigma * sigma;
+        }
+        expect(!build_fidelity_recovery_model(alternating, bits, false, true, params, diag),
+            "a fresh but poorly representable curve still requires source fallback");
+    }
+    FilmGrainGpuStats empty = {};
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
+    NVEncFilmGrainDiagnostics diag;
+    expect(!build_fidelity_recovery_model(empty, 8, false, true, params, diag),
+        "empty current evidence cannot recover a model");
+}
+
 } // namespace
 
 int main() {
@@ -417,6 +468,7 @@ int main() {
     testStrengthLut();
     testStrengthFitCenters();
     testStrengthFidelity();
+    testCurrentFrameRecovery();
     if (failures) {
         std::cerr << failures << " solver test(s) failed\n";
         return 1;

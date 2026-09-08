@@ -61,6 +61,7 @@ struct NVEncFilmGrainDiagnostics {
     float grainCorrelation;
     std::array<float, 3> strengthFitError;
     bool sourceFidelityFallback;
+    bool freshModel;
     bool reliable;
     bool rejectedModel; // quantized AR feedback could not be certified stable
     bool sceneReset;
@@ -171,6 +172,13 @@ void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& 
 bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,
     bool analyzeChroma, bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
     NVEncFilmGrainDiagnostics& diagnostics, bool useBinCenters = false);
+// Retry a stale amplitude model using only current-frame evidence. The full
+// syntax/feedback guards still apply, followed by the stricter recovery fit.
+// Failure leaves caller outputs unchanged.
+bool build_fidelity_recovery_model(const FilmGrainGpuStats& stats, int bitDepth,
+    bool analyzeChroma, bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
+    NVEncFilmGrainDiagnostics& diagnostics);
+
 double eval_scaling_curve(const uint8_t *values, const uint8_t *scalings, uint32_t count, double x);
 bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC_FILM_GRAIN_PARAMS_AV1& b,
     double relativeSigmaTolerance = 0.05, double coefficientTolerance = 0.05);
