@@ -7,6 +7,7 @@ for a whole film. Timing on a shared GPU includes other workloads.
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -48,7 +49,10 @@ def main():
     parser.add_argument('--clips', nargs='+', choices=['taxi_clip', 'silo_clip', 'alien_clip', 'gentlemen_clip'],
                         default=['taxi_clip', 'silo_clip', 'alien_clip', 'gentlemen_clip'])
     parser.add_argument('--output-dir', type=Path, required=True)
+    parser.add_argument('--retain-max', type=float, help='Same automatic-retention ceiling for both encoders')
     args = parser.parse_args()
+    if args.retain_max is not None and (not math.isfinite(args.retain_max) or not 0 <= args.retain_max <= 0.5):
+        parser.error('--retain-max must be finite and in 0..0.5')
     args.output_dir.mkdir(parents=True, exist_ok=False)
     manifest = json.loads(fixtures.MANIFEST.read_text())
     names = list(dict.fromkeys(args.clips))
@@ -79,6 +83,8 @@ def main():
         output = directory / 'output.mkv'
         binary = args.baseline if arm.startswith('old-') else args.candidate
         opts = 'denoise=auto,chroma=auto,denoiser=bilateral' + (',retain=auto' if auto else '')
+        if auto and args.retain_max is not None:
+            opts += ',retain-max=' + str(args.retain_max)
         argv = [str(binary), '--avsw', '-i', pinned[name]['path'], '--codec', 'av1',
                 '--output-depth', '10', '--qvbr', '30', '--max-bitrate', '50000',
                 '--preset', 'quality', '--tune', 'hq', '--lookahead', '32',

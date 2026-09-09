@@ -62,6 +62,7 @@ struct NVEncFilmGrainDiagnostics {
     std::array<float, 3> strengthFitError;
     bool sourceFidelityFallback;
     bool freshModel;
+    bool strengthRefit; // recovered using occupied-bin amplitudes and measured intensities
     bool reliable;
     bool rejectedModel; // quantized AR feedback could not be certified stable
     bool sceneReset;
@@ -125,6 +126,10 @@ struct FilmGrainGpuPlaneStats {
     int64_t atb[FGS_AR_COEFFS_CHROMA];
     double binVarSum[FGS_STRENGTH_BINS];
     uint64_t binBlockCount[FGS_STRENGTH_BINS];
+    // Actual luma coordinates of occupied strength observations. Intensity
+    // counts distinguish measured black from older/analytical centre-only data.
+    double binLumaSum[FGS_STRENGTH_BINS];
+    uint64_t intensityBlocks;
     double lumaPredVarSum;
     uint64_t lumaPredBlocks;
     uint64_t observations;
@@ -172,8 +177,10 @@ void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& 
 bool build_film_grain_params(const FilmGrainGpuStats& stats, int bitDepth,
     bool analyzeChroma, bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
     NVEncFilmGrainDiagnostics& diagnostics, bool useBinCenters = false);
-// Retry a stale amplitude model using only current-frame evidence. The full
-// syntax/feedback guards still apply, followed by the stricter recovery fit.
+// Retry an inaccurate amplitude model using only current-frame evidence. An
+// occupied-bin fit can recover sharp curves lost to smoothing, using measured
+// brightness coordinates where available. The full syntax/feedback guards
+// still apply, followed by the stricter quantized per-plane recovery fit.
 // Failure leaves caller outputs unchanged.
 bool build_fidelity_recovery_model(const FilmGrainGpuStats& stats, int bitDepth,
     bool analyzeChroma, bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,

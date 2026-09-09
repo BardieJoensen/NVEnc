@@ -117,6 +117,7 @@ def encode(binary, directory, source, spec, qp, retain, expected_frames, retain_
                 model_frames=models, source_fallbacks=log.count('sourceFallback=1'),
                 source_fallback_frames=[int(v) for v in re.findall(r'fgs-model frame=(\d+)[^\n]*sourceFallback=1', log)],
                 fresh_model_frames=[int(v) for v in re.findall(r'fgs-model frame=(\d+)[^\n]*freshModel=1', log)],
+                strength_refit_frames=[int(v) for v in re.findall(r'fgs-model frame=(\d+)[^\n]*strengthRefit=1', log)],
                 fit_errors=[[float(v) for v in m] for m in re.findall(r'fitError=([\d.]+)/([\d.]+)/([\d.]+)', log)])
 
 

@@ -453,6 +453,91 @@ void testCurrentFrameRecovery() {
         "empty current evidence cannot recover a model");
 }
 
+void testOccupiedStrengthRecovery() {
+    // Ten supported intensity levels fit within AV1's point budget. Smoothing
+    // each peak into its neighbours needlessly makes this evidence fail the
+    // amplitude guard; retaining an entire source frame is avoidable here.
+    for (const int bits : {8, 10}) {
+        const double ds = 1 << (bits - 8);
+        FilmGrainGpuStats stats = {};
+        fillWhitePlane(stats.plane[0], 6.0 * ds, false);
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            const bool occupied = (bin % 2 == 0);
+            const double sigma = (bin % 4 == 0 ? 2.0 : 10.0) * ds;
+            stats.plane[0].binBlockCount[bin] = occupied ? 100 : 0;
+            stats.plane[0].binVarSum[bin] = occupied ? 100.0 * sigma * sigma : 0.0;
+        }
+        NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
+        NVEncFilmGrainDiagnostics diag;
+        expect(build_film_grain_params(stats, bits, false, true, params, diag, true),
+            "supported sharp curve has a stable AR model");
+        expect(film_grain_strength_fidelity(stats, params, bits, diag.templateGain).needsSource(),
+            "smoothed sharp curve reproduces avoidable source fallback");
+        expect(build_fidelity_recovery_model(stats, bits, false, true, params, diag),
+            "supported sharp curve recovers inside the existing AV1 point budget");
+        expect(!film_grain_strength_fidelity(stats, params, bits, diag.templateGain).needsSource(0.10, 0.25),
+            "occupied-bin recovery satisfies the unchanged strict amplitude guard");
+    }
+}
+
+void testMeasuredStrengthCoordinates() {
+    for (const int bits : {8, 10}) {
+        const double ds = 1 << (bits - 8);
+        FilmGrainGpuStats stats = {};
+        fillWhitePlane(stats.plane[0], 6.0 * ds, false);
+        auto& plane = stats.plane[0];
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            const bool occupied = bin >= 2 && bin <= 16 && bin % 2 == 0;
+            const double sigma = (bin % 4 == 0 ? 2.0 : 10.0) * ds;
+            const double x = (bin + (bin % 4 == 0 ? 0.1 : 0.9)) * 256.0 / FGS_STRENGTH_BINS;
+            plane.binBlockCount[bin] = occupied ? 100 : 0;
+            plane.binVarSum[bin] = occupied ? 100.0 * sigma * sigma : 0.0;
+            plane.binLumaSum[bin] = occupied ? 100.0 * x * ds : 0.0;
+            plane.intensityBlocks += plane.binBlockCount[bin];
+        }
+        NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
+        NVEncFilmGrainDiagnostics diag;
+        expect(build_fidelity_recovery_model(stats, bits, false, true, params, diag),
+            "sharp supported curve recovers at measured rather than bucket-centre brightness");
+        expect(!film_grain_strength_fidelity(stats, params, bits, diag.templateGain).needsSource(0.10, 0.25),
+            "quantized recovery is accurate at the actual measured brightness");
+        const auto good = params;
+        auto invalid = stats;
+        invalid.plane[0].binLumaSum[2] = std::numeric_limits<double>::quiet_NaN();
+        expect(!build_fidelity_recovery_model(invalid, bits, false, true, params, diag),
+            "non-finite occupied brightness cannot establish a recovery fit");
+        expect(std::memcmp(&params, &good, sizeof(params)) == 0,
+            "invalid brightness leaves the selected model unchanged");
+        invalid = stats;
+        --invalid.plane[0].intensityBlocks;
+        expect(!build_fidelity_recovery_model(invalid, bits, false, true, params, diag),
+            "partial intensity observations cannot establish a recovery fit");
+
+        FilmGrainGpuStats duplicate = {};
+        fillWhitePlane(duplicate.plane[0], 6.0 * ds, false);
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            duplicate.plane[0].binBlockCount[bin] = (bin == 4 || bin == 5) ? 100 : 0;
+            duplicate.plane[0].binVarSum[bin] = (bin == 4 || bin == 5) ? 100.0 * 36.0 * ds * ds : 0.0;
+        }
+        duplicate.plane[0].binLumaSum[4] = 100.0 * 63.98 * ds;
+        duplicate.plane[0].binLumaSum[5] = 100.0 * 64.02 * ds;
+        duplicate.plane[0].intensityBlocks = 200;
+        expect(build_fidelity_recovery_model(duplicate, bits, false, true, params, diag),
+            "neighbouring buckets at the same quantized intensity remain representable");
+        for (uint32_t i = 1; i < params.numYPoints; ++i) {
+            expect(params.pointYValue[i] > params.pointYValue[i - 1],
+                "recovery emits strictly ordered scaling positions");
+        }
+        duplicate.plane[0].binVarSum[4] = 100.0 * 4.0 * ds * ds;
+        duplicate.plane[0].binVarSum[5] = 100.0 * 100.0 * ds * ds;
+        const auto before = params;
+        expect(!build_fidelity_recovery_model(duplicate, bits, false, true, params, diag),
+            "incompatible grain at the same brightness still preserves the source");
+        expect(std::memcmp(&params, &before, sizeof(params)) == 0,
+            "unrepresentable duplicate intensity leaves the selected model unchanged");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -469,6 +554,8 @@ int main() {
     testStrengthFitCenters();
     testStrengthFidelity();
     testCurrentFrameRecovery();
+    testOccupiedStrengthRecovery();
+    testMeasuredStrengthCoordinates();
     if (failures) {
         std::cerr << failures << " solver test(s) failed\n";
         return 1;
