@@ -1222,9 +1222,16 @@ RGY_ERR RGYOutputAvcodec::InitVideo(const VideoInfo *videoOutputInfo, const Avco
             doviconf = AVStreamGetSideData<AVDOVIDecoderConfigurationRecord>(prm->videoInputStream, AV_PKT_DATA_DOVI_CONF, side_data_size);
             if (doviconf) {
                 m_Mux.video.doviProfileSrc = RGY_DOVI_PROFILE_OTHER;
+                // Keep the input profile before adapting its container record to
+                // the output codec. P7 RPU conversion must not be disabled merely
+                // because the AV1 container now declares profile 10.
+                const auto sourceDoviProfile = doviconf->dv_profile;
                 if (videoOutputInfo->codec == RGY_CODEC_AV1 && doviconf->dv_profile != 10) {
                     // 出力がAV1の場合は、profile=10に読み替える
                     doviconf->dv_profile = 10;
+                    if (sourceDoviProfile == 7 && doviconf->dv_bl_signal_compatibility_id == 6) {
+                        doviconf->dv_bl_signal_compatibility_id = 1;
+                    }
                     if (   doviconf->dv_bl_signal_compatibility_id != 1
                         && doviconf->dv_bl_signal_compatibility_id != 2
                         && doviconf->dv_bl_signal_compatibility_id != 4) {
@@ -1266,6 +1273,9 @@ RGY_ERR RGYOutputAvcodec::InitVideo(const VideoInfo *videoOutputInfo, const Avco
                     } else {
                         m_Mux.video.doviProfileSrc = RGY_DOVI_PROFILE_100;
                     }
+                }
+                if (sourceDoviProfile == 7) {
+                    m_Mux.video.doviProfileSrc = RGY_DOVI_PROFILE_70;
                 }
             }
         }

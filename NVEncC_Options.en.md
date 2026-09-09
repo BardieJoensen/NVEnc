@@ -1080,6 +1080,12 @@ Interleave Dolby Vision RPU metadata from the specified file into the output fil
 
 Current Dolby Vision output is BL+RPU only. BL+EL output is not supported.
 
+Profile 7 RPU metadata is converted to a single-layer representation for explicit
+AV1 profile 10.1 output. With profile `copy`, an HDR10-compatible profile 7 input
+is signaled as AV1 profile 10.1 and receives the same RPU conversion. This does
+not reconstruct or preserve a full enhancement layer (FEL); retain such a source
+when its enhancement-layer picture information is required.
+
 To better satisfy Dolby Vision profile/level bitrate and HRD limits, use bitrate/VBV-controlled modes and set [--max-bitrate](#--max-bitrate-int) / [--vbv-bufsize](#--vbv-bufsize-int) appropriately. `--cqp` can also be used, but it does not enforce those limits by itself.
 
 ### --dolby-vision-rpu copy [HEVC, AV1]
