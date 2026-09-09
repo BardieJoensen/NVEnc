@@ -464,7 +464,7 @@ __global__ void kernel_fgs_motion_confidence(uint8_t *__restrict__ flatMask,
     }
 }
 
-template<typename Type, int shift, int components>
+template<typename Type, int shift, int components, bool directionalExtent>
 __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPitch,
     const uint8_t *__restrict__ src, const int srcPitch, const int width, const int height,
     const int maxValue, const float sigma, const float *__restrict__ sigmaMap,
@@ -472,16 +472,17 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
     const int blocksX, const int blocksY, const int planeBlockSize, const float detailProtectionScale, const bool directionalDenoise) {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
-    constexpr int tileWidth = FGS_BILATERAL_BLOCK_X + FGS_BILATERAL_RADIUS * 2;
-    constexpr int tileHeight = FGS_BILATERAL_BLOCK_Y + FGS_BILATERAL_RADIUS * 2;
+    constexpr int halo = directionalExtent ? 4 : FGS_BILATERAL_RADIUS;
+    constexpr int tileWidth = FGS_BILATERAL_BLOCK_X + halo * 2;
+    constexpr int tileHeight = FGS_BILATERAL_BLOCK_Y + halo * 2;
     constexpr int tilePixels = tileWidth * tileHeight;
     constexpr int blockThreads = FGS_BILATERAL_BLOCK_X * FGS_BILATERAL_BLOCK_Y;
     __shared__ int tile[tilePixels * components];
 
     // Neighbourhoods overlap heavily: the original implementation issued 25
     // global source loads per output component.  Cooperatively cache this
-    // block's 5x5 halo once, preserving the exact sample values and arithmetic
-    // order used by the filter below.
+    // block's halo once. Default paths keep their 5x5 support and arithmetic;
+    // optional directional auto can extend along structure to a 9x9 support.
     const int tid = threadIdx.y * FGS_BILATERAL_BLOCK_X + threadIdx.x;
     for (int index = tid; index < tilePixels * components; index += blockThreads) {
         const int component = index % components;
@@ -489,9 +490,9 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
         const int tx = pixel % tileWidth;
         const int ty = pixel / tileWidth;
         const int sx = min(width - 1, max(0,
-            static_cast<int>(blockIdx.x) * FGS_BILATERAL_BLOCK_X + tx - FGS_BILATERAL_RADIUS));
+            static_cast<int>(blockIdx.x) * FGS_BILATERAL_BLOCK_X + tx - halo));
         const int sy = min(height - 1, max(0,
-            static_cast<int>(blockIdx.y) * FGS_BILATERAL_BLOCK_Y + ty - FGS_BILATERAL_RADIUS));
+            static_cast<int>(blockIdx.y) * FGS_BILATERAL_BLOCK_Y + ty - halo));
         tile[index] = load_code<Type, shift>(src, srcPitch, sx, sy, component, components);
     }
     __syncthreads();
@@ -577,16 +578,17 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
     }
     for (int component = 0; component < components; ++component) {
         const int centerIndex = (
-            (threadIdx.y + FGS_BILATERAL_RADIUS) * tileWidth
-            + threadIdx.x + FGS_BILATERAL_RADIUS) * components + component;
+            (threadIdx.y + halo) * tileWidth
+            + threadIdx.x + halo) * components + component;
         const int center = tile[centerIndex];
         float weighted = 0.0f;
         float weightSum = 0.0f;
-        for (int dy = -2; dy <= 2; ++dy) {
-            for (int dx = -2; dx <= 2; ++dx) {
+        const int radius = directionalExtent && normalPrecision > 0.0f ? 4 : 2;
+        for (int dy = -radius; dy <= radius; ++dy) {
+            for (int dx = -radius; dx <= radius; ++dx) {
                 const int sampleIndex = (
-                    (threadIdx.y + FGS_BILATERAL_RADIUS + dy) * tileWidth
-                    + threadIdx.x + FGS_BILATERAL_RADIUS + dx) * components + component;
+                    (threadIdx.y + halo + dy) * tileWidth
+                    + threadIdx.x + halo + dx) * components + component;
                 const int sample = tile[sampleIndex];
                 if (dx == 0 && dy == 0) {
                     constexpr float centerWeight = spatial[2] * spatial[2];
@@ -596,10 +598,20 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
                 }
                 const float difference = static_cast<float>(sample - center);
                 const float rangeWeight = 1.0f / (1.0f + difference * difference * invRange2);
-                float weight = spatial[dx + 2] * spatial[dy + 2] * rangeWeight;
+                const float legacySpatial = abs(dx) <= 2 && abs(dy) <= 2
+                    ? spatial[dx + 2] * spatial[dy + 2] : 0.0f;
+                float weight = legacySpatial * rangeWeight;
                 if (normalPrecision > 0.0f) {
                     const float cross = fmaxf(0.0f, dx*dx*normalXX + 2.0f*dx*dy*normalXY + dy*dy*normalYY);
                     weight /= 1.0f + normalPrecision * cross;
+                    if (directionalExtent) {
+                        // Extend averaging along supported structure while
+                        // tightening it across that structure. This removes
+                        // more independent noise without broadening the edge.
+                        const float oriented = 36.0f * __expf(-0.125f * (dx*dx + dy*dy) - 6.0f * cross);
+                        const float blend = fminf(1.0f, normalPrecision * 0.25f);
+                        weight = weight * (1.0f - blend) + oriented * rangeWeight * blend;
+                    }
                 }
                 weighted += weight * sample;
                 weightSum += weight;
@@ -768,6 +780,8 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
             static_cast<int>(metrics[blockIndex].mean * FGS_STRENGTH_BINS / (maxValue + 1))));
         atomic_add_f64(output->binVarSum + bin, variance);
         atomic_add_u64(output->binBlockCount + bin, 1ULL);
+        atomic_add_f64(output->binLumaSum + bin, static_cast<double>(metrics[blockIndex].mean));
+        atomic_add_u64(&output->intensityBlocks, 1ULL);
         if (chroma) {
             const double meanPred = static_cast<double>(predSum) / samples;
             const double predVariance = fmax(0.0,
@@ -1006,9 +1020,15 @@ static RGY_ERR launch_bilateral(const RGYFrameInfo& dst, const RGYFrameInfo& src
     const float detailProtectionScale = 1.0f, const bool directionalDenoise = false) {
     const dim3 block(FGS_BILATERAL_BLOCK_X, FGS_BILATERAL_BLOCK_Y);
     const dim3 grid(divCeil(width, static_cast<int>(block.x)), divCeil(height, static_cast<int>(block.y)));
-    kernel_fgs_bilateral<Type, shift, components><<<grid, block, 0, stream>>>(
-        dst.ptr[0], dst.pitch[0], src.ptr[0], src.pitch[0], width, height, (1 << bitDepth) - 1, sigma,
-        sigmaMap, detailMetrics, blocksX, blocksY, planeBlockSize, detailProtectionScale, directionalDenoise);
+    if (directionalDenoise && detailMetrics != nullptr) {
+        kernel_fgs_bilateral<Type, shift, components, true><<<grid, block, 0, stream>>>(
+            dst.ptr[0], dst.pitch[0], src.ptr[0], src.pitch[0], width, height, (1 << bitDepth) - 1, sigma,
+            sigmaMap, detailMetrics, blocksX, blocksY, planeBlockSize, detailProtectionScale, directionalDenoise);
+    } else {
+        kernel_fgs_bilateral<Type, shift, components, false><<<grid, block, 0, stream>>>(
+            dst.ptr[0], dst.pitch[0], src.ptr[0], src.pitch[0], width, height, (1 << bitDepth) - 1, sigma,
+            sigmaMap, detailMetrics, blocksX, blocksY, planeBlockSize, detailProtectionScale, directionalDenoise);
+    }
     return err_to_rgy(cudaGetLastError());
 }
 
@@ -2036,6 +2056,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 diagnostics.observations = freshDiagnostics.observations;
                 diagnostics.modelHeld = false;
                 diagnostics.freshModel = true;
+                diagnostics.strengthRefit = freshDiagnostics.strengthRefit;
                 m_state->lastParams = params;
                 m_state->lastTemplateGain = diagnostics.templateGain;
                 m_state->lastParamsValid = true;
@@ -2171,7 +2192,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             pointsCr += strsprintf(_T(" %d:%d"), params.pointCrValue[i], params.pointCrScaling[i]);
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
-            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
+            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d strengthRefit=%d scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             modelValid ? 1 : 0, diagnostics.sceneReset ? 1 : 0, diagnostics.modelHeld ? 1 : 0,
@@ -2179,7 +2200,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             diagnostics.noiseStdDev[0], diagnostics.noiseStdDev[1], diagnostics.noiseStdDev[2],
             diagnostics.detailRisk, diagnostics.residualRetain, diagnostics.grainCorrelation,
             diagnostics.strengthFitError[0], diagnostics.strengthFitError[1], diagnostics.strengthFitError[2],
-            diagnostics.sourceFidelityFallback ? 1 : 0, diagnostics.freshModel ? 1 : 0,
+            diagnostics.sourceFidelityFallback ? 1 : 0, diagnostics.freshModel ? 1 : 0, diagnostics.strengthRefit ? 1 : 0,
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,

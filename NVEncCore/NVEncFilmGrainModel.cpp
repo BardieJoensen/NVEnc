@@ -46,7 +46,7 @@
 NVEncFilmGrainDiagnostics::NVEncFilmGrainDiagnostics() :
     flatBlocks(0), totalBlocks(0), modelFrames(0), noiseStdDev(), templateGain{1.0f, 1.0f, 1.0f}, observations(),
     detailRisk(0.0f), residualRetain(0.0f), grainCorrelation(0.0f), strengthFitError(),
-    sourceFidelityFallback(false), freshModel(false), reliable(false), rejectedModel(false), sceneReset(false), modelHeld(false) {
+    sourceFidelityFallback(false), freshModel(false), strengthRefit(false), reliable(false), rejectedModel(false), sceneReset(false), modelHeld(false) {
 }
 
 namespace fgsmodel {
@@ -230,7 +230,9 @@ void add_plane_stats(FilmGrainGpuPlaneStats& dst, const FilmGrainGpuPlaneStats& 
     for (int i = 0; i < FGS_STRENGTH_BINS; ++i) {
         dst.binVarSum[i] += src.binVarSum[i];
         dst.binBlockCount[i] += src.binBlockCount[i];
+        dst.binLumaSum[i] += src.binLumaSum[i];
     }
+    dst.intensityBlocks += src.intensityBlocks;
     dst.lumaPredVarSum += src.lumaPredVarSum;
     dst.lumaPredBlocks += src.lumaPredBlocks;
     dst.observations += src.observations;
@@ -240,6 +242,7 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     const bool analyzeChroma, const bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
     NVEncFilmGrainDiagnostics& diagnostics, const bool useBinCenters) {
     diagnostics.rejectedModel = false;
+    diagnostics.strengthRefit = false;
     std::array<FilmGrainSolvedPlane, 3> solved;
     solved[0] = solve_plane(stats.plane[0], false, nullptr);
     if (!solved[0].valid) return false;
@@ -374,6 +377,102 @@ bool build_film_grain_params(const FilmGrainGpuStats& stats, const int bitDepth,
     return true;
 }
 
+static double strength_observation_x(const FilmGrainGpuPlaneStats& stats,
+    const int bin, const int bitDepth) {
+    if (stats.intensityBlocks == 0) return (bin + 0.5) * 256.0 / FGS_STRENGTH_BINS;
+    uint64_t blocks = 0;
+    for (const auto count : stats.binBlockCount) blocks += count;
+    if (blocks != stats.intensityBlocks || stats.binBlockCount[bin] == 0)
+        return std::numeric_limits<double>::quiet_NaN();
+    const double x = stats.binLumaSum[bin] / stats.binBlockCount[bin] / (1 << (bitDepth - 8));
+    const double lo = bin * 256.0 / FGS_STRENGTH_BINS;
+    const double hi = (bin + 1) * 256.0 / FGS_STRENGTH_BINS;
+    if (!std::isfinite(x) || x < lo - 1e-4 || x > hi + 1e-4)
+        return std::numeric_limits<double>::quiet_NaN();
+    return x;
+}
+
+// A regularized curve can erase a well-supported sharp change in grain
+// strength. Retry only its scaling points, using actual occupied bins rather
+// than spending AV1's point budget on interpolated, unobserved intensities.
+// The AR model has already passed the normal solver and synthesis guards.
+static bool refit_occupied_strength(const FilmGrainGpuStats& stats, const int bitDepth,
+    NV_ENC_FILM_GRAIN_PARAMS_AV1& params, NVEncFilmGrainDiagnostics& diagnostics) {
+    std::array<std::vector<StrengthPoint>, 3> points;
+    std::array<std::vector<uint64_t>, 3> weights;
+    const int limits[3] = { 14, 10, 10 };
+    const bool active[3] = { params.numYPoints > 0, params.numCbPoints > 0, params.numCrPoints > 0 };
+    const double depthScale = static_cast<double>(1 << (bitDepth - 8));
+    double maxScaling = 1e-4;
+    for (int plane = 0; plane < 3; ++plane) {
+        if (!active[plane]) continue;
+        const double gain = diagnostics.templateGain[plane];
+        if (!(gain > 0.0) || !std::isfinite(gain)) return false;
+        for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+            const auto count = stats.plane[plane].binBlockCount[bin];
+            if (count == 0) continue;
+            const double sigma = std::sqrt(stats.plane[plane].binVarSum[bin] / count) / (gain * depthScale);
+            const double measuredX = strength_observation_x(stats.plane[plane], bin, bitDepth);
+            if (!std::isfinite(measuredX)) return false;
+            const double x = std::clamp(std::round(measuredX), 0.0, 255.0);
+            // Adjacent occupied buckets can describe the same quantized
+            // intensity. Pool their energy rather than emitting duplicate
+            // AV1 scaling positions or silently dropping one observation.
+            if (!points[plane].empty() && points[plane].back().first == x) {
+                const auto weight = weights[plane].back();
+                const double oldSigma = points[plane].back().second;
+                points[plane].back().second = std::sqrt((oldSigma * oldSigma * weight + sigma * sigma * count)
+                    / (static_cast<double>(weight) + count));
+                weights[plane].back() += count;
+            } else {
+                points[plane].emplace_back(x, sigma);
+                weights[plane].push_back(count);
+            }
+            maxScaling = std::max(maxScaling, sigma);
+        }
+        if (points[plane].empty()) return false;
+        const auto observations = points[plane];
+        while (static_cast<int>(points[plane].size()) > limits[plane]) {
+            size_t remove = 1;
+            double leastError = std::numeric_limits<double>::infinity();
+            for (size_t candidate = 1; candidate + 1 < points[plane].size(); ++candidate) {
+                auto trial = points[plane];
+                trial.erase(trial.begin() + candidate);
+                double error = 0.0;
+                size_t right = 1;
+                for (size_t i = 0; i < observations.size(); ++i) {
+                    const auto& sample = observations[i];
+                    while (right + 1 < trial.size() && trial[right].first < sample.first) ++right;
+                    const auto& lo = trial[right - 1];
+                    const auto& hi = trial[right];
+                    const double mix = (sample.first - lo.first) / (hi.first - lo.first);
+                    const double difference = lo.second + mix * (hi.second - lo.second) - sample.second;
+                    error += weights[plane][i] * difference * difference;
+                }
+                if (error < leastError) { leastError = error; remove = candidate; }
+            }
+            points[plane].erase(points[plane].begin() + remove);
+        }
+    }
+    const int maxScalingLog2 = std::clamp(static_cast<int>(std::floor(std::log2(maxScaling)) + 1), 2, 5);
+    const double factor = static_cast<double>(1 << (8 - maxScalingLog2));
+    params.grainScalingMinus8 = 5 - maxScalingLog2;
+    params.numYPoints = static_cast<uint32_t>(points[0].size());
+    params.numCbPoints = static_cast<uint32_t>(points[1].size());
+    params.numCrPoints = static_cast<uint32_t>(points[2].size());
+    uint8_t *values[3] = { params.pointYValue, params.pointCbValue, params.pointCrValue };
+    uint8_t *scaling[3] = { params.pointYScaling, params.pointCbScaling, params.pointCrScaling };
+    for (int plane = 0; plane < 3; ++plane) {
+        std::fill(values[plane], values[plane] + limits[plane], static_cast<uint8_t>(0));
+        std::fill(scaling[plane], scaling[plane] + limits[plane], static_cast<uint8_t>(0));
+        for (size_t i = 0; i < points[plane].size(); ++i) {
+            values[plane][i] = static_cast<uint8_t>(std::clamp(static_cast<int>(std::lround(points[plane][i].first)), 0, 255));
+            scaling[plane][i] = static_cast<uint8_t>(std::clamp(static_cast<int>(std::lround(points[plane][i].second * factor)), 0, 255));
+        }
+    }
+    return true;
+}
+
 bool build_fidelity_recovery_model(const FilmGrainGpuStats& stats, const int bitDepth,
     const bool analyzeChroma, const bool limitedRange, NV_ENC_FILM_GRAIN_PARAMS_AV1& params,
     NVEncFilmGrainDiagnostics& diagnostics) {
@@ -389,8 +488,14 @@ bool build_fidelity_recovery_model(const FilmGrainGpuStats& stats, const int bit
     NVEncFilmGrainDiagnostics freshDiagnostics;
     if (!build_film_grain_params(stats, bitDepth, analyzeChroma, limitedRange,
             fresh, freshDiagnostics, true)) return false;
-    const auto fidelity = film_grain_strength_fidelity(stats, fresh, bitDepth, freshDiagnostics.templateGain);
-    if (fidelity.blocks[0] == 0 || fidelity.needsSource(0.10, 0.25)) return false;
+    auto fidelity = film_grain_strength_fidelity(stats, fresh, bitDepth, freshDiagnostics.templateGain);
+    if (fidelity.blocks[0] == 0) return false;
+    if (fidelity.needsSource(0.10, 0.25)) {
+        if (!refit_occupied_strength(stats, bitDepth, fresh, freshDiagnostics)) return false;
+        fidelity = film_grain_strength_fidelity(stats, fresh, bitDepth, freshDiagnostics.templateGain);
+        if (fidelity.needsSource(0.10, 0.25)) return false;
+        freshDiagnostics.strengthRefit = true;
+    }
     params = fresh;
     diagnostics = freshDiagnostics;
     return true;
@@ -504,10 +609,14 @@ FilmGrainStrengthFidelity film_grain_strength_fidelity(const FilmGrainGpuStats& 
                 squaredError = std::numeric_limits<double>::infinity();
                 continue;
             }
-            // GPU collection uses floor(mean * bins / (maxValue + 1)).
-            // Evaluate at that interval's centre, not the legacy fitter's
-            // endpoint grid: those coordinates differ most near black/white.
-            const double x = (bin + 0.5) * 256.0 / FGS_STRENGTH_BINS;
+            // A bucket centre can be several code values away from the
+            // actual picture brightness. Sharp valid curves must be checked
+            // where their evidence was measured, including after quantization.
+            const double x = strength_observation_x(observed, bin, bitDepth);
+            if (!std::isfinite(x)) {
+                squaredError = std::numeric_limits<double>::infinity();
+                continue;
+            }
             const int left = std::clamp(static_cast<int>(std::floor(x)), 0, FGS_STRENGTH_LUT_SIZE - 1);
             const int right = std::min(left + 1, FGS_STRENGTH_LUT_SIZE - 1);
             const double modeledSigma = lut[left] * (1.0 - (x - left)) + lut[right] * (x - left);
