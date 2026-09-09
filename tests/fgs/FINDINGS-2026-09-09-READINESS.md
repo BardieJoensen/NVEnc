@@ -1,8 +1,10 @@
 # Encoder and Tdarr readiness work
 
-Status: **in progress**. The real Tdarr scheduler trial passed;
-production rollout remains to be completed. This continues the broader
-[work through production](WORK-TO-PRODUCTION.md), not a new completed goal.
+Status: **encoder and flow deployed**. The foreground acceptance and rollout
+work is complete. Approved library repairs and the watchability audit remain
+running in the background; unsupported or unresolved files stay on hold.
+This closes the encoder rollout portion of the broader
+[work through production](WORK-TO-PRODUCTION.md).
 
 Evidence directory:
 `/opt/docker-apps/logs/fgs-ripple-repair-20260906/production-readiness-20260909`.
@@ -209,3 +211,55 @@ the repair coordinator's existing node pause and worker limits, and touches
 only the Tdarr node runtime/build selection, the reviewed flow and its added
 plugins. Activation status is recorded separately in
 `production-rollout-result.json`; a successful preflight is not activation.
+
+## Live deployment and repair-worker integration
+
+The production node now runs image
+`sha256:a7232fd54134b3c54fb4c73ca21df3875f344499a249af1968036d1e5b0a6f19`
+with encoder core `497caa64`, binary SHA-256
+`bb7e75cbcb9097f1f1c7ac3347e7193c74caa6c7d57db1c3c77348cc27daf144`.
+The live flow was read back and all 191 existing/new plugin files were verified.
+Its installed export SHA-256 is
+`6cebd7cb63d540f61d9c142a9728ed4fbf0edaeaa3312eacae9ae7503126c7fe`.
+The original two GPU/two CPU-health worker limits and repair-owned pause were
+preserved. Startup's temporary hold setting was restored to its previous value.
+Repairs, audit and Emby were not stopped. No library media was replaced by the
+deployment, and the hold on new recovery downloads remains in force.
+
+Finishing activation briefly deferred because the post-start process check
+still saw an encoder/validator process, despite no assigned worker. Once the
+node was quiet, the recorded installation was reverified and finished without
+another restart. Both attempts are retained. A read-only rollback preflight
+also passed after activation. The persistent build recipe and local encoder
+asset were installed; later normal node recreation keeps the selected runtime.
+
+An additional read-only audit found three attempted repair sources with P7:
+two MEL encodes still running on the old host binary, and a held FEL source
+(Bumblebee) whose archived command also referenced a vanished temporary RPU.
+No completed repair in those source-probe records was P7. Only the two unsafe
+P7 encode attempts were terminated before installation; both retained their
+library file and source. The coordinator and unrelated workers continued.
+
+The separate host repair worker now selects the qualified binary for new jobs,
+classifies P7 before encoding, preserves FEL/uncertain input, refuses stale
+external-RPU replay, and applies the shared output normalization guard. Its
+full P7 MEL fixture completed decoding, validation, mux, backup and atomic
+replacement of a disposable test copy. Real FEL and historical bad-RPU controls
+were rejected. The new binary uses the coordinator's existing recognized host
+path so Emby yielding continues without restarting the repair service. Already
+running SDR/P8 workers can finish on the preceding safe encoder.
+
+Two other holds were caused solely by empty track titles becoming omitted tags
+during Matroska remuxing. The repair comparison now treats those as equivalent
+while preserving all meaningful title/language/disposition/codec/payload checks.
+The video-only repair fixture also exposed optional FFmpeg maps falling back
+to video when no audio/subtitles existed. It now records an empty nonvideo hash
+set and explicitly excludes video from that pass. The initial failure and
+successful retry are retained; the completed encode was reused for the retry.
+
+The two interrupted MEL cases and two empty-title cases returned to the normal
+repair queue under the corrected worker. Bumblebee remains subject to FEL
+preservation. See `repair-p7-protection.json`, `repair-p7-layer-checks.json`,
+`repair-guard-negative-results.json`, `repair-worker-trial-state`,
+`repair-deployment-v1/deployment.json` and
+[repair integration notes](../../tools/fgs/REPAIR-DOVI.md).

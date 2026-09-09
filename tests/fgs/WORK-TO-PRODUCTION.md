@@ -1,6 +1,6 @@
 # Encoder work through production
 
-Status: **in progress**, reconciled 2026-09-09 after the post-encode study.
+Status: **encoder rollout complete; approved library work running**, 2026-09-09.
 
 The goal is to finish the encoder improvements, resolve measured quality,
 reliability, speed and storage costs, and integrate the validated result into
@@ -21,20 +21,21 @@ close the overall task.
 - The exact source/bitstream/track checks and the limitations of sampled or
   conservative measurements are recorded in the linked findings.
 
-## Work still open
+## Acceptance and remaining background work
 
 | Work | Required outcome |
 |---|---|
-| Production integration | A pinned candidate runtime, fresh encode through the actual media-processing path, deployable configuration, and rollback artifacts |
-| Storage policy | An integrated oversized-file decision with measured runtime cost; estimates must not be presented as an exact old-encoder size cap |
-| Repeat variability | Establish its picture-quality impact and fix a demonstrated cause or establish a defensible operating policy; matching a few hashes is insufficient |
-| Format coverage | Exercise the candidate on available HDR10+, interlace and metadata paths; retain source formats that cannot be preserved |
-| Speed and overhead | Measure the final configured pipeline against production and fix demonstrated bottlenecks without discarding fidelity protection |
-| Library remediation | Continue the approved repairs and contextual watchability audit, keeping later recovery decisions grounded in severity and recurrence |
+| Production integration | Complete: pinned core 497caa64 deployed; real scheduler, staged outputs, live hashes and rollback verified |
+| Storage policy | Implemented: ordinary retain=0 and existing savings rules; optional auto retention remains a separate measured-source pilot |
+| Repeat variability | Bounded qualification complete; picture impact measured, operating policy recorded, no unsupported deterministic-output claim |
+| Format coverage | Available HDR10+/P7 MEL and true-interlace paths pass; FEL/uncertain source video is preserved |
+| Speed and overhead | Complete for the configured rollout: tested byte-accounting optimization, bounded DV guard, existing final validator unchanged |
+| Library remediation | Running in background; repair-worker DV guards and metadata fixes installed, evidence-based later recovery remains under the download hold |
 
 The active operational ledger is
 `/opt/docker-apps/logs/fgs-ripple-repair-20260906/production-readiness-20260909/work-plan.json`.
-It must stay open while a critical implementation or acceptance item remains.
+It distinguishes completed foreground engineering from ongoing background
+repairs and explicitly deferred investigations.
 
 ## Persistent constraints
 
@@ -45,10 +46,11 @@ input. Exhaustive development audits do not become routine per-file Tdarr
 validation by accident. The unrelated FFprobe XML-printer investigation is
 documented and deferred.
 
-The current 10% measured-baseline limit is a trial setting. An exact cap needs
-a complete matching baseline; sampling cannot remove that requirement. Its
-operational cost and behavior must be addressed before treating it as the
-normal production policy.
+The 10% measured-baseline limit remains a trial setting requiring a complete
+matching baseline. The ordinary production flow keeps default retention and
+its existing source-relative savings policy, so it gains neither a second
+encode nor a source-hash pass. Optional automatic detail retention remains
+limited to the separate measured pilot.
 
 ## Evidence already completed
 

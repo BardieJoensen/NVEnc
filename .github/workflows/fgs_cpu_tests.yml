@@ -66,6 +66,7 @@ jobs:
           python3 tests/fgs/test_tdarr_pilot.py
           python3 tests/fgs/test_tdarr_rollout.py
           python3 tests/fgs/test_tdarr_plugin_update.py
+          python3 tests/fgs/test_repair_dovi_guard.py
 
       # The suite above must fail when the code under test is wrong, not only
       # pass when it is right. A suite that has never been observed failing is
