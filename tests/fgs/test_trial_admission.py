@@ -3,10 +3,35 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from production_compare import identity, sha
-from trial_admission import admit, byte_budget, validated_pair
+from trial_admission import admit, byte_budget, probe_video_only, validated_pair
+
+
+class ContainerProbeTests(unittest.TestCase):
+    def probe(self, streams):
+        with patch('trial_admission.subprocess.run', return_value=SimpleNamespace(
+                stdout=json.dumps({'streams': streams}))):
+            probe_video_only(Path('fixture.mkv'))
+
+    def test_single_av1_video_accepts_dolby_vision_side_data(self):
+        for side_data in [None, [{}], [{'side_data_type': 'DOVI configuration record'}]]:
+            with self.subTest(side_data=side_data):
+                stream = dict(codec_name='av1', codec_type='video')
+                if side_data is not None:
+                    stream['side_data_list'] = side_data
+                self.probe([stream])
+
+    def test_missing_wrong_or_additional_tracks_are_rejected(self):
+        video = dict(codec_name='av1', codec_type='video', side_data_list=[{}])
+        for streams in [[], [{}], [dict(codec_name='hevc', codec_type='video')],
+                        [dict(codec_name='av1', codec_type='audio')],
+                        [video, dict(codec_name='aac', codec_type='audio')],
+                        [video, video], [video, dict(codec_type='subtitle')]]:
+            with self.subTest(streams=streams), self.assertRaisesRegex(ValueError, 'video-only'):
+                self.probe(streams)
 
 
 class AdmissionTests(unittest.TestCase):

@@ -435,3 +435,12 @@ AV1 decoder; the comparison instead requires the parsed Dolby Vision fields.
 The tested cross-codec configuration mapping is HEVC profile 8 without an
 enhancement layer to AV1 profile 10. Other source-profile conversions require
 separate evidence. These offline traces add no work to normal Tdarr validation.
+
+Keep the recorder's default grain application enabled. The local FFprobe build
+used for the September 2026 trials fails when its XML printer encounters
+exported film-grain side data with grain application disabled. The normal XML
+path completed all full HDR comparisons. Separate pixel-only grain-off decodes
+remain part of `production_compare.py` and also pass.
+
+The completed size admission, full HDR and repeatability follow-up is documented
+in [the September 9 findings](FINDINGS-2026-09-09-TRIALS.md).

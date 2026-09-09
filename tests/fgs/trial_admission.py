@@ -74,7 +74,10 @@ def probe_video_only(path):
                             'stream=codec_type,codec_name', '-of', 'json', str(path)],
                            capture_output=True, text=True, check=True, timeout=120)
     streams = json.loads(probe.stdout).get('streams', [])
-    if len(streams) != 1 or streams[0] != {'codec_name': 'av1', 'codec_type': 'video'}:
+    # FFprobe can include side_data_list even with this restricted selection.
+    # Dolby Vision metadata belongs to the video stream; it is not another track.
+    if (len(streams) != 1 or streams[0].get('codec_name') != 'av1'
+            or streams[0].get('codec_type') != 'video'):
         raise ValueError('A video-only AV1 baseline and candidate are required')
 
 
