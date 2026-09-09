@@ -493,7 +493,8 @@ std::pair<int, std::string> convert_dovi_rpu(std::vector<uint8_t>& data, const R
         }
         if (prm->convertProfile
             && ((doviProfileDst != doviProfileSrc
-                && doviProfileDst == RGY_DOVI_PROFILE_81
+                && (doviProfileDst == RGY_DOVI_PROFILE_81
+                 || (doviProfileSrc == RGY_DOVI_PROFILE_70 && doviProfileDst == RGY_DOVI_PROFILE_101))
                 && (doviProfileSrc != RGY_DOVI_PROFILE_OTHER
                  && doviProfileSrc != RGY_DOVI_PROFILE_81
                  && doviProfileSrc != RGY_DOVI_PROFILE_100)) // dovi_convert_rpu_with_modeのmode=2が対応しているのは profile 5, 7, 8 のみ
