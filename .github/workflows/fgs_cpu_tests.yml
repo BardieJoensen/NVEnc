@@ -61,7 +61,9 @@ jobs:
         run: bash tests/fgs/run_cpu_tests.sh
 
       - name: Test offline Tdarr replay admission and final-output checks
-        run: node --test tests/fgs/test_tdarr_trial_pipeline.js
+        run: |
+          node --test tests/fgs/test_tdarr_trial_pipeline.js tests/fgs/test_tdarr_size_budget.js
+          python3 tests/fgs/test_tdarr_pilot.py
 
       # The suite above must fail when the code under test is wrong, not only
       # pass when it is right. A suite that has never been observed failing is
