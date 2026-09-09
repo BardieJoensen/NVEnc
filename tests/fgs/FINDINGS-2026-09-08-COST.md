@@ -1,5 +1,11 @@
 # Production cost and grain-fidelity follow-up — 2026-09-08
 
+Follow-up: the [September 9 retention work](FINDINGS-2026-09-09-AUTO-RETENTION.md)
+demonstrates that the 12-band `strength_steps` curve below can be represented
+with a better fitter and measured brightness coordinates. Its description as
+unrepresentable here reflects the limitation of the then-tested fitter, not
+an intrinsic AV1 limit. The historical results below remain unchanged.
+
 The bounded study is complete. The guarded fresh-model retry, optional retention
 ceiling and validated directional denoising change are committed to the fidelity
 work branch. The deployed encoder and Tdarr flow are unchanged. The measurements

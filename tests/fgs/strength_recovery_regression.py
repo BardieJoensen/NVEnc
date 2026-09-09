@@ -119,8 +119,12 @@ def decode_and_measure(directory, source, info, clean, spec):
 
 def check(case, candidate):
     if case['spec'].get('preserve'):
-        return ([] if candidate['grain_on_off_identical'] and candidate['source_fallbacks'] == case['source']['frames']
-                else ['point-budget negative did not consistently preserve source without synthesis'])
+        errors = []
+        if not (candidate['grain_on_off_identical'] and candidate['source_fallbacks'] == case['source']['frames']):
+            errors.append('point-budget negative did not consistently preserve source without synthesis')
+        if candidate['decoded_hashes']['0'] != case['arms']['previous_auto']['decoded_hashes']['0']:
+            errors.append('point-budget negative changed the quantized source-preservation pictures')
+        return errors
     errors = []
     for band in candidate['bands']:
         if not (0.85 <= band['median'] <= 1.10 and 0.75 <= band['minimum'] and band['maximum'] <= 1.25):

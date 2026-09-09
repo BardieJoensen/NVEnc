@@ -166,6 +166,8 @@ bounds at the same QP, alongside the measured cost improvements.
 `fidelity_real.py --retain-max 0.1` compares both encoders at the same retention
 ceiling on the pinned real clips, including the Gentlemen jacket regressions.
 These are offline development tests; they add no work to ordinary Tdarr jobs.
+The [September 9 retention findings](FINDINGS-2026-09-09-AUTO-RETENTION.md)
+record the tested improvements, rejected prototypes and remaining size costs.
 
 ```sh
 python3 tests/fgs/retain_sweep.py --bits both
