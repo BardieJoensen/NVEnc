@@ -416,6 +416,7 @@ void testCurrentFrameRecovery() {
             "held model mismatches changed grain amplitude");
         expect(build_fidelity_recovery_model(changed, bits, false, true, params, diag),
             "current representable grain can recover without source fallback");
+        expect(!diag.strengthRefit, "ordinary current-frame recovery does not report an occupied-bin refit");
         expect(!film_grain_strength_fidelity(changed, params, bits, diag.templateGain).needsSource(0.10, 0.25),
             "recovery satisfies stricter per-plane fit");
 
@@ -475,6 +476,7 @@ void testOccupiedStrengthRecovery() {
             "smoothed sharp curve reproduces avoidable source fallback");
         expect(build_fidelity_recovery_model(stats, bits, false, true, params, diag),
             "supported sharp curve recovers inside the existing AV1 point budget");
+        expect(diag.strengthRefit, "sharp-curve recovery reports its occupied-bin refit");
         expect(!film_grain_strength_fidelity(stats, params, bits, diag.templateGain).needsSource(0.10, 0.25),
             "occupied-bin recovery satisfies the unchanged strict amplitude guard");
     }

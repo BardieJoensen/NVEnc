@@ -20,6 +20,9 @@ CASES = {
     'steps_sdr': dict(bits=8, bands=12),
     'steps_pq': dict(bits=10, bands=12, color='pq'),
     'steps_hlg': dict(bits=10, bands=12, color='hlg'),
+    'steps_offset': dict(bits=8, bands=12, shift=7),
+    'steps_horizontal': dict(bits=8, bands=12, axis='y', shift=7),
+    'steps_diagonal': dict(bits=8, bands=12, diagonal=True, shift=7),
     'changing_curve': dict(bits=8, bands=12, change=True),
     'point_budget_sdr': dict(bits=8, bands=20, preserve=True),
     'point_budget_pq': dict(bits=10, bands=20, color='pq', preserve=True),
@@ -34,6 +37,13 @@ def generate(root, spec):
     levels = (np.linspace(32, 224, bands) if bands == 12
               else (np.arange(bands) + 0.5) * 256 / bands) * ds
     ideal = np.broadcast_to(np.repeat(levels, 64), (height, width))
+    ideal = np.roll(ideal, spec.get('shift', 0), axis=1)
+    if spec.get('diagonal'):
+        shifted = (np.arange(width)[None, :] - (np.arange(height) // 2)[:, None]) % width
+        ideal = np.take_along_axis(ideal, shifted, axis=1)
+    if spec.get('axis') == 'y':
+        ideal = ideal.T
+        width, height = height, width
     clean = np.rint(ideal).astype(dtype)
     chroma = np.full((height // 2, width // 2), 128 * ds, dtype=dtype)
     rng = np.random.default_rng(0xF1DE117)
@@ -42,6 +52,11 @@ def generate(root, spec):
         for frame in range(frames):
             flip = int(spec.get('change', False) and frame >= frames // 2)
             sigmas = np.repeat(np.where((np.arange(bands) + flip) % 2, 2, 10), 64) * ds
+            sigmas = np.roll(sigmas, spec.get('shift', 0))
+            if spec.get('diagonal'):
+                sigmas = sigmas[shifted]
+            if spec.get('axis') == 'y':
+                sigmas = sigmas[:, None]
             noisy = np.clip(np.rint(ideal + rng.normal(size=(height, width)) * sigmas),
                             0, (1 << bits) - 1).astype(dtype)
             y4m.write(b'FRAME\n')
@@ -52,7 +67,7 @@ def generate(root, spec):
                 source_sha256=fc.sha(root / 'source.y4m'), raw_sha256=fc.sha(root / 'source.yuv')), clean
 
 
-def decode_and_measure(directory, source, info, clean, bands):
+def decode_and_measure(directory, source, info, clean, spec):
     bits, width, height, frames = [info[k] for k in ['bits', 'width', 'height', 'frames']]
     dtype = np.uint8 if bits == 8 else np.uint16
     pix = 'yuv420p' if bits == 8 else 'yuv420p10le'
@@ -69,15 +84,36 @@ def decode_and_measure(directory, source, info, clean, bands):
         raise ValueError('Incomplete source or decoded pictures')
     mapped = {k: np.memmap(p, dtype=dtype, mode='r').reshape(frames, -1)[:, :width * height].reshape(frames, height, width)
               for k, p in pictures.items()}
+    if spec.get('diagonal'):
+        # Align the known slanted boundaries only for measurement. The encoder
+        # sees the original diagonal picture, including its pixel stair steps.
+        columns = (np.arange(width)[None, :] + (np.arange(height) // 2)[:, None]) % width
+        mapped = {k: np.take_along_axis(a, columns[None, :, :], axis=2) for k, a in mapped.items()}
+        clean = np.take_along_axis(clean, columns, axis=1)
     rows = []
-    for band in range(bands):
-        crop = np.s_[height // 2 + 24:-24, band * 64 + 16:(band + 1) * 64 - 16]
+    shift = spec.get('shift', 0)
+    for band in range(spec['bands']):
+        band_slice = slice(band * 64 + 16 + shift, (band + 1) * 64 - 16 + shift)
+        crop = ((band_slice, slice(width // 2 + 24, -24)) if spec.get('axis') == 'y'
+                else (slice(height // 2 + 24, -24), band_slice))
         residual = {k: a[:, crop[0], crop[1]].astype(float) - clean[crop] for k, a in mapped.items()}
         sigmas = {k: value.std(axis=(1, 2)) for k, value in residual.items()}
         ratio = sigmas['1'] / sigmas['source']
         rows.append(dict(band=band, ratios=ratio.tolist(), median=float(np.median(ratio[8:])),
                          minimum=float(ratio.min()), maximum=float(ratio.max())))
-    return dict(bands=rows, grain_on_off_identical=fc.sha(pictures['0']) == fc.sha(pictures['1']),
+    if spec.get('axis') == 'y':
+        profile = mapped['1'][8:, :, width // 2 + 24:-24].mean(axis=(0, 2))
+        clean_profile = clean[:, width // 2 + 24:-24].mean(axis=1)
+    else:
+        profile = mapped['1'][8:, height // 2 + 24:-24, :].mean(axis=(0, 1))
+        clean_profile = clean[height // 2 + 24:-24, :].mean(axis=0)
+    edge_mask = np.zeros(len(profile), dtype=bool)
+    for band in range(1 if not shift else 0, spec['bands']):
+        edge = band * 64 + shift
+        edge_mask[edge - 3:edge + 3] = True
+    error = np.abs(profile[edge_mask] - clean_profile[edge_mask]) / (1 << (bits - 8))
+    return dict(bands=rows, edge_mean_error8bit=float(error.mean()), edge_max_error8bit=float(error.max()),
+                grain_on_off_identical=fc.sha(pictures['0']) == fc.sha(pictures['1']),
                 decoded_hashes={k: fc.sha(p) for k, p in pictures.items() if k != 'source'})
 
 
@@ -93,6 +129,9 @@ def check(case, candidate):
         errors.append('representable controlled curve needlessly preserved whole source frames')
     if not candidate['strength_refit_frames']:
         errors.append('controlled sharp curve did not exercise occupied-bin recovery')
+    previous = case['arms']['previous_auto']
+    if candidate['edge_mean_error8bit'] > previous['edge_mean_error8bit'] + 0.25:
+        errors.append('sharp picture edges softened relative to the preserved-source reference')
     return errors
 
 
@@ -135,7 +174,7 @@ def main():
                         and row['scan'].get('criterion') == 'synthesis_texture_v1'
                         and row['scan'].get('packets') == info['frames']):
                     raise ValueError('Incomplete or unsafe synthesis scan')
-                row.update(decode_and_measure(directory, root, info, clean, spec['bands']))
+                row.update(decode_and_measure(directory, root, info, clean, spec))
                 case['arms'][arm] = row
                 save()
             candidate = case['arms']['candidate']

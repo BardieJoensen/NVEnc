@@ -142,6 +142,31 @@ The tests require FFmpeg with a dav1d decoder exposing the `filmgrain` switch.
 
 ## Retention sweep
 
+For automatic-retention changes, also run `strength_recovery_regression.py`.
+It generates SDR, PQ and HLG pictures with sharp brightness-dependent grain,
+a mid-scene curve change, and SDR/PQ curves beyond the AV1 point budget.
+Every frame is decoded with grain on and off. Per-band amplitude checks catch
+excess grain that an aggregate frame score can hide; unrepresentable controls
+must retain the source without synthesis on every frame.
+Mean edge profiles also cover block-aligned, shifted, horizontal and diagonal
+boundaries. Recovery must not buy smaller files by softening those edges.
+
+```sh
+python3 tests/fgs/strength_recovery_regression.py \
+  --baseline /path/to/previous/nvencc --candidate /path/to/candidate/nvencc \
+  --scanner /path/to/fgs-scan --output-dir /path/to/new-report
+```
+
+The CPU solver suite covers occupied-bin fitting, measured intensity
+coordinates, duplicate quantized positions, invalid evidence and unchanged
+feedback rejection. `retention_cost_regression.py` checks the 16-case
+`cost_compare.py` output and the eight-case `texture_residual.py` output against
+the preceding automatic-retention report. It requires decoded detail and grain
+bounds at the same QP, alongside the measured cost improvements.
+`fidelity_real.py --retain-max 0.1` compares both encoders at the same retention
+ceiling on the pinned real clips, including the Gentlemen jacket regressions.
+These are offline development tests; they add no work to ordinary Tdarr jobs.
+
 ```sh
 python3 tests/fgs/retain_sweep.py --bits both
 ```

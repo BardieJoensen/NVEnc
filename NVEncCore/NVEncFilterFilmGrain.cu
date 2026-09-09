@@ -526,6 +526,12 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
     }
     const float rangeSigma = fmaxf(1.0f, blockSigma * 2.35f);
     const float invRange2 = 1.0f / (rangeSigma * rangeSigma);
+    // Use local noise strength: a weak-grain frame median must not disable
+    // protection in the noisier part of the same picture.
+    const float protection = directionalDenoise
+        ? detailProtectionScale * fminf(1.0f, fmaxf(0.0f,
+            (blockSigma * 256.0f / (maxValue + 1) - 2.5f) / 3.5f))
+        : detailProtectionScale;
     float refinementWeight = 1.0f;
     float normalXX = 0.0f, normalXY = 0.0f, normalYY = 0.0f, normalPrecision = 0.0f;
     if (detailMetrics != nullptr) {
@@ -554,7 +560,7 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
             // blending the entire noisy source back into the clean picture.
             // A frame-global synthesis model cannot compensate a local patch
             // which retained much more random grain than the modeled flats.
-            refinementWeight = 1.0f - detailProtectionScale * 0.2f * repeated;
+            refinementWeight = 1.0f - protection * 0.2f * repeated;
             const float w00 = (1.0f-wx)*(1.0f-wy), w10 = wx*(1.0f-wy);
             const float w01 = (1.0f-wx)*wy, w11 = wx*wy;
             const auto& m00 = detailMetrics[iy*blocksX+ix];
@@ -570,10 +576,47 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
                 normalXX = (xx-minor)/gap;
                 normalXY = xy/gap;
                 normalYY = (yy-minor)/gap;
-                normalPrecision = 4.0f * detailProtectionScale * directional;
+                normalPrecision = 4.0f * protection * directional;
             }
         } else {
-            refinementWeight = 1.0f - detailProtectionScale * fmaxf(directional, 0.2f * repeated);
+            refinementWeight = 1.0f - protection * fmaxf(directional, 0.2f * repeated);
+        }
+    }
+    if (directionalExtent && detailProtectionScale > 0.0f && detailMetrics != nullptr) {
+        // Within-block metrics cannot see an edge lying exactly between two
+        // analysis blocks. Strip averages in this pixel's cached halo provide
+        // a translation-independent edge cue without using historical pixels.
+        float gx = 0.0f, gy = 0.0f;
+        for (int dy = -4; dy <= 4; ++dy) {
+            for (int dx = -4; dx <= 4; ++dx) {
+                const int index = ((threadIdx.y + halo + dy) * tileWidth
+                    + threadIdx.x + halo + dx) * components;
+                const float value = static_cast<float>(tile[index]);
+                gx += (dx > 0 ? value : (dx < 0 ? -value : 0.0f));
+                gy += (dy > 0 ? value : (dy < 0 ? -value : 0.0f));
+            }
+        }
+        gx /= 36.0f;
+        gy /= 36.0f;
+        const float correlationTop = detailMetrics[iy * blocksX + ix].spatialCorrelation * (1.0f - wx)
+            + detailMetrics[iy * blocksX + ix1].spatialCorrelation * wx;
+        const float correlationBottom = detailMetrics[iy1 * blocksX + ix].spatialCorrelation * (1.0f - wx)
+            + detailMetrics[iy1 * blocksX + ix1].spatialCorrelation * wx;
+        const float correlation = correlationTop * (1.0f - wy) + correlationBottom * wy;
+        // Coarse correlated grain has less independent evidence in a strip.
+        // Require stronger contrast before treating it as picture structure.
+        const float threshold = fmaxf(1.0f, blockSigma * (1.0f + 2.0f * fmaxf(0.0f, correlation)));
+        const float magnitude2 = gx * gx + gy * gy;
+        const float confidence = fminf(1.0f, fmaxf(0.0f, (sqrtf(magnitude2) - threshold) / (0.5f * threshold)));
+        // A confident edge must not inherit the weak-noise ramp used for
+        // block texture. Partial protection still mixes both sides twice.
+        const float previous = normalPrecision * 0.25f;
+        const float blend = fminf(1.0f, fmaxf(0.0f, (confidence - previous) / fmaxf(1.0f - previous, 1e-6f)));
+        if (blend > 0.0f && magnitude2 > 0.0f) {
+            normalXX = normalXX * (1.0f - blend) + blend * gx * gx / magnitude2;
+            normalXY = normalXY * (1.0f - blend) + blend * gx * gy / magnitude2;
+            normalYY = normalYY * (1.0f - blend) + blend * gy * gy / magnitude2;
+            normalPrecision = 4.0f * fmaxf(previous, confidence);
         }
     }
     for (int component = 0; component < components; ++component) {
@@ -1795,9 +1838,9 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     } else {
         // Weak grain already needs little smoothing; preserving its remaining
         // random residual can spend many bits for negligible detail benefit.
-        // Ramp protection with the observed 8-bit-equivalent noise level.
-        const float autoDetailProtection = prm->filmGrain.residualRetain < 0.0f
-            ? clamp((denoiseSigma / depthScale - 2.5f) / 3.5f, 0.0f, 1.0f) : 0.0f;
+        // The bilateral kernel ramps block-texture protection with local
+        // noise, while independently protecting confident pixel-centred edges.
+        const float autoDetailProtection = prm->filmGrain.residualRetain < 0.0f ? 1.0f : 0.0f;
         retainDetailReference = m_detailReference && autoDetailProtection > 0.0f;
         if (retainDetailReference) {
             const auto& reference = m_detailReference->frame;
