@@ -4,10 +4,9 @@
 // The reference is a complete measured encode of the same source. This plugin
 // never estimates that size from samples or changes the encoder's quality.
 const assert = require('node:assert/strict');
-const cp = require('node:child_process');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
-const readline = require('node:readline');
+const videoBytes = require('./tdarr_video_bytes.js');
 
 const SCHEMA = 'fgs_tdarr_budget_reference_v1';
 const hashText = value => crypto.createHash('sha256').update(value).digest('hex');
@@ -60,39 +59,10 @@ function loadReference(file) {
     }
     return {manifest, sha256: hashText(raw)};
 }
-function probeVideo(file) {
-    const probe = JSON.parse(cp.execFileSync('/usr/local/bin/ffprobe', ['-v', 'error',
-        '-show_streams', '-of', 'json', file], {timeout: 120000, maxBuffer: 16 * 1024**2}));
-    const streams = probe.streams.filter(s => s.codec_type === 'video' && !(s.disposition || {}).attached_pic);
-    assert.equal(streams.length, 1, 'Expected one primary video stream');
-    assert.equal(streams[0].codec_name, 'av1', 'Budget applies to an AV1 output');
-    return streams[0];
-}
 function measureVideo(file) {
-    const video = probeVideo(file);
-    return new Promise((resolve, reject) => {
-        let bytes = 0, packets = 0, errorText = '', parseError;
-        const child = cp.spawn('/usr/local/bin/ffprobe', ['-v', 'error', '-select_streams',
-            String(video.index), '-show_packets', '-show_entries', 'packet=size', '-of', 'csv=p=0', file],
-        {stdio: ['ignore', 'pipe', 'pipe']});
-        const timer = setTimeout(() => child.kill('SIGKILL'), 1800000);
-        const lines = readline.createInterface({input: child.stdout});
-        lines.on('line', line => {
-            if (!line.trim()) return;
-            // Packet side data may follow the selected size as extra CSV fields.
-            const size = Number(line.split(',')[0]);
-            if (!Number.isSafeInteger(size) || size <= 0) parseError = 'Invalid video packet size';
-            else { bytes += size; packets++; }
-        });
-        child.stderr.on('data', data => { errorText = (errorText + data).slice(-4096); });
-        child.on('error', error => { clearTimeout(timer); reject(error); });
-        child.on('close', code => {
-            clearTimeout(timer);
-            if (code !== 0 || errorText.trim() || parseError || !Number.isSafeInteger(bytes) || !packets) {
-                reject(new Error(`Video byte measurement failed: ${parseError || errorText || code}`));
-            } else resolve({bytes, packets});
-        });
-    });
+    const info = videoBytes.inspect(file);
+    assert.equal(info.video.codec_name, 'av1', 'Budget applies to an AV1 output');
+    return videoBytes.measure(file, info);
 }
 
 exports.details = () => ({name: 'Measured Fidelity Trial Budget',

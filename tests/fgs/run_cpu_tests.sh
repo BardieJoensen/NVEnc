@@ -37,3 +37,4 @@ python3 tests/fgs/test_review_batch.py
 python3 tests/fgs/test_production_compare.py
 python3 tests/fgs/test_trial_admission.py
 python3 tests/fgs/test_hdr_metadata_trace.py
+python3 tests/fgs/test_dovi_conversion_regression.py

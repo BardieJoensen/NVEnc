@@ -21,6 +21,7 @@ KEEP = 'fidelityKeepSource_001'
 SELECT = 'fidelitySelect_001'
 PREPARE = 'fidelityPrepare_001'
 CHECK = 'fidelityCheck_001'
+DOVI = 'fidelityDovi_001'
 ACCEPT = 'fidelityAccepted_001'
 
 
@@ -62,10 +63,10 @@ def verify_graph(flow, promotion):
         routes[key] = e['target']
     seen, terminals = set(), set()
 
-    def walk(node_id, prepared=False, checked=False, validated=False, encoded=False, ancestors=()):
+    def walk(node_id, prepared=False, checked=False, validated=False, encoded=False, dovi_checked=False, ancestors=()):
         if node_id in ancestors:
             raise ValueError('Pilot flow contains a cycle')
-        state = (node_id, prepared, checked, validated, encoded)
+        state = (node_id, prepared, checked, validated, encoded, dovi_checked)
         if state in seen:
             return
         seen.add(state)
@@ -74,9 +75,9 @@ def verify_graph(flow, promotion):
             raise ValueError('Disabled nodes need explicit review')
         if node_id in ('videoSample_001', 'nvenccEncode_001') and not prepared:
             raise ValueError('Encoding is reachable without source/build preparation')
-        if node_id == 'validateOutput_001' and not checked:
-            raise ValueError('Final validator is reachable without a budget pass')
-        if node_id in (ACCEPT, 'replaceOrig_001') and not (prepared and checked and validated and encoded):
+        if node_id == 'validateOutput_001' and not (checked and dovi_checked):
+            raise ValueError('Final validator is reachable without budget and Dolby Vision passes')
+        if node_id in (ACCEPT, 'replaceOrig_001') and not (prepared and checked and validated and encoded and dovi_checked):
             raise ValueError('Candidate acceptance bypasses required gates')
         if not promotion and (node['pluginName'] == 'replaceOriginalFile' or node_id.startswith('notify')):
             raise ValueError('Review pilot can mutate or notify a library')
@@ -88,6 +89,7 @@ def verify_graph(flow, promotion):
                  checked or (node_id == CHECK and output == '1'),
                  validated or (node_id == 'validateOutput_001' and output == '1'),
                  encoded or (node_id == 'nvenccEncode_001' and output == '1'),
+                 dovi_checked or (node_id == DOVI and output == '1'),
                  (*ancestors, node_id))
     walk('inputFile_001')
     for reject in (SELECT, PREPARE, CHECK, 'videoSample_001', 'sizeCheck_001', 'sizeCheckRelaxed_001'):
@@ -96,7 +98,7 @@ def verify_graph(flow, promotion):
     if not promotion and terminals != {KEEP, ACCEPT}:
         raise ValueError(f'Unexpected review terminals: {terminals}')
     return dict(reachable_nodes=len({s[0] for s in seen}), terminals=sorted(terminals),
-                promotion_enabled=promotion, required_gates=['source/build', 'video budget', 'final validator'])
+                promotion_enabled=promotion, required_gates=['source/build', 'video budget', 'Dolby Vision normalization', 'final validator'])
 
 
 def build_flow(original, reference_path, promotion=False):
@@ -113,6 +115,10 @@ def build_flow(original, reference_path, promotion=False):
     encoder['cliArguments'] = encoder['cliArguments'].replace(FGS_OLD + ' ', FGS_NEW + ' ')
     sampler['encoderArguments'] = encoder['cliArguments']
     nodes['dvhdrDetect_001']['inputsDB']['code'] = preserve_fel(nodes['dvhdrDetect_001']['inputsDB']['code'])
+    for node_id in ('sizeCheck_001', 'sizeCheckRelaxed_001'):
+        nodes[node_id]['sourceRepo'] = 'Local'
+        nodes[node_id]['pluginName'] = 'fgsSourceSize'
+        nodes[node_id]['version'] = '1.0.0'
     for node_id, phase, y in ((SELECT, 'select', 80), (PREPARE, 'prepare', 900), (CHECK, 'check', 1200)):
         nodes[node_id] = dict(id=node_id, name=f'Measured fidelity budget: {phase}',
             sourceRepo='Local', pluginName=BUDGET, version='1.0.0', fpEnabled=True,
@@ -120,16 +126,13 @@ def build_flow(original, reference_path, promotion=False):
     nodes[KEEP] = dict(id=KEEP, name='Keep original and end pilot', sourceRepo='Community',
         pluginName='setWorkingFile', version='1.0.0', fpEnabled=True, position=dict(x=1400, y=900),
         inputsDB=dict(source='originalFile', customPath=''))
-    nodes[ACCEPT] = dict(id=ACCEPT, name='Review accepted candidate; no library replacement',
-        sourceRepo='Community', pluginName='customFunction', version='1.0.0', fpEnabled=True,
-        position=dict(x=1100, y=1450), inputsDB=dict(code="""module.exports = async args => {
-  const assert = require('node:assert/strict');
-  assert.equal(args.variables.user.fidelityBudgetDecision.decision, 'within_budget');
-  assert.equal(String(args.variables.user.videoAlreadyEncoded), '1');
-  args.variables.user.fidelityTrialAccepted = true;
-  args.jobLog('[fidelity-pilot] Candidate accepted for review: ' + args.inputFileObj._id);
-  return {outputFileObj: args.inputFileObj, outputNumber: 1, variables: args.variables};
-};"""))
+    nodes[DOVI] = dict(id=DOVI, name='Check single-layer Dolby Vision metadata',
+        sourceRepo='Local', pluginName='fgsDoviGuard', version='1.0.0', fpEnabled=True,
+        position=dict(x=1100, y=1300), inputsDB={})
+    nodes[ACCEPT] = dict(id=ACCEPT, name='Save accepted candidate for review; keep original',
+        sourceRepo='Local', pluginName='fgsStageReview', version='1.0.0', fpEnabled=True,
+        position=dict(x=1100, y=1450), inputsDB=dict(outputDirectory='/fgs-review'))
+
     routes = {(e['source'], str(e['sourceHandle'])): e['target'] for e in flow['flowEdges']}
     if len(routes) != len(flow['flowEdges']):
         raise ValueError('Ambiguous source flow')
@@ -142,7 +145,8 @@ def build_flow(original, reference_path, promotion=False):
         if routes[(source, '1')] != 'validateOutput_001':
             raise ValueError('Source size routing changed')
         routes[(source, '1')] = CHECK
-    routes[(CHECK, '1')] = 'validateOutput_001'
+    routes[(CHECK, '1')] = DOVI
+    routes[(DOVI, '1')] = 'validateOutput_001'
     # Measured trials never take a substitute FFmpeg video encode or stream-copy
     # replacement on a failed encode/saving/format decision.
     for key, target in list(routes.items()):
@@ -165,6 +169,21 @@ def build_flow(original, reference_path, promotion=False):
     return flow, verify_graph(flow, promotion)
 
 
+def install_plugins(root):
+    """The same complete plugin set is installed into server and node runtime."""
+    for name, source, needs_bytes in [
+        ('fgsMeasuredBudget', 'tdarr_size_budget.js', True),
+        ('fgsSourceSize', 'tdarr_source_size.js', True),
+        ('fgsDoviGuard', 'tdarr_dovi_guard.js', False),
+        ('fgsStageReview', 'tdarr_stage_review.js', True),
+    ]:
+        destination = root / 'LocalFlowPlugins/video' / name / '1.0.0'
+        destination.mkdir(parents=True)
+        shutil.copyfile(Path(__file__).with_name(source), destination / 'index.js')
+        if needs_bytes:
+            shutil.copyfile(Path(__file__).with_name('tdarr_video_bytes.js'), destination / 'tdarr_video_bytes.js')
+
+
 def bundle(flow_path, expected_flow_sha, reference_path, candidate_image, output):
     raw = flow_path.read_bytes()
     if sha(raw) != expected_flow_sha:
@@ -184,9 +203,8 @@ def bundle(flow_path, expected_flow_sha, reference_path, candidate_image, output
         reports[name] = checks
     (output / 'rollback-flow.json').write_bytes(raw)
     shutil.copyfile(reference_path, output / 'fgs-measured-reference.json')
-    plugin = output / 'FlowPlugins/LocalFlowPlugins/video/fgsMeasuredBudget/1.0.0/index.js'
-    plugin.parent.mkdir(parents=True)
-    shutil.copyfile(Path(__file__).with_name('tdarr_size_budget.js'), plugin)
+    install_plugins(output / 'FlowPlugins')
+
     manifest = dict(schema='fgs_tdarr_pilot_bundle_v1', candidate_image=candidate_image,
         candidate_sha256=reference['candidate_sha256'], baseline_flow_sha256=expected_flow_sha,
         activation='none; separate limited-source pilot, not a blanket production policy',

@@ -55,6 +55,7 @@ normal production policy.
 - [Encoder changes and cost study](FINDINGS-2026-09-08-COST.md)
 - [Full source metadata, admission and repeat localization](FINDINGS-2026-09-09-TRIALS.md)
 - [Post-encode integration and validator timing](FINDINGS-2026-09-09-INTEGRATION.md)
+- [DV conversion, size accounting and real scheduler integration](FINDINGS-2026-09-09-READINESS.md)
 
 Those reports retain their completed-study status. This broader production
 work does not inherit that status.
