@@ -9,7 +9,7 @@ the reason matters more than the arrangement.
 | | tier 1 | tier 2 | scheduled local monitors |
 |---|---|---|---|
 | where | GitHub Actions, every push | this box, manually and pre-push | this box, 08:45 and 20:15 |
-| needs | g++, python, numpy | GPU, real film, libaom, Docker | GPU, real film, Docker, Tdarr DB |
+| needs | g++, python, numpy, Node 22 | GPU, real film, libaom, Docker | GPU, real film, Docker, Tdarr DB |
 | catches | logic and arithmetic errors in the model solver, the table parser, and the descriptor mathematics | analyzer regressions visible only on real film; texture substitution; metric-gaming | grain destruction and grain substitution in shipped library output |
 | blind to | anything requiring a real encode | anything not in the pinned fixture titles | anything the deployed binary does not do on the sampled files |
 | runtime | ~30 s | ~3.5 min quick, tens of minutes full | ~10 min |
@@ -43,6 +43,13 @@ an otherwise-green run is the same failure in a different costume.
 ## Tier 1 — hosted CI, every push
 
 `.github/workflows/fgs_cpu_tests.yml` runs `tests/fgs/run_cpu_tests.sh`:
+
+It also runs `node --test tests/fgs/test_tdarr_trial_pipeline.js` for the offline
+replay's evidence binding, policy-fixture path handling, explicit output-track
+checks, packet timing/hash checks and plugin-snapshot identity. Those tests use
+temporary generated data and need no Tdarr installation or media. Real
+post-encode plugin replays remain a separate local integration study; see the
+README's post-encode replay instructions.
 
 | check | subject |
 |---|---|
