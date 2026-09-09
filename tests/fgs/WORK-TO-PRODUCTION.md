@@ -8,6 +8,40 @@ Tdarr. The evidence-based library audit and approved repairs continue alongside
 that work. A completed experiment is evidence toward this goal; it does not
 close the overall task.
 
+## Quality requirements for further encoder work
+
+The user's priority is source-picture fidelity and prevention of artifacts,
+including ripple and banding, alongside speed and storage efficiency. Evaluate
+quality independently: a size or speed improvement does not qualify a change
+that introduces artifacts or fails the agreed source-detail checks. Compare
+against both the source and the qualified encoder, and retain rejected
+examples as regression controls.
+
+Further automatic-retention work starts with these quality questions:
+
+- Smooth gradients, near-black detail and fades in SDR, PQ and HLG: check
+  introduced contours, clipping and rounding in both grain-on and grain-off
+  decoded pictures. The existing grain-strength ramp test does not establish
+  freedom from visible banding in a smooth picture gradient.
+- Colour detail with little luma contrast, fine diagonals and fabric/hair
+  textures: measure retained source structure and colour bleeding. The new
+  directional protection primarily operates on luma; assess colour structure
+  before deciding whether to extend it to chroma.
+- Moving detail, cuts and fades with changing grain: check local noise energy,
+  texture and detail over time, including entry into and recovery from source
+  fallback. Preserve the existing synthesis guards and known ripple controls.
+
+These are coverage gaps and development targets, not newly confirmed defects.
+Use source-labelled controls and decoded comparisons to establish failures,
+then fix the responsible analysis, filtering, precision or synthesis handling.
+Aggregate quality scores alone do not qualify a candidate. A proposed local
+retention mask must also preserve grain balance across regions and over time.
+Speed optimisations that are intended to preserve output require decoded-pixel
+comparisons before acceptance.
+
+The expensive qualification work stays in offline development and bounded
+pilots; the existing routine Tdarr validation budget remains unchanged.
+
 ## Established
 
 - The intermittent ripple originated in the transcode. The corrected encoder
@@ -58,6 +92,7 @@ limited to the separate measured pilot.
 - [Full source metadata, admission and repeat localization](FINDINGS-2026-09-09-TRIALS.md)
 - [Post-encode integration and validator timing](FINDINGS-2026-09-09-INTEGRATION.md)
 - [DV conversion, size accounting and real scheduler integration](FINDINGS-2026-09-09-READINESS.md)
+- [Qualified automatic-retention recovery and edge protection](FINDINGS-2026-09-09-AUTO-RETENTION.md)
 
 Those reports retain their completed-study status. This broader production
 work does not inherit that status.
