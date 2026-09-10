@@ -20,6 +20,19 @@ def original():
 
 
 class OrdinaryRolloutTests(unittest.TestCase):
+    def test_an_already_deployed_flow_can_receive_a_later_encoder(self):
+        deployed, _ = rollout.build_flow(original())
+        saved = copy.deepcopy(deployed)
+        rebuilt, checks = rollout.build_flow(deployed)
+        self.assertEqual(deployed, saved)
+        self.assertEqual(rebuilt, deployed)
+        self.assertFalse(checks['optional_retention'])
+        reviewed, _ = rollout.build_flow(deployed, review=True)
+        self.assertFalse(any(n['pluginName'] == 'replaceOriginalFile' for n in reviewed['flowPlugins']))
+        next(n for n in deployed['flowPlugins'] if n['id'] == rollout.DOVI)['pluginName'] = 'unrecognized'
+        with self.assertRaises(ValueError):
+            rollout.build_flow(deployed)
+
     def test_quality_sampling_saving_thresholds_and_stream_copy_routes_stay_unchanged(self):
         source = original()
         saved = copy.deepcopy(source)

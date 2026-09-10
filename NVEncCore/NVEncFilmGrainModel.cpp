@@ -633,7 +633,7 @@ FilmGrainStrengthFidelity film_grain_strength_fidelity(const FilmGrainGpuStats& 
 
 bool FilmGrainLocalStrengthFidelity::needsSource(const double relativeLimit, const double absoluteLimit8bit) const {
     if (!valid) return true;
-    for (int bin = 0; bin < FGS_LOCAL_STRENGTH_BINS; ++bin) {
+    for (int bin = 0; bin < FGS_LOCAL_STRENGTH_SLOTS; ++bin) {
         // Four independent patches reduce finite-sample noise; a lone block
         // cannot establish a mismatch or certify the unobserved picture.
         if (blocks[bin] < 4) continue;
@@ -645,17 +645,18 @@ bool FilmGrainLocalStrengthFidelity::needsSource(const double relativeLimit, con
 }
 
 FilmGrainLocalStrengthFidelity film_grain_local_strength_fidelity(const FilmGrainLocalStrengthStats& stats,
-    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bitDepth, const double templateGain, const double residualRetain) {
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bitDepth, const double templateGain, const double residualRetain, const int plane) {
     FilmGrainLocalStrengthFidelity result;
-    if ((bitDepth != 8 && bitDepth != 10) || !std::isfinite(templateGain) || templateGain <= 0.0
+    if (plane < 0 || plane > 2 || (bitDepth != 8 && bitDepth != 10) || !std::isfinite(templateGain) || templateGain <= 0.0
         || !std::isfinite(residualRetain) || residualRetain < 0.0 || residualRetain > 1.0) {
         result.valid = false;
         return result;
     }
     const double depthScale = static_cast<double>(1 << (bitDepth - 8));
     float lut[FGS_STRENGTH_LUT_SIZE];
-    build_strength_lut(params, bitDepth, lut, 0, templateGain);
-    for (int bin = 0; bin < FGS_LOCAL_STRENGTH_BINS; ++bin) {
+    build_strength_lut(params, bitDepth, lut, plane, templateGain);
+    for (int bin = 0; bin < FGS_LOCAL_STRENGTH_SLOTS; ++bin) {
+        const int brightness = bin % FGS_LOCAL_STRENGTH_BINS;
         const auto count = stats.blocks[bin];
         result.blocks[bin] = count;
         if (!count) continue;
@@ -664,7 +665,7 @@ FilmGrainLocalStrengthFidelity film_grain_local_strength_fidelity(const FilmGrai
         const double covariance = stats.covarianceSum[bin] / count;
         const double x = stats.intensitySum[bin] / (count * depthScale);
         if (!std::isfinite(variance) || variance < 0.0 || !std::isfinite(baseVariance) || baseVariance < 0.0
-            || !std::isfinite(covariance) || !std::isfinite(x) || x < std::max(0.0, bin - 0.5001) || x > (bin == 255 ? 255.75 : bin + 0.5001)) {
+            || !std::isfinite(covariance) || !std::isfinite(x) || x < std::max(0.0, brightness - 0.5001) || x > (brightness == 255 ? 255.75 : brightness + 0.5001)) {
             result.valid = false;
             continue;
         }
@@ -686,6 +687,236 @@ FilmGrainLocalStrengthFidelity film_grain_local_strength_fidelity(const FilmGrai
         result.modeledSigma[bin] = std::sqrt(std::max(0.0, baseEnergy + synthesisEnergy)) / depthScale;
     }
     return result;
+}
+
+
+bool refit_local_strength(const FilmGrainLocalStrengthStats& stats, const int bitDepth,
+    const double templateGain, const double residualRetain, NV_ENC_FILM_GRAIN_PARAMS_AV1& params) {
+    if ((bitDepth != 8 && bitDepth != 10) || !params.applyGrain || params.numYPoints == 0 || params.numYPoints > 14
+        || params.numCbPoints > 10 || params.numCrPoints > 10 || params.chromaScalingFromLuma
+        || params.grainScalingMinus8 > 3 || !std::isfinite(residualRetain) || residualRetain < 0.0 || residualRetain >= 1.0
+        || !std::isfinite(templateGain) || templateGain <= 0.0) return false;
+    for (uint32_t i = 1; i < params.numYPoints; ++i) {
+        if (params.pointYValue[i] <= params.pointYValue[i - 1]) return false;
+    }
+    if (!film_grain_local_strength_fidelity(stats, params, bitDepth, templateGain, residualRetain).valid) return false;
+    const double depthScale = static_cast<double>(1 << (bitDepth - 8));
+    const double cleanWeight = 1.0 - residualRetain;
+    const double synthesisWeight = 1.0 - residualRetain * residualRetain;
+    const double scalingFactor = static_cast<double>(1 << (params.grainScalingMinus8 + 3));
+    struct Observation { double x, scaling, weight, measuredX; };
+    std::vector<Observation> observed;
+    for (int bin = 0; bin < FGS_LOCAL_STRENGTH_BINS; ++bin) {
+        const auto count = stats.blocks[bin];
+        if (count < 4) continue;
+        const double source = stats.varianceSum[bin] / count;
+        const double base = stats.baseVarianceSum[bin] / count;
+        const double covarianceLimit = std::sqrt(source * base);
+        const double covariance = std::clamp(stats.covarianceSum[bin] / count, -covarianceLimit, covarianceLimit);
+        const double baseEnergy = cleanWeight * cleanWeight * base + residualRetain * residualRetain * source
+            + 2.0 * residualRetain * cleanWeight * covariance;
+        const double sigma = std::sqrt(std::max(0.0, (source - baseEnergy) / synthesisWeight));
+        const double scaling = sigma / (depthScale * templateGain) * scalingFactor;
+        // Keep the shared scaling shift: retuning luma must not silently
+        // change either colour component or clip an unrepresentable strength.
+        if (!std::isfinite(scaling) || scaling > 255.0) return false;
+        observed.push_back({ static_cast<double>(bin), scaling, static_cast<double>(count),
+            stats.intensitySum[bin] / (count * depthScale) });
+    }
+    if (observed.empty()) return false;
+    if (observed.size() == 1) {
+        // A single quiet brightness (for example a black border around
+        // correlated grain) supports a narrow zero plateau, not removal of
+        // grain from the unobserved picture. Keep the old curve a code value
+        // beyond each edge. Fractional 10-bit means need both adjacent zeros.
+        const auto sample = observed.front();
+        if (sample.scaling > 0.0) return false;
+        const int lo = std::clamp(static_cast<int>(std::floor(sample.measuredX)), 0, 255);
+        const int hi = std::clamp(static_cast<int>(std::ceil(sample.measuredX)), 0, 255);
+        std::vector<Observation> isolated;
+        for (uint32_t i = 0; i < params.numYPoints; ++i) {
+            const int x = params.pointYValue[i];
+            if (x < lo - 1 || x > hi + 1)
+                isolated.push_back({ static_cast<double>(x), static_cast<double>(params.pointYScaling[i]), 1.0, static_cast<double>(x) });
+        }
+        if (lo > 0) isolated.push_back({ static_cast<double>(lo - 1),
+            eval_scaling_curve(params.pointYValue, params.pointYScaling, params.numYPoints, lo - 1), 1.0, static_cast<double>(lo - 1) });
+        isolated.push_back({ static_cast<double>(lo), 0.0, sample.weight, static_cast<double>(lo) });
+        if (hi != lo) isolated.push_back({ static_cast<double>(hi), 0.0, sample.weight, static_cast<double>(hi) });
+        if (hi < 255) isolated.push_back({ static_cast<double>(hi + 1),
+            eval_scaling_curve(params.pointYValue, params.pointYScaling, params.numYPoints, hi + 1), 1.0, static_cast<double>(hi + 1) });
+        std::sort(isolated.begin(), isolated.end(), [](const Observation& a, const Observation& b) { return a.x < b.x; });
+        for (size_t i = 1; i + 1 < isolated.size();) {
+            const auto& a = isolated[i - 1];
+            const auto& b = isolated[i];
+            const auto& c = isolated[i + 1];
+            if (std::abs((b.scaling - a.scaling) * (c.x - a.x)
+                    - (c.scaling - a.scaling) * (b.x - a.x)) < 1e-9) {
+                isolated.erase(isolated.begin() + i);
+            } else { ++i; }
+        }
+        if (isolated.size() > 14) return false;
+        auto trial = params;
+        trial.numYPoints = static_cast<uint32_t>(isolated.size());
+        std::fill(std::begin(trial.pointYValue), std::end(trial.pointYValue), static_cast<uint8_t>(0));
+        std::fill(std::begin(trial.pointYScaling), std::end(trial.pointYScaling), static_cast<uint8_t>(0));
+        for (size_t i = 0; i < isolated.size(); ++i) {
+            trial.pointYValue[i] = static_cast<uint8_t>(isolated[i].x);
+            trial.pointYScaling[i] = static_cast<uint8_t>(std::lround(isolated[i].scaling));
+        }
+        if (film_grain_local_strength_fidelity(stats, trial, bitDepth, templateGain, residualRetain).needsSource(0.10, 0.25)) return false;
+        params = trial;
+        return true;
+    }
+    // Keep the old curve outside the range supported by independent evidence.
+    // An isolated quiet patch cannot turn the entire unobserved picture quiet.
+    std::vector<Observation> samples;
+    for (uint32_t i = 0; i < params.numYPoints; ++i) {
+        if (params.pointYValue[i] < observed.front().x)
+            samples.push_back({ static_cast<double>(params.pointYValue[i]), static_cast<double>(params.pointYScaling[i]), 1.0, static_cast<double>(params.pointYValue[i]) });
+    }
+    samples.insert(samples.end(), observed.begin(), observed.end());
+    for (uint32_t i = 0; i < params.numYPoints; ++i) {
+        if (params.pointYValue[i] > observed.back().x)
+            samples.push_back({ static_cast<double>(params.pointYValue[i]), static_cast<double>(params.pointYScaling[i]), 1.0, static_cast<double>(params.pointYValue[i]) });
+    }
+    // Add the largest supported interpolation error, with at most 14 scans
+    // over the fine grid. Exhaustive point-deletion searches would make a
+    // dense 256-bucket frame substantially more expensive to recover.
+    std::vector<size_t> selected = { 0, samples.size() - 1 };
+    while (selected.size() < std::min<size_t>(14, samples.size())) {
+        size_t add = 0;
+        double largestError = 0.0;
+        for (size_t segment = 1; segment < selected.size(); ++segment) {
+            const auto& lo = samples[selected[segment - 1]];
+            const auto& hi = samples[selected[segment]];
+            for (size_t i = selected[segment - 1] + 1; i < selected[segment]; ++i) {
+                const auto& sample = samples[i];
+                const double mix = (sample.x - lo.x) / (hi.x - lo.x);
+                const double difference = lo.scaling + mix * (hi.scaling - lo.scaling) - sample.scaling;
+                const double error = sample.weight * difference * difference;
+                if (error > largestError) { largestError = error; add = i; }
+            }
+        }
+        if (largestError == 0.0) break;
+        selected.insert(std::lower_bound(selected.begin(), selected.end(), add), add);
+    }
+    std::vector<Observation> points;
+    for (const auto index : selected) points.push_back(samples[index]);
+    auto trial = params;
+    trial.numYPoints = static_cast<uint32_t>(points.size());
+    std::fill(std::begin(trial.pointYValue), std::end(trial.pointYValue), static_cast<uint8_t>(0));
+    std::fill(std::begin(trial.pointYScaling), std::end(trial.pointYScaling), static_cast<uint8_t>(0));
+    for (size_t i = 0; i < points.size(); ++i) {
+        trial.pointYValue[i] = static_cast<uint8_t>(points[i].x);
+        trial.pointYScaling[i] = static_cast<uint8_t>(std::lround(points[i].scaling));
+    }
+    if (film_grain_local_strength_fidelity(stats, trial, bitDepth, templateGain, residualRetain).needsSource(0.10, 0.25)) {
+        // AV1 positions are integers, but observations have fractional mean
+        // brightness. Refine the scaling amplitudes at the emitted positions
+        // against those actual means; rounding both coordinates would smear
+        // a sharp nearby quiet/noisy transition.
+        const int count = static_cast<int>(points.size());
+        std::vector<double> matrix(count * count, 0.0), rhs(count, 0.0), scaling;
+        for (const auto& sample : samples) {
+            int lo = 0, hi = 0;
+            double blend = 0.0;
+            if (sample.measuredX >= points.back().x) {
+                lo = hi = count - 1;
+            } else if (sample.measuredX > points.front().x) {
+                hi = 1;
+                while (hi + 1 < count && points[hi].x < sample.measuredX) ++hi;
+                lo = hi - 1;
+                blend = (sample.measuredX - points[lo].x) / (points[hi].x - points[lo].x);
+            }
+            const double a = 1.0 - blend, b = blend, weight = sample.weight;
+            matrix[lo * count + lo] += weight * a * a;
+            matrix[hi * count + hi] += weight * b * b;
+            matrix[lo * count + hi] += weight * a * b;
+            matrix[hi * count + lo] += weight * a * b;
+            rhs[lo] += weight * a * sample.scaling;
+            rhs[hi] += weight * b * sample.scaling;
+        }
+        if (!solve_linear_system(matrix, rhs, scaling, count)) return false;
+        for (int i = 0; i < count; ++i) {
+            if (!std::isfinite(scaling[i]) || scaling[i] > 255.0) return false;
+            trial.pointYScaling[i] = static_cast<uint8_t>(std::lround(std::max(0.0, scaling[i])));
+        }
+        if (film_grain_local_strength_fidelity(stats, trial, bitDepth, templateGain, residualRetain).needsSource(0.10, 0.25)) return false;
+    }
+    params = trial;
+    return true;
+}
+
+FilmGrainGpuStats local_strength_targets(const FilmGrainGpuStats& coarse,
+    const FilmGrainLocalStrengthStats& local, const int bitDepth, const double residualRetain) {
+    auto result = coarse;
+    if ((bitDepth != 8 && bitDepth != 10) || !std::isfinite(residualRetain)
+        || residualRetain < 0.0 || residualRetain >= 1.0) {
+        result.plane[0].binBlockCount[0] = 1;
+        result.plane[0].binVarSum[0] = std::numeric_limits<double>::infinity();
+        return result;
+    }
+    FilmGrainGpuPlaneStats replacement = {};
+    std::array<uint64_t, FGS_STRENGTH_BINS> supported = {};
+    const double depthScale = static_cast<double>(1 << (bitDepth - 8));
+    for (int bin = 0; bin < FGS_LOCAL_STRENGTH_BINS; ++bin) {
+        const auto count = local.blocks[bin];
+        if (!count) continue;
+        const double x = local.intensitySum[bin] / count;
+        if (!std::isfinite(x) || x < 0.0 || x > (1 << bitDepth) - 1) continue;
+        const int target = std::clamp(static_cast<int>(x * FGS_STRENGTH_BINS / (256 * depthScale)), 0, FGS_STRENGTH_BINS - 1);
+        const double r = residualRetain, clean = 1.0 - r;
+        const double baseEnergy = clean * clean * local.baseVarianceSum[bin] + r * r * local.varianceSum[bin]
+            + 2.0 * r * clean * local.covarianceSum[bin];
+        const double desiredEnergy = std::max(0.0, (local.varianceSum[bin] - baseEnergy) / (1.0 - r * r));
+        replacement.binVarSum[target] += desiredEnergy;
+        replacement.binBlockCount[target] += count;
+        replacement.binLumaSum[target] += local.intensitySum[bin];
+        supported[target] += local.correlatedBlocks[bin];
+    }
+    for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+        if (supported[bin] < 4) continue;
+        result.plane[0].binVarSum[bin] = replacement.binVarSum[bin];
+        result.plane[0].binBlockCount[bin] = replacement.binBlockCount[bin];
+        result.plane[0].binLumaSum[bin] = replacement.binLumaSum[bin];
+    }
+    result.plane[0].intensityBlocks = 0;
+    for (const auto count : result.plane[0].binBlockCount) result.plane[0].intensityBlocks += count;
+    return result;
+}
+
+bool can_restore_chroma_component(const FilmGrainGpuStats& stats,
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int plane) {
+    if (plane < 1 || plane > 2 || params.chromaScalingFromLuma
+        || params.arCoeffLag != FGS_AR_LAG || params.arCoeffShiftMinus6 > 3) return false;
+    const auto coeffs = plane == 1 ? params.arCoeffsCbPlus128 : params.arCoeffsCrPlus128;
+    const double signalled = std::abs(static_cast<int>(coeffs[FGS_AR_COEFFS]) - 128)
+        / static_cast<double>(1 << (params.arCoeffShiftMinus6 + 6));
+    if (signalled > 1.0 / 16.0) return false;
+    const auto& source = stats.plane[plane];
+    if (source.observations < 1024) return false;
+    double energy = 0.0;
+    uint64_t blocks = 0;
+    for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
+        if (!std::isfinite(source.binVarSum[bin]) || source.binVarSum[bin] < 0.0) return false;
+        energy += source.binVarSum[bin];
+        blocks += source.binBlockCount[bin];
+    }
+    const double predictor = static_cast<double>(source.ata[tri_index(FGS_AR_COEFFS_CHROMA, FGS_AR_COEFFS, FGS_AR_COEFFS)]);
+    if (!blocks || energy <= 0.0 || predictor <= 0.0) return false;
+    const double targetEnergy = (energy / blocks) * source.observations;
+    // Component-only recovery is qualified for nearly white colour grain.
+    // Spatially correlated residuals have fewer independent observations;
+    // preserve the whole source instead of trusting this sparse coupling fit.
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
+        if (std::abs(static_cast<double>(source.atb[i])) > 0.2 * targetEnergy) return false;
+    }
+    const double denominator = std::sqrt(predictor * targetEnergy);
+    const double correlation = std::abs(static_cast<double>(source.atb[FGS_AR_COEFFS])) / denominator;
+    // This is a conservative eligibility check, not proof of independence.
+    // Coupled or sparse evidence retains the complete source frame instead.
+    return std::isfinite(correlation) && correlation <= 0.05;
 }
 
 } // namespace fgsmodel

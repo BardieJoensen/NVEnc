@@ -86,3 +86,11 @@ was rejected with a zero-extra-byte control. The fresh full encode and subsequen
 audio/subtitle/chapter processing preserved the previously validated candidate's
 complete video payload, codec private data and timeline. Neither test replaced
 a library file.
+# Updating an existing guarded flow
+
+The bundle builders accept both the original flow and the already deployed
+source-size/Dolby Vision guard layout. They preserve the existing FEL source
+policy and require an enabled, recognized normalization guard leading directly
+to the final validator. Unknown routing or guard settings still require review.
+The review graph removes the former guard once its replacement is reachable
+through measured-budget admission, preventing duplicate validation work.

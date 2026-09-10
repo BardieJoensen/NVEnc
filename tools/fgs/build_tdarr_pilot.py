@@ -41,12 +41,29 @@ def preserve_fel(code):
     if code.count(start) != 1 or code.count(stop) != 1:
         raise ValueError('Detector layout changed; review FEL preservation manually')
     first, last = code.index(start), code.index(stop)
-    if 'only the per-pixel FEL refinement is lost.' not in code[first:last]:
-        raise ValueError('Expected FEL conversion policy is absent; review detector')
-    return code[:first] + """    if (dvElType === 'FEL') {
+    preserved = """    if (dvElType === 'FEL') {
       return keepVideoOriginal('Dolby Vision FEL per-pixel enhancement cannot be preserved in this AV1 pilot');
     }
-  }""" + code[last:]
+  }"""
+    if code[first:last] == preserved:
+        return code
+    if 'only the per-pixel FEL refinement is lost.' not in code[first:last]:
+        raise ValueError('Expected FEL conversion policy is absent; review detector')
+    return code[:first] + preserved + code[last:]
+
+
+def check_size_validation_path(nodes, routes, source):
+    """Accept the original flow or the already deployed normalization guard."""
+    target = routes.get((source, '1'))
+    if target == 'validateOutput_001':
+        return
+    guard = nodes.get(target, {})
+    expected = dict(sourceRepo='Local', pluginName='fgsDoviGuard', version='1.0.0', inputsDB={})
+    outgoing = {(src, output): dst for (src, output), dst in routes.items() if src == target}
+    if (any(guard.get(key) != value for key, value in expected.items())
+            or not guard.get('fpEnabled', True)
+            or outgoing != {(target, '1'): 'validateOutput_001'}):
+        raise ValueError('Source size/validation routing changed')
 
 
 def verify_graph(flow, promotion):
@@ -142,8 +159,7 @@ def build_flow(original, reference_path, promotion=False):
     routes[('mapQvbr_001', '1')] = PREPARE
     routes[(PREPARE, '1')] = 'videoSample_001'
     for source in ('sizeCheck_001', 'sizeCheckRelaxed_001'):
-        if routes[(source, '1')] != 'validateOutput_001':
-            raise ValueError('Source size routing changed')
+        check_size_validation_path(nodes, routes, source)
         routes[(source, '1')] = CHECK
     routes[(CHECK, '1')] = DOVI
     routes[(DOVI, '1')] = 'validateOutput_001'

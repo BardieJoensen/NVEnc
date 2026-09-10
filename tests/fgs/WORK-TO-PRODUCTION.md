@@ -1,12 +1,19 @@
 # Encoder work through production
 
-Status: **encoder rollout complete; approved library work running**, 2026-09-10.
+Status: **ordinary encoder deployed; automatic-retention work still in progress;
+approved library work running**, 2026-09-10.
 
 The goal is to finish the encoder improvements, resolve measured quality,
 reliability, speed and storage costs, and integrate the validated result into
 Tdarr. The evidence-based library audit and approved repairs continue alongside
 that work. A completed experiment is evidence toward this goal; it does not
 close the overall task.
+
+Core `02a6c86b` closes one quality-fix iteration. The broader automatic-retention
+task remains open: recover avoidable whole-frame fallbacks, audit the remaining
+local-grain coverage, measure the final candidate on full sources, and finish
+the concrete Tdarr acceptance/integration path. The active ledger for that work
+is `/opt/docker-apps/logs/fgs-ripple-repair-20260906/auto-retention-production-20260910/work-plan.json`.
 
 ## Quality requirements for further encoder work
 
@@ -49,6 +56,11 @@ lossless encoding or complete perceptual coverage.
 
 The expensive qualification work stays in offline development and bounded
 pilots; the existing routine Tdarr validation budget remains unchanged.
+
+The [local recovery findings](FINDINGS-2026-09-10-LOCAL-RECOVERY.md) record the
+subsequent source-population, correlated-energy and component-restoration
+work, its cost measurements, rejected prototypes and outstanding final
+acceptance stages.
 
 ## Established
 

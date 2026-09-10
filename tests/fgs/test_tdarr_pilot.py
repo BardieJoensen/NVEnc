@@ -97,6 +97,37 @@ class PilotRoutingTests(unittest.TestCase):
         code = next(n for n in flow['flowPlugins'] if n['id'] == 'dvhdrDetect_001')['inputsDB']['code']
         self.assertIn("return keepVideoOriginal('Dolby Vision FEL", code)
         self.assertNotIn('refinement is lost', code)
+        self.assertEqual(pilot.preserve_fel(code), code)
+        with self.assertRaises(ValueError):
+            pilot.preserve_fel(code.replace('return keepVideoOriginal(', 'logAndContinue('))
+
+    def test_pilot_can_start_from_the_deployed_guarded_flow(self):
+        flow = fixture()
+        nodes = {n['id']: n for n in flow['flowPlugins']}
+        nodes['dvhdrDetect_001']['inputsDB']['code'] = pilot.preserve_fel(
+            nodes['dvhdrDetect_001']['inputsDB']['code'])
+        guard = dict(id='rolloutDovi_001', sourceRepo='Local', pluginName='fgsDoviGuard',
+                     version='1.0.0', fpEnabled=True, inputsDB={})
+        flow['flowPlugins'].append(guard)
+        for edge in flow['flowEdges']:
+            if edge['source'] in ('sizeCheck_001', 'sizeCheckRelaxed_001') and edge['sourceHandle'] == '1':
+                edge['target'] = guard['id']
+        flow['flowEdges'].append(pilot.edge(guard['id'], 1, 'validateOutput_001'))
+        saved = copy.deepcopy(flow)
+        for promotion in (False, True):
+            converted, checks = pilot.build_flow(flow, '/reference.json', promotion)
+            self.assertEqual(flow, saved)
+            self.assertEqual(checks['promotion_enabled'], promotion)
+            self.assertNotIn(guard['id'], {n['id'] for n in converted['flowPlugins']})
+        for key, value in [('pluginName', 'unrecognized'), ('inputsDB', {'skip': True}),
+                           ('fpEnabled', False)]:
+            changed = copy.deepcopy(flow)
+            next(n for n in changed['flowPlugins'] if n['id'] == guard['id'])[key] = value
+            with self.assertRaises(ValueError):
+                pilot.build_flow(changed, '/reference.json')
+        flow['flowEdges'].append(pilot.edge(guard['id'], 2, 'replaceOrig_001'))
+        with self.assertRaises(ValueError):
+            pilot.build_flow(flow, '/reference.json')
 
     def test_duplicate_routes_and_cycles_are_refused(self):
         flow, _ = pilot.build_flow(fixture(), '/reference.json')

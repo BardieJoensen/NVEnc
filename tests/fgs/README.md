@@ -178,6 +178,26 @@ use `retain-max=0.1`. Every frame is decoded with grain off and on, and every
 packet must pass the synthesis-texture scanner. Deliberately blurred colour
 and stepped gradients verify that the measurements detect those defects.
 
+`local_grain_regression.py` adds 23 controls with different grain strengths at
+the same brightness, moving regions, colour coupling, correlated grain, black
+borders, startup and recovery, and strength-boundary controls. Every source,
+plain encode and previous/candidate auto encode is measured separately in
+source-defined regions on every frame and plane. The coupled controls also
+measure source/output luma-colour correlation. This exposes local defects
+that an average amplitude can hide; passing does not establish complete
+spatial texture or perceptual fidelity.
+
+```sh
+python3 tests/fgs/local_grain_regression.py \
+  --baseline /path/to/previous/nvencc --candidate /path/to/candidate/nvencc \
+  --scanner /path/to/fgs-scan --output-dir /path/to/new-local-grain-report
+```
+
+The short coarse-grain cost regression separately measures the first video
+packet when auto preserves exactly its startup frame. Full file sizes remain
+in the report. Persistent or repeated fallback receives no such adjustment;
+the measured Tdarr file-size budget remains unchanged.
+
 ```sh
 python3 tests/fgs/picture_fidelity_regression.py \
   --baseline /path/to/previous/nvencc --candidate /path/to/candidate/nvencc \

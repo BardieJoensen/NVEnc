@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 import re
 
-from build_tdarr_pilot import FGS_OLD, edge, install_plugins, preserve_fel, sha
+from build_tdarr_pilot import FGS_OLD, check_size_validation_path, edge, install_plugins, preserve_fel, sha
 
 DOVI = 'rolloutDovi_001'
 KEEP = 'rolloutKeep_001'
@@ -73,19 +73,20 @@ def build_flow(original, review=False):
     nodes['dvhdrDetect_001']['inputsDB']['code'] = preserve_fel(nodes['dvhdrDetect_001']['inputsDB']['code'])
     for node_id in ('sizeCheck_001', 'sizeCheckRelaxed_001'):
         n = nodes[node_id]
-        if n['pluginName'] != 'policySizeGate':
+        if (n['pluginName'] != 'policySizeGate'
+                and not (n['pluginName'] == 'fgsSourceSize' and n.get('sourceRepo') == 'Local'
+                         and n.get('version') == '1.0.0')):
             raise ValueError('Unexpected original size policy')
         n.update(sourceRepo='Local', pluginName='fgsSourceSize', version='1.0.0')
-    nodes[DOVI] = dict(id=DOVI, name='Check AV1 Dolby Vision normalization', sourceRepo='Local',
-        pluginName='fgsDoviGuard', version='1.0.0', fpEnabled=True,
-        position=dict(x=1100, y=1300), inputsDB={})
     routes = {(e['source'], str(e['sourceHandle'])): e['target'] for e in flow['flowEdges']}
     if len(routes) != len(flow['flowEdges']):
         raise ValueError('Ambiguous original routing')
     for node_id in ('sizeCheck_001', 'sizeCheckRelaxed_001'):
-        if routes[(node_id, '1')] != 'validateOutput_001':
-            raise ValueError('Unexpected original size/validation path')
+        check_size_validation_path(nodes, routes, node_id)
         routes[(node_id, '1')] = DOVI
+    nodes[DOVI] = dict(id=DOVI, name='Check AV1 Dolby Vision normalization', sourceRepo='Local',
+        pluginName='fgsDoviGuard', version='1.0.0', fpEnabled=True,
+        position=dict(x=1100, y=1300), inputsDB={})
     routes[(DOVI, '1')] = 'validateOutput_001'
     if review:
         flow['_id'] = 'FGSOrdinaryReview20260909'

@@ -4,9 +4,44 @@ import argparse
 import json
 from pathlib import Path
 import statistics
+import subprocess
 
 from fidelity_compare import CASES
+from production_compare import sha
 from texture_residual import CASES as TEXTURES
+
+
+def startup_source_bytes(current, reference):
+    """Measure the one newly preserved startup picture, not a general allowance.
+
+    Correlated auto needs an adjacent source frame before synthesizing grain.
+    Keep full file sizes in the cost report; separate this first-packet cost
+    when testing whether steady processing lost an earlier optimization.
+    Persistent/repeated source fallback cannot use this adjustment.
+    """
+    if (current.get('source_fallbacks') != 1
+            or current.get('source_fallback_frames') != [0]
+            or reference.get('source_fallbacks') != 0):
+        return 0
+    sizes = []
+    for row in [reference, current]:
+        command = row['command']
+        if command.count('-o') != 1:
+            raise ValueError('Ambiguous encoded output')
+        output = Path(command[command.index('-o') + 1])
+        if output.stat().st_size != row['bytes'] or sha(output) != row['file_sha256']:
+            raise ValueError('Startup-cost artifact changed')
+        result = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0',
+            '-read_intervals', '%+#1', '-show_packets', '-show_entries', 'packet=size',
+            '-of', 'json', str(output)], capture_output=True, text=True, check=True, timeout=120)
+        packets = json.loads(result.stdout).get('packets', [])
+        if result.stderr.strip() or len(packets) != 1:
+            raise ValueError('Cannot establish the first video packet size')
+        size = int(packets[0]['size'])
+        if not 0 < size < row['bytes']:
+            raise ValueError('Invalid first video packet size')
+        sizes.append(size)
+    return max(0, sizes[1] - sizes[0])
 
 
 def check(report, previous, residual):
@@ -56,7 +91,8 @@ def check(report, previous, residual):
             require(current['bytes'] < reference['bytes'] * 0.95,
                     'fine directional detail lost the measured cost reduction')
         if name == 'detail_coarse':
-            require(current['bytes'] < reference['bytes'] * 0.99,
+            startup = startup_source_bytes(current, reference)
+            require(current['bytes'] - startup < reference['bytes'] * 0.99,
                     'coarse directional detail lost the measured cost reduction')
         if name == 'changing_strength':
             ratios = [r['output_sigma'] / r['source_sigma'] for r in current['flat_trace'][24:]]
