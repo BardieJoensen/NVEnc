@@ -165,6 +165,28 @@ FilmGrainStrengthFidelity film_grain_strength_fidelity(const FilmGrainGpuStats& 
     const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int bitDepth,
     const std::array<float, 3>& templateGain);
 
+// Independent 16x16 source-flat observations. One-code brightness buckets
+// retain local strength differences that a sparse 20-bin fit can average away.
+// Compare source variance with base + independently synthesized grain variance;
+// removed-residual variance alone ignores grain already retained in the base.
+constexpr int FGS_LOCAL_STRENGTH_BINS = 256;
+struct FilmGrainLocalStrengthStats {
+    double varianceSum[FGS_LOCAL_STRENGTH_BINS]; // source after removing a local plane
+    double baseVarianceSum[FGS_LOCAL_STRENGTH_BINS]; // filtered base with the same detrending
+    double covarianceSum[FGS_LOCAL_STRENGTH_BINS]; // source/base, before optional residual blending
+    double intensitySum[FGS_LOCAL_STRENGTH_BINS];
+    uint64_t blocks[FGS_LOCAL_STRENGTH_BINS];
+};
+struct FilmGrainLocalStrengthFidelity {
+    std::array<double, FGS_LOCAL_STRENGTH_BINS> observedSigma = {};
+    std::array<double, FGS_LOCAL_STRENGTH_BINS> modeledSigma = {};
+    std::array<uint64_t, FGS_LOCAL_STRENGTH_BINS> blocks = {};
+    bool valid = true;
+    bool needsSource(double relativeLimit = 0.25, double absoluteLimit8bit = 0.5) const;
+};
+FilmGrainLocalStrengthFidelity film_grain_local_strength_fidelity(const FilmGrainLocalStrengthStats& stats,
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int bitDepth, double templateGain, double residualRetain = 0.0);
+
 using StrengthPoint = std::pair<double, double>;
 
 bool solve_linear_system(std::vector<double> matrix, std::vector<double> rhs, std::vector<double>& solution, int n);

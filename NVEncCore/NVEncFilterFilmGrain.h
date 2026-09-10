@@ -160,6 +160,9 @@ private:
     std::unique_ptr<NVEncFilterDegrain> m_motionDegrain;
     std::shared_ptr<NVEncFilterParamDegrain> m_motionDegrainParam;
     std::unique_ptr<CUMemBufPair> m_blockMetrics;
+    std::unique_ptr<CUMemBuf> m_chromaMetrics;
+    std::unique_ptr<CUMemBuf> m_localMetrics;
+    std::unique_ptr<CUMemBufPair> m_localStrength;
     std::unique_ptr<CUMemBufPair> m_blockMask;
     std::unique_ptr<CUMemBufPair> m_sigmaMap;
     std::unique_ptr<CUMemBufPair> m_strengthLut;
