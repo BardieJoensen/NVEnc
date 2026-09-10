@@ -2427,16 +2427,22 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 auto target = fidelityStats;
                 NV_ENC_FILM_GRAIN_PARAMS_AV1 fresh = {};
                 NVEncFilmGrainDiagnostics freshDiagnostics;
-                const bool cbInactive = std::none_of(params.pointCbScaling, params.pointCbScaling + params.numCbPoints, [](const uint8_t value) { return value != 0; });
-                const bool crInactive = std::none_of(params.pointCrScaling, params.pointCrScaling + params.numCrPoints, [](const uint8_t value) { return value != 0; });
-                const bool colourIndependent = (cbInactive || can_restore_chroma_component(current.gpu, params, 1))
-                    && (crInactive || can_restore_chroma_component(current.gpu, params, 2));
+                const auto independentColour = [&](const NV_ENC_FILM_GRAIN_PARAMS_AV1& model) {
+                    const bool cbInactive = std::none_of(model.pointCbScaling, model.pointCbScaling + model.numCbPoints, [](const uint8_t value) { return value != 0; });
+                    const bool crInactive = std::none_of(model.pointCrScaling, model.pointCrScaling + model.numCrPoints, [](const uint8_t value) { return value != 0; });
+                    return (cbInactive || can_restore_chroma_component(current.gpu, model, 1))
+                        && (crInactive || can_restore_chroma_component(current.gpu, model, 2));
+                };
+                const bool colourIndependent = independentColour(params);
                 double highpassFraction = 0.0;
                 const bool covarianceReady = apply_local_covariance(target, spatial, diagnostics.residualRetain, &highpassFraction);
                 const bool recovered = colourIndependent && prm->filmGrain.minModelFrames == 1
                     && covarianceReady
                     && build_covariance_recovery_model(target, bitDepth, prm->filmGrain.analyzeChroma,
-                        prm->filmGrain.clipToRestrictedRange, diagnostics.residualRetain, highpassFraction, fresh, freshDiagnostics);
+                        prm->filmGrain.clipToRestrictedRange, diagnostics.residualRetain, highpassFraction, fresh, freshDiagnostics)
+                    // A quiet held model can gain a coupled colour component
+                    // in this fresh fit. Its own eligibility must still hold.
+                    && independentColour(fresh);
                 correlatedTextureFallback = !recovered;
                 if (recovered) {
                     fidelityStats = target;
