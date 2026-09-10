@@ -869,15 +869,17 @@ static float auto_retain_from_detail_risk(const float detailRisk) {
 // This independent observation grid checks amplitude away from the fitted
 // model's sparse samples. Use block means, never each pixel's noisy intensity.
 // Source-defined flatness excludes edges/texture before looking at the output.
-template<typename Type, int shift>
+template<typename Type, int shift, int components = 1, int patchSize = 16>
 __global__ void kernel_fgs_local_strength(const uint8_t *__restrict__ src, const int srcPitch,
     const uint8_t *__restrict__ clean, const int cleanPitch, const int width, const int height,
     const FilmGrainBlockMetric *__restrict__ metrics, const int blocksX, const int depthScale,
-    const float minSigma, const float maxSigma, FilmGrainLocalStrengthStats *__restrict__ stats) {
+    const float minSigma, const float maxSigma, const bool quietOnly, FilmGrainLocalStrengthStats *__restrict__ stats,
+    const FilmGrainBlockMetric *__restrict__ lumaMetrics = nullptr, const int component = 0,
+    const uint8_t *__restrict__ reference = nullptr, const int referencePitch = 0) {
     const int block = blockIdx.x;
     const int lane = threadIdx.x;
     const auto metric = metrics[block];
-    const int x0 = (block % blocksX) * 16, y0 = (block / blocksX) * 16;
+    const int x0 = (block % blocksX) * patchSize, y0 = (block / blocksX) * patchSize;
     // Small-patch detrending does not preserve the energy of coarse grain
     // or balanced periodic texture. This independent guard covers nearly
     // white local noise; the existing model/decoded-texture guards cover the
@@ -886,29 +888,38 @@ __global__ void kernel_fgs_local_strength(const uint8_t *__restrict__ src, const
     // are unsuitable for fitting AR coefficients, but excluding them from
     // validation lets a neighboring noisy range synthesize grain into them.
     const bool quiet = metric.sigma < minSigma;
-    if (x0 + 16 > width || y0 + 16 > height || metric.sigma > maxSigma
-        || (!quiet && (metric.coherence > FGS_DETAIL_COHERENCE_LOW
+    if (x0 + patchSize > width || y0 + patchSize > height || metric.sigma > maxSigma) return;
+    if (patchSize == 32) {
+        if (!reference || quiet || metric.coherence > FGS_DETAIL_COHERENCE_HIGH
+            || fabsf(metric.spatialCorrelation) <= 0.2f || fabsf(metric.spatialCorrelation) > 0.9f) return;
+    } else if ((quietOnly && !quiet) || (!quiet && (metric.coherence > FGS_DETAIL_COHERENCE_LOW
             || fabsf(metric.spatialCorrelation) > 0.2f))) return;
-    int sums[9] = {};
+    constexpr int side = patchSize - 4, sampleCount = side * side;
+    int sums[patchSize == 32 ? 14 : 9] = {};
     // Exclude each patch's boundary and remove its fitted plane in both the
     // source and base. A smooth gradient is picture signal, not grain energy.
-    for (int i = lane; i < 144; i += 32) {
-        const int px = i % 12, py = i / 12;
+    for (int i = lane; i < sampleCount; i += 32) {
+        const int px = i % side, py = i / side;
         const int x = x0 + 2 + px, y = y0 + 2 + py;
-        const int a = load_code<Type, shift>(src, srcPitch, x, y);
-        const int b = load_code<Type, shift>(clean, cleanPitch, x, y);
-        const int xn = 2 * px - 11, yn = 2 * py - 11;
+        const int a = load_code<Type, shift>(src, srcPitch, x, y, component, components);
+        const int b = load_code<Type, shift>(clean, cleanPitch, x, y, component, components);
+        const int xn = 2 * px - (side - 1), yn = 2 * py - (side - 1);
         sums[0] += a; sums[1] += a * a;
         sums[2] += a * xn; sums[3] += a * yn;
         sums[4] += b; sums[5] += b * b;
         sums[6] += b * xn; sums[7] += b * yn;
         sums[8] += a * b;
+        if (patchSize == 32) {
+            const int r = load_code<Type, shift>(reference, referencePitch, x, y);
+            sums[9] += r; sums[10] += r * r;
+            sums[11] += r * xn; sums[12] += r * yn; sums[13] += a * r;
+        }
     }
     for (int offset = 16; offset > 0; offset >>= 1) {
-        for (int stat = 0; stat < 9; ++stat) sums[stat] += __shfl_down_sync(0xffffffffu, sums[stat], offset);
+        for (int stat = 0; stat < (patchSize == 32 ? 14 : 9); ++stat) sums[stat] += __shfl_down_sync(0xffffffffu, sums[stat], offset);
     }
     if (lane == 0) {
-        constexpr double samples = 144.0, planeNorm = 6864.0;
+        constexpr double samples = sampleCount, planeNorm = sampleCount * (side * side - 1) / 3.0;
         const double meanSource = static_cast<double>(sums[0]) / samples;
         const double meanBase = static_cast<double>(sums[4]) / samples;
         const double variance = fmax(0.0, static_cast<double>(sums[1]) / samples - meanSource * meanSource
@@ -917,19 +928,48 @@ __global__ void kernel_fgs_local_strength(const uint8_t *__restrict__ src, const
             - (static_cast<double>(sums[6]) * sums[6] + static_cast<double>(sums[7]) * sums[7]) / (planeNorm * samples));
         const double covariance = static_cast<double>(sums[8]) / samples - meanSource * meanBase
             - (static_cast<double>(sums[2]) * sums[6] + static_cast<double>(sums[3]) * sums[7]) / (planeNorm * samples);
-        const int bin = min(255, max(0, __float2int_rn(metric.mean / depthScale)));
-        atomic_add_f64(stats->varianceSum + bin, variance);
-        atomic_add_f64(stats->baseVarianceSum + bin, baseVariance);
-        atomic_add_f64(stats->covarianceSum + bin, covariance);
-        atomic_add_f64(stats->intensitySum + bin, static_cast<double>(metric.mean));
-        atomic_add_u64(stats->blocks + bin, 1ULL);
+        double populationVariance = variance;
+        if (patchSize == 32) {
+            const double meanReference = static_cast<double>(sums[9]) / samples;
+            const double referenceVariance = fmax(0.0, static_cast<double>(sums[10]) / samples - meanReference * meanReference
+                - (static_cast<double>(sums[11]) * sums[11] + static_cast<double>(sums[12]) * sums[12]) / (planeNorm * samples));
+            const double temporalCovariance = static_cast<double>(sums[13]) / samples - meanSource * meanReference
+                - (static_cast<double>(sums[2]) * sums[11] + static_cast<double>(sums[3]) * sums[12]) / (planeNorm * samples);
+            // A repeated weave is picture signal. Require an adjacent source
+            // frame with stable local level and independently changing noise.
+            if (variance <= 0.0 || referenceVariance <= 0.0 || fabs(meanSource - meanReference) > depthScale
+                || referenceVariance < 0.5 * variance || referenceVariance > 2.0 * variance
+                || fabs(temporalCovariance) > 0.15 * sqrt(variance * referenceVariance)) return;
+            // Classify correlated grain using independent prior-frame noise.
+            // Sorting and measuring the same small correlated sample would
+            // manufacture weak/strong populations in uniform random grain.
+            populationVariance = referenceVariance;
+        }
+        const double intensity = lumaMetrics ? lumaMetrics[block].mean : metric.mean;
+        const int bin = min(255, max(0, __float2int_rn(intensity / depthScale)));
+        // A small quiet patch can disappear in a brightness bucket's mean.
+        // Keep separate source-defined strength populations as independent
+        // vetoes; they are not averaged back together for acceptance.
+        const double variance8 = populationVariance / (depthScale * depthScale);
+        const int population = variance8 < 0.25 ? 0 : (variance8 < 4.0 ? 1
+            : (variance8 < 16.0 ? 2 : (variance8 < 64.0 ? 3 : (variance8 < 256.0 ? 4 : 5))));
+        const int slots[2] = { bin, (population + 1) * FGS_LOCAL_STRENGTH_BINS + bin };
+        if (patchSize == 32) atomic_add_u64(stats->correlatedBlocks + bin, 1ULL);
+        for (const auto slot : slots) {
+            atomic_add_f64(stats->varianceSum + slot, variance);
+            atomic_add_f64(stats->baseVarianceSum + slot, baseVariance);
+            atomic_add_f64(stats->covarianceSum + slot, covariance);
+            atomic_add_f64(stats->intensitySum + slot, intensity);
+            atomic_add_u64(stats->blocks + slot, 1ULL);
+        }
     }
 }
 
 template<typename Type, int shift>
 static RGY_ERR local_strength_stats(const RGYFrameInfo *src, const RGYFrameInfo *clean,
     FilmGrainBlockMetric *metrics, FilmGrainLocalStrengthStats *stats, const int bitDepth,
-    const float minSigma, const float maxSigma, cudaStream_t stream) {
+    const float minSigma, const float maxSigma, const bool quietOnly, cudaStream_t stream, const FilmGrainBlockMetric *chromaMetrics,
+    const FilmGrainBlockMetric *lumaMetrics, const RGYFrameInfo *reference) {
     const auto y = getPlane(src, RGY_PLANE_Y), base = getPlane(clean, RGY_PLANE_Y);
     const int blocksX = divCeil(y.width, 16), blocksY = divCeil(y.height, 16);
     kernel_fgs_flat_metrics<Type, shift, 1, 16><<<blocksX * blocksY, FGS_FLAT_THREADS, 0, stream>>>(
@@ -938,8 +978,39 @@ static RGY_ERR local_strength_stats(const RGYFrameInfo *src, const RGYFrameInfo 
     if (sts != RGY_ERR_NONE) return sts;
     kernel_fgs_local_strength<Type, shift><<<blocksX * blocksY, 32, 0, stream>>>(
         y.ptr[0], y.pitch[0], base.ptr[0], base.pitch[0], y.width, y.height,
-        metrics, blocksX, 1 << (bitDepth - 8), minSigma, maxSigma, stats);
-    return err_to_rgy(cudaGetLastError());
+        metrics, blocksX, 1 << (bitDepth - 8), minSigma, maxSigma, quietOnly, stats);
+    sts = err_to_rgy(cudaGetLastError());
+    if (sts != RGY_ERR_NONE) return sts;
+    if (quietOnly && reference) {
+        const auto previous = getPlane(reference, RGY_PLANE_Y);
+        const int largeX = divCeil(y.width, 32), largeY = divCeil(y.height, 32);
+        kernel_fgs_local_strength<Type, shift, 1, 32><<<largeX * largeY, 32, 0, stream>>>(
+            y.ptr[0], y.pitch[0], base.ptr[0], base.pitch[0], y.width, y.height,
+            lumaMetrics, largeX, 1 << (bitDepth - 8), minSigma, maxSigma, false, stats,
+            nullptr, 0, previous.ptr[0], previous.pitch[0]);
+        sts = err_to_rgy(cudaGetLastError());
+        if (sts != RGY_ERR_NONE) return sts;
+    }
+    if (!chromaMetrics) return RGY_ERR_NONE;
+    const int chromaBlocksX = divCeil(src->width / 2, 16), chromaBlocksY = divCeil(src->height / 2, 16);
+    const bool semiPlanar = src->csp == RGY_CSP_NV12 || src->csp == RGY_CSP_P010;
+    for (int component = 0; component < 2; ++component) {
+        const auto c = getPlane(src, static_cast<RGY_PLANE>(semiPlanar ? RGY_PLANE_U : RGY_PLANE_U + component));
+        const auto filtered = getPlane(clean, static_cast<RGY_PLANE>(semiPlanar ? RGY_PLANE_U : RGY_PLANE_U + component));
+        const auto cm = chromaMetrics + component * chromaBlocksX * chromaBlocksY;
+        if (semiPlanar) {
+            kernel_fgs_local_strength<Type, shift, 2><<<chromaBlocksX * chromaBlocksY, 32, 0, stream>>>(
+                c.ptr[0], c.pitch[0], filtered.ptr[0], filtered.pitch[0], src->width / 2, src->height / 2,
+                cm, chromaBlocksX, 1 << (bitDepth - 8), minSigma, maxSigma, false, stats + component + 1, lumaMetrics, component);
+        } else {
+            kernel_fgs_local_strength<Type, shift><<<chromaBlocksX * chromaBlocksY, 32, 0, stream>>>(
+                c.ptr[0], c.pitch[0], filtered.ptr[0], filtered.pitch[0], c.width, c.height,
+                cm, chromaBlocksX, 1 << (bitDepth - 8), minSigma, maxSigma, false, stats + component + 1, lumaMetrics);
+        }
+        sts = err_to_rgy(cudaGetLastError());
+        if (sts != RGY_ERR_NONE) return sts;
+    }
+    return RGY_ERR_NONE;
 }
 
 template<typename Type, int shift>
@@ -1200,13 +1271,15 @@ struct NVEncFilterFilmGrain::AnalyzerState {
     int heldStreak;
     bool sourceFallbackActive;
     int fidelityRecoveryFrames;
+    std::array<bool, 2> chromaSourceActive;
+    std::array<int, 2> chromaRecoveryFrames;
 
     AnalyzerState() : history(), previousBlockMeans(), stableNoise(0.0f), autoRetain(0.0f),
         lastTimestamp(std::numeric_limits<int64_t>::min()), lastParams(), pendingParams(),
         lastTemplateGain{1.0f, 1.0f, 1.0f}, pendingTemplateGain{1.0f, 1.0f, 1.0f},
         lastParamsValid(false), pendingParamsValid(false), modelWindowSettled(false),
         pendingStreak(0), framesSinceModelUpdate(0), heldStreak(0),
-        sourceFallbackActive(false), fidelityRecoveryFrames(0) {}
+        sourceFallbackActive(false), fidelityRecoveryFrames(0), chromaSourceActive{}, chromaRecoveryFrames{} {}
     void advanceModelAge() {
         if (framesSinceModelUpdate < std::numeric_limits<int>::max()) ++framesSinceModelUpdate;
     }
@@ -1228,6 +1301,8 @@ struct NVEncFilterFilmGrain::AnalyzerState {
         heldStreak = 0;
         sourceFallbackActive = false;
         fidelityRecoveryFrames = 0;
+        chromaSourceActive.fill(false);
+        chromaRecoveryFrames.fill(0);
     }
 };
 
@@ -1577,7 +1652,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
             || (sts = m_detailConfidence->alloc()) != RGY_ERR_NONE) return sts;
         const size_t localBlocks = static_cast<size_t>(divCeil(prm->frameIn.width, 16)) * divCeil(prm->frameIn.height, 16);
         m_localMetrics = std::make_unique<CUMemBuf>(localBlocks * sizeof(FilmGrainBlockMetric));
-        m_localStrength = std::make_unique<CUMemBufPair>(sizeof(FilmGrainLocalStrengthStats));
+        m_localStrength = std::make_unique<CUMemBufPair>((config.analyzeChroma ? 3 : 1) * sizeof(FilmGrainLocalStrengthStats));
         if ((sts = m_localMetrics->alloc()) != RGY_ERR_NONE
             || (sts = m_localStrength->alloc()) != RGY_ERR_NONE) return sts;
         if (config.analyzeChroma) {
@@ -1808,6 +1883,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     nvenc_film_grain_erase_frame_data(output->dataList);
 
     bool retainDetailReference = false;
+    bool adjacentDetailReference = false;
     NVEncFilmGrainDiagnostics diagnostics;
     diagnostics.totalBlocks = m_blocksX * m_blocksY;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
@@ -2027,6 +2103,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             const bool adjacent = m_detailReferenceValid && reference.inputFrameId >= 0
                 && static_cast<int64_t>(source->inputFrameId) == static_cast<int64_t>(reference.inputFrameId) + 1
                 && source->timestamp > reference.timestamp;
+            adjacentDetailReference = adjacent;
             if (adjacent) {
                 sts = detail_repeatability(source, &reference,
                     static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
@@ -2058,6 +2135,34 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice), stream,
         m_chromaMetrics ? static_cast<const FilmGrainBlockMetric *>(m_chromaMetrics->ptr) : nullptr);
     if (sts != RGY_ERR_NONE) return sts;
+    if (m_localStrength) {
+        cudaerr = cudaMemsetAsync(m_localStrength->ptrDevice, 0, m_localStrength->nSize, stream);
+        if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+        auto localMetrics = static_cast<FilmGrainBlockMetric *>(m_localMetrics->ptr);
+        auto localStats = static_cast<FilmGrainLocalStrengthStats *>(m_localStrength->ptrDevice);
+        // Always inspect fine quiet patches, including within a correlated
+        // picture. Coarse blocks can hide a narrow clean border or subtitle.
+        const bool quietOnly = std::abs(measuredGrainCorrelation) > 0.2f;
+        const auto chromaMetrics = m_chromaMetrics ? static_cast<const FilmGrainBlockMetric *>(m_chromaMetrics->ptr) : nullptr;
+        const auto lumaMetrics = static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice);
+        const auto reference = adjacentDetailReference ? &m_detailReference->frame : nullptr;
+        switch (source->csp) {
+        case RGY_CSP_NV12:
+        case RGY_CSP_YV12:
+            sts = local_strength_stats<uint8_t, 0>(source, output, localMetrics, localStats, bitDepth, minSigma, maxSigma, quietOnly, stream, chromaMetrics, lumaMetrics, reference);
+            break;
+        case RGY_CSP_YV12_10:
+            sts = local_strength_stats<uint16_t, 0>(source, output, localMetrics, localStats, bitDepth, minSigma, maxSigma, quietOnly, stream, chromaMetrics, lumaMetrics, reference);
+            break;
+        case RGY_CSP_P010:
+            sts = local_strength_stats<uint16_t, 6>(source, output, localMetrics, localStats, bitDepth, minSigma, maxSigma, quietOnly, stream, chromaMetrics, lumaMetrics, reference);
+            break;
+        default:
+            sts = RGY_ERR_UNSUPPORTED;
+            break;
+        }
+        if (sts != RGY_ERR_NONE || (sts = m_localStrength->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
+    }
     m_detailReferenceValid = false;
     if (retainDetailReference) {
         // Only luma is read by the repeatability kernel. Include its copy in
@@ -2065,32 +2170,6 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // cannot read an unfinished reference. No additional host wait needed.
         auto referenceLuma = getPlane(&m_detailReference->frame, RGY_PLANE_Y);
         if ((sts = copyPlaneAsync(&referenceLuma, &luma, stream)) != RGY_ERR_NONE) return sts;
-    }
-    if (m_localStrength) {
-        cudaerr = cudaMemsetAsync(m_localStrength->ptrDevice, 0, m_localStrength->nSize, stream);
-        if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
-        auto localMetrics = static_cast<FilmGrainBlockMetric *>(m_localMetrics->ptr);
-        auto localStats = static_cast<FilmGrainLocalStrengthStats *>(m_localStrength->ptrDevice);
-        // Avoid a second full-image analysis when the measured grain is
-        // outside this small-patch guard's calibrated correlation range.
-        if (std::abs(measuredGrainCorrelation) <= 0.2f) {
-            switch (source->csp) {
-            case RGY_CSP_NV12:
-            case RGY_CSP_YV12:
-                sts = local_strength_stats<uint8_t, 0>(source, output, localMetrics, localStats, bitDepth, minSigma, maxSigma, stream);
-                break;
-            case RGY_CSP_YV12_10:
-                sts = local_strength_stats<uint16_t, 0>(source, output, localMetrics, localStats, bitDepth, minSigma, maxSigma, stream);
-                break;
-            case RGY_CSP_P010:
-                sts = local_strength_stats<uint16_t, 6>(source, output, localMetrics, localStats, bitDepth, minSigma, maxSigma, stream);
-                break;
-            default:
-                sts = RGY_ERR_UNSUPPORTED;
-                break;
-            }
-        }
-        if (sts != RGY_ERR_NONE || (sts = m_localStrength->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     }
     if ((sts = m_modelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     cudaerr = cudaStreamSynchronize(stream);
@@ -2286,11 +2365,27 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         sts = copyFrameAsync(output, source, stream);
         if (sts != RGY_ERR_NONE) return sts;
     }
+    if (modelValid && prm->filmGrain.residualRetain < 0.0f && m_localStrength
+        && std::abs(measuredGrainCorrelation) > 0.2f && !adjacentDetailReference) {
+        // Correlated-noise evidence needs an adjacent source picture. Keep
+        // the startup/seek picture intact while that witness is unavailable.
+        // This is not a measured mismatch: retain the candidate model cache
+        // and evaluate it normally once independent evidence arrives.
+        diagnostics.sourceFidelityFallback = true;
+        diagnostics.modelHeld = false;
+        modelValid = false;
+        std::memset(&params, 0, sizeof(params));
+        if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
+    }
     if (modelValid && prm->filmGrain.residualRetain < 0.0f) {
-        // Evaluate the model actually selected by temporal hysteresis against
-        // this frame's removed residual. A safe but badly fitting held model
+        // Evaluate the model selected by temporal hysteresis against this
+        // frame's residual and independently supported source-energy targets.
+        // A safe but badly fitting held model
         // must not turn a source-amplitude change into synthetic replacement.
-        auto fidelity = film_grain_strength_fidelity(current.gpu, params, bitDepth, diagnostics.templateGain);
+        const auto fidelityStats = m_localStrength ? local_strength_targets(current.gpu,
+            *static_cast<const FilmGrainLocalStrengthStats *>(m_localStrength->ptrHost),
+            bitDepth, diagnostics.residualRetain) : current.gpu;
+        auto fidelity = film_grain_strength_fidelity(fidelityStats, params, bitDepth, diagnostics.templateGain);
         const auto localFidelity = [&]() {
             return m_localStrength ? film_grain_local_strength_fidelity(
                 *static_cast<const FilmGrainLocalStrengthStats *>(m_localStrength->ptrHost),
@@ -2321,27 +2416,107 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 m_state->pendingStreak = 0;
                 m_state->heldStreak = 0;
                 m_state->framesSinceModelUpdate = 0;
-                fidelity = film_grain_strength_fidelity(current.gpu, params, bitDepth, diagnostics.templateGain);
+                fidelity = film_grain_strength_fidelity(fidelityStats, params, bitDepth, diagnostics.templateGain);
                 local = localFidelity();
+            }
+        }
+        if (m_localStrength && (local.needsSource() || fidelity.needsSource()) && prm->filmGrain.minModelFrames == 1) {
+            // Independent evidence can repair a representable curve as well
+            // as reject it. Quiet patches must not be omitted just because
+            // they cannot fit AR coefficients. Reuse the accepted AR model
+            // and keep both the coarse and independent strict fit checks.
+            auto refined = params;
+            if (refit_local_strength(*static_cast<const FilmGrainLocalStrengthStats *>(m_localStrength->ptrHost),
+                    bitDepth, diagnostics.templateGain[0], diagnostics.residualRetain, refined)
+                && !film_grain_strength_fidelity(fidelityStats, refined, bitDepth, diagnostics.templateGain).needsSource(0.10, 0.25)) {
+                params = refined;
+                diagnostics.strengthRefit = true;
+                diagnostics.freshModel = true;
+                diagnostics.modelHeld = false;
+                m_state->lastParams = params;
+                m_state->lastTemplateGain = diagnostics.templateGain;
+                m_state->lastParamsValid = true;
+                m_state->pendingParamsValid = false;
+                m_state->pendingStreak = 0;
+                m_state->heldStreak = 0;
+                m_state->framesSinceModelUpdate = 0;
+                fidelity = film_grain_strength_fidelity(fidelityStats, params, bitDepth, diagnostics.templateGain);
+                local = localFidelity();
+                AddMessage(RGY_LOG_DEBUG, _T("fgs-local-strength frame=%d recovered=1 points=%u\n"),
+                    source->inputFrameId, params.numYPoints);
             }
         }
         for (int plane = 0; plane < 3; ++plane) {
             diagnostics.strengthFitError[plane] = static_cast<float>(fidelity.relativeRmsError[plane]);
         }
+        bool coupledChromaFallback = false;
+        if (m_chromaMetrics && m_localStrength) {
+            const auto stats = static_cast<const FilmGrainLocalStrengthStats *>(m_localStrength->ptrHost);
+            for (int component = 0; component < 2; ++component) {
+                const int plane = component + 1;
+                const auto scaling = component == 0 ? params.pointCbScaling : params.pointCrScaling;
+                const auto count = component == 0 ? params.numCbPoints : params.numCrPoints;
+                if (!params.chromaScalingFromLuma && std::none_of(scaling, scaling + count,
+                        [](const uint8_t value) { return value != 0; })) {
+                    // This source component is already restored below.
+                    m_state->chromaSourceActive[component] = false;
+                    m_state->chromaRecoveryFrames[component] = 0;
+                    fidelity.blocks[plane] = 0;
+                    continue;
+                }
+                const auto chroma = film_grain_local_strength_fidelity(stats[plane], params,
+                    bitDepth, diagnostics.templateGain[plane], 0.0, plane);
+                const bool coarseBad = fidelity.blocks[plane] && (!std::isfinite(fidelity.relativeRmsError[plane])
+                    || !std::isfinite(fidelity.rmsError8bit[plane])
+                    || (fidelity.relativeRmsError[plane] > 0.25 && fidelity.rmsError8bit[plane] > 0.5));
+                if (chroma.needsSource() || coarseBad) {
+                    m_state->chromaSourceActive[component] = true;
+                    m_state->chromaRecoveryFrames[component] = 0;
+                }
+                if (!m_state->chromaSourceActive[component]) continue;
+                const bool settled = diagnostics.modelFrames >= prm->filmGrain.modelWindow;
+                const bool coarseCloser = !fidelity.blocks[plane]
+                    || (std::isfinite(fidelity.relativeRmsError[plane]) && std::isfinite(fidelity.rmsError8bit[plane])
+                        && (fidelity.relativeRmsError[plane] <= 0.10 || fidelity.rmsError8bit[plane] <= 0.25));
+                if (settled && coarseCloser && !chroma.needsSource(0.10, 0.25)) {
+                    ++m_state->chromaRecoveryFrames[component];
+                } else {
+                    m_state->chromaRecoveryFrames[component] = 0;
+                }
+                if (m_state->chromaRecoveryFrames[component] >= 3) {
+                    m_state->chromaSourceActive[component] = false;
+                    m_state->chromaRecoveryFrames[component] = 0;
+                    continue;
+                }
+                const bool independent = can_restore_chroma_component(current.gpu, params, plane);
+                AddMessage(RGY_LOG_DEBUG, _T("fgs-local-chroma frame=%d plane=%d source=1 independent=%d\n"),
+                    source->inputFrameId, plane, independent);
+                if (!independent) {
+                    coupledChromaFallback = true;
+                    continue;
+                }
+                // AV1 4:2:0 pairs Cb/Cr point counts. Zero only the amplitudes
+                // and restore this component from source after the decision.
+                // The temporal cache keeps the original model for recovery.
+                std::fill(scaling, scaling + 10, static_cast<uint8_t>(0));
+                fidelity.blocks[plane] = 0; // Output is source, not this rejected synthesis.
+            }
+        }
         if (local.needsSource()) {
             int worstBin = -1;
             double worstRelative = 0.0;
-            for (int bin = 0; bin < FGS_LOCAL_STRENGTH_BINS; ++bin) {
+            for (int bin = 0; bin < FGS_LOCAL_STRENGTH_SLOTS; ++bin) {
                 if (local.blocks[bin] < 4) continue;
                 const double error = std::abs(local.modeledSigma[bin] - local.observedSigma[bin]);
                 const double relative = error / std::max(1e-6, local.observedSigma[bin]);
                 if (error > 0.5 && relative > worstRelative) { worstBin = bin; worstRelative = relative; }
             }
-            AddMessage(RGY_LOG_DEBUG, _T("fgs-local-strength frame=%d mismatch=1 valid=%d bin=%d source=%.3f predicted=%.3f\n"),
-                source->inputFrameId, local.valid, worstBin, worstBin >= 0 ? local.observedSigma[worstBin] : 0.0,
+            AddMessage(RGY_LOG_DEBUG, _T("fgs-local-strength frame=%d mismatch=1 valid=%d bin=%d population=%d source=%.3f predicted=%.3f\n"),
+                source->inputFrameId, local.valid, worstBin < 0 ? -1 : worstBin % FGS_LOCAL_STRENGTH_BINS,
+                worstBin < 0 ? -1 : worstBin / FGS_LOCAL_STRENGTH_BINS, worstBin >= 0 ? local.observedSigma[worstBin] : 0.0,
                 worstBin >= 0 ? local.modeledSigma[worstBin] : 0.0);
         }
-        if (fidelity.needsSource() || local.needsSource()) {
+        if (fidelity.needsSource() || local.needsSource() || coupledChromaFallback) {
             m_state->sourceFallbackActive = true;
             m_state->fidelityRecoveryFrames = 0;
         }
@@ -2350,7 +2525,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             // threshold otherwise alternates encoded source and synthesis
             // during a strength transition, making the grain pump.
             if (diagnostics.modelFrames >= prm->filmGrain.modelWindow
-                && !fidelity.needsSource(0.10, 0.25) && !local.needsSource(0.10, 0.25)) {
+                && !fidelity.needsSource(0.10, 0.25) && !local.needsSource(0.10, 0.25) && !coupledChromaFallback) {
                 ++m_state->fidelityRecoveryFrames;
             } else {
                 m_state->fidelityRecoveryFrames = 0;

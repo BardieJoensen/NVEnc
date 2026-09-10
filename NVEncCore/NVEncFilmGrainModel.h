@@ -165,27 +165,47 @@ FilmGrainStrengthFidelity film_grain_strength_fidelity(const FilmGrainGpuStats& 
     const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int bitDepth,
     const std::array<float, 3>& templateGain);
 
-// Independent 16x16 source-flat observations. One-code brightness buckets
-// retain local strength differences that a sparse 20-bin fit can average away.
+// Source-flat observations: fine 16x16 patches and larger 32x32 correlated
+// luma patches with independent temporal evidence. One-code brightness and
+// separate strength populations retain differences a coarse fit can hide.
 // Compare source variance with base + independently synthesized grain variance;
 // removed-residual variance alone ignores grain already retained in the base.
 constexpr int FGS_LOCAL_STRENGTH_BINS = 256;
+constexpr int FGS_LOCAL_STRENGTH_GROUPS = 6; // sigma boundaries: 0.5, 2, 4, 8, 16 in 8-bit units
+constexpr int FGS_LOCAL_STRENGTH_SLOTS = FGS_LOCAL_STRENGTH_BINS * (1 + FGS_LOCAL_STRENGTH_GROUPS);
 struct FilmGrainLocalStrengthStats {
-    double varianceSum[FGS_LOCAL_STRENGTH_BINS]; // source after removing a local plane
-    double baseVarianceSum[FGS_LOCAL_STRENGTH_BINS]; // filtered base with the same detrending
-    double covarianceSum[FGS_LOCAL_STRENGTH_BINS]; // source/base, before optional residual blending
-    double intensitySum[FGS_LOCAL_STRENGTH_BINS];
-    uint64_t blocks[FGS_LOCAL_STRENGTH_BINS];
+    double varianceSum[FGS_LOCAL_STRENGTH_SLOTS]; // source after removing a local plane
+    double baseVarianceSum[FGS_LOCAL_STRENGTH_SLOTS]; // filtered base with the same detrending
+    double covarianceSum[FGS_LOCAL_STRENGTH_SLOTS]; // source/base, before optional residual blending
+    double intensitySum[FGS_LOCAL_STRENGTH_SLOTS];
+    uint64_t blocks[FGS_LOCAL_STRENGTH_SLOTS];
+    uint64_t correlatedBlocks[FGS_LOCAL_STRENGTH_BINS]; // larger patches with independent temporal evidence
 };
 struct FilmGrainLocalStrengthFidelity {
-    std::array<double, FGS_LOCAL_STRENGTH_BINS> observedSigma = {};
-    std::array<double, FGS_LOCAL_STRENGTH_BINS> modeledSigma = {};
-    std::array<uint64_t, FGS_LOCAL_STRENGTH_BINS> blocks = {};
+    std::array<double, FGS_LOCAL_STRENGTH_SLOTS> observedSigma = {};
+    std::array<double, FGS_LOCAL_STRENGTH_SLOTS> modeledSigma = {};
+    std::array<uint64_t, FGS_LOCAL_STRENGTH_SLOTS> blocks = {};
     bool valid = true;
     bool needsSource(double relativeLimit = 0.25, double absoluteLimit8bit = 0.5) const;
 };
 FilmGrainLocalStrengthFidelity film_grain_local_strength_fidelity(const FilmGrainLocalStrengthStats& stats,
-    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int bitDepth, double templateGain, double residualRetain = 0.0);
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int bitDepth, double templateGain, double residualRetain = 0.0, int plane = 0);
+// Retry only luma strength with independent local source/base evidence,
+// including quiet patches. AR coefficients, chroma curves and the global
+// scaling shift are preserved. Failure leaves the caller's model unchanged.
+bool refit_local_strength(const FilmGrainLocalStrengthStats& stats, int bitDepth,
+    double templateGain, double residualRetain, NV_ENC_FILM_GRAIN_PARAMS_AV1& params);
+
+// Where independent correlated-grain evidence exists, the desired synthesis
+// is source variance minus retained-base variance, not removed-residual energy.
+// Keep AR normal equations and unobserved coarse bins unchanged.
+FilmGrainGpuStats local_strength_targets(const FilmGrainGpuStats& coarse,
+    const FilmGrainLocalStrengthStats& local, int bitDepth, double residualRetain);
+
+// Independent colour-source restoration is permitted only with substantial
+// current evidence and negligible measured/signalled luma coupling.
+bool can_restore_chroma_component(const FilmGrainGpuStats& stats,
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int plane);
 
 using StrengthPoint = std::pair<double, double>;
 
