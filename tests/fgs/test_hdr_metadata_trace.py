@@ -102,6 +102,38 @@ class MetadataTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Duplicate'):
             metadata_row(frame, 0)
 
+    def test_remux_origin_shift_requires_explicit_opt_in_and_is_recorded(self):
+        source = [dict(frame=i, pts=pts, metadata={'Dolby Vision Metadata': str(i)})
+                  for i, pts in enumerate(['0.125', '0.167', '0.209'])]
+        muxed = [dict(row, pts=pts) for row, pts in zip(source, ['0.000', '0.042', '0.084'])]
+        self.assertFalse(compare_rows(source, muxed)['passed'])
+        result = compare_rows(source, muxed, allow_common_origin_shift=True)
+        self.assertTrue(result['passed'])
+        self.assertEqual(result['frames'], 3)
+        self.assertEqual(result['common_origin_shift_seconds'], -.125)
+        self.assertEqual(result['common_origin_shift_fraction'], '-1/8')
+
+    def test_origin_normalization_cannot_hide_cadence_metadata_or_frame_changes(self):
+        source = [dict(frame=i, pts=pts, metadata={'Dolby Vision Metadata': str(i)})
+                  for i, pts in enumerate(['0.125', '0.167', '0.209'])]
+        muxed = [dict(row, pts=pts) for row, pts in zip(source, ['0.000', '0.042', '0.084'])]
+        for change in ['cadence', 'metadata']:
+            changed = copy.deepcopy(muxed)
+            if change == 'cadence':
+                changed[1]['pts'] = '0.043'
+            else:
+                changed[1]['metadata']['Dolby Vision Metadata'] = 'different'
+            result = compare_rows(source, changed, allow_common_origin_shift=True)
+            self.assertFalse(result['passed'])
+            self.assertEqual(result['different_frames'], 1)
+        with self.assertRaisesRegex(ValueError, 'lengths differ'):
+            compare_rows(source, muxed[:-1], allow_common_origin_shift=True)
+        with self.assertRaisesRegex(ValueError, 'reordered'):
+            compare_rows(source, muxed[::-1], allow_common_origin_shift=True)
+        muxed[1]['pts'] = None
+        with self.assertRaisesRegex(ValueError, 'every timestamp'):
+            compare_rows(source, muxed, allow_common_origin_shift=True)
+
     def test_dovi_profile_conversion_does_not_hide_missing_configuration(self):
         conf = dict(side_data_type='DOVI configuration record', dv_profile=8,
                     rpu_present_flag=1, el_present_flag=0, bl_present_flag=1,

@@ -204,16 +204,26 @@ def record(source, directory, expected_frames, expected_sha256, timeout=18000, t
     return report
 
 
-def compare_rows(reference, candidate):
+def compare_rows(reference, candidate, allow_common_origin_shift=False):
     failures = []
     count = 0
+    origin_a = origin_b = None
     for a, b in zip_longest(reference, candidate):
         if a is None or b is None:
             raise ValueError('Metadata trace lengths differ')
         if a['frame'] != count or b['frame'] != count:
             raise ValueError('Missing or reordered trace frames')
         differences = []
-        if a['pts'] != b['pts']:
+        if allow_common_origin_shift:
+            if a['pts'] is None or b['pts'] is None:
+                raise ValueError('Origin normalization requires every timestamp')
+            pts_a, pts_b = Fraction(a['pts']), Fraction(b['pts'])
+            if count == 0:
+                origin_a, origin_b = pts_a, pts_b
+            same_time = pts_a - origin_a == pts_b - origin_b
+        else:
+            same_time = a['pts'] == b['pts']
+        if not same_time:
             differences.append('timestamp')
         for kind in sorted(set(a['metadata']) | set(b['metadata'])):
             if a['metadata'].get(kind) != b['metadata'].get(kind):
@@ -223,11 +233,16 @@ def compare_rows(reference, candidate):
         count += 1
     if count == 0:
         raise ValueError('Empty metadata traces')
-    return dict(passed=not failures, frames=count, different_frames=len(failures),
-                first_differences=failures[:30])
+    result = dict(passed=not failures, frames=count, different_frames=len(failures),
+                  first_differences=failures[:30])
+    if allow_common_origin_shift:
+        result.update(timestamp_mode='exact cadence with one common origin shift',
+                      common_origin_shift_seconds=float(origin_b - origin_a),
+                      common_origin_shift_fraction=str(origin_b - origin_a))
+    return result
 
 
-def compare(reference, candidate):
+def compare(reference, candidate, allow_common_origin_shift=False):
     paths = [Path(reference), Path(candidate)]
     reports = []
     for path in paths:
@@ -239,7 +254,7 @@ def compare(reference, candidate):
         raise ValueError('Metadata trace formats differ; record both with the same formatter')
     stream_failures = compare_streams(reports[0]['stream'], reports[1]['stream'])
     with (paths[0] / 'frames.jsonl').open() as a, (paths[1] / 'frames.jsonl').open() as b:
-        result = compare_rows(map(json.loads, a), map(json.loads, b))
+        result = compare_rows(map(json.loads, a), map(json.loads, b), allow_common_origin_shift)
     if any(result['frames'] != r['frames'] for r in reports):
         raise ValueError('Trace/report frame counts differ')
     result['traces'] = [str(p.resolve()) for p in paths]
@@ -288,9 +303,11 @@ def main():
     cmp = sub.add_parser('compare')
     cmp.add_argument('--reference', type=Path, required=True)
     cmp.add_argument('--candidate', type=Path, required=True)
+    cmp.add_argument('--allow-common-origin-shift', action='store_true',
+                     help='For remuxed video: allow one recorded timestamp offset; require exact cadence and metadata on every frame')
     args = parser.parse_args()
     result = (record(args.source, args.output_dir, args.frames, args.expected_sha256, threads=args.threads)
-              if args.mode == 'record' else compare(args.reference, args.candidate))
+              if args.mode == 'record' else compare(args.reference, args.candidate, args.allow_common_origin_shift))
     print(json.dumps(result, indent=2))
     return 0 if result.get('passed', result.get('complete')) else 2
 
