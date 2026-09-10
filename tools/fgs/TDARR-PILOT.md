@@ -80,12 +80,19 @@ node --test tests/fgs/test_tdarr_dovi_guard.js tests/fgs/test_tdarr_video_bytes.
 python3 tests/fgs/test_tdarr_pilot.py
 ```
 
-The recorded real full-episode trial accepted a 1,007,395,242-byte video against
+An earlier encoder iteration's real full-episode trial accepted a 1,007,395,242-byte video against
 its 991,509,444-byte baseline and 1,090,660,388-byte limit. The same real candidate
 was rejected with a zero-extra-byte control. The fresh full encode and subsequent
 audio/subtitle/chapter processing preserved the previously validated candidate's
 complete video payload, codec private data and timeline. Neither test replaced
 a library file.
+
+Those historical admission results do not qualify core `9c1664d4`. Its full
+episode outputs exceed the unchanged 10% trial allowance. A separate
+[source-savings alternative](TDARR-SOURCE-SAVINGS.md) is being qualified for
+review; it permits more growth than the preceding encoder while requiring
+savings against the original. Preparing that alternative does not change this
+pilot's budget or activate a new production policy.
 # Updating an existing guarded flow
 
 The bundle builders accept both the original flow and the already deployed
