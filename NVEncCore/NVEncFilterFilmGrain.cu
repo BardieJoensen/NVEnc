@@ -918,7 +918,10 @@ __global__ void kernel_fgs_local_strength(const uint8_t *__restrict__ src, const
     for (int offset = 16; offset > 0; offset >>= 1) {
         for (int stat = 0; stat < (patchSize == 32 ? 14 : 9); ++stat) sums[stat] += __shfl_down_sync(0xffffffffu, sums[stat], offset);
     }
-    if (lane == 0) {
+    // Every lane needs the same eligibility and detrending plane below.
+    for (int stat = 0; stat < (patchSize == 32 ? 14 : 9); ++stat)
+        sums[stat] = __shfl_sync(0xffffffffu, sums[stat], 0);
+    {
         constexpr double samples = sampleCount, planeNorm = sampleCount * (side * side - 1) / 3.0;
         const double meanSource = static_cast<double>(sums[0]) / samples;
         const double meanBase = static_cast<double>(sums[4]) / samples;
@@ -954,13 +957,43 @@ __global__ void kernel_fgs_local_strength(const uint8_t *__restrict__ src, const
         const int population = variance8 < 0.25 ? 0 : (variance8 < 4.0 ? 1
             : (variance8 < 16.0 ? 2 : (variance8 < 64.0 ? 3 : (variance8 < 256.0 ? 4 : 5))));
         const int slots[2] = { bin, (population + 1) * FGS_LOCAL_STRENGTH_BINS + bin };
-        if (patchSize == 32) atomic_add_u64(stats->correlatedBlocks + bin, 1ULL);
-        for (const auto slot : slots) {
-            atomic_add_f64(stats->varianceSum + slot, variance);
-            atomic_add_f64(stats->baseVarianceSum + slot, baseVariance);
-            atomic_add_f64(stats->covarianceSum + slot, covariance);
-            atomic_add_f64(stats->intensitySum + slot, intensity);
-            atomic_add_u64(stats->blocks + slot, 1ULL);
+        if (lane == 0) {
+            if (patchSize == 32) {
+                atomic_add_u64(stats->correlatedBlocks + bin, 1ULL);
+                atomic_add_u64(&stats->covarianceBlocks, 1ULL);
+            }
+            for (const auto slot : slots) {
+                atomic_add_f64(stats->varianceSum + slot, variance);
+                atomic_add_f64(stats->baseVarianceSum + slot, baseVariance);
+                atomic_add_f64(stats->covarianceSum + slot, covariance);
+                atomic_add_f64(stats->intensitySum + slot, intensity);
+                atomic_add_u64(stats->blocks + slot, 1ULL);
+            }
+        }
+        if (patchSize == 32) {
+            // The same independent source-flat patches supply the spatial
+            // covariance target. Strength alone cannot repair grain texture.
+            for (int lag = lane; lag < FGS_LOCAL_COVARIANCES; lag += 32) {
+                const int dy = lag < 7 ? 0 : 1 + (lag - 7) / 13;
+                const int dx = lag < 7 ? lag : (lag - 7) % 13 - 6;
+                float sourceSum = 0.0f, baseSum = 0.0f, crossSum = 0.0f;
+                for (int sample = 0; sample < FGS_LOCAL_COVARIANCE_SAMPLES; ++sample) {
+                    const int px = 8 + sample % 16;
+                    const int py = 5 + sample / 16;
+                    const float xn = static_cast<float>(2 * (px - 2) - (side - 1));
+                    const float yn = static_cast<float>(2 * (py - 2) - (side - 1));
+                    const float sx = static_cast<float>(sums[2] / planeNorm), sy = static_cast<float>(sums[3] / planeNorm);
+                    const float bx = static_cast<float>(sums[6] / planeNorm), by = static_cast<float>(sums[7] / planeNorm);
+                    const float a = load_code<Type, shift>(src, srcPitch, x0 + px, y0 + py) - static_cast<float>(meanSource) - sx * xn - sy * yn;
+                    const float b = load_code<Type, shift>(clean, cleanPitch, x0 + px, y0 + py) - static_cast<float>(meanBase) - bx * xn - by * yn;
+                    const float ar = load_code<Type, shift>(src, srcPitch, x0 + px + dx, y0 + py + dy) - static_cast<float>(meanSource) - sx * (xn + 2 * dx) - sy * (yn + 2 * dy);
+                    const float br = load_code<Type, shift>(clean, cleanPitch, x0 + px + dx, y0 + py + dy) - static_cast<float>(meanBase) - bx * (xn + 2 * dx) - by * (yn + 2 * dy);
+                    sourceSum += a * ar; baseSum += b * br; crossSum += a * br + b * ar;
+                }
+                atomic_add_f64(stats->sourceCovariance + lag, sourceSum / static_cast<double>(FGS_LOCAL_COVARIANCE_SAMPLES));
+                atomic_add_f64(stats->baseCovariance + lag, baseSum / static_cast<double>(FGS_LOCAL_COVARIANCE_SAMPLES));
+                atomic_add_f64(stats->crossCovariance + lag, crossSum / static_cast<double>(FGS_LOCAL_COVARIANCE_SAMPLES));
+            }
         }
     }
 }
@@ -2382,9 +2415,48 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // frame's residual and independently supported source-energy targets.
         // A safe but badly fitting held model
         // must not turn a source-amplitude change into synthetic replacement.
-        const auto fidelityStats = m_localStrength ? local_strength_targets(current.gpu,
+        auto fidelityStats = m_localStrength ? local_strength_targets(current.gpu,
             *static_cast<const FilmGrainLocalStrengthStats *>(m_localStrength->ptrHost),
             bitDepth, diagnostics.residualRetain) : current.gpu;
+        bool correlatedTextureFallback = false;
+        const bool covarianceRecoveryRequired = m_localStrength
+            && static_cast<const FilmGrainLocalStrengthStats *>(m_localStrength->ptrHost)->covarianceBlocks;
+        if (m_localStrength) {
+            const auto& spatial = *static_cast<const FilmGrainLocalStrengthStats *>(m_localStrength->ptrHost);
+            if (spatial.covarianceBlocks) {
+                auto target = fidelityStats;
+                NV_ENC_FILM_GRAIN_PARAMS_AV1 fresh = {};
+                NVEncFilmGrainDiagnostics freshDiagnostics;
+                const bool cbInactive = std::none_of(params.pointCbScaling, params.pointCbScaling + params.numCbPoints, [](const uint8_t value) { return value != 0; });
+                const bool crInactive = std::none_of(params.pointCrScaling, params.pointCrScaling + params.numCrPoints, [](const uint8_t value) { return value != 0; });
+                const bool colourIndependent = (cbInactive || can_restore_chroma_component(current.gpu, params, 1))
+                    && (crInactive || can_restore_chroma_component(current.gpu, params, 2));
+                double highpassFraction = 0.0;
+                const bool covarianceReady = apply_local_covariance(target, spatial, diagnostics.residualRetain, &highpassFraction);
+                const bool recovered = colourIndependent && prm->filmGrain.minModelFrames == 1
+                    && covarianceReady
+                    && build_covariance_recovery_model(target, bitDepth, prm->filmGrain.analyzeChroma,
+                        prm->filmGrain.clipToRestrictedRange, diagnostics.residualRetain, highpassFraction, fresh, freshDiagnostics);
+                correlatedTextureFallback = !recovered;
+                if (recovered) {
+                    fidelityStats = target;
+                    params = fresh;
+                    diagnostics.templateGain = freshDiagnostics.templateGain;
+                    diagnostics.noiseStdDev = freshDiagnostics.noiseStdDev;
+                    diagnostics.observations = freshDiagnostics.observations;
+                    diagnostics.freshModel = true;
+                    diagnostics.modelHeld = false;
+                    diagnostics.strengthRefit = freshDiagnostics.strengthRefit;
+                    m_state->lastParams = params;
+                    m_state->lastTemplateGain = diagnostics.templateGain;
+                    m_state->lastParamsValid = true;
+                    m_state->pendingParamsValid = false;
+                    m_state->pendingStreak = m_state->heldStreak = m_state->framesSinceModelUpdate = 0;
+                }
+                AddMessage(RGY_LOG_DEBUG, _T("fgs-local-covariance frame=%d blocks=%llu recovered=%d covariance=%d colourIndependent=%d\n"),
+                    source->inputFrameId, static_cast<unsigned long long>(spatial.covarianceBlocks), recovered, covarianceReady, colourIndependent);
+            }
+        }
         auto fidelity = film_grain_strength_fidelity(fidelityStats, params, bitDepth, diagnostics.templateGain);
         const auto localFidelity = [&]() {
             return m_localStrength ? film_grain_local_strength_fidelity(
@@ -2392,7 +2464,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 params, bitDepth, diagnostics.templateGain[0], diagnostics.residualRetain) : FilmGrainLocalStrengthFidelity();
         };
         auto local = localFidelity();
-        if ((fidelity.needsSource() || local.needsSource()) && prm->filmGrain.minModelFrames == 1) {
+        if ((fidelity.needsSource() || local.needsSource()) && prm->filmGrain.minModelFrames == 1 && !covarianceRecoveryRequired) {
             // A stale rolling/held estimate is not proof that this frame
             // cannot be synthesized. Try the already-collected current
             // evidence before paying for a whole source frame. This reuses
@@ -2400,7 +2472,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             // no extra GPU pass or weakened source-fallback threshold.
             NV_ENC_FILM_GRAIN_PARAMS_AV1 fresh = {};
             NVEncFilmGrainDiagnostics freshDiagnostics;
-            if (build_fidelity_recovery_model(current.gpu, bitDepth, prm->filmGrain.analyzeChroma,
+            if (build_fidelity_recovery_model(fidelityStats, bitDepth, prm->filmGrain.analyzeChroma,
                     prm->filmGrain.clipToRestrictedRange, fresh, freshDiagnostics)) {
                 params = fresh;
                 diagnostics.templateGain = freshDiagnostics.templateGain;
@@ -2516,7 +2588,9 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 worstBin < 0 ? -1 : worstBin / FGS_LOCAL_STRENGTH_BINS, worstBin >= 0 ? local.observedSigma[worstBin] : 0.0,
                 worstBin >= 0 ? local.modeledSigma[worstBin] : 0.0);
         }
-        if (fidelity.needsSource() || local.needsSource() || coupledChromaFallback) {
+        if (covarianceRecoveryRequired && film_grain_luma_dc_amplitude(params, diagnostics.residualRetain) > 6.0)
+            correlatedTextureFallback = true;
+        if (fidelity.needsSource() || local.needsSource() || coupledChromaFallback || correlatedTextureFallback) {
             m_state->sourceFallbackActive = true;
             m_state->fidelityRecoveryFrames = 0;
         }
@@ -2525,7 +2599,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             // threshold otherwise alternates encoded source and synthesis
             // during a strength transition, making the grain pump.
             if (diagnostics.modelFrames >= prm->filmGrain.modelWindow
-                && !fidelity.needsSource(0.10, 0.25) && !local.needsSource(0.10, 0.25) && !coupledChromaFallback) {
+                && !fidelity.needsSource(0.10, 0.25) && !local.needsSource(0.10, 0.25) && !coupledChromaFallback && !correlatedTextureFallback) {
                 ++m_state->fidelityRecoveryFrames;
             } else {
                 m_state->fidelityRecoveryFrames = 0;
