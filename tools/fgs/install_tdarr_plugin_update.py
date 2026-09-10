@@ -7,8 +7,43 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import zipfile
 
 from prepare_tdarr_plugin_update import digest
+
+
+def archives_equivalent(actual, expected):
+    """Recognize a Tdarr repack without accepting changed members or permissions.
+
+    ZIP timestamps, compression and UTF-8/data-descriptor flags can change on
+    regeneration. Require the exact decoded names, bytes, types and Unix modes.
+    Duplicate names and encrypted or otherwise changed flags remain errors.
+    """
+    try:
+        with zipfile.ZipFile(actual) as a, zipfile.ZipFile(expected) as b:
+            left = {i.filename: i for i in a.infolist()}
+            right = {i.filename: i for i in b.infolist()}
+            if (len(left) != len(a.infolist()) or len(right) != len(b.infolist())
+                    or left.keys() != right.keys()):
+                return False
+            for name, one in left.items():
+                two = right[name]
+                if (one.file_size != two.file_size or one.is_dir() != two.is_dir()
+                        or one.external_attr != two.external_attr
+                        or one.create_system != two.create_system
+                        or one.flag_bits & 1 or two.flag_bits & 1
+                        or (one.flag_bits ^ two.flag_bits) & ~0x808):
+                    return False
+                with a.open(one) as x, b.open(two) as y:
+                    while True:
+                        block = x.read(1024 * 1024)
+                        if block != y.read(1024 * 1024):
+                            return False
+                        if not block:
+                            break
+            return True
+    except (OSError, ValueError, RuntimeError, zipfile.BadZipFile, NotImplementedError):
+        return False
 
 
 def atomic_copy(source, destination):
@@ -42,12 +77,20 @@ def apply(prepared, rollback=False):
             raise ValueError('Prepared plugin artifact changed: ' + name)
         operations.append((source, destination, expected))
     archive_before, archive_after = record['rollback_archive_sha256'], record['candidate_archive_sha256']
-    if digest(archive) not in (archive_before, archive_after):
-        raise ValueError('Installed plugin archive changed outside this update')
+    observed_archive = digest(archive)
+    repacked = observed_archive not in (archive_before, archive_after)
+    if repacked:
+        known = [(prepared / 'rollback-nodePlugins.Zip', archive_before),
+                 (prepared / 'candidate-nodePlugins.Zip', archive_after)]
+        if not any(digest(path) == expected and archives_equivalent(archive, path)
+                   for path, expected in known):
+            raise ValueError('Installed plugin archive changed outside this update')
     source_archive = prepared / ('rollback-nodePlugins.Zip' if rollback else 'candidate-nodePlugins.Zip')
     expected_archive = archive_before if rollback else archive_after
     if digest(source_archive) != expected_archive:
         raise ValueError('Prepared plugin archive changed')
+    if digest(archive) != observed_archive:
+        raise ValueError('Installed plugin archive changed during verification')
     # Check all inputs before modifying any file. A retry accepts either this
     # update's old or new bytes, allowing recovery after an interrupted copy.
     for source, destination, expected in operations:
@@ -60,7 +103,8 @@ def apply(prepared, rollback=False):
     atomic_copy(source_archive, archive)
     if digest(archive) != expected_archive:
         raise ValueError('Installed plugin archive does not match its artifact')
-    return dict(complete=True, rollback=rollback, plugins=len(operations), archive_sha256=expected_archive)
+    return dict(complete=True, rollback=rollback, plugins=len(operations), archive_sha256=expected_archive,
+                equivalent_repack_verified=repacked, previous_archive_sha256=observed_archive)
 
 
 if __name__ == '__main__':
