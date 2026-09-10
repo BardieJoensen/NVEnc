@@ -226,6 +226,27 @@ bool build_covariance_recovery_model(const FilmGrainGpuStats& stats, int bitDept
     bool analyzeChroma, bool limitedRange, double residualRetain, double highpassFraction,
     NV_ENC_FILM_GRAIN_PARAMS_AV1& params, NVEncFilmGrainDiagnostics& diagnostics);
 
+// Stable debug reason codes; these describe the first failing eligibility
+// condition, not an observed picture defect. 254/255 are reserved by the
+// filter for inactive components and checks not reached, respectively.
+enum class FilmGrainChromaRestoreReason : uint32_t {
+    Eligible = 0, InvalidPlane = 1, ScalingFromLuma = 2, UnsupportedLag = 3,
+    InvalidShift = 4, SignalledCoupling = 5, InsufficientObservations = 6,
+    InvalidVariance = 7, MissingEnergy = 8, MissingPredictor = 9,
+    SpatialCorrelation = 10, InvalidCorrelation = 11, MeasuredCoupling = 12
+};
+FilmGrainChromaRestoreReason chroma_restore_reason(const FilmGrainGpuStats& stats,
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int plane);
+
+// Current reasons for whole-source output. Several checks can fail on one
+// frame; RecoveryHold alone means the stricter re-entry has not settled.
+enum FilmGrainSourceReason : uint32_t {
+    FGS_SOURCE_NO_MODEL = 1u, FGS_SOURCE_FEEDBACK = 2u, FGS_SOURCE_NO_ADJACENT = 4u,
+    FGS_SOURCE_STRENGTH = 8u, FGS_SOURCE_LOCAL = 16u, FGS_SOURCE_COLOUR = 32u,
+    FGS_SOURCE_COVARIANCE = 64u, FGS_SOURCE_DC = 128u, FGS_SOURCE_RECOVERY_HOLD = 256u,
+    FGS_SOURCE_INSUFFICIENT_FLAT = 512u
+};
+
 // Independent colour-source restoration is permitted only with substantial
 // current evidence and negligible measured/signalled luma coupling.
 bool can_restore_chroma_component(const FilmGrainGpuStats& stats,

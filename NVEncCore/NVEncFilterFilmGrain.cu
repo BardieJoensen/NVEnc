@@ -1917,6 +1917,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
 
     bool retainDetailReference = false;
     bool adjacentDetailReference = false;
+    uint32_t sourceReasonMask = 0;
     NVEncFilmGrainDiagnostics diagnostics;
     diagnostics.totalBlocks = m_blocksX * m_blocksY;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
@@ -1995,9 +1996,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // later frames.  The next reliable region must build a fresh window.
         diagnostics.sceneReset = !m_state->history.empty();
         m_state->clear();
-        AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=0 reset=%d flat=%d/%d window=0\n"),
+        AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=0 reset=%d flat=%d/%d window=0 ")
+            _T("sourceFallback=0 trace=1 sourceReasons=%u requiredFlat=%d\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
-            diagnostics.sceneReset ? 1 : 0, diagnostics.flatBlocks, diagnostics.totalBlocks);
+            diagnostics.sceneReset ? 1 : 0, diagnostics.flatBlocks, diagnostics.totalBlocks,
+            static_cast<uint32_t>(FGS_SOURCE_INSUFFICIENT_FLAT), requiredBlocks);
         if (cleanBase != source && (sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
         attachResult();
         return RGY_ERR_NONE;
@@ -2394,6 +2397,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         m_state->advanceModelAge();
         ++m_state->heldStreak;
     } else {
+        sourceReasonMask |= FGS_SOURCE_NO_MODEL;
+        if (diagnostics.rejectedModel) sourceReasonMask |= FGS_SOURCE_FEEDBACK;
         std::memset(&params, 0, sizeof(params));
         sts = copyFrameAsync(output, source, stream);
         if (sts != RGY_ERR_NONE) return sts;
@@ -2402,6 +2407,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         && std::abs(measuredGrainCorrelation) > 0.2f && !adjacentDetailReference) {
         // Correlated-noise evidence needs an adjacent source picture. Keep
         // the startup/seek picture intact while that witness is unavailable.
+        sourceReasonMask |= FGS_SOURCE_NO_ADJACENT;
         // This is not a measured mismatch: retain the candidate model cache
         // and evaluate it normally once independent evidence arrives.
         diagnostics.sourceFidelityFallback = true;
@@ -2427,22 +2433,29 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 auto target = fidelityStats;
                 NV_ENC_FILM_GRAIN_PARAMS_AV1 fresh = {};
                 NVEncFilmGrainDiagnostics freshDiagnostics;
-                const auto independentColour = [&](const NV_ENC_FILM_GRAIN_PARAMS_AV1& model) {
+                const auto independentColour = [&](const NV_ENC_FILM_GRAIN_PARAMS_AV1& model, std::array<uint32_t, 2>& reasons) {
                     const bool cbInactive = std::none_of(model.pointCbScaling, model.pointCbScaling + model.numCbPoints, [](const uint8_t value) { return value != 0; });
                     const bool crInactive = std::none_of(model.pointCrScaling, model.pointCrScaling + model.numCrPoints, [](const uint8_t value) { return value != 0; });
-                    return (cbInactive || can_restore_chroma_component(current.gpu, model, 1))
-                        && (crInactive || can_restore_chroma_component(current.gpu, model, 2));
+                    reasons[0] = cbInactive ? 254u : static_cast<uint32_t>(chroma_restore_reason(current.gpu, model, 1));
+                    reasons[1] = crInactive ? 254u : static_cast<uint32_t>(chroma_restore_reason(current.gpu, model, 2));
+                    return (cbInactive || reasons[0] == 0) && (crInactive || reasons[1] == 0);
                 };
-                const bool colourIndependent = independentColour(params);
+                std::array<uint32_t, 2> heldColour = { 255u, 255u }, freshColour = { 255u, 255u };
+                const bool colourIndependent = independentColour(params, heldColour);
+                const bool minFramesEligible = prm->filmGrain.minModelFrames == 1;
                 double highpassFraction = 0.0;
-                const bool covarianceReady = apply_local_covariance(target, spatial, diagnostics.residualRetain, &highpassFraction);
-                const bool recovered = colourIndependent && prm->filmGrain.minModelFrames == 1
-                    && covarianceReady
+                // target is local scratch and can only be consumed after both
+                // eligibility checks. Avoid the unused covariance/matrix work.
+                const bool covarianceAttempted = colourIndependent && minFramesEligible;
+                const bool covarianceReady = covarianceAttempted
+                    && apply_local_covariance(target, spatial, diagnostics.residualRetain, &highpassFraction);
+                const bool fitAttempted = covarianceReady;
+                const bool fitSucceeded = fitAttempted
                     && build_covariance_recovery_model(target, bitDepth, prm->filmGrain.analyzeChroma,
-                        prm->filmGrain.clipToRestrictedRange, diagnostics.residualRetain, highpassFraction, fresh, freshDiagnostics)
-                    // A quiet held model can gain a coupled colour component
-                    // in this fresh fit. Its own eligibility must still hold.
-                    && independentColour(fresh);
+                        prm->filmGrain.clipToRestrictedRange, diagnostics.residualRetain, highpassFraction, fresh, freshDiagnostics);
+                // A quiet held model can gain a coupled colour component
+                // in this fresh fit. Its own eligibility must still hold.
+                const bool recovered = fitSucceeded && independentColour(fresh, freshColour);
                 correlatedTextureFallback = !recovered;
                 if (recovered) {
                     fidelityStats = target;
@@ -2459,8 +2472,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                     m_state->pendingParamsValid = false;
                     m_state->pendingStreak = m_state->heldStreak = m_state->framesSinceModelUpdate = 0;
                 }
-                AddMessage(RGY_LOG_DEBUG, _T("fgs-local-covariance frame=%d blocks=%llu recovered=%d covariance=%d colourIndependent=%d\n"),
-                    source->inputFrameId, static_cast<unsigned long long>(spatial.covarianceBlocks), recovered, covarianceReady, colourIndependent);
+                AddMessage(RGY_LOG_DEBUG, _T("fgs-local-covariance frame=%d blocks=%llu recovered=%d covariance=%d colourIndependent=%d ")
+                    _T("trace=1 covarianceAttempted=%d minFramesEligible=%d fitAttempted=%d fitSucceeded=%d heldCb=%u heldCr=%u freshCb=%u freshCr=%u\n"),
+                    source->inputFrameId, static_cast<unsigned long long>(spatial.covarianceBlocks), recovered, covarianceReady, colourIndependent,
+                    covarianceAttempted, minFramesEligible, fitAttempted, fitSucceeded,
+                    heldColour[0], heldColour[1], freshColour[0], freshColour[1]);
             }
         }
         auto fidelity = film_grain_strength_fidelity(fidelityStats, params, bitDepth, diagnostics.templateGain);
@@ -2566,9 +2582,10 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                     m_state->chromaRecoveryFrames[component] = 0;
                     continue;
                 }
-                const bool independent = can_restore_chroma_component(current.gpu, params, plane);
-                AddMessage(RGY_LOG_DEBUG, _T("fgs-local-chroma frame=%d plane=%d source=1 independent=%d\n"),
-                    source->inputFrameId, plane, independent);
+                const auto chromaReason = chroma_restore_reason(current.gpu, params, plane);
+                const bool independent = chromaReason == FilmGrainChromaRestoreReason::Eligible;
+                AddMessage(RGY_LOG_DEBUG, _T("fgs-local-chroma frame=%d plane=%d source=1 independent=%d trace=1 reason=%u\n"),
+                    source->inputFrameId, plane, independent, static_cast<uint32_t>(chromaReason));
                 if (!independent) {
                     coupledChromaFallback = true;
                     continue;
@@ -2580,7 +2597,9 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 fidelity.blocks[plane] = 0; // Output is source, not this rejected synthesis.
             }
         }
-        if (local.needsSource()) {
+        const bool strengthMismatch = fidelity.needsSource();
+        const bool localMismatch = local.needsSource();
+        if (localMismatch) {
             int worstBin = -1;
             double worstRelative = 0.0;
             for (int bin = 0; bin < FGS_LOCAL_STRENGTH_SLOTS; ++bin) {
@@ -2594,9 +2613,15 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 worstBin < 0 ? -1 : worstBin / FGS_LOCAL_STRENGTH_BINS, worstBin >= 0 ? local.observedSigma[worstBin] : 0.0,
                 worstBin >= 0 ? local.modeledSigma[worstBin] : 0.0);
         }
-        if (covarianceRecoveryRequired && film_grain_luma_dc_amplitude(params, diagnostics.residualRetain) > 6.0)
+        if (correlatedTextureFallback) sourceReasonMask |= FGS_SOURCE_COVARIANCE;
+        if (covarianceRecoveryRequired && film_grain_luma_dc_amplitude(params, diagnostics.residualRetain) > 6.0) {
             correlatedTextureFallback = true;
-        if (fidelity.needsSource() || local.needsSource() || coupledChromaFallback || correlatedTextureFallback) {
+            sourceReasonMask |= FGS_SOURCE_DC;
+        }
+        if (strengthMismatch) sourceReasonMask |= FGS_SOURCE_STRENGTH;
+        if (localMismatch) sourceReasonMask |= FGS_SOURCE_LOCAL;
+        if (coupledChromaFallback) sourceReasonMask |= FGS_SOURCE_COLOUR;
+        if (strengthMismatch || localMismatch || coupledChromaFallback || correlatedTextureFallback) {
             m_state->sourceFallbackActive = true;
             m_state->fidelityRecoveryFrames = 0;
         }
@@ -2616,6 +2641,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             }
         }
         if (m_state->sourceFallbackActive) {
+            if (!sourceReasonMask) sourceReasonMask |= FGS_SOURCE_RECOVERY_HOLD;
             diagnostics.sourceFidelityFallback = true;
             diagnostics.modelHeld = false;
             modelValid = false;
@@ -2722,7 +2748,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
             _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d strengthRefit=%d scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
-            _T("y=[%s] cb=[%s] cr=[%s]\n"),
+            _T("y=[%s] cb=[%s] cr=[%s] trace=1 sourceReasons=%u\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             modelValid ? 1 : 0, diagnostics.sceneReset ? 1 : 0, diagnostics.modelHeld ? 1 : 0,
             diagnostics.flatBlocks, diagnostics.totalBlocks, diagnostics.modelFrames,
@@ -2733,7 +2759,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,
-            pointsY.c_str(), pointsCb.c_str(), pointsCr.c_str());
+            pointsY.c_str(), pointsCb.c_str(), pointsCr.c_str(), sourceReasonMask);
     }
     attachResult();
     return RGY_ERR_NONE;
