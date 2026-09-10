@@ -631,4 +631,61 @@ FilmGrainStrengthFidelity film_grain_strength_fidelity(const FilmGrainGpuStats& 
     return result;
 }
 
+bool FilmGrainLocalStrengthFidelity::needsSource(const double relativeLimit, const double absoluteLimit8bit) const {
+    if (!valid) return true;
+    for (int bin = 0; bin < FGS_LOCAL_STRENGTH_BINS; ++bin) {
+        // Four independent patches reduce finite-sample noise; a lone block
+        // cannot establish a mismatch or certify the unobserved picture.
+        if (blocks[bin] < 4) continue;
+        const double error = std::abs(modeledSigma[bin] - observedSigma[bin]);
+        if (!std::isfinite(error)
+            || (error > absoluteLimit8bit && error > relativeLimit * observedSigma[bin])) return true;
+    }
+    return false;
+}
+
+FilmGrainLocalStrengthFidelity film_grain_local_strength_fidelity(const FilmGrainLocalStrengthStats& stats,
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bitDepth, const double templateGain, const double residualRetain) {
+    FilmGrainLocalStrengthFidelity result;
+    if ((bitDepth != 8 && bitDepth != 10) || !std::isfinite(templateGain) || templateGain <= 0.0
+        || !std::isfinite(residualRetain) || residualRetain < 0.0 || residualRetain > 1.0) {
+        result.valid = false;
+        return result;
+    }
+    const double depthScale = static_cast<double>(1 << (bitDepth - 8));
+    float lut[FGS_STRENGTH_LUT_SIZE];
+    build_strength_lut(params, bitDepth, lut, 0, templateGain);
+    for (int bin = 0; bin < FGS_LOCAL_STRENGTH_BINS; ++bin) {
+        const auto count = stats.blocks[bin];
+        result.blocks[bin] = count;
+        if (!count) continue;
+        const double variance = stats.varianceSum[bin] / count;
+        const double baseVariance = stats.baseVarianceSum[bin] / count;
+        const double covariance = stats.covarianceSum[bin] / count;
+        const double x = stats.intensitySum[bin] / (count * depthScale);
+        if (!std::isfinite(variance) || variance < 0.0 || !std::isfinite(baseVariance) || baseVariance < 0.0
+            || !std::isfinite(covariance) || !std::isfinite(x) || x < std::max(0.0, bin - 0.5001) || x > (bin == 255 ? 255.75 : bin + 0.5001)) {
+            result.valid = false;
+            continue;
+        }
+        const int left = std::clamp(static_cast<int>(std::floor(x)), 0, FGS_STRENGTH_LUT_SIZE - 1);
+        const int right = std::min(left + 1, FGS_STRENGTH_LUT_SIZE - 1);
+        const double modeled = lut[left] * (1.0 - (x - left)) + lut[right] * (x - left);
+        const double covarianceLimit = std::sqrt(variance * baseVariance);
+        if (std::abs(covariance) > covarianceLimit + 1e-6 * std::max({1.0, variance, baseVariance})) {
+            result.valid = false;
+            continue;
+        }
+        // Match the later residual blend and synthesis compensation. Grain
+        // already retained in the base is correlated with the original.
+        const double retain = residualRetain, cleanWeight = 1.0 - retain;
+        const double baseEnergy = cleanWeight * cleanWeight * baseVariance + retain * retain * variance
+            + 2.0 * retain * cleanWeight * std::clamp(covariance, -covarianceLimit, covarianceLimit);
+        const double synthesisEnergy = modeled * modeled * (1.0 - retain * retain);
+        result.observedSigma[bin] = std::sqrt(variance) / depthScale;
+        result.modeledSigma[bin] = std::sqrt(std::max(0.0, baseEnergy + synthesisEnergy)) / depthScale;
+    }
+    return result;
+}
+
 } // namespace fgsmodel

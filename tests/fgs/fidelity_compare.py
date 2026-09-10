@@ -95,14 +95,16 @@ def generate(directory, spec, frames):
                 hashes={p.name:sha(p) for p in inputs})
 
 
-def encode(binary, directory, source, spec, qp, retain, expected_frames, retain_max=None):
+def encode(binary, directory, source, spec, qp, retain, expected_frames, retain_max=None, film_grain=True):
     directory.mkdir()
     output = directory / 'output.mkv'
     opts = 'denoise=auto,chroma=auto,denoiser=bilateral' + (',retain=auto' if retain else '')
     if retain_max is not None:
         opts += ',retain-max=' + str(retain_max)
     argv = [str(binary), '--codec', 'av1', '--preset', 'quality', '--tune', 'hq', '--cqp', str(qp),
-            '--av1-film-grain', opts, '--log-level', 'debug', '-i', str(source), '-o', str(output)]
+            '--log-level', 'debug', '-i', str(source), '-o', str(output)]
+    if film_grain:
+        argv += ['--av1-film-grain', opts]
     if spec.get('bits') == 10:
         argv += ['--output-depth', '10']
     argv += kat.COLOR_ARGS.get(spec.get('color'), [])

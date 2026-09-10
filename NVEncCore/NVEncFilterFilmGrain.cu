@@ -243,18 +243,18 @@ static RGY_ERR detail_repeatability(const RGYFrameInfo *source, const RGYFrameIn
     return err_to_rgy(cudaGetLastError());
 }
 
-template<typename Type, int shift>
+template<typename Type, int shift, int components = 1, int planeBlockSize = FGS_BLOCK_SIZE>
 __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const int pitch,
     const int width, const int height, const int blocksX, const int bitDepth,
-    FilmGrainBlockMetric *__restrict__ metrics) {
+    FilmGrainBlockMetric *__restrict__ metrics, const int component = 0) {
     const int blockIndex = blockIdx.x;
     const int tid = threadIdx.x;
     const int bx = blockIndex % blocksX;
     const int by = blockIndex / blocksX;
-    const int x0 = bx * FGS_BLOCK_SIZE;
-    const int y0 = by * FGS_BLOCK_SIZE;
-    const int bw = min(FGS_BLOCK_SIZE, width - x0);
-    const int bh = min(FGS_BLOCK_SIZE, height - y0);
+    const int x0 = bx * planeBlockSize;
+    const int y0 = by * planeBlockSize;
+    const int bw = min(planeBlockSize, width - x0);
+    const int bh = min(planeBlockSize, height - y0);
     if (bw < 8 || bh < 8) {
         if (tid == 0) metrics[blockIndex] = {};
         return;
@@ -267,9 +267,9 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     // working set is bw*bh with no halo.  Stage it in shared memory once and
     // read every later tap from there, preserving the sample values and the
     // arithmetic order used below.
-    __shared__ int tile[FGS_BLOCK_SIZE * FGS_BLOCK_SIZE];
+    __shared__ int tile[planeBlockSize * planeBlockSize];
     for (int index = tid; index < count; index += FGS_FLAT_THREADS) {
-        tile[index] = load_code<Type, shift>(src, pitch, x0 + index % bw, y0 + index / bw);
+        tile[index] = load_code<Type, shift>(src, pitch, x0 + index % bw, y0 + index / bw, component, components);
     }
     __syncthreads();
 
@@ -403,8 +403,8 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     const float e2 = (trace - sqrtf(discriminant)) * 0.5f;
     const float ratio = e1 / fmaxf(e2, 1e-6f);
 
-    const float traceThreshold = 0.15f / (FGS_BLOCK_SIZE * FGS_BLOCK_SIZE);
-    const float normThreshold = 0.08f / (FGS_BLOCK_SIZE * FGS_BLOCK_SIZE);
+    const float traceThreshold = 0.15f / (planeBlockSize * planeBlockSize);
+    const float normThreshold = 0.08f / (planeBlockSize * planeBlockSize);
     const float varThreshold = 0.005f / count;
     const bool isFlat = trace < traceThreshold && ratio < 1.25 && e1 < normThreshold && varNorm > varThreshold;
     float scoreArg = -6682.0f * varNorm - 0.2056f * ratio + 13087.0f * trace - 12434.0f * e1 + 2.5694f;
@@ -515,111 +515,121 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
         wx = fminf(1.0f, fmaxf(0.0f, fx - ix));
         wy = fminf(1.0f, fmaxf(0.0f, fy - iy));
     }
-    float blockSigma = sigma;
-    if (sigmaMap != nullptr) {
-        // Grain strength varies across the frame (typically with intensity);
-        // a range sigma from the global median under-removes strong grain.
-        // Interpolate the per-block noise estimate between block centers.
-        const float top = sigmaMap[iy * blocksX + ix] * (1.0f - wx) + sigmaMap[iy * blocksX + ix1] * wx;
-        const float bottom = sigmaMap[iy1 * blocksX + ix] * (1.0f - wx) + sigmaMap[iy1 * blocksX + ix1] * wx;
-        blockSigma = top * (1.0f - wy) + bottom * wy;
-    }
-    const float rangeSigma = fmaxf(1.0f, blockSigma * 2.35f);
-    const float invRange2 = 1.0f / (rangeSigma * rangeSigma);
-    // Use local noise strength: a weak-grain frame median must not disable
-    // protection in the noisier part of the same picture.
-    const float protection = directionalDenoise
-        ? detailProtectionScale * fminf(1.0f, fmaxf(0.0f,
-            (blockSigma * 256.0f / (maxValue + 1) - 2.5f) / 3.5f))
-        : detailProtectionScale;
-    float refinementWeight = 1.0f;
-    float normalXX = 0.0f, normalXY = 0.0f, normalYY = 0.0f, normalPrecision = 0.0f;
-    if (detailMetrics != nullptr) {
-        const float top = detailMetrics[iy * blocksX + ix].coherence * (1.0f - wx)
-            + detailMetrics[iy * blocksX + ix1].coherence * wx;
-        const float bottom = detailMetrics[iy1 * blocksX + ix].coherence * (1.0f - wx)
-            + detailMetrics[iy1 * blocksX + ix1].coherence * wx;
-        const float coherence = top * (1.0f - wy) + bottom * wy;
-        // Below the low threshold is normally isotropic grain; above the high
-        // threshold is strongly directional picture detail.  Fade the local
-        // correction between the two instead of making the block classifier
-        // a hard render boundary.
-        const float directional = fminf(1.0f, fmaxf(0.0f,
-            (coherence - FGS_DETAIL_COHERENCE_LOW)
-            / (FGS_DETAIL_COHERENCE_HIGH - FGS_DETAIL_COHERENCE_LOW)));
-        const float repeatedTop = detailMetrics[iy * blocksX + ix].repeatability * (1.0f - wx)
-            + detailMetrics[iy * blocksX + ix1].repeatability * wx;
-        const float repeatedBottom = detailMetrics[iy1 * blocksX + ix].repeatability * (1.0f - wx)
-            + detailMetrics[iy1 * blocksX + ix1].repeatability * wx;
-        const float repeated = repeatedTop * (1.0f - wy) + repeatedBottom * wy;
-        // Full source retention also retains independent grain and is costly
-        // to compress. Keep repeatability a modest correction to the existing
-        // spatial filter; directionally unambiguous detail keeps its guard.
-        if (directionalDenoise) {
-            // Protect coherent structure by averaging along it, instead of
-            // blending the entire noisy source back into the clean picture.
-            // A frame-global synthesis model cannot compensate a local patch
-            // which retained much more random grain than the modeled flats.
-            refinementWeight = 1.0f - protection * 0.2f * repeated;
-            const float w00 = (1.0f-wx)*(1.0f-wy), w10 = wx*(1.0f-wy);
-            const float w01 = (1.0f-wx)*wy, w11 = wx*wy;
-            const auto& m00 = detailMetrics[iy*blocksX+ix];
-            const auto& m10 = detailMetrics[iy*blocksX+ix1];
-            const auto& m01 = detailMetrics[iy1*blocksX+ix];
-            const auto& m11 = detailMetrics[iy1*blocksX+ix1];
-            const float xx = w00*m00.tensorXX + w10*m10.tensorXX + w01*m01.tensorXX + w11*m11.tensorXX;
-            const float xy = w00*m00.tensorXY + w10*m10.tensorXY + w01*m01.tensorXY + w11*m11.tensorXY;
-            const float yy = w00*m00.tensorYY + w10*m10.tensorYY + w01*m01.tensorYY + w11*m11.tensorYY;
-            const float gap = sqrtf(fmaxf(0.0f, (xx-yy)*(xx-yy)+4.0f*xy*xy));
-            if (gap > FGS_DETAIL_COHERENCE_LOW) {
-                const float minor = (xx+yy-gap)*0.5f;
-                normalXX = (xx-minor)/gap;
-                normalXY = xy/gap;
-                normalYY = (yy-minor)/gap;
-                normalPrecision = 4.0f * protection * directional;
-            }
-        } else {
-            refinementWeight = 1.0f - protection * fmaxf(directional, 0.2f * repeated);
-        }
-    }
-    if (directionalExtent && detailProtectionScale > 0.0f && detailMetrics != nullptr) {
-        // Within-block metrics cannot see an edge lying exactly between two
-        // analysis blocks. Strip averages in this pixel's cached halo provide
-        // a translation-independent edge cue without using historical pixels.
-        float gx = 0.0f, gy = 0.0f;
-        for (int dy = -4; dy <= 4; ++dy) {
-            for (int dx = -4; dx <= 4; ++dx) {
-                const int index = ((threadIdx.y + halo + dy) * tileWidth
-                    + threadIdx.x + halo + dx) * components;
-                const float value = static_cast<float>(tile[index]);
-                gx += (dx > 0 ? value : (dx < 0 ? -value : 0.0f));
-                gy += (dy > 0 ? value : (dy < 0 ? -value : 0.0f));
-            }
-        }
-        gx /= 36.0f;
-        gy /= 36.0f;
-        const float correlationTop = detailMetrics[iy * blocksX + ix].spatialCorrelation * (1.0f - wx)
-            + detailMetrics[iy * blocksX + ix1].spatialCorrelation * wx;
-        const float correlationBottom = detailMetrics[iy1 * blocksX + ix].spatialCorrelation * (1.0f - wx)
-            + detailMetrics[iy1 * blocksX + ix1].spatialCorrelation * wx;
-        const float correlation = correlationTop * (1.0f - wy) + correlationBottom * wy;
-        // Coarse correlated grain has less independent evidence in a strip.
-        // Require stronger contrast before treating it as picture structure.
-        const float threshold = fmaxf(1.0f, blockSigma * (1.0f + 2.0f * fmaxf(0.0f, correlation)));
-        const float magnitude2 = gx * gx + gy * gy;
-        const float confidence = fminf(1.0f, fmaxf(0.0f, (sqrtf(magnitude2) - threshold) / (0.5f * threshold)));
-        // A confident edge must not inherit the weak-noise ramp used for
-        // block texture. Partial protection still mixes both sides twice.
-        const float previous = normalPrecision * 0.25f;
-        const float blend = fminf(1.0f, fmaxf(0.0f, (confidence - previous) / fmaxf(1.0f - previous, 1e-6f)));
-        if (blend > 0.0f && magnitude2 > 0.0f) {
-            normalXX = normalXX * (1.0f - blend) + blend * gx * gx / magnitude2;
-            normalXY = normalXY * (1.0f - blend) + blend * gx * gy / magnitude2;
-            normalYY = normalYY * (1.0f - blend) + blend * gy * gy / magnitude2;
-            normalPrecision = 4.0f * fmaxf(previous, confidence);
-        }
-    }
     for (int component = 0; component < components; ++component) {
+        const auto planeMetrics = detailMetrics == nullptr ? nullptr
+            : detailMetrics + component * blocksX * blocksY;
+        float blockSigma = sigma;
+        if (sigmaMap != nullptr) {
+            // Grain strength varies across the frame (typically with intensity);
+            // a range sigma from the global median under-removes strong grain.
+            // Interpolate the per-block noise estimate between block centers.
+            const float top = sigmaMap[iy * blocksX + ix] * (1.0f - wx) + sigmaMap[iy * blocksX + ix1] * wx;
+            const float bottom = sigmaMap[iy1 * blocksX + ix] * (1.0f - wx) + sigmaMap[iy1 * blocksX + ix1] * wx;
+            blockSigma = top * (1.0f - wy) + bottom * wy;
+        }
+        if (planeBlockSize < FGS_BLOCK_SIZE && planeMetrics != nullptr && sigmaMap != nullptr) {
+            const float top = planeMetrics[iy * blocksX + ix].sigma * (1.0f - wx)
+                + planeMetrics[iy * blocksX + ix1].sigma * wx;
+            const float bottom = planeMetrics[iy1 * blocksX + ix].sigma * (1.0f - wx)
+                + planeMetrics[iy1 * blocksX + ix1].sigma * wx;
+            blockSigma = top * (1.0f - wy) + bottom * wy;
+        }
+        const float rangeSigma = fmaxf(1.0f, blockSigma * 2.35f);
+        const float invRange2 = 1.0f / (rangeSigma * rangeSigma);
+        // Use local noise strength: a weak-grain frame median must not disable
+        // protection in the noisier part of the same picture.
+        const float protection = directionalDenoise && planeBlockSize == FGS_BLOCK_SIZE
+            ? detailProtectionScale * fminf(1.0f, fmaxf(0.0f,
+                (blockSigma * 256.0f / (maxValue + 1) - 2.5f) / 3.5f))
+            : detailProtectionScale;
+        float refinementWeight = 1.0f;
+        float normalXX = 0.0f, normalXY = 0.0f, normalYY = 0.0f, normalPrecision = 0.0f;
+        if (planeMetrics != nullptr) {
+            const float top = planeMetrics[iy * blocksX + ix].coherence * (1.0f - wx)
+                + planeMetrics[iy * blocksX + ix1].coherence * wx;
+            const float bottom = planeMetrics[iy1 * blocksX + ix].coherence * (1.0f - wx)
+                + planeMetrics[iy1 * blocksX + ix1].coherence * wx;
+            const float coherence = top * (1.0f - wy) + bottom * wy;
+            // Below the low threshold is normally isotropic grain; above the high
+            // threshold is strongly directional picture detail.  Fade the local
+            // correction between the two instead of making the block classifier
+            // a hard render boundary.
+            const float directional = fminf(1.0f, fmaxf(0.0f,
+                (coherence - FGS_DETAIL_COHERENCE_LOW)
+                / (FGS_DETAIL_COHERENCE_HIGH - FGS_DETAIL_COHERENCE_LOW)));
+            const float repeatedTop = planeMetrics[iy * blocksX + ix].repeatability * (1.0f - wx)
+                + planeMetrics[iy * blocksX + ix1].repeatability * wx;
+            const float repeatedBottom = planeMetrics[iy1 * blocksX + ix].repeatability * (1.0f - wx)
+                + planeMetrics[iy1 * blocksX + ix1].repeatability * wx;
+            const float repeated = repeatedTop * (1.0f - wy) + repeatedBottom * wy;
+            // Full source retention also retains independent grain and is costly
+            // to compress. Keep repeatability a modest correction to the existing
+            // spatial filter; directionally unambiguous detail keeps its guard.
+            if (directionalDenoise) {
+                // Protect coherent structure by averaging along it, instead of
+                // blending the entire noisy source back into the clean picture.
+                // A frame-global synthesis model cannot compensate a local patch
+                // which retained much more random grain than the modeled flats.
+                refinementWeight = 1.0f - protection * 0.2f * repeated;
+                const float w00 = (1.0f-wx)*(1.0f-wy), w10 = wx*(1.0f-wy);
+                const float w01 = (1.0f-wx)*wy, w11 = wx*wy;
+                const auto& m00 = planeMetrics[iy*blocksX+ix];
+                const auto& m10 = planeMetrics[iy*blocksX+ix1];
+                const auto& m01 = planeMetrics[iy1*blocksX+ix];
+                const auto& m11 = planeMetrics[iy1*blocksX+ix1];
+                const float xx = w00*m00.tensorXX + w10*m10.tensorXX + w01*m01.tensorXX + w11*m11.tensorXX;
+                const float xy = w00*m00.tensorXY + w10*m10.tensorXY + w01*m01.tensorXY + w11*m11.tensorXY;
+                const float yy = w00*m00.tensorYY + w10*m10.tensorYY + w01*m01.tensorYY + w11*m11.tensorYY;
+                const float gap = sqrtf(fmaxf(0.0f, (xx-yy)*(xx-yy)+4.0f*xy*xy));
+                if (gap > FGS_DETAIL_COHERENCE_LOW) {
+                    const float minor = (xx+yy-gap)*0.5f;
+                    normalXX = (xx-minor)/gap;
+                    normalXY = xy/gap;
+                    normalYY = (yy-minor)/gap;
+                    normalPrecision = 4.0f * protection * directional;
+                }
+            } else {
+                refinementWeight = 1.0f - protection * fmaxf(directional, 0.2f * repeated);
+            }
+        }
+        // A saturated block direction cannot be improved by the bounded edge cue.
+        if (directionalExtent && detailProtectionScale > 0.0f && planeMetrics != nullptr && normalPrecision < 4.0f) {
+            // Within-block metrics cannot see an edge lying exactly between two
+            // analysis blocks. Strip averages in this pixel's cached halo provide
+            // a translation-independent edge cue without using historical pixels.
+            float gx = 0.0f, gy = 0.0f;
+            for (int dy = -4; dy <= 4; ++dy) {
+                for (int dx = -4; dx <= 4; ++dx) {
+                    const int index = ((threadIdx.y + halo + dy) * tileWidth
+                        + threadIdx.x + halo + dx) * components;
+                    const float value = static_cast<float>(tile[index + component]);
+                    gx += (dx > 0 ? value : (dx < 0 ? -value : 0.0f));
+                    gy += (dy > 0 ? value : (dy < 0 ? -value : 0.0f));
+                }
+            }
+            gx /= 36.0f;
+            gy /= 36.0f;
+            const float correlationTop = planeMetrics[iy * blocksX + ix].spatialCorrelation * (1.0f - wx)
+                + planeMetrics[iy * blocksX + ix1].spatialCorrelation * wx;
+            const float correlationBottom = planeMetrics[iy1 * blocksX + ix].spatialCorrelation * (1.0f - wx)
+                + planeMetrics[iy1 * blocksX + ix1].spatialCorrelation * wx;
+            const float correlation = correlationTop * (1.0f - wy) + correlationBottom * wy;
+            // Coarse correlated grain has less independent evidence in a strip.
+            // Require stronger contrast before treating it as picture structure.
+            const float threshold = fmaxf(1.0f, blockSigma * (1.0f + 2.0f * fmaxf(0.0f, correlation)));
+            const float magnitude2 = gx * gx + gy * gy;
+            const float confidence = fminf(1.0f, fmaxf(0.0f, (sqrtf(magnitude2) - threshold) / (0.5f * threshold)));
+            // A confident edge must not inherit the weak-noise ramp used for
+            // block texture. Partial protection still mixes both sides twice.
+            const float previous = normalPrecision * 0.25f;
+            const float blend = fminf(1.0f, fmaxf(0.0f, (confidence - previous) / fmaxf(1.0f - previous, 1e-6f)));
+            if (blend > 0.0f && magnitude2 > 0.0f) {
+                normalXX = normalXX * (1.0f - blend) + blend * gx * gx / magnitude2;
+                normalXY = normalXY * (1.0f - blend) + blend * gx * gy / magnitude2;
+                normalYY = normalYY * (1.0f - blend) + blend * gy * gy / magnitude2;
+                normalPrecision = 4.0f * fmaxf(previous, confidence);
+            }
+        }
         const int centerIndex = (
             (threadIdx.y + halo) * tileWidth
             + threadIdx.x + halo) * components + component;
@@ -651,7 +661,8 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
                         // Extend averaging along supported structure while
                         // tightening it across that structure. This removes
                         // more independent noise without broadening the edge.
-                        const float oriented = 36.0f * __expf(-0.125f * (dx*dx + dy*dy) - 6.0f * cross);
+                        const float angular = planeBlockSize < FGS_BLOCK_SIZE ? 24.0f : 6.0f;
+                        const float oriented = 36.0f * __expf(-0.125f * (dx*dx + dy*dy) - angular * cross);
                         const float blend = fminf(1.0f, normalPrecision * 0.25f);
                         weight = weight * (1.0f - blend) + oriented * rangeWeight * blend;
                     }
@@ -681,11 +692,14 @@ __global__ void kernel_fgs_model_stats(const uint8_t *__restrict__ src, const in
     const uint8_t *__restrict__ lumaDenoised, const int lumaDenoisedPitch,
     const int lumaWidth, const int lumaHeight, const int blocksX, const int bitDepth,
     const uint8_t *__restrict__ flatMask, const FilmGrainBlockMetric *__restrict__ metrics,
-    FilmGrainGpuPlaneStats *__restrict__ output) {
+    FilmGrainGpuPlaneStats *__restrict__ output, const FilmGrainBlockMetric *__restrict__ chromaMetrics = nullptr) {
     const int bx = blockIdx.x;
     const int by = blockIdx.y;
     const int blockIndex = by * blocksX + bx;
     if (flatMask[blockIndex] == 0) return;
+    // Flat brightness does not imply flat colour. Fitting a removed colour
+    // pattern as random grain loses source detail and can force false fallback.
+    if (chroma && chromaMetrics != nullptr && chromaMetrics[blockIndex].coherence > FGS_DETAIL_COHERENCE_HIGH) return;
 
     constexpr int coeffCount = chroma ? FGS_AR_COEFFS_CHROMA : FGS_AR_COEFFS;
     constexpr int triCount = chroma ? FGS_TRI_C : FGS_TRI_Y;
@@ -850,6 +864,82 @@ struct FilmGrainHostStats {
 static float auto_retain_from_detail_risk(const float detailRisk) {
     const float unquantized = clamp(detailRisk * FGS_AUTO_RETAIN_SCALE, 0.0f, FGS_AUTO_RETAIN_MAX);
     return std::round(unquantized / FGS_AUTO_RETAIN_STEP) * FGS_AUTO_RETAIN_STEP;
+}
+
+// This independent observation grid checks amplitude away from the fitted
+// model's sparse samples. Use block means, never each pixel's noisy intensity.
+// Source-defined flatness excludes edges/texture before looking at the output.
+template<typename Type, int shift>
+__global__ void kernel_fgs_local_strength(const uint8_t *__restrict__ src, const int srcPitch,
+    const uint8_t *__restrict__ clean, const int cleanPitch, const int width, const int height,
+    const FilmGrainBlockMetric *__restrict__ metrics, const int blocksX, const int depthScale,
+    const float minSigma, const float maxSigma, FilmGrainLocalStrengthStats *__restrict__ stats) {
+    const int block = blockIdx.x;
+    const int lane = threadIdx.x;
+    const auto metric = metrics[block];
+    const int x0 = (block % blocksX) * 16, y0 = (block / blocksX) * 16;
+    // Small-patch detrending does not preserve the energy of coarse grain
+    // or balanced periodic texture. This independent guard covers nearly
+    // white local noise; the existing model/decoded-texture guards cover the
+    // correlated cases. Do not mislabel woven picture detail as noise.
+    // Quiet patches are positive evidence that grain must stay quiet. They
+    // are unsuitable for fitting AR coefficients, but excluding them from
+    // validation lets a neighboring noisy range synthesize grain into them.
+    const bool quiet = metric.sigma < minSigma;
+    if (x0 + 16 > width || y0 + 16 > height || metric.sigma > maxSigma
+        || (!quiet && (metric.coherence > FGS_DETAIL_COHERENCE_LOW
+            || fabsf(metric.spatialCorrelation) > 0.2f))) return;
+    int sums[9] = {};
+    // Exclude each patch's boundary and remove its fitted plane in both the
+    // source and base. A smooth gradient is picture signal, not grain energy.
+    for (int i = lane; i < 144; i += 32) {
+        const int px = i % 12, py = i / 12;
+        const int x = x0 + 2 + px, y = y0 + 2 + py;
+        const int a = load_code<Type, shift>(src, srcPitch, x, y);
+        const int b = load_code<Type, shift>(clean, cleanPitch, x, y);
+        const int xn = 2 * px - 11, yn = 2 * py - 11;
+        sums[0] += a; sums[1] += a * a;
+        sums[2] += a * xn; sums[3] += a * yn;
+        sums[4] += b; sums[5] += b * b;
+        sums[6] += b * xn; sums[7] += b * yn;
+        sums[8] += a * b;
+    }
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        for (int stat = 0; stat < 9; ++stat) sums[stat] += __shfl_down_sync(0xffffffffu, sums[stat], offset);
+    }
+    if (lane == 0) {
+        constexpr double samples = 144.0, planeNorm = 6864.0;
+        const double meanSource = static_cast<double>(sums[0]) / samples;
+        const double meanBase = static_cast<double>(sums[4]) / samples;
+        const double variance = fmax(0.0, static_cast<double>(sums[1]) / samples - meanSource * meanSource
+            - (static_cast<double>(sums[2]) * sums[2] + static_cast<double>(sums[3]) * sums[3]) / (planeNorm * samples));
+        const double baseVariance = fmax(0.0, static_cast<double>(sums[5]) / samples - meanBase * meanBase
+            - (static_cast<double>(sums[6]) * sums[6] + static_cast<double>(sums[7]) * sums[7]) / (planeNorm * samples));
+        const double covariance = static_cast<double>(sums[8]) / samples - meanSource * meanBase
+            - (static_cast<double>(sums[2]) * sums[6] + static_cast<double>(sums[3]) * sums[7]) / (planeNorm * samples);
+        const int bin = min(255, max(0, __float2int_rn(metric.mean / depthScale)));
+        atomic_add_f64(stats->varianceSum + bin, variance);
+        atomic_add_f64(stats->baseVarianceSum + bin, baseVariance);
+        atomic_add_f64(stats->covarianceSum + bin, covariance);
+        atomic_add_f64(stats->intensitySum + bin, static_cast<double>(metric.mean));
+        atomic_add_u64(stats->blocks + bin, 1ULL);
+    }
+}
+
+template<typename Type, int shift>
+static RGY_ERR local_strength_stats(const RGYFrameInfo *src, const RGYFrameInfo *clean,
+    FilmGrainBlockMetric *metrics, FilmGrainLocalStrengthStats *stats, const int bitDepth,
+    const float minSigma, const float maxSigma, cudaStream_t stream) {
+    const auto y = getPlane(src, RGY_PLANE_Y), base = getPlane(clean, RGY_PLANE_Y);
+    const int blocksX = divCeil(y.width, 16), blocksY = divCeil(y.height, 16);
+    kernel_fgs_flat_metrics<Type, shift, 1, 16><<<blocksX * blocksY, FGS_FLAT_THREADS, 0, stream>>>(
+        y.ptr[0], y.pitch[0], y.width, y.height, blocksX, bitDepth, metrics);
+    auto sts = err_to_rgy(cudaGetLastError());
+    if (sts != RGY_ERR_NONE) return sts;
+    kernel_fgs_local_strength<Type, shift><<<blocksX * blocksY, 32, 0, stream>>>(
+        y.ptr[0], y.pitch[0], base.ptr[0], base.pitch[0], y.width, y.height,
+        metrics, blocksX, 1 << (bitDepth - 8), minSigma, maxSigma, stats);
+    return err_to_rgy(cudaGetLastError());
 }
 
 template<typename Type, int shift>
@@ -1080,13 +1170,13 @@ static RGY_ERR launch_model_stats(const RGYFrameInfo& src, const RGYFrameInfo& d
     const int width, const int height, const int component, const RGYFrameInfo& lumaSrc,
     const RGYFrameInfo& lumaDenoised, const int blocksX, const int blocksY, const int bitDepth,
     const uint8_t *flatMask, const FilmGrainBlockMetric *metrics,
-    FilmGrainGpuPlaneStats *stats, cudaStream_t stream) {
+    FilmGrainGpuPlaneStats *stats, cudaStream_t stream, const FilmGrainBlockMetric *chromaMetrics = nullptr) {
     const dim3 block(8, 8);
     const dim3 grid(blocksX, blocksY);
     kernel_fgs_model_stats<Type, shift, components, chroma><<<grid, block, 0, stream>>>(
         src.ptr[0], src.pitch[0], denoised.ptr[0], denoised.pitch[0], width, height, component,
         lumaSrc.ptr[0], lumaSrc.pitch[0], lumaDenoised.ptr[0], lumaDenoised.pitch[0],
-        lumaSrc.width, lumaSrc.height, blocksX, bitDepth, flatMask, metrics, stats);
+        lumaSrc.width, lumaSrc.height, blocksX, bitDepth, flatMask, metrics, stats, chromaMetrics);
     return err_to_rgy(cudaGetLastError());
 }
 
@@ -1222,7 +1312,7 @@ tstring NVEncFilterParamFilmGrain::print() const {
 NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_denoiseWork(), m_detailReference(), m_detailConfidence(), m_detailReferenceValid(false), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(),
-    m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
+    m_blockMetrics(), m_chromaMetrics(), m_localMetrics(), m_localStrength(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWriter(),
     m_state(std::make_unique<AnalyzerState>()), m_blocksX(0), m_blocksY(0) {
     m_name = _T("film-grain");
@@ -1243,13 +1333,84 @@ void NVEncFilterFilmGrain::resetTemporalState() {
 namespace {
 
 // includeLuma selects between an all-plane pass and a chroma-only pass.
-// detailMetrics optionally fades luma refinement around structured detail;
-// chroma is always filtered because the metrics describe luma blocks.
+// Optional metrics describe each plane independently: colour structure must
+// not inherit direction or noise strength from luma.
+template<typename Type, int shift>
+static RGY_ERR chroma_detail_metrics(const RGYFrameInfo *src, FilmGrainBlockMetric *metrics,
+    const int blocksX, const int blocksY, const int bitDepth, cudaStream_t stream) {
+    if (metrics == nullptr) return RGY_ERR_NONE;
+    const bool semiPlanar = src->csp == RGY_CSP_NV12 || src->csp == RGY_CSP_P010;
+    for (int component = 0; component < 2; ++component) {
+        const auto plane = getPlane(src, static_cast<RGY_PLANE>(semiPlanar ? RGY_PLANE_U : RGY_PLANE_U + component));
+        auto output = metrics + component * blocksX * blocksY;
+        if (semiPlanar) {
+            kernel_fgs_flat_metrics<Type, shift, 2, FGS_BLOCK_SIZE / 2><<<blocksX * blocksY, FGS_FLAT_THREADS, 0, stream>>>(
+                plane.ptr[0], plane.pitch[0], src->width / 2, src->height / 2, blocksX, bitDepth, output, component);
+        } else {
+            kernel_fgs_flat_metrics<Type, shift, 1, FGS_BLOCK_SIZE / 2><<<blocksX * blocksY, FGS_FLAT_THREADS, 0, stream>>>(
+                plane.ptr[0], plane.pitch[0], plane.width, plane.height, blocksX, bitDepth, output);
+        }
+        const auto sts = err_to_rgy(cudaGetLastError());
+        if (sts != RGY_ERR_NONE) return sts;
+    }
+    return RGY_ERR_NONE;
+}
+
+template<typename Type>
+__global__ void kernel_fgs_restore_chroma(uint8_t *__restrict__ dst, const int dstPitch,
+    const uint8_t *__restrict__ src, const int srcPitch, const int width, const int height,
+    const bool copyCb, const bool copyCr) {
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+    if (x >= width || y >= height) return;
+    const auto input = reinterpret_cast<const Type *>(src + static_cast<size_t>(y) * srcPitch);
+    auto output = reinterpret_cast<Type *>(dst + static_cast<size_t>(y) * dstPitch);
+    if (copyCb) output[2 * x] = input[2 * x];
+    if (copyCr) output[2 * x + 1] = input[2 * x + 1];
+}
+
+static RGY_ERR restore_inactive_chroma(RGYFrameInfo *output, const RGYFrameInfo *source,
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, cudaStream_t stream) {
+    if (params.chromaScalingFromLuma) return RGY_ERR_NONE;
+    // Zero-valued points also mean no grain. Point count alone does not
+    // establish activity, and 4:2:0 can signal one all-zero component.
+    const bool copyCb = std::none_of(params.pointCbScaling, params.pointCbScaling + params.numCbPoints,
+        [](const uint8_t value) { return value != 0; });
+    const bool copyCr = std::none_of(params.pointCrScaling, params.pointCrScaling + params.numCrPoints,
+        [](const uint8_t value) { return value != 0; });
+    if (!copyCb && !copyCr) return RGY_ERR_NONE;
+    const bool semiPlanar = source->csp == RGY_CSP_NV12 || source->csp == RGY_CSP_P010;
+    if (semiPlanar && copyCb != copyCr) {
+        const auto src = getPlane(source, RGY_PLANE_U), dst = getPlane(output, RGY_PLANE_U);
+        const dim3 block(32, 8), grid(divCeil(source->width / 2, 32), divCeil(source->height / 2, 8));
+        if (source->csp == RGY_CSP_NV12) {
+            kernel_fgs_restore_chroma<uint8_t><<<grid, block, 0, stream>>>(
+                dst.ptr[0], dst.pitch[0], src.ptr[0], src.pitch[0], source->width / 2, source->height / 2, copyCb, copyCr);
+        } else {
+            kernel_fgs_restore_chroma<uint16_t><<<grid, block, 0, stream>>>(
+                dst.ptr[0], dst.pitch[0], src.ptr[0], src.pitch[0], source->width / 2, source->height / 2, copyCb, copyCr);
+        }
+        return err_to_rgy(cudaGetLastError());
+    }
+    for (int plane = RGY_PLANE_U; plane <= (semiPlanar ? RGY_PLANE_U : RGY_PLANE_V); ++plane) {
+        if ((plane == RGY_PLANE_U && !copyCb) || (plane == RGY_PLANE_V && !copyCr)) continue;
+        const auto original = getPlane(source, static_cast<RGY_PLANE>(plane));
+        auto restored = getPlane(output, static_cast<RGY_PLANE>(plane));
+        const auto sts = copyPlaneAsync(&restored, &original, stream);
+        if (sts != RGY_ERR_NONE) return sts;
+    }
+    return RGY_ERR_NONE;
+}
+
 template<typename Type, int shift>
 static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFrameInfo *src,
     const bool chroma, const bool includeLuma, const int passes, const int bitDepth, const float sigma,
     const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
-    const int blocksX, const int blocksY, cudaStream_t stream, const float detailProtectionScale, const bool directionalDenoise) {
+    const int blocksX, const int blocksY, cudaStream_t stream, const float detailProtectionScale, const bool directionalDenoise,
+    FilmGrainBlockMetric *chromaMetrics) {
+    auto analysis = chroma_detail_metrics<Type, shift>(src, chromaMetrics,
+        blocksX, blocksY, bitDepth, stream);
+    if (analysis != RGY_ERR_NONE) return analysis;
     for (int pass = 0; pass < passes; ++pass) {
         const RGYFrameInfo *passSrc = pass == 0 ? src : work;
         RGYFrameInfo *passDst = pass + 1 == passes ? dst : work;
@@ -1266,14 +1427,17 @@ static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const 
             auto srcUV = getPlane(passSrc, RGY_PLANE_U);
             auto dstUV = getPlane(passDst, RGY_PLANE_U);
             auto sts = launch_bilateral<Type, shift, 2>(dstUV, srcUV, src->width / 2, src->height / 2, bitDepth, sigma,
-                sigmaMap, nullptr, blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream);
+                sigmaMap, chromaMetrics, blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream,
+                chromaMetrics ? detailProtectionScale : 1.0f, chromaMetrics != nullptr);
             if (sts != RGY_ERR_NONE) return sts;
         } else {
             for (int plane = RGY_PLANE_U; plane <= RGY_PLANE_V; ++plane) {
                 auto srcC = getPlane(passSrc, static_cast<RGY_PLANE>(plane));
                 auto dstC = getPlane(passDst, static_cast<RGY_PLANE>(plane));
                 auto sts = launch_bilateral<Type, shift, 1>(dstC, srcC, srcC.width, srcC.height, bitDepth, sigma,
-                    sigmaMap, nullptr, blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream);
+                    sigmaMap, chromaMetrics ? chromaMetrics + (plane - RGY_PLANE_U) * blocksX * blocksY : nullptr,
+                    blocksX, blocksY, FGS_BLOCK_SIZE / 2, stream,
+                    chromaMetrics ? detailProtectionScale : 1.0f, chromaMetrics != nullptr);
                 if (sts != RGY_ERR_NONE) return sts;
             }
         }
@@ -1284,15 +1448,16 @@ static RGY_ERR denoise_frame_typed(RGYFrameInfo *dst, RGYFrameInfo *work, const 
 static RGY_ERR denoise_frame(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFrameInfo *src,
     const bool chroma, const bool includeLuma, const int passes, const int bitDepth, const float sigma,
     const float *sigmaMap, const FilmGrainBlockMetric *detailMetrics,
-    const int blocksX, const int blocksY, cudaStream_t stream, const float detailProtectionScale = 1.0f, const bool directionalDenoise = false) {
+    const int blocksX, const int blocksY, cudaStream_t stream, const float detailProtectionScale = 1.0f, const bool directionalDenoise = false,
+    FilmGrainBlockMetric *chromaMetrics = nullptr) {
     switch (src->csp) {
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
-        return denoise_frame_typed<uint8_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale, directionalDenoise);
+        return denoise_frame_typed<uint8_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale, directionalDenoise, chromaMetrics);
     case RGY_CSP_YV12_10:
-        return denoise_frame_typed<uint16_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale, directionalDenoise);
+        return denoise_frame_typed<uint16_t, 0>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale, directionalDenoise, chromaMetrics);
     case RGY_CSP_P010:
-        return denoise_frame_typed<uint16_t, 6>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale, directionalDenoise);
+        return denoise_frame_typed<uint16_t, 6>(dst, work, src, chroma, includeLuma, passes, bitDepth, sigma, sigmaMap, detailMetrics, blocksX, blocksY, stream, detailProtectionScale, directionalDenoise, chromaMetrics);
     default:
         return RGY_ERR_UNSUPPORTED;
     }
@@ -1301,7 +1466,7 @@ static RGY_ERR denoise_frame(RGYFrameInfo *dst, RGYFrameInfo *work, const RGYFra
 template<typename Type, int shift>
 static RGY_ERR collect_model_stats_typed(const RGYFrameInfo *src, const RGYFrameInfo *denoised,
     const bool chroma, const int blocksX, const int blocksY, const int bitDepth, const uint8_t *mask,
-    const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats, cudaStream_t stream) {
+    const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats, cudaStream_t stream, const FilmGrainBlockMetric *chromaMetrics = nullptr) {
     const auto srcY = getPlane(src, RGY_PLANE_Y);
     const auto dstY = getPlane(denoised, RGY_PLANE_Y);
     auto sts = launch_model_stats<Type, shift, 1, false>(srcY, dstY, srcY.width, srcY.height, 0,
@@ -1313,7 +1478,8 @@ static RGY_ERR collect_model_stats_typed(const RGYFrameInfo *src, const RGYFrame
         const auto dstUV = getPlane(denoised, RGY_PLANE_U);
         for (int component = 0; component < 2; ++component) {
             sts = launch_model_stats<Type, shift, 2, true>(srcUV, dstUV, src->width / 2, src->height / 2,
-                component, srcY, dstY, blocksX, blocksY, bitDepth, mask, metrics, &stats->plane[component + 1], stream);
+                component, srcY, dstY, blocksX, blocksY, bitDepth, mask, metrics, &stats->plane[component + 1], stream,
+                chromaMetrics ? chromaMetrics + component * blocksX * blocksY : nullptr);
             if (sts != RGY_ERR_NONE) return sts;
         }
     } else {
@@ -1321,7 +1487,8 @@ static RGY_ERR collect_model_stats_typed(const RGYFrameInfo *src, const RGYFrame
             const auto srcC = getPlane(src, static_cast<RGY_PLANE>(plane));
             const auto dstC = getPlane(denoised, static_cast<RGY_PLANE>(plane));
             sts = launch_model_stats<Type, shift, 1, true>(srcC, dstC, srcC.width, srcC.height, 0,
-                srcY, dstY, blocksX, blocksY, bitDepth, mask, metrics, &stats->plane[plane], stream);
+                srcY, dstY, blocksX, blocksY, bitDepth, mask, metrics, &stats->plane[plane], stream,
+                chromaMetrics ? chromaMetrics + (plane - RGY_PLANE_U) * blocksX * blocksY : nullptr);
             if (sts != RGY_ERR_NONE) return sts;
         }
     }
@@ -1330,15 +1497,15 @@ static RGY_ERR collect_model_stats_typed(const RGYFrameInfo *src, const RGYFrame
 
 static RGY_ERR collect_model_stats(const RGYFrameInfo *src, const RGYFrameInfo *denoised,
     const bool chroma, const int blocksX, const int blocksY, const int bitDepth, const uint8_t *mask,
-    const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats, cudaStream_t stream) {
+    const FilmGrainBlockMetric *metrics, FilmGrainGpuStats *stats, cudaStream_t stream, const FilmGrainBlockMetric *chromaMetrics = nullptr) {
     switch (src->csp) {
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
-        return collect_model_stats_typed<uint8_t, 0>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, stream);
+        return collect_model_stats_typed<uint8_t, 0>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, stream, chromaMetrics);
     case RGY_CSP_YV12_10:
-        return collect_model_stats_typed<uint16_t, 0>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, stream);
+        return collect_model_stats_typed<uint16_t, 0>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, stream, chromaMetrics);
     case RGY_CSP_P010:
-        return collect_model_stats_typed<uint16_t, 6>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, stream);
+        return collect_model_stats_typed<uint16_t, 6>(src, denoised, chroma, blocksX, blocksY, bitDepth, mask, metrics, stats, stream, chromaMetrics);
     default:
         return RGY_ERR_UNSUPPORTED;
     }
@@ -1398,6 +1565,9 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     m_blocksY = divCeil(prm->frameIn.height, FGS_BLOCK_SIZE);
     m_detailReference.reset();
     m_detailConfidence.reset();
+    m_chromaMetrics.reset();
+    m_localMetrics.reset();
+    m_localStrength.reset();
     m_detailReferenceValid = false;
     if (config.denoiser == FGS_DENOISE_BILATERAL && config.residualRetain < 0.0f) {
         m_detailReference = std::make_unique<CUFrameBuf>(prm->frameIn);
@@ -1405,6 +1575,16 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         m_detailConfidence = std::make_unique<CUMemBuf>(static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(float));
         if ((sts = m_detailReference->alloc()) != RGY_ERR_NONE
             || (sts = m_detailConfidence->alloc()) != RGY_ERR_NONE) return sts;
+        const size_t localBlocks = static_cast<size_t>(divCeil(prm->frameIn.width, 16)) * divCeil(prm->frameIn.height, 16);
+        m_localMetrics = std::make_unique<CUMemBuf>(localBlocks * sizeof(FilmGrainBlockMetric));
+        m_localStrength = std::make_unique<CUMemBufPair>(sizeof(FilmGrainLocalStrengthStats));
+        if ((sts = m_localMetrics->alloc()) != RGY_ERR_NONE
+            || (sts = m_localStrength->alloc()) != RGY_ERR_NONE) return sts;
+        if (config.analyzeChroma) {
+            m_chromaMetrics = std::make_unique<CUMemBuf>(
+                2 * static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(FilmGrainBlockMetric));
+            if ((sts = m_chromaMetrics->alloc()) != RGY_ERR_NONE) return sts;
+        }
     }
     m_blockMetrics = std::make_unique<CUMemBufPair>(
         static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(FilmGrainBlockMetric));
@@ -1865,7 +2045,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             // than relying only on the later whole-frame residual blend.
             autoDetailProtection > 0.0f
                 ? static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice) : nullptr,
-            m_blocksX, m_blocksY, stream, autoDetailProtection, true);
+            m_blocksX, m_blocksY, stream, autoDetailProtection, true,
+            m_chromaMetrics ? static_cast<FilmGrainBlockMetric *>(m_chromaMetrics->ptr) : nullptr);
         if (sts != RGY_ERR_NONE) return sts;
     }
 
@@ -1874,7 +2055,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     sts = collect_model_stats(source, output, prm->filmGrain.analyzeChroma, m_blocksX, m_blocksY,
         bitDepth, static_cast<const uint8_t *>(m_blockMask->ptrDevice),
         static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
-        static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice), stream);
+        static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice), stream,
+        m_chromaMetrics ? static_cast<const FilmGrainBlockMetric *>(m_chromaMetrics->ptr) : nullptr);
     if (sts != RGY_ERR_NONE) return sts;
     m_detailReferenceValid = false;
     if (retainDetailReference) {
@@ -1883,6 +2065,32 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // cannot read an unfinished reference. No additional host wait needed.
         auto referenceLuma = getPlane(&m_detailReference->frame, RGY_PLANE_Y);
         if ((sts = copyPlaneAsync(&referenceLuma, &luma, stream)) != RGY_ERR_NONE) return sts;
+    }
+    if (m_localStrength) {
+        cudaerr = cudaMemsetAsync(m_localStrength->ptrDevice, 0, m_localStrength->nSize, stream);
+        if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+        auto localMetrics = static_cast<FilmGrainBlockMetric *>(m_localMetrics->ptr);
+        auto localStats = static_cast<FilmGrainLocalStrengthStats *>(m_localStrength->ptrDevice);
+        // Avoid a second full-image analysis when the measured grain is
+        // outside this small-patch guard's calibrated correlation range.
+        if (std::abs(measuredGrainCorrelation) <= 0.2f) {
+            switch (source->csp) {
+            case RGY_CSP_NV12:
+            case RGY_CSP_YV12:
+                sts = local_strength_stats<uint8_t, 0>(source, output, localMetrics, localStats, bitDepth, minSigma, maxSigma, stream);
+                break;
+            case RGY_CSP_YV12_10:
+                sts = local_strength_stats<uint16_t, 0>(source, output, localMetrics, localStats, bitDepth, minSigma, maxSigma, stream);
+                break;
+            case RGY_CSP_P010:
+                sts = local_strength_stats<uint16_t, 6>(source, output, localMetrics, localStats, bitDepth, minSigma, maxSigma, stream);
+                break;
+            default:
+                sts = RGY_ERR_UNSUPPORTED;
+                break;
+            }
+        }
+        if (sts != RGY_ERR_NONE || (sts = m_localStrength->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     }
     if ((sts = m_modelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     cudaerr = cudaStreamSynchronize(stream);
@@ -2083,7 +2291,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // this frame's removed residual. A safe but badly fitting held model
         // must not turn a source-amplitude change into synthetic replacement.
         auto fidelity = film_grain_strength_fidelity(current.gpu, params, bitDepth, diagnostics.templateGain);
-        if (fidelity.needsSource() && prm->filmGrain.minModelFrames == 1) {
+        const auto localFidelity = [&]() {
+            return m_localStrength ? film_grain_local_strength_fidelity(
+                *static_cast<const FilmGrainLocalStrengthStats *>(m_localStrength->ptrHost),
+                params, bitDepth, diagnostics.templateGain[0], diagnostics.residualRetain) : FilmGrainLocalStrengthFidelity();
+        };
+        auto local = localFidelity();
+        if ((fidelity.needsSource() || local.needsSource()) && prm->filmGrain.minModelFrames == 1) {
             // A stale rolling/held estimate is not proof that this frame
             // cannot be synthesized. Try the already-collected current
             // evidence before paying for a whole source frame. This reuses
@@ -2108,12 +2322,26 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 m_state->heldStreak = 0;
                 m_state->framesSinceModelUpdate = 0;
                 fidelity = film_grain_strength_fidelity(current.gpu, params, bitDepth, diagnostics.templateGain);
+                local = localFidelity();
             }
         }
         for (int plane = 0; plane < 3; ++plane) {
             diagnostics.strengthFitError[plane] = static_cast<float>(fidelity.relativeRmsError[plane]);
         }
-        if (fidelity.needsSource()) {
+        if (local.needsSource()) {
+            int worstBin = -1;
+            double worstRelative = 0.0;
+            for (int bin = 0; bin < FGS_LOCAL_STRENGTH_BINS; ++bin) {
+                if (local.blocks[bin] < 4) continue;
+                const double error = std::abs(local.modeledSigma[bin] - local.observedSigma[bin]);
+                const double relative = error / std::max(1e-6, local.observedSigma[bin]);
+                if (error > 0.5 && relative > worstRelative) { worstBin = bin; worstRelative = relative; }
+            }
+            AddMessage(RGY_LOG_DEBUG, _T("fgs-local-strength frame=%d mismatch=1 valid=%d bin=%d source=%.3f predicted=%.3f\n"),
+                source->inputFrameId, local.valid, worstBin, worstBin >= 0 ? local.observedSigma[worstBin] : 0.0,
+                worstBin >= 0 ? local.modeledSigma[worstBin] : 0.0);
+        }
+        if (fidelity.needsSource() || local.needsSource()) {
             m_state->sourceFallbackActive = true;
             m_state->fidelityRecoveryFrames = 0;
         }
@@ -2122,7 +2350,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             // threshold otherwise alternates encoded source and synthesis
             // during a strength transition, making the grain pump.
             if (diagnostics.modelFrames >= prm->filmGrain.modelWindow
-                && !fidelity.needsSource(0.10, 0.25)) {
+                && !fidelity.needsSource(0.10, 0.25) && !local.needsSource(0.10, 0.25)) {
                 ++m_state->fidelityRecoveryFrames;
             } else {
                 m_state->fidelityRecoveryFrames = 0;
@@ -2147,6 +2375,9 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         m_state->fidelityRecoveryFrames = 0;
     }
     diagnostics.reliable = modelValid;
+    if (modelValid && prm->filmGrain.residualRetain < 0.0f && prm->filmGrain.analyzeChroma) {
+        if ((sts = restore_inactive_chroma(output, source, params, stream)) != RGY_ERR_NONE) return sts;
+    }
     if (modelValid && params.applyGrain && diagnostics.residualRetain > 0.0f) {
         // Residual retention: keep retain * (source - clean) in the base luma
         // and shrink the signalled synthesis so total variance is preserved.
@@ -2266,6 +2497,9 @@ void NVEncFilterFilmGrain::close() {
     m_detailConfidence.reset();
     m_detailReferenceValid = false;
     m_blockMetrics.reset();
+    m_chromaMetrics.reset();
+    m_localMetrics.reset();
+    m_localStrength.reset();
     m_blockMask.reset();
     m_sigmaMap.reset();
     m_strengthLut.reset();

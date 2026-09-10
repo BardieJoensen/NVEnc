@@ -169,6 +169,36 @@ These are offline development tests; they add no work to ordinary Tdarr jobs.
 The [September 9 retention findings](FINDINGS-2026-09-09-AUTO-RETENTION.md)
 record the tested improvements, rejected prototypes and remaining size costs.
 
+`picture_fidelity_regression.py` adds 19 source-labelled controls for smooth
+gradients, near-black detail, fades, colour-only structure, moving colour,
+cuts, narrow changes in grain strength, and quiet regions beside grain.
+The controls include SDR at 8/10 bits, PQ and HLG. All three arms (plain
+compression, previous auto and candidate auto) use QP 20, and both auto arms
+use `retain-max=0.1`. Every frame is decoded with grain off and on, and every
+packet must pass the synthesis-texture scanner. Deliberately blurred colour
+and stepped gradients verify that the measurements detect those defects.
+
+```sh
+python3 tests/fgs/picture_fidelity_regression.py \
+  --baseline /path/to/previous/nvencc --candidate /path/to/candidate/nvencc \
+  --scanner /path/to/fgs-scan --output-dir /path/to/new-picture-report
+```
+
+The colour check projects onto the known source pattern. Its separate
+high-pass diagnostic can overemphasize quantization steps in weak 8-bit
+patterns and must not be interpreted as total detail retention. Gradient
+errors are engineering measurements in normalized code values, not HDR
+perceptual thresholds. The plain arm separates ordinary compression loss
+from filtering loss. Weak-grain and source-fallback comparisons also retain
+that distinction. `--output-depth 8|10` can exercise an explicit output depth;
+`--reuse-baseline` requires matching binaries, harness/helpers, source and
+decoded-output hashes. These checks stay offline.
+
+The CPU suite also verifies local source/base covariance accounting, quiet
+regions, sparse evidence, invalid inputs and 8/10-bit scaling. The
+[September 10 picture findings](FINDINGS-2026-09-10-PICTURE.md) record the
+qualified source-fidelity improvements and their storage costs.
+
 ```sh
 python3 tests/fgs/retain_sweep.py --bits both
 ```
