@@ -11,13 +11,13 @@ import argparse
 from collections import Counter
 from fractions import Fraction
 import hashlib
+import io
 from itertools import zip_longest
 import json
 from pathlib import Path
 import subprocess
 import threading
 import time
-import xml.etree.ElementTree as ET
 
 from production_compare import identity, sha
 
@@ -52,6 +52,93 @@ def metadata_row(frame, index):
     return dict(frame=index, pts=frame.attrib.get('pts_time'), metadata=metadata)
 
 
+def json_frames(stream, chunk_size=65536, maximum_frame_chars=8 * 1024 * 1024):
+    """Read FFprobe's frames-only JSON without buffering a whole feature film."""
+    decoder = json.JSONDecoder()
+    buffer = ''
+    ended = False
+
+    def fill():
+        nonlocal buffer, ended
+        chunk = stream.read(chunk_size)
+        ended = not chunk
+        buffer += chunk
+        if len(buffer) > maximum_frame_chars:
+            raise ValueError('Frame metadata exceeds the bounded JSON buffer')
+
+    def whitespace():
+        nonlocal buffer
+        buffer = buffer.lstrip()
+        while not buffer and not ended:
+            fill()
+            buffer = buffer.lstrip()
+
+    def token(expected):
+        nonlocal buffer
+        whitespace()
+        if not buffer.startswith(expected):
+            raise ValueError('Unexpected FFprobe JSON structure')
+        buffer = buffer[len(expected):]
+
+    def value():
+        nonlocal buffer
+        whitespace()
+        while True:
+            try:
+                result, end = decoder.raw_decode(buffer)
+                buffer = buffer[end:]
+                return result
+            except json.JSONDecodeError:
+                if ended:
+                    raise ValueError('Incomplete or invalid FFprobe JSON') from None
+                fill()
+
+    token('{')
+    if value() != 'frames':
+        raise ValueError('Expected a frames-only FFprobe JSON document')
+    token(':')
+    token('[')
+    whitespace()
+    if not buffer.startswith(']'):
+        while True:
+            frame = value()
+            if not isinstance(frame, dict):
+                raise ValueError('A decoded frame is not a JSON object')
+            yield frame
+            whitespace()
+            if buffer.startswith(']'):
+                break
+            token(',')
+    token(']')
+    token('}')
+    whitespace()
+    if buffer:
+        raise ValueError('Unexpected trailing FFprobe output')
+
+
+def json_metadata_row(frame, index):
+    metadata = {}
+    for side in frame.get('side_data_list', []):
+        kind = side.get('side_data_type')
+        if kind not in TYPES:
+            continue
+        if kind in metadata:
+            raise ValueError('Duplicate HDR side data on one frame')
+        value = dict(side)
+        if kind == 'Mastering display metadata':
+            for key in ['red_x', 'red_y', 'green_x', 'green_y', 'blue_x', 'blue_y',
+                        'white_point_x', 'white_point_y', 'min_luminance', 'max_luminance']:
+                if key not in value:
+                    continue
+                denominator = 16384 if key == 'min_luminance' else 256 if key == 'max_luminance' else 65536
+                scaled = Fraction(value[key]) * denominator
+                if scaled < 0:
+                    raise ValueError('Negative mastering display metadata')
+                value[key] = int(scaled + Fraction(1, 2))
+        metadata[kind] = hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+    return dict(frame=index, pts=frame.get('pts_time'), metadata=metadata)
+
+
 def record(source, directory, expected_frames, expected_sha256, timeout=18000, threads=2):
     source, directory = Path(source), Path(directory)
     before = identity(source)
@@ -62,6 +149,7 @@ def record(source, directory, expected_frames, expected_sha256, timeout=18000, t
     directory.mkdir(parents=True, exist_ok=False)
     report = dict(complete=False, source=str(source), source_sha256=expected_sha256,
                   source_identity=before, expected_frames=expected_frames,
+                  trace_format='ffprobe-json-hdr-v1',
                   harness_sha256=sha(__file__), started_at=time.time())
     probe = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0',
                             '-show_streams', '-of', 'json', str(source)],
@@ -69,7 +157,7 @@ def record(source, directory, expected_frames, expected_sha256, timeout=18000, t
     report['stream'] = json.loads(probe.stdout)['streams'][0]
     command = ['ffprobe', '-v', 'error', '-threads', str(threads), '-err_detect', 'explode',
                '-select_streams', 'v:0', '-show_frames', '-show_entries',
-               'frame=pts_time,side_data_list', '-of', 'xml', str(source)]
+               'frame=pts_time,side_data_list', '-of', 'json', str(source)]
     report['command'] = command
     count = 0
     counts = Counter()
@@ -80,10 +168,9 @@ def record(source, directory, expected_frames, expected_sha256, timeout=18000, t
             timer = threading.Timer(timeout, process.kill)
             timer.start()
             try:
-                for event, node in ET.iterparse(process.stdout, events=['end']):
-                    if node.tag != 'frame':
-                        continue
-                    row = metadata_row(node, count)
+                decoded_json = io.TextIOWrapper(process.stdout, encoding='utf-8')
+                for frame in json_frames(decoded_json):
+                    row = json_metadata_row(frame, count)
                     if row['pts'] is None:
                         raise ValueError('A decoded frame has no timestamp')
                     pts = Fraction(row['pts'])
@@ -93,7 +180,6 @@ def record(source, directory, expected_frames, expected_sha256, timeout=18000, t
                     counts.update(row['metadata'].keys())
                     trace.write(json.dumps(row, separators=(',', ':')) + '\n')
                     count += 1
-                    node.clear()
                 if process.wait() != 0:
                     raise RuntimeError('Metadata decoding failed or timed out')
             finally:
@@ -149,6 +235,8 @@ def compare(reference, candidate):
         if report.get('complete') is not True or report.get('trace_sha256') != sha(path / 'frames.jsonl'):
             raise ValueError('Incomplete or changed metadata trace')
         reports.append(report)
+    if reports[0].get('trace_format', 'legacy-xml') != reports[1].get('trace_format', 'legacy-xml'):
+        raise ValueError('Metadata trace formats differ; record both with the same formatter')
     stream_failures = compare_streams(reports[0]['stream'], reports[1]['stream'])
     with (paths[0] / 'frames.jsonl').open() as a, (paths[1] / 'frames.jsonl').open() as b:
         result = compare_rows(map(json.loads, a), map(json.loads, b))

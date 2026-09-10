@@ -886,6 +886,125 @@ FilmGrainGpuStats local_strength_targets(const FilmGrainGpuStats& coarse,
     return result;
 }
 
+bool apply_local_covariance(FilmGrainGpuStats& stats,
+    const FilmGrainLocalStrengthStats& local, const double residualRetain, double *highpassFraction) {
+    if (local.covarianceBlocks < 16 || local.covarianceBlocks > 10000000
+        || !std::isfinite(residualRetain) || residualRetain < 0.0 || residualRetain >= 1.0) return false;
+    const double sourceVariance = local.sourceCovariance[0], baseVariance = local.baseCovariance[0];
+    if (!std::isfinite(sourceVariance) || sourceVariance <= 0.0 || !std::isfinite(baseVariance) || baseVariance < 0.0
+        || std::abs(local.crossCovariance[0]) > 2.0 * std::sqrt(sourceVariance * baseVariance)
+            + 1e-5 * std::max(sourceVariance, 1.0)) return false;
+    std::array<double, FGS_LOCAL_COVARIANCES> covariance = {};
+    const double r = residualRetain, clean = 1.0 - r;
+    for (int i = 0; i < FGS_LOCAL_COVARIANCES; ++i) {
+        const double source = local.sourceCovariance[i], base = local.baseCovariance[i], cross = local.crossCovariance[i];
+        if (!std::isfinite(source) || !std::isfinite(base) || !std::isfinite(cross)) return false;
+        covariance[i] = (source - r * r * source - clean * clean * base - r * clean * cross)
+            / ((1.0 - r * r) * local.covarianceBlocks);
+    }
+    if (!std::isfinite(covariance[0]) || covariance[0] <= 1e-6 || covariance[0] > 1048576.0) return false;
+    for (const auto value : covariance) {
+        if (!std::isfinite(value) || std::abs(value) > covariance[0] * 1.02) return false;
+    }
+    // Variance of center minus the four axial neighbours divided by four.
+    // This independent target prevents an amplitude-correct model from
+    // whitening coarse grain to satisfy a low-frequency response constraint.
+    const double highpass = (1.25 * covariance[0] - covariance[fgs_covariance_index(0, 1)]
+        - covariance[fgs_covariance_index(1, 0)] + 0.125 * (covariance[fgs_covariance_index(0, 2)]
+        + covariance[fgs_covariance_index(2, 0)]) + 0.25 * (covariance[fgs_covariance_index(1, 1)]
+        + covariance[fgs_covariance_index(1, -1)])) / covariance[0];
+    if (!std::isfinite(highpass) || highpass <= 0.0 || highpass > 4.0) return false;
+    // A small ridge represents sampling uncertainty in these spatial moments.
+    // It must also make the complete normal matrix positive definite; an
+    // arbitrary clipped/inverted covariance is not a recoverable grain model.
+    std::array<std::pair<int, int>, FGS_AR_COEFFS> positions;
+    int count = 0;
+    for (int y = -3; y <= 0; ++y) for (int x = -3; x <= 3; ++x) {
+        if (y < 0 || x < 0) positions[count++] = { y, x };
+    }
+    std::array<double, FGS_AR_COEFFS * FGS_AR_COEFFS> matrix = {}, cholesky = {};
+    const double ridge = covariance[0] * 0.02;
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) for (int j = 0; j < FGS_AR_COEFFS; ++j) {
+        const auto a = positions[i], b = positions[j];
+        matrix[i * FGS_AR_COEFFS + j] = covariance[fgs_covariance_index(a.first - b.first, a.second - b.second)]
+            + (i == j ? ridge : 0.0);
+    }
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) for (int j = 0; j <= i; ++j) {
+        double value = matrix[i * FGS_AR_COEFFS + j];
+        for (int k = 0; k < j; ++k) value -= cholesky[i * FGS_AR_COEFFS + k] * cholesky[j * FGS_AR_COEFFS + k];
+        if (i == j) {
+            if (!std::isfinite(value) || value <= covariance[0] * 1e-8) return false;
+            cholesky[i * FGS_AR_COEFFS + j] = std::sqrt(value);
+        } else cholesky[i * FGS_AR_COEFFS + j] = value / cholesky[j * FGS_AR_COEFFS + j];
+    }
+    auto result = stats;
+    auto& plane = result.plane[0];
+    plane.observations = local.covarianceBlocks * FGS_LOCAL_COVARIANCE_SAMPLES;
+    for (int i = 0; i < FGS_AR_COEFFS; ++i) {
+        plane.atb[i] = std::llround(covariance[fgs_covariance_index(positions[i].first, positions[i].second)] * plane.observations);
+        for (int j = i; j < FGS_AR_COEFFS; ++j)
+            plane.ata[tri_index(FGS_AR_COEFFS, i, j)] = std::llround(matrix[i * FGS_AR_COEFFS + j] * plane.observations);
+    }
+    stats = result;
+    if (highpassFraction) *highpassFraction = highpass;
+    return true;
+}
+
+double film_grain_luma_dc_amplitude(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const double residualRetain) {
+    if (!std::isfinite(residualRetain) || residualRetain < 0.0 || residualRetain >= 1.0
+        || params.arCoeffLag > 3 || params.arCoeffShiftMinus6 > 3 || params.numYPoints > 14
+        || params.grainScalingMinus8 > 3 || params.grainScaleShift != 0) return std::numeric_limits<double>::infinity();
+    if (!params.applyGrain || !params.numYPoints) return 0.0;
+    const int coefficients = 2 * params.arCoeffLag * (params.arCoeffLag + 1);
+    double sum = 0.0;
+    for (int i = 0; i < coefficients; ++i)
+        sum += (static_cast<int>(params.arCoeffsYPlus128[i]) - 128) / static_cast<double>(1 << (params.arCoeffShiftMinus6 + 6));
+    if (sum >= 1.0) return std::numeric_limits<double>::infinity();
+    const double scaling = *std::max_element(params.pointYScaling, params.pointYScaling + params.numYPoints);
+    return scaling * std::sqrt(1.0 - residualRetain * residualRetain)
+        / ((1 << (params.grainScalingMinus8 + 3)) * (1.0 - sum));
+}
+
+bool build_covariance_recovery_model(const FilmGrainGpuStats& stats, const int bitDepth,
+    const bool analyzeChroma, const bool limitedRange, const double residualRetain, const double highpassFraction,
+    NV_ENC_FILM_GRAIN_PARAMS_AV1& params, NVEncFilmGrainDiagnostics& diagnostics) {
+    if (!stats.plane[0].observations || stats.plane[0].ata[0] <= 0
+        || stats.plane[0].ata[0] > std::numeric_limits<int64_t>::max() / 4
+        || !std::isfinite(highpassFraction) || highpassFraction <= 0.0 || highpassFraction > 4.0
+        || !std::isfinite(residualRetain) || residualRetain < 0.0 || residualRetain >= 1.0) return false;
+    for (int attempt = 0; attempt < 7; ++attempt) {
+        auto target = stats;
+        // Penalize response to a constant predictor without weakening the
+        // existing pole/texture guards. This rank-one fit constraint focuses
+        // on DC; ordinary ridge shrinkage changes every spatial frequency.
+        const double penalty = attempt ? std::ldexp(0.005, attempt - 1) : 0.0;
+        const int64_t offset = static_cast<int64_t>(std::llround(stats.plane[0].ata[0] * penalty));
+        for (int i = 0; i < FGS_TRI_Y; ++i) {
+            if (target.plane[0].ata[i] > std::numeric_limits<int64_t>::max() - offset) return false;
+            target.plane[0].ata[i] += offset;
+        }
+        NV_ENC_FILM_GRAIN_PARAMS_AV1 trial = {};
+        NVEncFilmGrainDiagnostics measured;
+        if (!build_fidelity_recovery_model(target, bitDepth, analyzeChroma, limitedRange, trial, measured)) continue;
+        const auto spectrum = film_grain_ar_spectrum(trial.arCoeffsYPlus128, trial.arCoeffLag, trial.arCoeffShiftMinus6 + 6);
+        if (!std::isfinite(spectrum.meanPower) || spectrum.meanPower <= 0.0
+            || !std::isfinite(spectrum.highpassFraction)
+            || spectrum.highpassFraction < highpassFraction * 0.85 * 0.85
+            || spectrum.highpassFraction > highpassFraction * 1.15 * 1.15) continue;
+        // A constrained normal matrix is not itself the generated AR process.
+        // Normalize its amplitude from the actual quantized transfer function.
+        measured.templateGain[0] = static_cast<float>(std::sqrt(spectrum.meanPower));
+        if (!refit_occupied_strength(stats, bitDepth, trial, measured)
+            || film_grain_strength_fidelity(stats, trial, bitDepth, measured.templateGain).needsSource(0.10, 0.25)
+            || film_grain_luma_dc_amplitude(trial, residualRetain) > 6.0) continue;
+        measured.strengthRefit = true;
+        params = trial;
+        diagnostics = measured;
+        return true;
+    }
+    return false;
+}
+
 bool can_restore_chroma_component(const FilmGrainGpuStats& stats,
     const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int plane) {
     if (plane < 1 || plane > 2 || params.chromaScalingFromLuma

@@ -130,8 +130,10 @@ def measure(root, directory, spec, info):
             regions = masks(spec, frame, w, h)
             values = {}
             for key in ['source', 'off', 'on']:
+                highpass = fc.quality_metrics.highpass(pictures[key][plane]) / ds
                 values[key] = [dict(mean=float(pictures[key][plane][mask].mean() / ds),
-                                    sigma=float(pictures[key][plane][mask].std() / ds)) for mask in regions]
+                                    sigma=float(pictures[key][plane][mask].std() / ds),
+                                    hf_sigma=float(highpass[mask].std())) for mask in regions]
             delta = (pictures['on'][plane].astype(float) - pictures['off'][plane]) / ds
             values['synthesis_sigma'] = [float(delta[mask].std()) for mask in regions]
             row['planes'].append(values)
@@ -165,6 +167,10 @@ def check(case, arm='candidate'):
                 lower = min(.75 * source['sigma'], .95 * ordinary['sigma'])
                 if output['sigma'] > upper or (source['sigma'] >= 2 and output['sigma'] < lower):
                     errors.append(f'frame {row["frame"]} plane {plane} region {region}: grain amplitude {output["sigma"]:.3f}, source {source["sigma"]:.3f}, plain {ordinary["sigma"]:.3f}')
+                if case['spec'].get('correlated') and plane == case['spec']['plane']:
+                    hf_upper = max(1.15 * source['hf_sigma'], ordinary['hf_sigma'] * 1.05 + .1)
+                    if output['hf_sigma'] > hf_upper:
+                        errors.append(f'frame {row["frame"]} plane {plane} region {region}: excess fine-grain energy')
     return errors
 
 

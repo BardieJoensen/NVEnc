@@ -1,8 +1,13 @@
 import copy
+import io
+import json
+from pathlib import Path
+import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from hdr_metadata_trace import canonical, compare_rows, compare_streams, metadata_row
+from hdr_metadata_trace import canonical, compare, compare_rows, compare_streams, json_frames, json_metadata_row, metadata_row
+from production_compare import sha
 
 
 def mastering(values):
@@ -13,6 +18,48 @@ def mastering(values):
 
 
 class MetadataTests(unittest.TestCase):
+    def test_streamed_json_keeps_nested_frames_across_chunk_boundaries(self):
+        frames = [dict(pts_time=str(n), side_data_list=[dict(side_data_type='Dolby Vision Metadata',
+                  nested=[dict(value='brace } and quote " and unicode \u2603', levels=[1, 2, 3])])]) for n in range(3)]
+        document = json.dumps(dict(frames=frames), ensure_ascii=False)
+        for chunk in [1, 7, 65536]:
+            self.assertEqual(list(json_frames(io.StringIO(document), chunk_size=chunk)), frames)
+        self.assertEqual(list(json_frames(io.StringIO('{"frames":[]}'))), [])
+
+    def test_streamed_json_rejects_truncation_trailing_data_and_oversized_frames(self):
+        for document in ['{"frames":[{}', '{"frames":[{},]}', '{"frames":[]} unexpected',
+                         '{"streams":[]}', '{"frames":[42]}']:
+            with self.assertRaises(ValueError):
+                list(json_frames(io.StringIO(document), chunk_size=3))
+        with self.assertRaisesRegex(ValueError, 'bounded'):
+            list(json_frames(io.StringIO(json.dumps(dict(frames=[dict(value='x' * 1000)]))),
+                             chunk_size=8, maximum_frame_chars=128))
+
+    def test_json_static_rounding_and_dynamic_values(self):
+        source = dict(pts_time='0', side_data_list=[dict(side_data_type='Mastering display metadata',
+            red_x='34000/50000', min_luminance='1/10000', max_luminance='10000000/10000'),
+            dict(side_data_type='Dolby Vision Metadata', nested=dict(value=1))])
+        encoded = copy.deepcopy(source)
+        encoded['side_data_list'][0].update(red_x='44564/65536', min_luminance='2/16384', max_luminance='256000/256')
+        self.assertEqual(json_metadata_row(source, 0), json_metadata_row(encoded, 0))
+        encoded['side_data_list'][1]['nested']['value'] = 2
+        self.assertFalse(compare_rows([json_metadata_row(source, 0)], [json_metadata_row(encoded, 0)])['passed'])
+        source['side_data_list'].append(source['side_data_list'][1])
+        with self.assertRaisesRegex(ValueError, 'Duplicate'):
+            json_metadata_row(source, 0)
+
+    def test_legacy_and_json_digests_cannot_be_misreported_as_metadata_damage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths = [Path(directory)/name for name in ['old', 'new']]
+            for path, fmt in zip(paths, ['legacy-xml', 'ffprobe-json-hdr-v1']):
+                path.mkdir()
+                trace = path/'frames.jsonl'
+                trace.write_text('{}\n')
+                (path/'report.json').write_text(json.dumps(dict(complete=True, trace_format=fmt,
+                    trace_sha256=sha(trace))))
+            with self.assertRaisesRegex(ValueError, 'formats differ'):
+                compare(*paths)
+
     def test_av1_fixed_point_rounding_is_not_metadata_loss(self):
         source = mastering({'red_x': '34000/50000', 'green_y': '34500/50000',
                             'min_luminance': '1/10000', 'max_luminance': '10000000/10000'})

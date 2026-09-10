@@ -201,12 +201,15 @@ def main():
                         save()
                         print(case['name'], arm, 'reusing encode; validation pending', flush=True)
                         continue
+                encode_started_at = time.time()
                 elapsed = run(argv, directory / 'encode.log', args.timeout)
+                encode_finished_at = time.time()
                 log = (directory / 'encode.log').read_text(errors='replace')
                 finish = re.search(r'encoded (\d+) frames, ([\d.]+) fps', log)
                 if not finish:
                     raise RuntimeError('Missing encoder completion: ' + str(directory))
                 row = dict(case=case['name'], arm=arm, command=argv, seconds=elapsed,
+                           encode_started_at=encode_started_at, encode_finished_at=encode_finished_at,
                            frames=int(finish[1]), fps=float(finish[2]), bytes=output.stat().st_size,
                            sha256=sha(output), fallback_frames=[int(x) for x in re.findall(
                                r'fgs-model frame=(\d+)[^\n]*sourceFallback=1', log)],

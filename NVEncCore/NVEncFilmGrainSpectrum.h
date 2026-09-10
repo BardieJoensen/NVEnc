@@ -8,6 +8,8 @@
 
 namespace fgsmodel {
 struct FilmGrainSpectrum {
+    double meanPower = 0.0;
+    double highpassFraction = 0.0;
     double peakToMean = 0.0;
     double peakToRing = 0.0;
 };
@@ -16,6 +18,7 @@ constexpr int gridSize = 64;
 struct Frequency {
     std::array<double, 24> real{}, imag{};
     double radius = 0.0;
+    double highpassPower = 0.0;
 };
 inline const std::array<Frequency, gridSize * gridSize>& frequencies() {
     static const auto grid = [] {
@@ -26,6 +29,8 @@ inline const std::array<Frequency, gridSize * gridSize>& frequencies() {
             const double u = (fx < gridSize / 2 ? fx : fx - gridSize) / double(gridSize);
             const double v = (fy < gridSize / 2 ? fy : fy - gridSize) / double(gridSize);
             point.radius = std::hypot(u, v);
+            const double highpass = 1.0 - 0.5 * std::cos(2.0 * pi * u) - 0.5 * std::cos(2.0 * pi * v);
+            point.highpassPower = highpass * highpass;
             int i = 0;
             for (int y = -3; y <= 0; ++y) for (int x = -3; x <= 3 && (y < 0 || x < 0); ++x) {
                 const double phase = 2.0 * pi * (u * x + v * y);
@@ -61,7 +66,7 @@ inline FilmGrainSpectrum film_grain_ar_spectrum(const uint8_t *coeff, unsigned l
     }
     const auto& grid = frequencies();
     std::array<double, gridSize * gridSize> power{};
-    double sum = 0.0, peak = 0.0;
+    double sum = 0.0, highpassSum = 0.0, peak = 0.0;
     size_t peakIndex = 0;
     for (size_t i = 0; i < grid.size(); ++i) {
         double real = 1.0, imag = 0.0;
@@ -74,6 +79,7 @@ inline FilmGrainSpectrum film_grain_ar_spectrum(const uint8_t *coeff, unsigned l
             return result;
         }
         power[i] = 1.0 / denominator; sum += power[i];
+        highpassSum += power[i] * grid[i].highpassPower;
         if (grid[i].radius >= 1.0 / 16.0 && power[i] > peak) { peak = power[i]; peakIndex = i; }
     }
     double ringSum = 0.0;
@@ -83,7 +89,9 @@ inline FilmGrainSpectrum film_grain_ar_spectrum(const uint8_t *coeff, unsigned l
             ringSum += power[i]; ++ringCount;
         }
     }
-    result.peakToMean = peak / (sum / grid.size());
+    result.meanPower = sum / grid.size();
+    result.highpassFraction = highpassSum / sum;
+    result.peakToMean = peak / result.meanPower;
     result.peakToRing = peak / (ringSum / ringCount);
     return result;
 }

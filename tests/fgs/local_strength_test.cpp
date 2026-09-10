@@ -5,6 +5,7 @@
 #include <iostream>
 #include <limits>
 #include "NVEncFilmGrainModel.h"
+#include "NVEncFilmGrainSpectrum.h"
 
 using namespace fgsmodel;
 
@@ -19,6 +20,108 @@ static NV_ENC_FILM_GRAIN_PARAMS_AV1 constant_model() {
 }
 
 int main() {
+    // Independent synthesis needs the source-minus-retained-base covariance,
+    // not just a larger amplitude on the removed residual's old AR shape.
+    {
+        FilmGrainLocalStrengthStats spatial = {};
+        spatial.covarianceBlocks = 64;
+        for (int dy = 0; dy <= 3; ++dy) for (int dx = -6; dx <= 6; ++dx) {
+            if (dy == 0 && dx < 0) continue;
+            const int index = fgs_covariance_index(dy, dx);
+            assert(index >= 0 && index < FGS_LOCAL_COVARIANCES);
+            assert(index == fgs_covariance_index(-dy, -dx));
+            const double corr = std::pow(0.3, std::abs(dx)) * std::pow(0.4, dy);
+            spatial.sourceCovariance[index] = 64 * 36 * corr;
+            spatial.baseCovariance[index] = 64 * 9 * corr;
+            spatial.crossCovariance[index] = 64 * 36 * corr;
+        }
+        assert(fgs_covariance_index(4, 0) == -1);
+        assert(fgs_covariance_index(0, -7) == -1);
+        assert(fgs_covariance_index(std::numeric_limits<int>::min(), 0) == -1);
+        FilmGrainGpuStats original = {};
+        original.plane[1].observations = 4096;
+        original.plane[0].binVarSum[10] = 123;
+        for (const double retain : {0.0, 0.5}) {
+            auto stats = original;
+            double highpass = -1.0;
+            assert(apply_local_covariance(stats, spatial, retain, &highpass));
+            assert(std::abs(highpass - .64125) < 1e-8);
+            const double target = retain == 0.0 ? 27.0 : 21.0;
+            const auto& y = stats.plane[0];
+            assert(y.observations == 64 * FGS_LOCAL_COVARIANCE_SAMPLES);
+            assert(std::abs(y.ata[0] / double(y.observations) - target * 1.02) < 0.001);
+            assert(std::abs(y.atb[23] / double(y.observations) - target * 0.3) < 0.001);
+            std::memcpy(stats.plane[0].ata, original.plane[0].ata, sizeof(y.ata));
+            std::memcpy(stats.plane[0].atb, original.plane[0].atb, sizeof(y.atb));
+            stats.plane[0].observations = original.plane[0].observations;
+            assert(std::memcmp(&stats, &original, sizeof(stats)) == 0);
+        }
+        for (int defect = 0; defect < 6; ++defect) {
+            auto bad = spatial;
+            if (defect == 0) bad.covarianceBlocks = 15;
+            if (defect == 1) bad.sourceCovariance[4] = std::numeric_limits<double>::quiet_NaN();
+            if (defect == 2) bad.baseCovariance[0] = -1;
+            if (defect == 3) bad.crossCovariance[0] = 1e20;
+            if (defect == 4) {
+                bad.sourceCovariance[1] = bad.sourceCovariance[0] * 0.99;
+                bad.sourceCovariance[2] = -bad.sourceCovariance[0] * 0.99;
+            }
+            auto stats = original;
+            double highpass = -1.0;
+            assert(!apply_local_covariance(stats, bad, defect == 5 ? 1.0 : 0.0, &highpass));
+            assert(highpass == -1.0);
+            assert(std::memcmp(&stats, &original, sizeof(stats)) == 0);
+        }
+        // A separable AR(1) covariance has a known spatial response. Weak
+        // grain remains recoverable at both bit depths without turning it
+        // into a higher-frequency process or amplifying its mean response.
+        for (const int bits : {8, 10}) {
+            auto weak = spatial;
+            const double ds = 1 << (bits - 8);
+            for (int i = 0; i < FGS_LOCAL_COVARIANCES; ++i) {
+                weak.sourceCovariance[i] *= ds * ds / 36.0;
+                weak.baseCovariance[i] = weak.crossCovariance[i] = 0.0;
+            }
+            FilmGrainGpuStats target = {};
+            target.plane[0].binBlockCount[10] = 64;
+            target.plane[0].binVarSum[10] = 64 * ds * ds;
+            target.plane[0].binLumaSum[10] = 64 * 128 * ds;
+            target.plane[0].intensityBlocks = 64;
+            double highpass = 0.0;
+            assert(apply_local_covariance(target, weak, .1, &highpass));
+            NV_ENC_FILM_GRAIN_PARAMS_AV1 model = {};
+            NVEncFilmGrainDiagnostics d;
+            assert(build_covariance_recovery_model(target, bits, false, false, .1, highpass, model, d));
+            const auto spectrum = film_grain_ar_spectrum(model.arCoeffsYPlus128, model.arCoeffLag, model.arCoeffShiftMinus6 + 6);
+            assert(spectrum.meanPower > 1.0);
+            assert(std::abs(std::sqrt(spectrum.highpassFraction / highpass) - 1.0) < .15);
+            assert(film_grain_luma_dc_amplitude(model, .1) <= 6.0);
+            assert(!film_grain_strength_fidelity(target, model, bits, d.templateGain).needsSource(.10, .25));
+            const auto before = model;
+            for (const double invalid : {0.0, -1.0, 5.0, std::numeric_limits<double>::quiet_NaN()}) {
+                assert(!build_covariance_recovery_model(target, bits, false, false, .1, invalid, model, d));
+                assert(std::memcmp(&model, &before, sizeof(model)) == 0);
+            }
+            for (const double invalid : {-1.0, 1.0, std::numeric_limits<double>::quiet_NaN()}) {
+                assert(!build_covariance_recovery_model(target, bits, false, false, invalid, highpass, model, d));
+                assert(std::memcmp(&model, &before, sizeof(model)) == 0);
+            }
+            target.plane[0].ata[0] = std::numeric_limits<int64_t>::max();
+            assert(!build_covariance_recovery_model(target, bits, false, false, .1, highpass, model, d));
+            assert(std::memcmp(&model, &before, sizeof(model)) == 0);
+        }
+    }
+    {
+        auto p = constant_model();
+        assert(std::abs(film_grain_luma_dc_amplitude(p, .5) - 6.0 * std::sqrt(.75)) < 1e-8);
+        p.arCoeffLag = 1;
+        std::fill(std::begin(p.arCoeffsYPlus128), std::end(p.arCoeffsYPlus128), 128);
+        p.arCoeffsYPlus128[3] += 32;
+        assert(film_grain_luma_dc_amplitude(p, 0.0) == 12.0);
+        p.arCoeffsYPlus128[3] += 32;
+        assert(!std::isfinite(film_grain_luma_dc_amplitude(p, 0.0)));
+        assert(!std::isfinite(film_grain_luma_dc_amplitude(p, -1.0)));
+    }
     for (const int bits : {8, 10}) {
         const double ds = 1 << (bits - 8);
         auto p = constant_model();

@@ -173,6 +173,14 @@ FilmGrainStrengthFidelity film_grain_strength_fidelity(const FilmGrainGpuStats& 
 constexpr int FGS_LOCAL_STRENGTH_BINS = 256;
 constexpr int FGS_LOCAL_STRENGTH_GROUPS = 6; // sigma boundaries: 0.5, 2, 4, 8, 16 in 8-bit units
 constexpr int FGS_LOCAL_STRENGTH_SLOTS = FGS_LOCAL_STRENGTH_BINS * (1 + FGS_LOCAL_STRENGTH_GROUPS);
+constexpr int FGS_LOCAL_COVARIANCE_SAMPLES = 16 * 22;
+constexpr int FGS_LOCAL_COVARIANCES = 46; // dy 0: dx 0..6; dy 1..3: dx -6..6
+FGS_HOST_DEVICE constexpr int fgs_covariance_index(int dy, int dx) {
+    if (dy < -3 || dy > 3 || dx < -6 || dx > 6) return -1;
+    if (dy < 0 || (dy == 0 && dx < 0)) { dy = -dy; dx = -dx; }
+    return dy == 0 ? (dx <= 6 ? dx : -1)
+        : (dy <= 3 && dx >= -6 && dx <= 6 ? 7 + (dy - 1) * 13 + dx + 6 : -1);
+}
 struct FilmGrainLocalStrengthStats {
     double varianceSum[FGS_LOCAL_STRENGTH_SLOTS]; // source after removing a local plane
     double baseVarianceSum[FGS_LOCAL_STRENGTH_SLOTS]; // filtered base with the same detrending
@@ -180,6 +188,10 @@ struct FilmGrainLocalStrengthStats {
     double intensitySum[FGS_LOCAL_STRENGTH_SLOTS];
     uint64_t blocks[FGS_LOCAL_STRENGTH_SLOTS];
     uint64_t correlatedBlocks[FGS_LOCAL_STRENGTH_BINS]; // larger patches with independent temporal evidence
+    double sourceCovariance[FGS_LOCAL_COVARIANCES];
+    double baseCovariance[FGS_LOCAL_COVARIANCES];
+    double crossCovariance[FGS_LOCAL_COVARIANCES]; // source/base in both spatial directions
+    uint64_t covarianceBlocks;
 };
 struct FilmGrainLocalStrengthFidelity {
     std::array<double, FGS_LOCAL_STRENGTH_SLOTS> observedSigma = {};
@@ -201,6 +213,18 @@ bool refit_local_strength(const FilmGrainLocalStrengthStats& stats, int bitDepth
 // Keep AR normal equations and unobserved coarse bins unchanged.
 FilmGrainGpuStats local_strength_targets(const FilmGrainGpuStats& coarse,
     const FilmGrainLocalStrengthStats& local, int bitDepth, double residualRetain);
+
+// Fit the independent synthesis covariance as source minus retained base.
+// Return false for sparse, invalid or nonpositive covariance evidence.
+bool apply_local_covariance(FilmGrainGpuStats& stats,
+    const FilmGrainLocalStrengthStats& local, double residualRetain, double *highpassFraction = nullptr);
+
+// Bound low-frequency amplification in newly recovered grain; finite decoder
+// templates can otherwise shift the whole picture mean for some seeds.
+double film_grain_luma_dc_amplitude(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, double residualRetain);
+bool build_covariance_recovery_model(const FilmGrainGpuStats& stats, int bitDepth,
+    bool analyzeChroma, bool limitedRange, double residualRetain, double highpassFraction,
+    NV_ENC_FILM_GRAIN_PARAMS_AV1& params, NVEncFilmGrainDiagnostics& diagnostics);
 
 // Independent colour-source restoration is permitted only with substantial
 // current evidence and negligible measured/signalled luma coupling.

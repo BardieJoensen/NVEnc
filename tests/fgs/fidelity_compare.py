@@ -154,6 +154,12 @@ def measure(directory, root, info, decode=True):
         row = dict(frame=frame, source_sigma=float(residuals['source'].std()/ds),
                    base_sigma=float(residuals['off'].std()/ds), output_sigma=float(residuals['on'].std()/ds),
                    synth_sigma=float((values['on']-values['off'])[mask].std()/ds))
+        # Global means can hide opposing shifts in different brightness
+        # bands, and steady-state medians hide one-frame template offsets.
+        difference = (values['on'] - values['source']) / ds
+        row['band_mean_shift_8bit'] = [float(difference[
+            info['height']//2+24:-24, band*64+16:(band+1)*64-16].mean())
+            for band in range(12)]
         # Upper band interiors contain the known woven/directional detail.
         # Per-frame measurements expose start-up and cut behaviour too.
         detail_mask = np.zeros_like(mask)

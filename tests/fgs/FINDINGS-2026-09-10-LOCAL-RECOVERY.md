@@ -1,7 +1,7 @@
 # Local grain recovery and Tdarr acceptance
 
-Status: **development controls qualified; final build, full-source acceptance
-and Tdarr canary in progress**. This report does not close the broader
+Status: **prototype 14 passes picture/texture qualification; coarse optimization
+fails, final build/full-source acceptance and Tdarr canary pending**. This report does not close the broader
 [work through production](WORK-TO-PRODUCTION.md).
 
 Evidence directory:
@@ -59,8 +59,15 @@ and source hashes. A separately identified final build is required for the
 remaining acceptance stages.
 
 The 19 picture controls, 23 local-grain controls, 16 controlled cases at both
-retention ceilings, eight texture-residual checks and nine strength/transition
-controls pass their decoded quality checks. Every tested output is scanned
+retention ceilings and nine strength/transition controls passed their individual
+checks. The claimed eight texture-residual passes were invalid: the prototype
+runner still pointed those checks at `controlled-3`. Exact-build qualification
+of core `f9d087ca` caught residual ratios of 1.273 and 1.219 in `detail_coarse`
+and `woven_coarse`, exceeding the unchanged 1.10 limit. The earlier separate
+cost pass combined mismatched evidence and did not qualify prototype 7.
+`qualification-final.json` and `texture-final.json` retain the rejection.
+The cost harness now requires the texture report's hash binding to match its
+controlled report, with a regression test that rejects stale evidence. Every tested output is scanned
 for synthesis stability; both grain-on and grain-off output are decoded.
 The local controls include positive and negative luma-colour coupling and
 uniform-grain controls around the strength-group boundaries.
@@ -77,14 +84,15 @@ improves from about 0.778 to 0.871 without changing QP. The complete output is
 packet bytes. Excluding that one measured startup difference, the earlier
 processing optimization still saves 2.396%.
 
-The first cost check retained the old rule comparing a two-second clip with
-no protected startup picture, and failed its 1% saving threshold by 1,494 bytes.
+A separately reviewed size calculation compared a two-second clip with
+no protected startup picture and missed its 1% saving threshold by 1,494 bytes.
 `startup-cost-accounting.json` records the resolution. The cost regression now
 separately measures this first packet only when exactly frame zero is retained
 and the reference has no source fallback. Full file sizes remain reported.
 The rejected prototype with 47 fallback frames still fails this check. No
 Tdarr size limit or picture-quality bound was relaxed. The original failed
-qualification record remains intact; its resolved cost evidence is separate.
+qualification record remains intact. The startup byte calculation remains
+valid, but it does not resolve the independently failed texture checks.
 
 On the 150-second Gentlemen interval, ABBA means were 45.669 seconds for
 `02a6c86b` and 45.569 seconds for prototype 7 on the shared server. Output grew
@@ -95,6 +103,76 @@ performance guarantee. All real-clip grain-on/off decodes, timelines and
 synthesis scans pass; fixed/default-mode decoded pixels remain unchanged.
 
 ## Coverage and limits
+
+### Spatial texture and transient brightness follow-up
+
+Correcting amplitude while retaining the old residual's AR shape increased
+fine-grain energy in the coarse controls. New independently measured spatial
+covariances describe the required synthesis after subtracting retained-base
+energy. The matrix must be positive definite with a bounded sampling ridge;
+sparse or inconsistent evidence preserves the source. The occupied strength
+curve remains independently checked after fitting.
+
+This exposed a second problem: some fitted coarse templates changed a band's
+mean briefly, even though its steady-state grain amplitude passed. Prototype
+9's coarse controls reached mean differences of 0.621 and 0.678 eight-bit code
+units. Prototype 10 also failed the larger local correlated/border controls.
+The lower-band check now covers every frame and all 12 brightness bands, with
+the same 0.5-code limit used by the local controls. The texture test retains
+its established steady-state bound and now checks transient HF excess too.
+The local correlated controls also measure fine-grain energy, alongside mean
+and total amplitude. These are source-labelled engineering checks, not HDR
+perceptual scores or a promise of exact grain reproduction.
+
+The recovered fit limits low-frequency amplification and normalizes strength
+from the quantized AR transfer spectrum. Its high-frequency energy must also
+agree with the independent source-minus-base target. A stronger constraint
+alone was insufficient: prototype 12 fixed brightness but raised decoded
+coarse HF residual medians to 1.445 and 1.362. Prototype 13 still had a transient
+texture failure. Their failed results remain recorded. Prototype 14 passes
+the joint decoded checks; it does not qualify the earlier coarse size saving.
+
+`qualification-14.json` records 16 controlled cases at both retention caps,
+eight texture cases, 23 local-grain controls, 19 picture controls, the real
+clips and the quick ripple gate. Its `quality_passed` is true and its overall
+`passed` remains false because the old coarse optimization check still fails.
+The tested binary SHA-256 is
+`da03108266b12639da74f4fb5ac2a88c762568fb7c76da23f69859ab74a3396f`.
+All 48 frames of the three coarse controls at cap 0.1 preserve source.
+`preserved-coarse-14/report.json` proves that their grain-on and grain-off
+decoded pixels are identical to plain encodes with the same candidate and QP.
+This is measured source preservation with its full byte cost, not successful
+reproduction of the old coarse optimization.
+
+On the 150-second Gentlemen interval, the new ABBA mean is 28.968 seconds,
+versus 29.052 seconds for `02a6c86b` automatic retention on the shared host.
+The new output is 51,759,133 bytes versus 47,351,720 (+9.308%), with 2,134 versus
+98 source-fallback frames out of 3,600. These figures compare two automatic
+modes, not the current production default, and do not establish full-title
+admission. The other real clips also retain additional source information
+and cost more bytes. Ordinary/default decoded pixels match in the bounded
+real-clip comparisons. Full production-setting measurements remain pending.
+
+AV1 synthesizes grain from a seeded finite template; its normative process
+does not provide an encoder-controlled global mean correction.
+See the [AV1 film-grain synthesis specification](https://aomediacodec.github.io/av1-spec/av1-spec.pdf).
+The checked-in NVENC API also exposes no grain-seed input. The connection
+between finite-template low-frequency amplification and the measured offsets
+is an inference supported by the constrained-fit trials. It is not a new
+diagnosis of damage in existing library files. Fits which cannot jointly meet
+the measured fidelity constraints retain source pixels and can cost more
+bytes. They must still meet the separate Tdarr admission budget before use.
+
+The original coarse optimization check remains intact and continues to fail
+when repeated source retention loses that saving. A texture or brightness
+failure must not be excused by a byte saving, nor can the old optimization be
+claimed from a model which fails the new decoded checks.
+
+Full-frame metadata recording now uses bounded streaming FFprobe JSON. The
+deferred XML-printer investigation remains deferred. JSON and legacy XML
+trace digests have explicit format identities and cannot be mixed into a
+false report of metadata loss. The trusted 736-frame dual-HDR reference was
+recorded successfully with all expected metadata types.
 
 These measurements establish the named controls and intervals. Sparse or
 structured regions cannot certify the whole picture. The correlated-grain

@@ -2,6 +2,7 @@
 """Check decoded retention cost/fidelity against the preceding auto candidate."""
 import argparse
 import json
+import math
 from pathlib import Path
 import statistics
 import subprocess
@@ -9,6 +10,19 @@ import subprocess
 from fidelity_compare import CASES
 from production_compare import sha
 from texture_residual import CASES as TEXTURES
+
+
+def brightness_errors(trace, frames):
+    if [row.get('frame') for row in trace] != list(range(frames)):
+        return ['complete per-frame brightness evidence is required']
+    errors = []
+    for row in trace:
+        shifts = row.get('band_mean_shift_8bit', [])
+        if len(shifts) != 12 or not all(math.isfinite(value) for value in shifts):
+            errors.append(f"frame {row['frame']}: all 12 finite band means are required")
+        elif max(abs(value) for value in shifts) > 0.5:
+            errors.append(f"frame {row['frame']}: brightness-band mean shift exceeds 0.5 eight-bit code units")
+    return errors
 
 
 def startup_source_bytes(current, reference):
@@ -44,7 +58,9 @@ def startup_source_bytes(current, reference):
     return max(0, sizes[1] - sizes[0])
 
 
-def check(report, previous, residual):
+def check(report, previous, residual, controlled_report_sha256=None):
+    if not controlled_report_sha256 or residual.get('report_sha256') != controlled_report_sha256:
+        return ['Texture evidence belongs to a different controlled report']
     errors = []
 
     def require(condition, message):
@@ -67,6 +83,8 @@ def check(report, previous, residual):
         require(case['source'] == old[name]['source'], name + ': source changed')
         for key, current in case['arms'].items():
             require(current['qp'] == 20, name + ': quality setting changed')
+            errors.extend(name + '/' + key + ': ' + error for error in
+                          brightness_errors(current['flat_trace'], case['source']['frames']))
             require(all(m.get('retain', 0) <= current['retain_max'] + 1e-6 for m in current['model_frames']),
                     name + ': retention ceiling exceeded')
             if key not in old[name]['arms']:
@@ -103,7 +121,23 @@ def check(report, previous, residual):
         current = case['arms']['max-0.1-qp20']['median_hf_residual_ratio']
         require(prior - 0.05 <= current <= 1.10,
                 case['name'] + ': texture-region residual loss or excess')
+        # Keep the established steady-state bounds and separately reject a
+        # short spike, including the startup frames excluded from that median.
+        trace = case['arms']['max-0.1-qp20'].get('all_frame_trace', [])
+        frames = next(c['source']['frames'] for c in report['cases'] if c['name'] == case['name'])
+        require([row.get('frame') for row in trace] == list(range(frames)),
+                case['name'] + ': complete per-frame texture evidence is required')
+        require(all(0.0 <= row.get('hf_residual_ratio', float('inf')) <= 1.15 for row in trace),
+                case['name'] + ': transient texture-region residual excess')
     return errors
+
+
+def check_files(report_path, previous_path, residual_path):
+    residual = json.loads(residual_path.read_text())
+    if residual.get('report_sha256') != sha(report_path):
+        return ['Texture evidence belongs to a different controlled report']
+    return check(json.loads(report_path.read_text()),
+                 json.loads(previous_path.read_text()), residual, sha(report_path))
 
 
 if __name__ == '__main__':
@@ -112,6 +146,6 @@ if __name__ == '__main__':
     p.add_argument('--previous', type=Path, required=True)
     p.add_argument('--residual', type=Path, required=True)
     args = p.parse_args()
-    errors = check(*(json.loads(path.read_text()) for path in [args.report, args.previous, args.residual]))
+    errors = check_files(args.report, args.previous, args.residual)
     print(json.dumps(dict(passed=not errors, errors=errors), indent=2))
     raise SystemExit(bool(errors))

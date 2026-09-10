@@ -186,6 +186,10 @@ source-defined regions on every frame and plane. The coupled controls also
 measure source/output luma-colour correlation. This exposes local defects
 that an average amplitude can hide; passing does not establish complete
 spatial texture or perceptual fidelity.
+Correlated controls also compare fine-grain energy with the source and plain
+encode. Controlled brightness bands are checked on every frame, including
+startup; opposing shifts and isolated excursions cannot disappear into an
+average. Texture evidence must be hash-bound to the exact controlled report.
 
 ```sh
 python3 tests/fgs/local_grain_regression.py \

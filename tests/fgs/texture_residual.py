@@ -48,9 +48,9 @@ def measure(report, root, reference):
         mask = np.zeros((height, width), dtype=bool)
         for band in range(1, 11):
             mask[24:height // 2 - 24, band * 64 + 16:(band + 1) * 64 - 16] = True
-        clean = [highpass(ideal.luma(frame))[mask] for frame in range(8, info['frames'])]
+        clean = [highpass(ideal.luma(frame))[mask] for frame in range(info['frames'])]
         sigmas = [float((highpass(source.luma(frame))[mask] - texture).std())
-                  for frame, texture in zip(range(8, info['frames']), clean)]
+                  for frame, texture in enumerate(clean)]
         baseline = case['baseline']
         encoded = Path(baseline['command'][baseline['command'].index('-o') + 1])
         entries = [('production', encoded.parent, baseline)]
@@ -65,8 +65,8 @@ def measure(report, root, reference):
             off, on = [checked_reader(directory / f'grain-{grain}.yuv', info,
                                       evidence['decoded_hashes'][f'grain-{grain}.yuv'])
                        for grain in [0, 1]]
-            ratios, gains = [], []
-            for frame, texture, sigma in zip(range(8, info['frames']), clean, sigmas):
+            ratios, gains, trace = [], [], []
+            for frame, (texture, sigma) in enumerate(zip(clean, sigmas)):
                 denominator = float(np.sum(texture * texture))
                 if not denominator > 0 or not sigma > 0:
                     raise ValueError('Texture projection has no signal')
@@ -75,9 +75,12 @@ def measure(report, root, reference):
                 gains.append(float(np.sum(base * texture)) / denominator)
                 rendered_gain = float(np.sum(rendered * texture)) / denominator
                 ratios.append(float((rendered - rendered_gain * texture).std()) / sigma)
-            row['arms'][arm] = dict(median_base_detail_gain=statistics.median(gains),
-                median_hf_residual_ratio=statistics.median(ratios),
-                min_hf_residual_ratio=min(ratios), max_hf_residual_ratio=max(ratios))
+                trace.append(dict(frame=frame, base_detail_gain=gains[-1],
+                                  hf_residual_ratio=ratios[-1]))
+            row['arms'][arm] = dict(median_base_detail_gain=statistics.median(gains[8:]),
+                median_hf_residual_ratio=statistics.median(ratios[8:]),
+                min_hf_residual_ratio=min(ratios[8:]), max_hf_residual_ratio=max(ratios[8:]),
+                all_frame_trace=trace)
         rows.append(row)
         print(name, {key: round(value['median_hf_residual_ratio'], 3)
                      for key, value in row['arms'].items()}, flush=True)

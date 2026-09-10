@@ -11,9 +11,12 @@ import sys
 
 from fidelity_compare import CASES as CONTROLLED_CASES
 from texture_residual import CASES as TEXTURE_CASES
+from production_compare import sha
 
 
-def check(report, residual):
+def check(report, residual, controlled_report_sha256=None):
+    if not controlled_report_sha256 or residual.get('report_sha256') != controlled_report_sha256:
+        return ['Texture evidence belongs to a different controlled report']
     errors=[]
     def require(ok, message):
         if not ok: errors.append(message)
@@ -64,6 +67,6 @@ def check(report, residual):
 
 
 if __name__=='__main__':
-    failures=check(json.loads(Path(sys.argv[1]).read_text()),json.loads(Path(sys.argv[2]).read_text()))
+    failures=check(json.loads(Path(sys.argv[1]).read_text()),json.loads(Path(sys.argv[2]).read_text()),sha(Path(sys.argv[1])))
     print(json.dumps(dict(passed=not failures,failures=failures),indent=2))
     raise SystemExit(bool(failures))
