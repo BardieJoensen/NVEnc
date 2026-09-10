@@ -32,6 +32,8 @@ CASES = {
     'chroma_quiet_coupled': dict(plane=1, weak=0, coupling=.8),
     'chroma_quiet_anticoupled': dict(plane=1, weak=0, coupling=-.8),
     'chroma_quiet_transition': dict(plane=1, weak=0, transition=True),
+    'chroma_coupling_entry': dict(plane=1, weak=3, strong=4, luma_correlated=True,
+                                 coupling=.8, quiet_chroma_until=16),
     'luma_medium': dict(plane=0, weak=3),
     'luma_medium_correlated': dict(plane=0, weak=3, correlated=True),
     'luma_boundary_4': dict(plane=0, weak=4, strong=4),
@@ -84,7 +86,7 @@ def generate(root, spec, frames=48, width=768, height=432):
             for plane, strength in enumerate([spec.get('strong', 6), 3, 3]):
                 w, h = (width, height) if plane == 0 else (width // 2, height // 2)
                 noise = rng.normal(size=(h, w))
-                if spec.get('correlated') and spec['plane'] == plane:
+                if (spec.get('correlated') and spec['plane'] == plane) or (spec.get('luma_correlated') and plane == 0):
                     for axis in [0, 1]:
                         noise = (np.roll(noise, 1, axis) + 2 * noise + np.roll(noise, -1, axis)) / 4
                     noise /= noise.std()
@@ -98,6 +100,8 @@ def generate(root, spec, frames=48, width=768, height=432):
                 if plane == spec['plane']:
                     weak = spec['weak'] if not spec.get('transition') or 16 <= frame < 32 else strength
                     sigma = np.where(low_region(spec, frame, w, h), weak, strength)
+                    if frame < spec.get('quiet_chroma_until', 0):
+                        sigma = 0
                 mean = np.where(low_region(spec, frame, w, h), 16, 128) if spec.get('black') and plane == 0 else 128
                 data = np.clip(np.rint((mean + noise * sigma) * ds), 0, (1 << bits) - 1).astype(dtype)
                 y4m.write(data.tobytes())
@@ -137,7 +141,7 @@ def measure(root, directory, spec, info):
             delta = (pictures['on'][plane].astype(float) - pictures['off'][plane]) / ds
             values['synthesis_sigma'] = [float(delta[mask].std()) for mask in regions]
             row['planes'].append(values)
-        if spec.get('coupling'):
+        if spec.get('coupling') and frame >= spec.get('quiet_chroma_until', 0):
             row['correlation'] = {}
             for key in ['source', 'off', 'on']:
                 y = pictures[key][0].astype(float).reshape(height // 2, 2, width // 2, 2).mean((1, 3))
@@ -167,7 +171,8 @@ def check(case, arm='candidate'):
                 lower = min(.75 * source['sigma'], .95 * ordinary['sigma'])
                 if output['sigma'] > upper or (source['sigma'] >= 2 and output['sigma'] < lower):
                     errors.append(f'frame {row["frame"]} plane {plane} region {region}: grain amplitude {output["sigma"]:.3f}, source {source["sigma"]:.3f}, plain {ordinary["sigma"]:.3f}')
-                if case['spec'].get('correlated') and plane == case['spec']['plane']:
+                if ((case['spec'].get('correlated') and plane == case['spec']['plane'])
+                        or (case['spec'].get('luma_correlated') and plane == 0)):
                     hf_upper = max(1.15 * source['hf_sigma'], ordinary['hf_sigma'] * 1.05 + .1)
                     if output['hf_sigma'] > hf_upper:
                         errors.append(f'frame {row["frame"]} plane {plane} region {region}: excess fine-grain energy')

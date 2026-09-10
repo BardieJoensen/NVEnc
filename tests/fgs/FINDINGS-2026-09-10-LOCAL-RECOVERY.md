@@ -1,7 +1,8 @@
 # Local grain recovery and Tdarr acceptance
 
-Status: **prototype 14 passes picture/texture qualification; coarse optimization
-fails, final build/full-source acceptance and Tdarr canary pending**. This report does not close the broader
+Status: **a subsequent colour-grain transition rejected core ebad733e;
+the targeted fix passes, final build/full-source acceptance and Tdarr canary
+pending; coarse optimization remains failed**. This report does not close the broader
 [work through production](WORK-TO-PRODUCTION.md).
 
 Evidence directory:
@@ -173,6 +174,24 @@ deferred XML-printer investigation remains deferred. JSON and legacy XML
 trace digests have explicit format identities and cannot be mixed into a
 false report of metadata loss. The trusted 736-frame dual-HDR reference was
 recorded successfully with all expected metadata types.
+
+### Colour grain appearing after a quiet interval
+
+Core `ebad733e` passed the then-existing 23 local controls, but review found
+that a fresh covariance fit could activate colour grain after the held model
+had been quiet. Checking only the held model's independence missed coupling
+in the new model. A 24th control, `chroma_coupling_entry`, reproduces the fault:
+source Y/Cb correlation at frame 16 is 0.796; the same-QP plain encode is 0.741,
+and the rejected candidate falls to 0.636. Its synthesis syntax scan passes,
+so syntax stability alone does not establish colour-grain fidelity.
+
+Eligibility is now checked again on the freshly fitted model before it can
+replace the held parameters. The targeted prototype retains that source frame
+and measures correlation 0.743, with no local amplitude, mean, texture or
+coupling failures across all 48 frames. The rejected exact binary and the
+targeted regression remain recorded in `ebad-followup-rejection.json` and
+`coupling-entry-recheck/report.json`. This targeted pass does not qualify the
+replacement build or complete the full-source/Tdarr acceptance stages.
 
 These measurements establish the named controls and intervals. Sparse or
 structured regions cannot certify the whole picture. The correlated-grain
