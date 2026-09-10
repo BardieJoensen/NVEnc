@@ -130,6 +130,7 @@ def build_flow(original, candidate_sha, promotion=False):
         nodes[name]['inputsDB'] = dict(phase=phase, expectedEncoderSha256=candidate_sha)
     for name in SIZE_NODES:
         nodes[name]['inputsDB'] = {'maxPercent': '95'}
+        nodes[name]['name'] = 'Output <= 95% with identical retained audio'
     removed = {SELECT}
     if any(target in removed for (source, _), target in routes.items() if source not in removed):
         raise ValueError('Unexpected dependency on a measured-only stage')

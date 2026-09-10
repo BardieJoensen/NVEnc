@@ -2,8 +2,8 @@
 
 This is a separate, unactivated alternative to the
 [10% measured-baseline pilot](TDARR-PILOT.md). The measured pilot remains
-unchanged. This alternative is being qualified in an isolated review flow;
-it is not yet the live library policy.
+unchanged. This alternative has passed the isolated review flow, full staged
+decodes/HDR comparison and rollback; it is not the live library policy.
 
 Complete episode candidates for core `9c1664d4` cost about 20–30% more video
 bytes than the current encoder, while still saving at least 46% against their
@@ -43,6 +43,8 @@ filesystem change checks, not a full source-content hash guarantee.
 The existing Dolby Vision guard and final validator follow these checks.
 Routine validation retains its existing work budget; exhaustive offline
 decodes and HDR correspondence tests are not added to every Tdarr job.
+The separately qualified HDR decoder-thread change reduces sampling time
+while checking the same frames and metadata.
 
 Prepare a new bundle with immutable local image IDs:
 
@@ -71,6 +73,37 @@ metadata preservation, playback yielding and rollback in the isolated review
 flow. Keep the source copies read-only and the review directory outside the
 library and transcode cache. The guard evidence remains in job state and logs;
 the staging receipt records the accepted source-size measurement.
+
+Verify plugin access as the actual Tdarr worker account, as well as comparing
+file hashes. In the isolated trial, `COPY --chmod=0644` also created the new
+plugin directories without traversal permission. Root could read and hash all
+150 plugin files while the worker could not load the new plugin. Set the
+`fgsSourceGuard` and `1.0.0` directories to mode `0755` and the JavaScript files
+to `0644`, then verify their hashes using the worker UID/GID inside the final
+image. A server restart alone does not fix this installation error.
+
+When scripting the isolated trial through Tdarr's API, read back the library
+ID assigned on insertion. Resolve the connected runtime node ID from
+`/api/v2/get-nodes` for node-control calls; it differs from the node name used
+by persistent `NodeJSONDB` settings. Confirm actual worker registration and
+pause state before dispatching jobs.
+
+The September 10 trial accepted the 765-frame Bridge and 736-frame Shining
+clips at 9.928% and 17.531% of their source-relative baselines. It rejected
+the 600-frame interlaced output at 131.57%, retained all three originals,
+verified actual encoder pause/resume, and restored the prior lab image,
+flow and plugins. Every HDR frame retains its expected metadata. Encoded
+repeats differ; all-frame source-error measurements are recorded in the
+[qualification findings](../../tests/fgs/FINDINGS-2026-09-10-LOCAL-RECOVERY.md).
+Complete-episode costs remain 20–30% above the ordinary encoder, and the
+source-preserving mode uses a reliable synthesis model on only about 1% of
+the three measured episodes. This is a tested storage-policy choice, not
+a solution to those model-coverage and cost limitations.
+
+Tdarr can regenerate `nodePlugins.Zip` after startup. The installer verifies
+member contents, names, file types and permissions before recognizing an
+equivalent repack of a pinned archive. It still restores the prepared exact
+rollback archive, and rejects changed or duplicate members.
 
 Tests:
 

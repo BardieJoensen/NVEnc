@@ -1,0 +1,11 @@
+diff --git a/configs/tdarr/server/Tdarr/Plugins/FlowPlugins/LocalFlowPlugins/video/validateTranscodeOutput/1.0.0/index.js b/configs/tdarr/server/Tdarr/Plugins/FlowPlugins/LocalFlowPlugins/video/validateTranscodeOutput/1.0.0/index.js
+--- a/configs/tdarr/server/Tdarr/Plugins/FlowPlugins/LocalFlowPlugins/video/validateTranscodeOutput/1.0.0/index.js
++++ b/configs/tdarr/server/Tdarr/Plugins/FlowPlugins/LocalFlowPlugins/video/validateTranscodeOutput/1.0.0/index.js
+@@ -2060,6 +2060,6 @@
+ var probeFrameMetadata = function (path, duration, selector) {
+     var raw = childProcess.execFileSync(FFPROBE,
+-        ['-v', 'error', '-select_streams', selector || 'v:0', '-show_frames',
++        ['-v', 'error', '-threads', '4', '-select_streams', selector || 'v:0', '-show_frames',
+             '-read_intervals', buildIntervals(duration),
+             '-show_entries', 'frame=side_data_list', '-of', 'json', path],
+         { maxBuffer: 64 * 1024 * 1024 }).toString();

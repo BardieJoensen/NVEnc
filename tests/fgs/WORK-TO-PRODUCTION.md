@@ -1,7 +1,8 @@
 # Encoder work through production
 
-Status: **ordinary encoder deployed; automatic-retention work still in progress;
-approved library work running**, 2026-09-10.
+Status: **ordinary encoder and faster HDR validation deployed; automatic-retention
+qualification complete with material cost/coverage limits and rollout policy
+unresolved; approved library work running**, 2026-09-10.
 
 The goal is to finish the encoder improvements, resolve measured quality,
 reliability, speed and storage costs, and integrate the validated result into
@@ -9,10 +10,14 @@ Tdarr. The evidence-based library audit and approved repairs continue alongside
 that work. A completed experiment is evidence toward this goal; it does not
 close the overall task.
 
-Core `02a6c86b` closes one quality-fix iteration. The broader automatic-retention
-task remains open: recover avoidable whole-frame fallbacks, audit the remaining
-local-grain coverage, measure the final candidate on full sources, and finish
-the concrete Tdarr acceptance/integration path. The active ledger for that work
+Core `9c1664d4` completes the subsequent local/chroma recovery iteration,
+exact-build quality checks, full-source measurements, actual measured and
+source-savings Tdarr trials, staged artifact checks and rollback. Automatic
+outputs still exceed the unchanged 10% cap on all three full sources, and
+the coarse optimization still misses its target. The tested alternative
+requires savings versus originals and allows more bytes than the ordinary
+encoder; it awaits a storage-policy decision before broader activation.
+The active ledger for that work
 is `/opt/docker-apps/logs/fgs-ripple-repair-20260906/auto-retention-production-20260910/work-plan.json`.
 
 ## Quality requirements for further encoder work
@@ -41,10 +46,10 @@ The September 10 automatic-retention iteration addresses these questions:
 
 The [picture findings](FINDINGS-2026-09-10-PICTURE.md) retain the demonstrated
 failures, rejected prototypes, decoded comparisons, storage costs and final
-qualification. The additional local grain guard covers approximately
-independent luma grain; strongly correlated grain, sparse evidence and fine
-local chroma-grain energy remain outside that guard's calibrated scope.
-The existing model checks still apply. These controlled optional-mode faults
+qualification. Subsequent local recovery adds independent colour checks and
+constrained spatial covariance fitting. Unsupported, coupled or insufficient
+evidence preserves source picture before encoding. The existing model checks
+still apply. These controlled optional-mode faults
 do not establish additional damaged library titles or justify new downloads.
 
 Aggregate quality scores alone do not qualify a candidate. Future local
@@ -59,8 +64,8 @@ pilots; the existing routine Tdarr validation budget remains unchanged.
 
 The [local recovery findings](FINDINGS-2026-09-10-LOCAL-RECOVERY.md) record the
 subsequent source-population, correlated-energy and component-restoration
-work, its cost measurements, rejected prototypes and outstanding final
-acceptance stages.
+work, its cost measurements, rejected prototypes, completed acceptance and
+the remaining storage-policy and grain-model limits.
 
 ## Established
 
@@ -80,11 +85,11 @@ acceptance stages.
 | Work | Required outcome |
 |---|---|
 | Production integration | Complete: pinned core 497caa64 deployed; real scheduler, staged outputs, live hashes and rollback verified |
-| Storage policy | Implemented: ordinary retain=0 and existing savings rules; optional auto retention remains a separate measured-source pilot |
+| Storage policy | Ordinary retain=0 and existing savings rules; both optional policies tested, with broader source-savings activation awaiting a decision |
 | Repeat variability | Bounded qualification complete; picture impact measured, operating policy recorded, no unsupported deterministic-output claim |
 | Format coverage | Available HDR10+/P7 MEL and true-interlace paths pass; FEL/uncertain source video is preserved |
-| Speed and overhead | Complete for the configured rollout: tested byte-accounting optimization, bounded DV guard, existing final validator unchanged |
-| Further automatic-retention quality | Controlled colour/local-grain faults fixed and source coverage expanded; remains separate from the ordinary production mode and its validation budget |
+| Speed and overhead | Byte-accounting optimization and bounded DV guard retained; four-thread HDR sampling deployed after identical-metadata checks, 90 unit tests and actual-node validation/rollback |
+| Further automatic-retention quality | Controlled colour/local-grain faults fixed and full-source/Tdarr acceptance complete; source preservation still costs 20–30% more bytes on measured episodes and leaves about 1% usable synthesis coverage |
 | Library remediation | Running in background; repair-worker DV guards and metadata fixes installed, evidence-based later recovery remains under the download hold |
 
 The active operational ledger is
@@ -105,7 +110,9 @@ The 10% measured-baseline limit remains a trial setting requiring a complete
 matching baseline. The ordinary production flow keeps default retention and
 its existing source-relative savings policy, so it gains neither a second
 encode nor a source-hash pass. Optional automatic detail retention remains
-limited to the separate measured pilot.
+outside broad production activation. The separate source-savings review
+alternative has passed actual accepted/rejected jobs and restoration without
+changing the 10% trial rule.
 
 ## Evidence already completed
 
