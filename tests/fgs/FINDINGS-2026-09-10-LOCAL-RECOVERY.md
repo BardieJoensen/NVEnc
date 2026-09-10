@@ -3,8 +3,11 @@
 Status: **core 9c1664d4 passes exact-build short/full-source quality qualification,
 ordinary and source-savings Tdarr acceptance, and rollback. All three full sources
 exceed the unchanged 10% trial cap; coarse optimization remains failed**.
-The faster HDR validator is deployed. Automatic-retention rollout still needs
-a storage-policy decision. This report does not close the broader
+The faster HDR validator is deployed. The subsequent
+[repair-period preparation](FINDINGS-2026-09-10-RETENTION-PREPARATION.md) defers
+the storage-policy decision until matched-size quality and playback evidence
+are available, and prepares more precise diagnostics while repairs run.
+This report does not close the broader
 [work through production](WORK-TO-PRODUCTION.md).
 
 Evidence directory:

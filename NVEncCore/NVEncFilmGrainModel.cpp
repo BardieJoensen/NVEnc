@@ -1005,37 +1005,47 @@ bool build_covariance_recovery_model(const FilmGrainGpuStats& stats, const int b
     return false;
 }
 
-bool can_restore_chroma_component(const FilmGrainGpuStats& stats,
+FilmGrainChromaRestoreReason chroma_restore_reason(const FilmGrainGpuStats& stats,
     const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int plane) {
-    if (plane < 1 || plane > 2 || params.chromaScalingFromLuma
-        || params.arCoeffLag != FGS_AR_LAG || params.arCoeffShiftMinus6 > 3) return false;
+    using Reason = FilmGrainChromaRestoreReason;
+    if (plane < 1 || plane > 2) return Reason::InvalidPlane;
+    if (params.chromaScalingFromLuma) return Reason::ScalingFromLuma;
+    if (params.arCoeffLag != FGS_AR_LAG) return Reason::UnsupportedLag;
+    if (params.arCoeffShiftMinus6 > 3) return Reason::InvalidShift;
     const auto coeffs = plane == 1 ? params.arCoeffsCbPlus128 : params.arCoeffsCrPlus128;
     const double signalled = std::abs(static_cast<int>(coeffs[FGS_AR_COEFFS]) - 128)
         / static_cast<double>(1 << (params.arCoeffShiftMinus6 + 6));
-    if (signalled > 1.0 / 16.0) return false;
+    if (signalled > 1.0 / 16.0) return Reason::SignalledCoupling;
     const auto& source = stats.plane[plane];
-    if (source.observations < 1024) return false;
+    if (source.observations < 1024) return Reason::InsufficientObservations;
     double energy = 0.0;
     uint64_t blocks = 0;
     for (int bin = 0; bin < FGS_STRENGTH_BINS; ++bin) {
-        if (!std::isfinite(source.binVarSum[bin]) || source.binVarSum[bin] < 0.0) return false;
+        if (!std::isfinite(source.binVarSum[bin]) || source.binVarSum[bin] < 0.0) return Reason::InvalidVariance;
         energy += source.binVarSum[bin];
         blocks += source.binBlockCount[bin];
     }
     const double predictor = static_cast<double>(source.ata[tri_index(FGS_AR_COEFFS_CHROMA, FGS_AR_COEFFS, FGS_AR_COEFFS)]);
-    if (!blocks || energy <= 0.0 || predictor <= 0.0) return false;
+    if (!blocks || energy <= 0.0) return Reason::MissingEnergy;
+    if (predictor <= 0.0) return Reason::MissingPredictor;
     const double targetEnergy = (energy / blocks) * source.observations;
     // Component-only recovery is qualified for nearly white colour grain.
     // Spatially correlated residuals have fewer independent observations;
     // preserve the whole source instead of trusting this sparse coupling fit.
     for (int i = 0; i < FGS_AR_COEFFS; ++i) {
-        if (std::abs(static_cast<double>(source.atb[i])) > 0.2 * targetEnergy) return false;
+        if (std::abs(static_cast<double>(source.atb[i])) > 0.2 * targetEnergy) return Reason::SpatialCorrelation;
     }
     const double denominator = std::sqrt(predictor * targetEnergy);
     const double correlation = std::abs(static_cast<double>(source.atb[FGS_AR_COEFFS])) / denominator;
     // This is a conservative eligibility check, not proof of independence.
     // Coupled or sparse evidence retains the complete source frame instead.
-    return std::isfinite(correlation) && correlation <= 0.05;
+    if (!std::isfinite(correlation)) return Reason::InvalidCorrelation;
+    return correlation <= 0.05 ? Reason::Eligible : Reason::MeasuredCoupling;
+}
+
+bool can_restore_chroma_component(const FilmGrainGpuStats& stats,
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int plane) {
+    return chroma_restore_reason(stats, params, plane) == FilmGrainChromaRestoreReason::Eligible;
 }
 
 } // namespace fgsmodel

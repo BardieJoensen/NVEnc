@@ -15,6 +15,8 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
 $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
     tests/fgs/local_strength_test.cpp NVEncCore/NVEncFilmGrainModel.cpp -o "$OUT/fgs_local_strength_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
+    tests/fgs/chroma_restore_test.cpp NVEncCore/NVEncFilmGrainModel.cpp -o "$OUT/fgs_chroma_restore_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
     tests/fgs/parser_test.cpp NVEncCore/NVEncFilmGrain.cpp -o "$OUT/fgs_parser_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/stability_test.cpp -o "$OUT/fgs_stability_test"
@@ -23,6 +25,7 @@ $CXX -std=c++17 -O2 -Wall tests/fgs/av1_grain_syntax_test.cpp -o "$OUT/fgs_grain
 $CXX -std=c++17 -O2 -Wall tests/fgs/display_spatial_test.cpp -o "$OUT/fgs_display_spatial_test"
 "$OUT/fgs_solver_test"
 "$OUT/fgs_local_strength_test"
+"$OUT/fgs_chroma_restore_test"
 "$OUT/fgs_parser_test"
 "$OUT/fgs_stability_test"
 "$OUT/fgs_scan_packet_test"
@@ -40,5 +43,7 @@ python3 tests/fgs/test_review_batch.py
 python3 tests/fgs/test_production_compare.py
 python3 tests/fgs/test_trial_admission.py
 python3 tests/fgs/test_retention_cost_regression.py
+python3 tests/fgs/test_retention_diagnostics.py
+python3 tests/fgs/test_retention_tradeoff.py
 python3 tests/fgs/test_hdr_metadata_trace.py
 python3 tests/fgs/test_dovi_conversion_regression.py

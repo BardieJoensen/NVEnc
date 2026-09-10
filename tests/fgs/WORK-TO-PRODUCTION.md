@@ -1,8 +1,8 @@
 # Encoder work through production
 
-Status: **ordinary encoder and faster HDR validation deployed; automatic-retention
-qualification complete with material cost/coverage limits and rollout policy
-unresolved; approved library work running**, 2026-09-10.
+Status: **ordinary encoder and faster HDR validation deployed; retention
+diagnostics and comparison preparation complete on CPU; heavy quality/size
+experiments deferred until the running repair finishes**, 2026-09-10.
 
 The goal is to finish the encoder improvements, resolve measured quality,
 reliability, speed and storage costs, and integrate the validated result into
@@ -16,9 +16,16 @@ source-savings Tdarr trials, staged artifact checks and rollback. Automatic
 outputs still exceed the unchanged 10% cap on all three full sources, and
 the coarse optimization still misses its target. The tested alternative
 requires savings versus originals and allows more bytes than the ordinary
-encoder; it awaits a storage-policy decision before broader activation.
+encoder. The storage-policy decision follows evidence of visible benefit and
+quality per byte against the current production encoder.
 The active ledger for that work
 is `/opt/docker-apps/logs/fgs-ripple-repair-20260906/auto-retention-production-20260910/work-plan.json`.
+
+The [repair-period preparation](FINDINGS-2026-09-10-RETENTION-PREPARATION.md)
+adds precise fallback diagnostics, prepares skipping unused covariance work,
+retains source/output references without copying payloads, and prepares
+matched-size comparisons. CPU tests pass. The CUDA changes still need GPU
+compilation and qualification; they are not a new production build.
 
 ## Quality requirements for further encoder work
 
@@ -85,7 +92,7 @@ the remaining storage-policy and grain-model limits.
 | Work | Required outcome |
 |---|---|
 | Production integration | Complete: pinned core 497caa64 deployed; real scheduler, staged outputs, live hashes and rollback verified |
-| Storage policy | Ordinary retain=0 and existing savings rules; both optional policies tested, with broader source-savings activation awaiting a decision |
+| Storage policy | Ordinary retain=0 and existing savings rules; the size-policy decision follows matched-size quality and playback evidence |
 | Repeat variability | Bounded qualification complete; picture impact measured, operating policy recorded, no unsupported deterministic-output claim |
 | Format coverage | Available HDR10+/P7 MEL and true-interlace paths pass; FEL/uncertain source video is preserved |
 | Speed and overhead | Byte-accounting optimization and bounded DV guard retained; four-thread HDR sampling deployed after identical-metadata checks, 90 unit tests and actual-node validation/rollback |
