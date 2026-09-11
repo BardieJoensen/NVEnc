@@ -1,5 +1,8 @@
 # Decoded film-grain review tools
 
+For current encoder/repair state, retained evidence and the next development
+steps, start with [the work and handoff](../../tests/fgs/WORK-TO-PRODUCTION.md).
+
 These read-only tools measure the grain that an AV1 decoder adds to a decoded
 base picture. They help locate periodic, directional or unusually strong grain
 for visual review. They do not need an original encode and do not judge source

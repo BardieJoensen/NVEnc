@@ -1,14 +1,34 @@
-# Encoder work through production
+# FGS encoder and library repair: current work and handoff
 
 Status: **ordinary encoder and faster HDR validation deployed; retention
 diagnostics and comparison preparation complete on CPU; heavy quality/size
 experiments deferred until the running repair finishes**, 2026-09-11.
+
+This is the canonical entry point for resuming this project. Read the current
+state and next steps here before using an older findings report or work ledger.
+Older reports describe their named builds and dates; a historical `complete`
+status does not close the present goal. Live queues, binaries and file
+identities must be checked again when work resumes. No chat history is required
+to find the working state, evidence and remaining tasks from this document.
+
+The working checkout is `/home/bardie/git-repos/NVEnc-fgs-fidelity`, branch
+`feat/fgs-detail-fidelity-20260908`. Other NVEnc worktrees under `git-repos` are
+not necessarily on this branch. The current machine-readable ledger is
+[/opt/docker-apps/logs/fgs-ripple-repair-20260906/retention-prep-20260910/work-plan.json](/opt/docker-apps/logs/fgs-ripple-repair-20260906/retention-prep-20260910/work-plan.json).
 
 The goal is to finish the encoder improvements, resolve measured quality,
 reliability, speed and storage costs, and integrate the validated result into
 Tdarr. The evidence-based library audit and approved repairs continue alongside
 that work. A completed experiment is evidence toward this goal; it does not
 close the overall task.
+
+The user's original aim is fast, space-efficient CUDA/NVENC AV1 with grain
+preservation comparable in intent to an SVT-AV1 grain workflow, for both UHD/HDR
+and ordinary 1080p SDR. Preserving source detail and avoiding ripple, banding,
+colour loss and unstable grain matter as much as throughput and size. Higher
+average VMAF alone does not justify a storage increase. Demonstrate visible
+benefit and compare at similar actual video-byte budgets before choosing an
+automatic-retention allowance.
 
 Core `9c1664d4` completes the subsequent local/chroma recovery iteration,
 exact-build quality checks, full-source measurements, actual measured and
@@ -18,7 +38,7 @@ the coarse optimization still misses its target. The tested alternative
 requires savings versus originals and allows more bytes than the ordinary
 encoder. The storage-policy decision follows evidence of visible benefit and
 quality per byte against the current production encoder.
-The active ledger for that work
+The qualification ledger for that optional build
 is `/opt/docker-apps/logs/fgs-ripple-repair-20260906/auto-retention-production-20260910/work-plan.json`.
 
 The [repair-period preparation](FINDINGS-2026-09-10-RETENTION-PREPARATION.md)
@@ -46,6 +66,156 @@ checks on the same frame across six saved full-episode logs. It distinguishes
 overlapping colour/local failures from source preservation after successful
 covariance recovery, and selects six short diagnostic targets plus the existing
 jacket regression. The report tests pass; new media work remains deferred.
+
+## Build and deployment state
+
+| Revision | Role | State at this handoff |
+| --- | --- | --- |
+| `497caa64` | Ordinary encoder, `retain=0`, bilateral | Deployed in Tdarr and repair workers; ripple protection and ordinary integration qualified |
+| `9c1664d4` | Optional automatic retention | Quality/operational qualification recorded; not broadly enabled; all three complete-source outputs exceed the unchanged 10% trial cap |
+| `5450a4fc` | Precise fallback traces and skipping unused covariance work | CPU checks passed; new CUDA build and output-preservation checks deferred |
+| `3ac80ceb` | Exact strength-curve comparison for model reuse | Full CPU suite and archived curve reproduction passed; intentional model decisions need GPU/temporal qualification |
+| `57c0e8ae` | Joined diagnostic reports and focused target selection | 13 diagnostic and seven tradeoff tests passed; six saved logs reanalyzed; no encoder code changed in this step |
+
+Subsequent documentation commits do not constitute a new encoder qualification.
+The preparation ledger records current source hashes and completed CPU commits;
+the rollout and qualification records retain the baseline revisions. The two
+measured baseline binaries are pinned in
+[comparison-manifest.json](/opt/docker-apps/logs/fgs-ripple-repair-20260906/retention-prep-20260910/comparison-manifest.json):
+
+- Ordinary `497caa64`: SHA-256
+  `bb7e75cbcb9097f1f1c7ac3347e7193c74caa6c7d57db1c3c77348cc27daf144`.
+  The deployed host artifact is `/opt/docker-apps/build/tdarr-node/nvencc`;
+  the manifest also names its retained study copy.
+- Optional `9c1664d4`: SHA-256
+  `8dff824c8d7360adac294f05e7c6032770f8594cf1c3b63961f50a854e3b0fec`.
+  Its retained path is under `auto-retention-production-20260910/bin/` in
+  the repair log root.
+- Ordinary flow `/opt/docker-apps/configs/tdarr-flow/flows/AV1NVENCflow1.json`:
+  SHA-256 `6cebd7cb63d540f61d9c142a9728ed4fbf0edaeaa3312eacae9ae7503126c7fe`,
+  verified again on September 11. Hashes are recorded identities, not a promise
+  that a future installation is unchanged.
+
+The faster four-thread HDR validator is already deployed. Its 90 checks and
+measured sample timing are recorded in the September 10 ledger; this does not
+add the expensive development studies to routine Tdarr validation. The repair
+coordinator owns the current Tdarr pause. Isolated trial containers are stopped.
+
+## What happens next
+
+**GPU trials are prepared, not running or scheduled to start automatically.**
+The user's resource decision is to finish the current ripple repair before new
+substantial encodes, video decodes, metric sweeps or hardware profiling. The
+latest observed state still has two active repair workers; use the live status
+when resuming, not this count or an old countdown. A failed or stalled service
+does not establish repair completion.
+
+1. Read this document and the current preparation ledger. Check the working
+   branch/changes, live repair queue, worker state and pause ownership. Preserve
+   the running repair/audit work and playback yield. Resolve the resource
+   condition before starting the deferred media work.
+2. Recheck retained source identities and hashes; build and pin the exact
+   candidate binaries in isolated build directories. Use `5450a4fc` separately
+   from `3ac80ceb` to distinguish the covariance optimization from intentional
+   temporal model changes. The existing comparison manifest still pins
+   `497caa64` and `9c1664d4`; it must not silently represent a newer build.
+3. Start with the six targets in
+   [pilot-selection.json](/opt/docker-apps/logs/fgs-ripple-repair-20260906/retention-prep-20260910/fallback-profiles-20260911/pilot-selection.json)
+   plus the existing jacket regression, about 270 seconds of source per arm.
+   Verify source-frame alignment and reproduce the historical target with the
+   qualified baseline. The initial context is at least ten nominal seconds;
+   extend it if a cold excerpt does not reproduce the full-run model state.
+4. Use precise source-reason masks and joined checks to identify the useful
+   model improvements. South Park's held-colour rejections overlap heavily
+   with local mismatch; the HDR episode often preserves source even after a
+   successful covariance fit. Legacy logs cannot identify every later reason.
+   Improving model coverage must continue to satisfy the picture checks.
+5. Qualify actual encoded output with the existing full GPU gate and relevant
+   fidelity, local/chroma, temporal, gradient and HDR regressions. Output
+   preservation for the speed change and temporal stability for the model-hold
+   correction are separate claims. Check labelled negatives as well as passing
+   controls. Do not regenerate a positive baseline merely to accept a candidate.
+6. Execute the prepared seven-window/70-command quality/size comparison,
+   refining operating points until actual video sizes are comparable. Compare
+   ordinary FGS, auto and plain AV1; calibrate bounded SVT controls. Pin metric
+   definitions, inspect worst scenes, and review grain/detail at playback speed.
+   Old campaigns narrow this work; they do not qualify the current build.
+7. Measure speed under controlled conditions with pause time accounted for.
+   Use the measured quality/byte/time results to resolve retention policy, then
+   qualify the chosen build in the isolated real Tdarr flow with staged output
+   and rollback checks before production integration. Existing ordinary
+   retention and source-savings rules remain the live policy meanwhile.
+
+The overall task remains open while required qualification, retention-cost
+resolution or approved library repairs remain outstanding. A clean CPU suite,
+completed pilot, or a deployed ordinary encoder is only one part of that goal.
+
+## Where the local state and evidence live
+
+The repair log root is
+`/opt/docker-apps/logs/fgs-ripple-repair-20260906`. Paths in this table are
+relative to that root unless shown as absolute. These are local records and
+private media references; they are not all stored in Git. Additional filenames
+in a row share the directory of that row's first path.
+
+| Path | What it answers |
+| --- | --- |
+| `retention-prep-20260910/work-plan.json` | Current unfinished encoder objective, constraints, source hashes, completed CPU work and deferred steps |
+| `retention-prep-20260910/comparison-manifest.json`, `comparison-plan.json` | Original-source and binary pins, seven quality/size windows and 70 planned commands; none executed by this preparation |
+| `retention-prep-20260910/fallback-profiles-20260911/` | Six-log joins, 459,396 decisions, exact diagnostic target profiles, source/log hashes and verification |
+| `retention-prep-20260910/model-hold-audit-20260911/` | CPU suite, old-code failing reproduction and archived Ju-on/curve evidence |
+| `retention-prep-20260910/existing-log-analysis.json`, `chroma-equivalence.json`, `cpu-suite.json` | Original six-log analysis and prior 40,000-decision colour equivalence/CPU checks |
+| `retention-prep-20260910/existing-campaign-inventory-20260911.json` | Older campaign/report inventory and 42 media candidate files; candidates have not been admitted as current references |
+| `retention-prep-20260910/reference-retention.json` | The 25 retained artifacts, recorded hashes/identities and hard-link storage accounting |
+| `auto-retention-production-20260910/work-plan.json`, `qualified-candidate-9c1664d4.json` | Optional-build quality, full-source costs, actual Tdarr acceptance, unresolved storage cost and pointer to current preparation |
+| `auto-retention-production-20260910/foreground-final-state-9c1664d4.json` | Recorded live-state restoration, paused ordinary node and stopped trial containers |
+| `production-readiness-20260909/work-plan.json`, `production-rollout-result.json`, `production-rollback-preflight.json` | Ordinary rollout, exact runtime/flow, real scheduler evidence and rollback |
+| `status.json`, `progress.md`, `ready-manifest.json` | Current approved repair progress and retained-source work; do not sum unrelated counters into a damage estimate |
+| `tdarr-pause-ownership.json`, `source-recovery-hold.json`, `watchability-policy.json` | Pause owner, download hold and recorded review policy |
+| `evidence/watchability/`, `reports/watchability-measurements.csv` | Contextual recurrence/severity audit; measurements need their coverage and viewing limits |
+| `evidence/grain-syntax/` | Syntax findings, current scans, unresolved entries and repair receipts; syntax accounting is separate from watchability |
+| `evidence/jacket-34m05/`, `evidence/movie-extent/`, `evidence/decoded-scenes/` | Original defect and scene/extent review evidence |
+
+Read-only operational checks can start with:
+
+```sh
+git -C /home/bardie/git-repos/NVEnc-fgs-fidelity status --short --branch
+systemctl --user status fgs-ripple-repair.service fgs-ripple-watchability-audit.service
+```
+
+The coordinator and audit scripts are under `/opt/docker-apps/scripts/`:
+`fgs-ripple-coordinator.py`, `fgs-ripple-repair.py`, and
+`fgs-ripple-watchability-audit.py`. The separate syntax-audit service/timer is
+documented in
+[the operations guide](/opt/docker-apps/docs/fgs-repair-and-audit.md).
+That September 8 guide's encoder revision and numerical counts are historical;
+use this handoff and live state for current deployment and queue decisions.
+
+### Retained media, archives and scratch space
+
+- `/media/merged-storage/validation-fixtures/nvenc-fgs/v1` holds the pinned
+  source clips and labelled positive/negative controls in
+  [FIXTURES.md](FIXTURES.md) and [fixtures.json](fixtures.json).
+- `/media/merged-storage/validation-fixtures/nvenc-fgs/retention-20260910`
+  and `/tmp/downloads/fgs-retention-prep-20260910/retained` hold the recent
+  references. Hard links share data: never modify these media in place. The
+  five primary originals keep 15,126,585,999 bytes alive without copying their
+  payloads. Unlinking an old name does not release those blocks while another
+  link remains. Recorded hashes need rechecking before new experiments.
+- `/tmp/downloads/fgs-retention-prep-20260910` holds preparation/reproduction
+  scripts. `/tmp/downloads/fgs-auto-retention-production-20260910` holds recent
+  full-source outputs and logs. The ledgers bind their exact identities; a
+  path's continued existence alone does not establish validity.
+- `/media/merged-storage/media/test-encodes` and
+  `/tmp/downloads/tdarr-temp` contain older campaign artifacts. Use the
+  [campaign inventory](FINDINGS-2026-09-11-EXISTING-CAMPAIGNS.md) for the Silo,
+  SVT, settings, HDR and whole-title reports rather than guessing from filenames.
+  Some old sources are missing or have changed at the same path. The
+  uncorrected Planet Earth timing sample is excluded.
+- Persistent gate tools/builds are under `${FGS_GATE_CACHE:-~/.cache/fgs-gate}`;
+  [TIERS.md](TIERS.md) explains exact-commit builds and pinned dependencies.
+  Git stores code and findings, not the private media or all raw results.
+  Preserve the referenced artifacts when cleaning scratch or test directories.
 
 ## Quality requirements for further encoder work
 
@@ -133,6 +303,19 @@ input. Exhaustive development audits do not become routine per-file Tdarr
 validation by accident. The unrelated FFprobe XML-printer investigation is
 documented and deferred.
 
+The user explicitly chose to continue encoder work without the FFprobe
+XML/AddressSanitizer investigation. Keep its findings documented; it is not a
+prerequisite for the next retention trial. The JSON metadata path and its
+qualification are recorded in the later integration/local-recovery reports.
+
+The earlier 1,981-file/9.5-TB figure described a conservative repair scope,
+not individually confirmed visible damage. Subsequent title/source identities
+and audit coverage matter. Review recurrence, severity and watchability before
+new recovery selections; prior source searches do not establish that no
+original can exist at another path or later date. The separate September 4
+import move-versus-copy/seeding incident was fixed and is not an open encoder
+task. Keep those histories distinct when resuming library recovery.
+
 The 10% measured-baseline limit remains a trial setting requiring a complete
 matching baseline. The ordinary production flow keeps default retention and
 its existing source-relative savings policy, so it gains neither a second
@@ -141,14 +324,35 @@ outside broad production activation. The separate source-savings review
 alternative has passed actual accepted/rejected jobs and restoration without
 changing the 10% trial rule.
 
-## Evidence already completed
+## Evidence and implementation index
 
-- [Encoder changes and cost study](FINDINGS-2026-09-08-COST.md)
-- [Full source metadata, admission and repeat localization](FINDINGS-2026-09-09-TRIALS.md)
-- [Post-encode integration and validator timing](FINDINGS-2026-09-09-INTEGRATION.md)
-- [DV conversion, size accounting and real scheduler integration](FINDINGS-2026-09-09-READINESS.md)
-- [Qualified automatic-retention recovery and edge protection](FINDINGS-2026-09-09-AUTO-RETENTION.md)
-- [Colour detail, local grain, gradients and transition qualification](FINDINGS-2026-09-10-PICTURE.md)
+Use the relevant report for exact commands, build identities, rejected
+prototypes, numerical results and limitations. Dates indicate historical
+context, not continuing deployment. In particular, July hypotheses and initial
+coarse-grain limits are not conclusions about today's corrected encoder.
+
+| Topic | Entry points |
+| --- | --- |
+| Tests, coverage and retained controls | [Test README](README.md), [tiers](TIERS.md), [fixtures](FIXTURES.md), [fixture manifest](fixtures.json), [full local gate](local_gate.sh) |
+| Grain inspection, HDR/display assumptions and visual review | [Review tools](../../tools/fgs/README.md), [display qualification](FINDINGS-2026-09-07-DISPLAY.md) |
+| Original analyzer work and historical limits | [July 17](FINDINGS-2026-07-17.md) |
+| Sampling correction, quality/size and texture-substitution history | [July 29 performance](FINDINGS-2026-07-29-PERFORMANCE.md), [July 30 texture](FINDINGS-2026-07-30-TEXTURE.md), [July 31 model statistics](FINDINGS-2026-07-31-MODEL-STATS.md) |
+| Recovered historical campaigns | [September 11 inventory](FINDINGS-2026-09-11-EXISTING-CAMPAIGNS.md), [July campaign plan](/opt/docker-apps/docs/fgs-measurement-campaign.md), [historical open questions](/opt/docker-apps/docs/fgs-open-questions.md) |
+| Reliability and source/detail behavior | [September 7 hardening](FINDINGS-2026-09-07-HARDENING.md), [September 8 fidelity](FINDINGS-2026-09-08-FIDELITY.md) |
+| Initial retention cost and repeat variability | [Cost](FINDINGS-2026-09-08-COST.md), [repeatability](FINDINGS-2026-09-08-REPEATABILITY.md) |
+| Full-source checks, admission, repeats and deferred XML issue | [September 9 trials](FINDINGS-2026-09-09-TRIALS.md) |
+| Post-encode assembly and validator time | [Integration](FINDINGS-2026-09-09-INTEGRATION.md) |
+| Ordinary production, DV, byte accounting and real scheduler | [Readiness evidence](FINDINGS-2026-09-09-READINESS.md), [rollout/rollback guide](../../tools/fgs/TDARR-ROLLOUT.md), [repair DV handling](../../tools/fgs/REPAIR-DOVI.md) |
+| Initial automatic-retention recovery and edge protection | [September 9 auto retention](FINDINGS-2026-09-09-AUTO-RETENTION.md) |
+| Colour detail, local grain, gradients, cuts and fades | [September 10 picture](FINDINGS-2026-09-10-PICTURE.md) |
+| Current optional recovery, coupled colour, costs and qualification | [Local recovery](FINDINGS-2026-09-10-LOCAL-RECOVERY.md) |
+| Measured size limit and separately tested source-savings alternative | [Measured pilot](../../tools/fgs/TDARR-PILOT.md), [source-savings review](../../tools/fgs/TDARR-SOURCE-SAVINGS.md) |
+| Retained references, precise traces and prepared comparisons | [Preparation](FINDINGS-2026-09-10-RETENTION-PREPARATION.md), [diagnosis/planning/comparison usage](../../tools/fgs/RETENTION-TRADEOFFS.md) |
+| CPU model-reuse correction and archived reproduction | [Model hold](FINDINGS-2026-09-11-MODEL-HOLD.md), [CPU regression](model_hold_test.cpp) |
+| Overlapping fallback checks and six diagnostic targets | [Fallback profiles](FINDINGS-2026-09-11-FALLBACK-PROFILES.md), [analyzer](retention_diagnostics.py) |
+| Repair/source matching, syntax audit and review limitations | [Operations guide](/opt/docker-apps/docs/fgs-repair-and-audit.md), live state/evidence map above |
 
 Those reports retain their completed-study status. This broader production
-work does not inherit that status.
+work does not inherit that status. When another stage completes, update this
+handoff and the current ledger with the exact revision/binary, validation,
+remaining work and any deployment change; keep the underlying reports intact.

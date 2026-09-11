@@ -1,5 +1,10 @@
 # Which tier catches which class of defect
 
+The [current project handoff](WORK-TO-PRODUCTION.md) records later ripple,
+colour/local-fidelity and model-reuse work, current build qualification and
+resource constraints. The July examples below explain why real-film controls
+are required; they are not an exhaustive history of defects found in this project.
+
 Two tiers, split by what they need rather than by how long they take. The split
 is not a convenience: **the GPU tier is not hosted and cannot be hosted**, and
 the reason matters more than the arrangement.
@@ -32,8 +37,8 @@ were invisible to every conventional signal at once:
 They were found by comparing against libaom as an external oracle, on real
 film, with a grain-applying decoder. A GitHub-hosted runner has no GPU, no
 libaom build, no film, and no labelled negatives. A hosted copy of the tier-2
-gate would therefore report success for both of the only two regressions this
-project has ever had. **A green tick that checks nothing is worse than no
+gate would therefore report success for both of those July regressions.
+**A green tick that checks nothing is worse than no
 check**, because it is evidence in the wrong direction.
 
 For the same reason `local_gate.sh` refuses to run (exit 2) when a
