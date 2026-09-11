@@ -17,6 +17,28 @@ decisions and reports missing decisions. Incomplete logs cannot qualify.
 Covariance first blockers are exclusive per event; whole-source reasons can
 overlap. Legacy omissions stay unknown. These are not visible-damage labels.
 
+Schema 2 adds `source_reason_overlap` and `decision_profiles`. The first
+partitions source-preserved frames into exact recorded reason combinations
+and an unknown bucket for legacy logs. The second joins each frame's final
+model outcome, source mask, covariance blocker/colour subconditions, logged
+local mismatch and rejected colour-restoration components. It records counts
+and the longest uninterrupted run of each combination for choosing diagnostic
+excerpts. Runs stop at changed decisions and missing frame IDs.
+
+Use these joins before choosing an optimization target: a successful covariance
+fit may still end in source preservation after another check fails. Marginal
+reason counts alone cannot show that overlap. An absent event does not prove a
+check passed, and a single recorded reason does not predict that removing it
+would recover the frame. A changed model changes subsequent checks and temporal
+state. These reports estimate neither byte savings nor visible quality.
+Legacy local-mismatch/restoration events can be joined, but they do not supply
+the missing source mask or colour subconditions.
+
+Profile frame IDs locate decisions in the original logged run. Convert them to
+nominal times only for candidate selection; verify actual frame alignment later.
+Short excerpts reset model history. Include context and confirm the target
+decision recurs before using an excerpt to diagnose or qualify a change.
+
 Trace version 1 uses these colour codes:
 
 | Code | Meaning |

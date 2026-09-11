@@ -41,6 +41,12 @@ The combined branch still needs GPU qualification, including temporal update
 stability; this intentional model-decision change is separate from the
 covariance optimization's output-preservation checks.
 
+The [joint fallback analysis](FINDINGS-2026-09-11-FALLBACK-PROFILES.md) joins
+checks on the same frame across six saved full-episode logs. It distinguishes
+overlapping colour/local failures from source preservation after successful
+covariance recovery, and selects six short diagnostic targets plus the existing
+jacket regression. The report tests pass; new media work remains deferred.
+
 ## Quality requirements for further encoder work
 
 The user's priority is source-picture fidelity and prevention of artifacts,
