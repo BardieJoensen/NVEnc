@@ -2,7 +2,7 @@
 
 Status: **ordinary encoder and faster HDR validation deployed; retention
 diagnostics and comparison preparation complete on CPU; heavy quality/size
-experiments deferred until the running repair finishes**, 2026-09-10.
+experiments deferred until the running repair finishes**, 2026-09-11.
 
 The goal is to finish the encoder improvements, resolve measured quality,
 reliability, speed and storage costs, and integrate the validated result into
@@ -33,6 +33,13 @@ SVT/settings studies, whole-title metrics and additional reference candidates.
 Use those records to refine the next comparisons before repeating old sweeps.
 Historical scores remain attached to their original runs; newly found media
 requires provenance checks before entering the current comparison manifest.
+
+The [CPU model-reuse correction](FINDINGS-2026-09-11-MODEL-HOLD.md) replaces a
+sparse brightness-grid comparison that could miss narrow strength-curve
+changes. The full CPU suite and an archived Ju-on curve reproduction pass.
+The combined branch still needs GPU qualification, including temporal update
+stability; this intentional model-decision change is separate from the
+covariance optimization's output-preservation checks.
 
 ## Quality requirements for further encoder work
 

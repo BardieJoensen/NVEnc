@@ -17,6 +17,8 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
 $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
     tests/fgs/chroma_restore_test.cpp NVEncCore/NVEncFilmGrainModel.cpp -o "$OUT/fgs_chroma_restore_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
+    tests/fgs/model_hold_test.cpp NVEncCore/NVEncFilmGrainModel.cpp -o "$OUT/fgs_model_hold_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
     tests/fgs/parser_test.cpp NVEncCore/NVEncFilmGrain.cpp -o "$OUT/fgs_parser_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/stability_test.cpp -o "$OUT/fgs_stability_test"
@@ -26,6 +28,7 @@ $CXX -std=c++17 -O2 -Wall tests/fgs/display_spatial_test.cpp -o "$OUT/fgs_displa
 "$OUT/fgs_solver_test"
 "$OUT/fgs_local_strength_test"
 "$OUT/fgs_chroma_restore_test"
+"$OUT/fgs_model_hold_test"
 "$OUT/fgs_parser_test"
 "$OUT/fgs_stability_test"
 "$OUT/fgs_scan_packet_test"
