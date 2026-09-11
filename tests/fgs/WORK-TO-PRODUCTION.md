@@ -27,6 +27,13 @@ retains source/output references without copying payloads, and prepares
 matched-size comparisons. CPU tests pass. The CUDA changes still need GPU
 compilation and qualification; they are not a new production build.
 
+The [September 11 evidence inventory](FINDINGS-2026-09-11-EXISTING-CAMPAIGNS.md)
+recovers the July measurement campaign, Silo retention operating points,
+SVT/settings studies, whole-title metrics and additional reference candidates.
+Use those records to refine the next comparisons before repeating old sweeps.
+Historical scores remain attached to their original runs; newly found media
+requires provenance checks before entering the current comparison manifest.
+
 ## Quality requirements for further encoder work
 
 The user's priority is source-picture fidelity and prevention of artifacts,
