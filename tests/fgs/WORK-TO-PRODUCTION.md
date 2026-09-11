@@ -104,6 +104,9 @@ coordinator owns the current Tdarr pause. Isolated trial containers are stopped.
 ## What happens next
 
 **GPU trials are prepared, not running or scheduled to start automatically.**
+The user explicitly confirmed manual start only: wait for the repair to finish
+and resume the trials when requested. Do not install a timer or trigger that
+starts them when the repair completes.
 The user's resource decision is to finish the current ripple repair before new
 substantial encodes, video decodes, metric sweeps or hardware profiling. The
 latest observed state still has two active repair workers; use the live status
