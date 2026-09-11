@@ -531,12 +531,27 @@ bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC
         { a.pointCrValue, a.pointCrScaling, b.pointCrValue, b.pointCrScaling, a.numCrPoints, b.numCrPoints },
     };
     for (const auto& curve : curves) {
-        for (int x = 0; x <= 255; x += 15) {
+        const auto compareAt = [&](const int x) {
             const double sigmaA = eval_scaling_curve(curve.va, curve.sa, curve.na, x) * sigmaScaleA;
             const double sigmaB = eval_scaling_curve(curve.vb, curve.sb, curve.nb, x) * sigmaScaleB;
             maxSigma = std::max(maxSigma, std::max(sigmaA, sigmaB));
             maxSigmaDiff = std::max(maxSigmaDiff, std::abs(sigmaA - sigmaB));
+        };
+        // Each curve and their difference are piecewise linear. Their extrema
+        // occur at a knot of either curve or an endpoint. A fixed brightness
+        // grid can miss a narrow changed peak and incorrectly hold the old
+        // model. Merge the sorted knots for an exact, allocation-free check.
+        compareAt(0);
+        uint32_t ia = 0, ib = 0;
+        while (ia < curve.na || ib < curve.nb) {
+            const int xa = ia < curve.na ? curve.va[ia] : 256;
+            const int xb = ib < curve.nb ? curve.vb[ib] : 256;
+            const int x = std::min(xa, xb);
+            if (x != 0 && x != 255) compareAt(x);
+            if (xa == x) ++ia;
+            if (xb == x) ++ib;
         }
+        compareAt(255);
     }
     if (maxSigmaDiff > std::max(0.10, relativeSigmaTolerance * maxSigma)) return false;
     const double coeffScaleA = 1.0 / (1 << (a.arCoeffShiftMinus6 + 6));
