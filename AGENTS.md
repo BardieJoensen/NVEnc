@@ -1,5 +1,13 @@
 # NVEnc
 
+## FGS project context
+
+For film-grain encoder, ripple repair, automatic retention or Tdarr work, start
+with [the current work and handoff](tests/fgs/WORK-TO-PRODUCTION.md). It identifies
+the active worktree, deployed versus experimental builds, current local ledger,
+resource constraints, evidence and exact next steps. Use it to resume context;
+older findings and completed experiment ledgers describe their recorded dates.
+
 NVIDIAのGPU/APUに搭載されているHWエンコーダ(NVENC)をNVENC SDKを介して呼び出す。
 単体で動作するコマンドライン版とAviUtl/AviUtl2出力プラグイン版がある。
 
