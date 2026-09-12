@@ -4,6 +4,21 @@ Status: **ordinary encoder and faster HDR validation deployed; retention
 diagnostics and comparison preparation complete on CPU; heavy quality/size
 experiments deferred until the running repair finishes**, 2026-09-11.
 
+**September 12 grain-flicker fix:** the ordinary encoder now uses isolated
+commit `e2c3a99d` in Tdarr and the repair workers. Rejected or unusable fits could
+previously restart synthesized grain for only one/two frames. The fix requires
+sustained usable evidence before restarting it, without weakening ripple guards.
+The original ripple gate, new source-referenced flash regression and actual
+Tdarr 2.87.01 runtime check pass. See [the investigation and limitations](FLICKER-20260912.md)
+and the [live ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/work-plan.json)
+for build hashes, deployment, per-scene checks, selected repairs and scope.
+Nine reviewed/reported source-backed episode repairs are being processed;
+E10 has passed the new witness check and been installed. A header scope scan
+continues; header candidates are not a visibly damaged-file total. The fix and
+regression are integrated here as `63b6cebb`; this later development build
+compiles and passes CPU tests but is not the deployed binary. Deferred retention
+GPU trials remain manual-start only after the ripple repair finishes.
+
 This is the canonical entry point for resuming this project. Read the current
 state and next steps here before using an older findings report or work ledger.
 Older reports describe their named builds and dates; a historical `complete`
