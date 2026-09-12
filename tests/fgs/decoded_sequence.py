@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 
 CHANNELS = ('luma', 'red', 'blue')
+AMPLITUDE_ABSOLUTE_MARGIN = .15
 
 
 def load(path, frames=3600, fps=24, correlations=False):
@@ -65,7 +66,7 @@ def compare(candidate, reference):
     """
     if len(candidate['seconds']) != len(reference['seconds']) or not np.array_equal(candidate['seconds'], reference['seconds']):
         raise ValueError('candidate and reference frames are not aligned')
-    failures = []
+    failures = []; low_amplitude_correlations = []
     switches = candidate['grain_present'] != reference['grain_present']
     if switches.any():
         failures.append(dict(check='grain scheduling changed', **runs(switches)))
@@ -76,12 +77,26 @@ def compare(candidate, reference):
         # near-tie without a meaningful texture change, even on unchanged code.
         correlation = np.any([abs(candidate[c + '_acf_' + str(i)] - reference[c + '_acf_' + str(i)]) > .10
                               for i in range(12)], axis=0)
-        amplitude = abs(candidate[c + '_rms'] - reference[c + '_rms']) > reference[c + '_rms'] * .10 + .15
+        # A normalized covariance has no amplitude floor: a few quantized
+        # pixels can change its direction near zero residual. A same-binary
+        # repeat exposed this at 0.016-0.022 RMS, with every patch below 0.066.
+        # Use the existing absolute amplitude margin for eligibility, taking
+        # the strongest patch in EITHER encode so localized or disappearing
+        # texture cannot be hidden by the nine-patch mean. Keep these changes
+        # in the report; scheduling, amplitude and temporal checks still apply.
+        measurable = np.maximum(candidate[c + '_max_patch_rms'],
+                                reference[c + '_max_patch_rms']) > AMPLITUDE_ABSOLUTE_MARGIN
+        if (correlation & ~measurable).any():
+            low_amplitude_correlations.append(dict(channel=c, **runs(correlation & ~measurable)))
+        correlation &= measurable
+        amplitude = abs(candidate[c + '_rms'] - reference[c + '_rms']) > reference[c + '_rms'] * .10 + AMPLITUDE_ABSOLUTE_MARGIN
         temporal = abs(np.diff(candidate[c + '_rms']) - np.diff(reference[c + '_rms'])) > .25
         for check, mask in [('texture changed', texture), ('amplitude changed', amplitude),
                             ('signed correlation vector changed', correlation),
                             ('adjacent-frame grain change', temporal)]:
             if mask.any():
                 failures.append(dict(check=check, channel=c, **runs(mask)))
-    return dict(passed=not failures, failures=failures, candidate=describe(candidate), reference=describe(reference),
+    return dict(passed=not failures, failures=failures,
+                low_amplitude_correlation_changes=low_amplitude_correlations,
+                candidate=describe(candidate), reference=describe(reference),
                 scope='All displayed frames, nine native spatial patches, SDR luma/red/blue. Pinned-fixture change detector; no universal perceptual verdict.')
