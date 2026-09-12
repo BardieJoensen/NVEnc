@@ -2273,6 +2273,10 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             // be uniform while the luma indexing its grain spans many levels.
             const int first = clamp(static_cast<int>(std::floor(metrics[i].minCode / depthScale)) - 1, 0, 255);
             const int last = clamp(static_cast<int>(std::ceil(metrics[i].maxCode / depthScale)) + 1, 0, 255);
+            // Neutral chroma in clipped black/white regions is not evidence
+            // about the active image's colour noise at neighboring levels.
+            if (metrics[i].maxCode / depthScale <= 20.0f
+                || metrics[i].minCode / depthScale >= 232.0f) continue;
             for (int plane = 0; plane < (prm->filmGrain.analyzeChroma ? 3 : 1); ++plane) {
                 const double mean = (plane ? metrics[i].chromaMean[plane - 1] : metrics[i].mean) / depthScale;
                 const double sigma = (plane ? metrics[i].chromaSigma[plane - 1] : metrics[i].sigma) / depthScale;
@@ -2285,16 +2289,21 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 }
                 quietSource.observe(plane, mean, sigma, modeled);
                 if (modeled - sigma > 0.25) {
-                    m_state->sourceCaps.preserveCurveInterval(plane, values[plane], counts[plane], first, last);
+                    // Retain source-supported variance; a quiet but nonzero
+                    // source is not a reason to force its whole range to zero.
+                    m_state->sourceCaps.preserveRange(plane, first, last, sigma / modeled);
                 }
             }
         }
     }
     bool sourceCurveLimited = false;
     if (modelValid && params.applyGrain) {
-        sourceCurveLimited |= m_state->sourceCaps.lowerCurve(0, params.pointYValue, params.pointYScaling, params.numYPoints);
-        sourceCurveLimited |= m_state->sourceCaps.lowerCurve(1, params.pointCbValue, params.pointCbScaling, params.numCbPoints);
-        sourceCurveLimited |= m_state->sourceCaps.lowerCurve(2, params.pointCrValue, params.pointCrScaling, params.numCrPoints);
+        params.numYPoints = m_state->sourceCaps.refitCurve(0, params.pointYValue, params.pointYScaling,
+            params.numYPoints, 14, sourceCurveLimited);
+        params.numCbPoints = m_state->sourceCaps.refitCurve(1, params.pointCbValue, params.pointCbScaling,
+            params.numCbPoints, 10, sourceCurveLimited);
+        params.numCrPoints = m_state->sourceCaps.refitCurve(2, params.pointCrValue, params.pointCrScaling,
+            params.numCrPoints, 10, sourceCurveLimited);
     }
     bool nonzeroCurve = false;
     for (uint32_t i = 0; i < params.numYPoints; ++i) nonzeroCurve |= params.pointYScaling[i] != 0;
