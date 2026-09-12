@@ -44,5 +44,27 @@ int main() {
         invalid.observe(2, 100, 0, bad);
         require(invalid.needsSource(), "invalid prediction cleared source");
     }
-    std::cout << "quiet source guard tests passed\n";
+    fgsmodel::FilmGrainSourceCaps caps;
+    const uint8_t values[] = {0, 64, 128, 192, 255};
+    uint8_t scales[] = {64, 64, 64, 64, 64};
+    caps.preserveCurveInterval(0, values, 5, 90, 100);
+    require(caps.lowerCurve(0, values, scales, 5), "source interval not protected");
+    require(scales[0] == 64 && scales[1] == 0 && scales[2] == 0
+        && scales[3] == 64 && scales[4] == 64, "protection escaped its bracketing knots");
+    require(caps.gain(1, 90) == 1, "luma protection disabled unrelated chroma");
+    for (int i = 0; i < 100; ++i) caps.advance(false);
+    require(caps.gain(0, 90) == 0, "stale fits released source protection");
+    for (int i = 0; i < caps.holdFrames; ++i) caps.advance(true);
+    require(caps.gain(0, 90) == 0, "source hold ended early");
+    caps.advance(true);
+    require(caps.gain(0, 90) == 1.0/caps.rampFrames, "source release flashed to full strength");
+    caps.preserveCurveInterval(0, values, 5, 90, 100);
+    require(caps.gain(0, 90) == 0, "new conflict did not stop release");
+    for (int i = 0; i < caps.holdFrames + caps.rampFrames + 100; ++i) caps.advance(true);
+    require(caps.gain(0, 90) == 1, "source protection never released");
+    caps.preserveCurveInterval(2, values, 5, 0, 0);
+    require(caps.gain(2, 0) == 0 && caps.gain(2, 192) == 1, "endpoint protection escaped its range");
+    caps.reset();
+    require(caps.gain(2, 0) == 1, "explicit reset retained source constraints");
+    std::cout << "quiet source guard and curve protection tests passed\n";
 }

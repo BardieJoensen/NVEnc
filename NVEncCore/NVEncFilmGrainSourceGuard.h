@@ -40,5 +40,59 @@ struct FilmGrainQuietSourceGuard {
     }
 };
 
+// Brightness-local protection attacks immediately but releases only after
+// fresh fits and a gradual restart. Keep this independent of the AR cache:
+// changing a model's knot positions must not clear recent source evidence.
+class FilmGrainSourceCaps {
+public:
+    static constexpr int holdFrames = 24;
+    static constexpr int rampFrames = 16;
+    FilmGrainSourceCaps() { reset(); }
+    void reset() {
+        for (auto& plane : gains_) plane.fill(1.0);
+        for (auto& plane : holds_) plane.fill(0);
+    }
+    void advance(bool freshFit) {
+        if (!freshFit) return;
+        for (int p = 0; p < 3; ++p) for (int x = 0; x < 256; ++x) {
+            if (holds_[p][x]) --holds_[p][x];
+            else if (gains_[p][x] < 1.0) gains_[p][x] += 1.0 / rampFrames;
+        }
+    }
+    void preserveRange(int plane, int begin, int end) {
+        if (plane < 0 || plane >= 3) return;
+        if (begin < 0) begin = 0;
+        if (end > 255) end = 255;
+        for (int x = begin; x <= end; ++x) {
+            gains_[plane][x] = 0.0;
+            holds_[plane][x] = holdFrames;
+        }
+    }
+    // Lower both bracketing knots. With the original knot positions retained,
+    // the entire new curve is bounded above by the original curve, including
+    // between knots. No unconstrained refit can overshoot a protected interval.
+    void preserveCurveInterval(int plane, const uint8_t *values, uint32_t count,
+        int begin, int end) {
+        if (!count) return;
+        uint32_t left = 0, right = count - 1;
+        while (left + 1 < count && values[left + 1] <= begin) ++left;
+        while (right > 0 && values[right - 1] >= end) --right;
+        preserveRange(plane, values[left], values[right]);
+    }
+    bool lowerCurve(int plane, const uint8_t *values, uint8_t *scalings, uint32_t count) const {
+        bool changed = false;
+        for (uint32_t i = 0; i < count; ++i) {
+            const auto reduced = static_cast<uint8_t>(std::lround(scalings[i] * gains_[plane][values[i]]));
+            changed |= reduced != scalings[i];
+            scalings[i] = reduced;
+        }
+        return changed;
+    }
+    double gain(int plane, int x) const { return gains_[plane][x]; }
+private:
+    std::array<std::array<double, 256>, 3> gains_;
+    std::array<std::array<uint8_t, 256>, 3> holds_;
+};
+
 } // namespace fgsmodel
 #endif
