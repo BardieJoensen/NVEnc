@@ -37,6 +37,12 @@ accepts the new excerpt and final installed file at unchanged numerical limits.
 It adds no stage to normal Tdarr validation. Current queue admission and playback
 watchdog state are recorded in the linked live ledger and OPERATIONS.md.
 
+All 36 selected final files were independently verified at the September 12
+handoff, totaling 0.595% more container bytes. Eight surviving replacements use
+the earlier recovery hold; the other 28 use the refined ramp. The final admission
+hold is released and two ordinary 3778447e repair workers were observed running,
+with the existing Tdarr pause ownership and playback watchdog preserved.
+
 Qualification is for the current **10-bit output** flow. An 8-bit-output trial
 still adds excess texture on source-flat artwork. Weak longer grain bursts
 also remain in the full Lost Tapes test (including a seven-frame ramp to patch
