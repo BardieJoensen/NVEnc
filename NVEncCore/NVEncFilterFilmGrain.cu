@@ -2274,7 +2274,6 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         const bool fullChromaProtection = prm->filmGrain.residualRetain < 0.0f
             || m_state->synthesisRecovery.gain() < 1.0;
         for (int plane = 0; plane < (prm->filmGrain.analyzeChroma ? 3 : 1); ++plane) {
-            if (plane && !fullChromaProtection && !m_state->sourceCaps.hasProtection(0)) continue;
             for (int i = 0; i < blockCount; ++i) {
                 const int blockWidth = std::min(FGS_BLOCK_SIZE, luma.width - (i % m_blocksX) * FGS_BLOCK_SIZE);
                 const int blockHeight = std::min(FGS_BLOCK_SIZE, luma.height - (i / m_blocksX) * FGS_BLOCK_SIZE);
@@ -2293,6 +2292,16 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 const double mean = (plane ? metrics[i].chromaMean[plane - 1] : metrics[i].mean) / depthScale;
                 const double sigma = (plane ? metrics[i].chromaSigma[plane - 1] : metrics[i].sigma) / depthScale;
                 if (sigma > 0.5 || mean <= 20.0 || mean >= 232.0) continue;
+                // An exactly constant colour block is direct evidence, even
+                // over textured luma (for example, monochrome title lettering).
+                // Require an active luma mean so quantized black bars do not
+                // constrain neighbouring picture levels. Less certain, merely
+                // quiet chroma retains the recovery/auto policy above.
+                const double sourceLumaMean = metrics[i].mean / depthScale;
+                const bool constantSourceChroma = plane && sigma == 0.0
+                    && sourceLumaMean > 20.0 && sourceLumaMean < 232.0;
+                if (plane && !constantSourceChroma && !fullChromaProtection
+                    && !m_state->sourceCaps.hasProtection(0)) continue;
                 double modeled = std::max(predicted[plane][first], predicted[plane][last]) / depthScale;
                 for (uint32_t j = 0; j < counts[plane]; ++j) {
                     if (values[plane][j] >= first && values[plane][j] <= last) {
