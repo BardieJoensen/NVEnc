@@ -12,6 +12,7 @@ class WholeSequenceChecks(unittest.TestCase):
         for c in sequence.CHANNELS:
             data[c + '_score'] = np.full(48, .5)
             data[c + '_rms'] = np.ones(48)
+            data[c + '_max_patch_rms'] = np.ones(48)
             data[c + '_correlation'] = np.full(48, .5)
             data[c + '_dx'] = np.ones(48)
             data[c + '_dy'] = np.zeros(48)
@@ -51,6 +52,45 @@ class WholeSequenceChecks(unittest.TestCase):
         candidate['red_dx'][-1] = 0; candidate['red_dy'][-1] = 1
         candidate['red_correlation'][-1] *= -1
         self.assertTrue(sequence.compare(candidate, reference)['passed'])
+
+    def test_near_zero_quantized_correlation_is_reported_without_false_failure(self):
+        reference = self.fixture(); candidate = self.fixture()
+        # Rounded display residuals from the same encoder's frame 214:
+        # normalized red ACF changes by .169 with peak patch RMS below .066.
+        for data, rms, peak, acf in [(reference, .0170004986, .0510014959, -.00214761452),
+                                     (candidate, .0219602615, .0658807846, .166666667)]:
+            data['red_rms'][-1] = rms; data['red_max_patch_rms'][-1] = peak
+            data['red_acf_0'][-1] = acf; data['red_score'][-1] = rms * abs(acf)
+        result = sequence.compare(candidate, reference)
+        self.assertTrue(result['passed'])
+        self.assertEqual(result['low_amplitude_correlation_changes'][0]['frames'], 1)
+        self.assertEqual(result['low_amplitude_correlation_changes'][0]['channel'], 'red')
+
+    def test_localized_texture_in_either_encode_still_requires_review(self):
+        for local in ('candidate', 'reference'):
+            reference = self.fixture(); candidate = self.fixture()
+            for data in (reference, candidate):
+                data['blue_rms'][-1] = .08; data['blue_max_patch_rms'][-1] = .08
+                data['blue_score'][-1] = .04
+            (candidate if local == 'candidate' else reference)['blue_max_patch_rms'][-1] = .24
+            candidate['blue_acf_0'][-1] *= -1
+            failures = sequence.compare(candidate, reference)['failures']
+            self.assertTrue(any(f['check'] == 'signed correlation vector changed' for f in failures))
+
+    def test_weak_correlation_does_not_disable_schedule_or_amplitude_checks(self):
+        reference = self.fixture(); candidate = self.fixture()
+        for data in (reference, candidate):
+            for c in sequence.CHANNELS:
+                data[c + '_rms'][:] = .02; data[c + '_max_patch_rms'][:] = .06
+                data[c + '_score'][:] = .01
+        candidate['grain_present'][-1] = 0
+        candidate['red_acf_0'][-1] *= -1
+        failures = sequence.compare(candidate, reference)['failures']
+        self.assertTrue(any(f['check'] == 'grain scheduling changed' for f in failures))
+        candidate['luma_rms'][-1] = .4; candidate['luma_max_patch_rms'][-1] = .4
+        failures = sequence.compare(candidate, reference)['failures']
+        self.assertTrue(any(f['check'] == 'amplitude changed' for f in failures))
+        self.assertTrue(any(f['check'] == 'adjacent-frame grain change' for f in failures))
 
     def test_duration_distinguishes_single_frame_from_sustained_failure(self):
         mask = np.zeros(240, dtype=bool); mask[[0, 20, 40]] = True; mask[120:168] = True
