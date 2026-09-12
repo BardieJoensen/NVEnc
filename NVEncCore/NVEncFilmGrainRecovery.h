@@ -56,11 +56,11 @@ private:
 // R = r + q*(1-r) satisfies R^2 + gain^2*(1-r^2) = 1. Scaling grain without
 // this matching source blend would temporarily remove the original texture.
 inline double film_grain_recovery_source_blend(double gain, double retained) {
-    gain = std::clamp(gain, 0.0, 1.0);
-    retained = std::clamp(retained, 0.0, 1.0);
+    gain = (std::clamp)(gain, 0.0, 1.0);
+    retained = (std::clamp)(retained, 0.0, 1.0);
     if (retained == 1.0 || gain == 1.0) return 0.0;
     const double combined = std::sqrt(std::max(0.0, 1.0 - gain * gain * (1.0 - retained * retained)));
-    return std::clamp((combined - retained) / (1.0 - retained), 0.0, 1.0);
+    return (std::clamp)((combined - retained) / (1.0 - retained), 0.0, 1.0);
 }
 
 } // namespace fgsmodel
