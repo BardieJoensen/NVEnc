@@ -77,6 +77,16 @@
       "file": "gentlemen-recovery-positive-33m-150s.mkv",
       "sha256": "5e3579d491f1c20bfd4abc179aa4b4e4b07fa631a11a937b9a7929f0e5493f87",
       "bytes": 48365709
+    },
+    "losttapes_recovery_source": {
+      "file": "losttapes-recovery-source.mkv",
+      "sha256": "49be25bf53de5dff4592b9d41165fb719d448045cb08665550317bb8fd13d26c",
+      "bytes": 445436004
+    },
+    "losttapes_recovery_negative": {
+      "file": "losttapes-recovery-negative.mkv",
+      "sha256": "ef557baf358dd390ff06d6b29413749ac714ebe91a730a3299682ae7e82c6c1f",
+      "bytes": 223970809
     }
   },
   "provenance": {
@@ -209,6 +219,11 @@
       "retention": "Hard links to exact retained H.264 source and installed e778a88b AV1 negative; originals unchanged",
       "references": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/references.json",
       "review": "FLICKER-20260912.md; aligned 16-frame 05:56 shirt patch and full-frame source fidelity"
+    },
+    "losttapes_recovery": {
+      "retention": "Hard links to unchanged retained H.264 original and installed e2c3a99d AV1 counterexample",
+      "references": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/losttapes-recovery-negative.json",
+      "review": "Source-aligned eight-frame 01:30.257 foreground patch; source SD 0, e2 output one-frame SD 3.38 after 24-fit recovery"
     }
   },
   "canary_revalidation": {
