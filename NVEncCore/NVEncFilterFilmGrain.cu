@@ -74,6 +74,18 @@ constexpr int FGS_BILATERAL_BLOCK_X = 32;
 constexpr int FGS_BILATERAL_BLOCK_Y = 8;
 constexpr int FGS_BILATERAL_RADIUS = 2;
 
+// Separate source evidence from the 32x32 statistical model. A quiet 16x16
+// island inside a textured model block must not inherit that block's grain.
+constexpr int FGS_QUIET_SIZE = FGS_BLOCK_SIZE / 2;
+struct FilmGrainQuietSourceMetric {
+    float mean;
+    float sigma;
+    float minCode;
+    float maxCode;
+    float chromaMean[2];
+    float chromaSigma[2];
+};
+
 struct FilmGrainBlockMetric {
     float mean;
     float sigma;
@@ -89,7 +101,43 @@ struct FilmGrainBlockMetric {
     float chromaMean[2];
     float chromaSigma[2];
     uint32_t flat;
+    FilmGrainQuietSourceMetric sourceRegions[4];
 };
+
+// Integer moments keep exactly constant 8/10-bit colour exactly constant.
+// Subtracting large floating-point moments would lose weak source variance.
+// Each independent warp/subwarp owns one region; no new global pixel reads.
+template<int lanes, typename TileType>
+__device__ FilmGrainQuietSourceMetric quiet_source_region(const TileType *tile,
+    const int pitch, const int x0, const int y0, const int width, const int height,
+    const int lane) {
+    const int count = max(0, width) * max(0, height);
+    uint32_t sum = 0, square = 0;
+    int minimum = 65535, maximum = 0;
+    for (int i = lane; i < count; i += lanes) {
+        const int value = static_cast<int>(tile[(y0 + i / width) * pitch + x0 + i % width]);
+        sum += value;
+        square += value * value;
+        minimum = min(minimum, value);
+        maximum = max(maximum, value);
+    }
+    for (int offset = lanes / 2; offset; offset >>= 1) {
+        sum += __shfl_down_sync(0xffffffffu, sum, offset, lanes);
+        square += __shfl_down_sync(0xffffffffu, square, offset, lanes);
+        minimum = min(minimum, __shfl_down_sync(0xffffffffu, minimum, offset, lanes));
+        maximum = max(maximum, __shfl_down_sync(0xffffffffu, maximum, offset, lanes));
+    }
+    FilmGrainQuietSourceMetric result = {};
+    if (lane == 0 && count) {
+        const uint64_t numerator = static_cast<uint64_t>(count) * square
+            - static_cast<uint64_t>(sum) * sum;
+        result.mean = static_cast<float>(sum) / count;
+        result.sigma = sqrtf(static_cast<float>(numerator) / (count * count));
+        result.minCode = static_cast<float>(minimum);
+        result.maxCode = static_cast<float>(maximum);
+    }
+    return result;
+}
 
 __device__ inline void atomic_add_i64(int64_t *address, const int64_t value) {
     atomicAdd(reinterpret_cast<unsigned long long *>(address), static_cast<unsigned long long>(value));
@@ -279,6 +327,15 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     }
     __syncthreads();
 
+    __shared__ FilmGrainQuietSourceMetric sourceRegions[4];
+    const int region = tid / 32;
+    const int regionX = (region % 2) * FGS_QUIET_SIZE;
+    const int regionY = (region / 2) * FGS_QUIET_SIZE;
+    const auto sourceRegion = quiet_source_region<32>(tile, bw, regionX, regionY,
+        min(FGS_QUIET_SIZE, bw - regionX), min(FGS_QUIET_SIZE, bh - regionY), tid % 32);
+    if (tid % 32 == 0) sourceRegions[region] = sourceRegion;
+    __syncthreads();
+
     // Consumer NVIDIA GPUs have very low FP64 throughput. None of these
     // per-32x32-block values needs double precision: variance is accumulated
     // from the fitted residual directly, so there is no large mean-square
@@ -450,6 +507,7 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     out.spatialCorrelation = fminf(1.0f, fmaxf(-1.0f,
         reduce4[0] / fmaxf(reduce5[0], 1e-12f)));
     out.flat = isFlat ? 1u : 0u;
+    for (int region = 0; region < 4; ++region) out.sourceRegions[region] = sourceRegions[region];
     metrics[blockIndex] = out;
 }
 
@@ -487,6 +545,17 @@ __global__ void kernel_fgs_chroma_source_metrics(const uint8_t *__restrict__ src
     }
     if (tid == 0) mean = reduce[0] / count;
     __syncthreads();
+    // Four 8x8 chroma regions coincide with the finer luma source evidence.
+    constexpr int regionSize = FGS_QUIET_SIZE / 2;
+    const int region = tid / 16;
+    const int regionX = (region % 2) * regionSize;
+    const int regionY = (region / 2) * regionSize;
+    const auto sourceRegion = quiet_source_region<16>(tile, bw, regionX, regionY,
+        min(regionSize, bw - regionX), min(regionSize, bh - regionY), tid % 16);
+    if (tid % 16 == 0) {
+        metrics[index].sourceRegions[region].chromaMean[channel] = sourceRegion.mean;
+        metrics[index].sourceRegions[region].chromaSigma[channel] = sourceRegion.sigma;
+    }
     float variance = 0.0f;
     for (int i = tid; i < count; i += threads) {
         const float residual = tile[i] - mean;
@@ -2274,34 +2343,32 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         const bool fullChromaProtection = prm->filmGrain.residualRetain < 0.0f
             || m_state->synthesisRecovery.gain() < 1.0;
         for (int plane = 0; plane < (prm->filmGrain.analyzeChroma ? 3 : 1); ++plane) {
-            for (int i = 0; i < blockCount; ++i) {
-                const int blockWidth = std::min(FGS_BLOCK_SIZE, luma.width - (i % m_blocksX) * FGS_BLOCK_SIZE);
-                const int blockHeight = std::min(FGS_BLOCK_SIZE, luma.height - (i / m_blocksX) * FGS_BLOCK_SIZE);
-                if (blockWidth < 8 || blockHeight < 8) continue;
+            auto protectSource = [&](const auto& evidence, const int blockWidth, const int blockHeight) {
+                if (blockWidth < 8 || blockHeight < 8) return;
                 // Include actual source levels, not just a block mean. Chroma may
                 // be uniform while the luma indexing its grain spans many levels.
-                const int first = clamp(static_cast<int>(std::floor(metrics[i].minCode / depthScale)) - 1, 0, 255);
-                const int last = clamp(static_cast<int>(std::ceil(metrics[i].maxCode / depthScale)) + 1, 0, 255);
+                const int first = clamp(static_cast<int>(std::floor(evidence.minCode / depthScale)) - 1, 0, 255);
+                const int last = clamp(static_cast<int>(std::ceil(evidence.maxCode / depthScale)) + 1, 0, 255);
                 // Neutral chroma in clipped black/white regions is not evidence
                 // about the active image's colour noise at neighboring levels.
-                if (metrics[i].maxCode / depthScale <= 20.0f
-                    || metrics[i].minCode / depthScale >= 232.0f) continue;
+                if (evidence.maxCode / depthScale <= 20.0f
+                    || evidence.minCode / depthScale >= 232.0f) return;
                 // The existing kernels already measure partial edge blocks.
                 // Require 8x8 observations in the plane actually being checked.
-                if (plane && (blockWidth < 16 || blockHeight < 16)) continue;
-                const double mean = (plane ? metrics[i].chromaMean[plane - 1] : metrics[i].mean) / depthScale;
-                const double sigma = (plane ? metrics[i].chromaSigma[plane - 1] : metrics[i].sigma) / depthScale;
-                if (sigma > 0.5 || mean <= 20.0 || mean >= 232.0) continue;
+                if (plane && (blockWidth < 16 || blockHeight < 16)) return;
+                const double mean = (plane ? evidence.chromaMean[plane - 1] : evidence.mean) / depthScale;
+                const double sigma = (plane ? evidence.chromaSigma[plane - 1] : evidence.sigma) / depthScale;
+                if (sigma > 0.5 || mean <= 20.0 || mean >= 232.0) return;
                 // An exactly constant colour block is direct evidence, even
                 // over textured luma (for example, monochrome title lettering).
                 // Require an active luma mean so quantized black bars do not
                 // constrain neighbouring picture levels. Less certain, merely
                 // quiet chroma retains the recovery/auto policy above.
-                const double sourceLumaMean = metrics[i].mean / depthScale;
+                const double sourceLumaMean = evidence.mean / depthScale;
                 const bool constantSourceChroma = plane && sigma == 0.0
                     && sourceLumaMean > 20.0 && sourceLumaMean < 232.0;
                 if (plane && !constantSourceChroma && !fullChromaProtection
-                    && !m_state->sourceCaps.hasProtection(0)) continue;
+                    && !m_state->sourceCaps.hasProtection(0)) return;
                 double modeled = std::max(predicted[plane][first], predicted[plane][last]) / depthScale;
                 for (uint32_t j = 0; j < counts[plane]; ++j) {
                     if (values[plane][j] >= first && values[plane][j] <= last) {
@@ -2313,6 +2380,18 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                     // Retain source-supported variance; a quiet but nonzero
                     // source is not a reason to force its whole range to zero.
                     m_state->sourceCaps.preserveRange(plane, first, last, sigma / modeled);
+                }
+            };
+            for (int i = 0; i < blockCount; ++i) {
+                const int blockWidth = std::min(FGS_BLOCK_SIZE, luma.width - (i % m_blocksX) * FGS_BLOCK_SIZE);
+                const int blockHeight = std::min(FGS_BLOCK_SIZE, luma.height - (i / m_blocksX) * FGS_BLOCK_SIZE);
+                // Keep the existing detrended coarse evidence for gradients,
+                // and add raw finer evidence for small quiet source regions.
+                protectSource(metrics[i], blockWidth, blockHeight);
+                for (int region = 0; region < 4; ++region) {
+                    protectSource(metrics[i].sourceRegions[region],
+                        std::min(FGS_QUIET_SIZE, blockWidth - (region % 2) * FGS_QUIET_SIZE),
+                        std::min(FGS_QUIET_SIZE, blockHeight - (region / 2) * FGS_QUIET_SIZE));
                 }
             }
         }
