@@ -87,6 +87,11 @@
       "file": "losttapes-recovery-negative.mkv",
       "sha256": "ef557baf358dd390ff06d6b29413749ac714ebe91a730a3299682ae7e82c6c1f",
       "bytes": 223970809
+    },
+    "gentlemen_ramp_positive": {
+      "file": "gentlemen-ramp-positive-33m-150s.mkv",
+      "sha256": "972fdd30f6e8876946c656ed7e87cf7d7b4769756f54c15d439755e4eada4a77",
+      "bytes": 48568269
     }
   },
   "provenance": {
@@ -224,6 +229,23 @@
       "retention": "Hard links to unchanged retained H.264 original and installed e2c3a99d AV1 counterexample",
       "references": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/losttapes-recovery-negative.json",
       "review": "Source-aligned eight-frame 01:30.257 foreground patch; source SD 0, e2 output one-frame SD 3.38 after 24-fit recovery"
+    },
+    "gentlemen_ramp_positive": {
+      "encoder_core": "3778447e",
+      "encoder_sha256": "b5cb35205ad2e29499fd26d6274780690df5fdc12495c9d525ce5ce6b7271883",
+      "source_review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/ramp-periodic-source-review.json",
+      "decoded_frames": 3600,
+      "source_frames_reviewed": 445,
+      "grain_schedule_unchanged": true,
+      "visual_review_frames": [
+        309,
+        581,
+        916
+      ],
+      "decision": "Accept separately retained gradual-recovery baseline. At maximum amplitude change, the older positive adds conspicuous texture to source-smooth surfaces; ramp moves closer to source. Worst small RMS increase scene and ordinary anchor retain structure; fine source grain remains attenuated by lossy AV1 as in earlier fallback.",
+      "limits": "Still-frame review plus aligned source metrics and complete decoded temporal descriptors; not a universal perceptual pass. Old positives and mesh negative retained; numeric gates unchanged.",
+      "negative_retained": true,
+      "reviewed_at": 1789209897.0049336
     }
   },
   "canary_revalidation": {
