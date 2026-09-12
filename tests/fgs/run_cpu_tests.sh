@@ -19,6 +19,9 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore \
 $CXX -std=c++17 -O2 -Wall tests/fgs/scan_packet_test.cpp -o "$OUT/fgs_scan_packet_test"
 $CXX -std=c++17 -O2 -Wall tests/fgs/av1_grain_syntax_test.cpp -o "$OUT/fgs_grain_syntax_test"
 $CXX -std=c++17 -O2 -Wall tests/fgs/display_spatial_test.cpp -o "$OUT/fgs_display_spatial_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore \
+    tests/fgs/synthesis_recovery_test.cpp -o "$OUT/fgs_synthesis_recovery_test"
+"$OUT/fgs_synthesis_recovery_test"
 "$OUT/fgs_solver_test"
 "$OUT/fgs_parser_test"
 "$OUT/fgs_stability_test"
