@@ -2343,7 +2343,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         const bool fullChromaProtection = prm->filmGrain.residualRetain < 0.0f
             || m_state->synthesisRecovery.gain() < 1.0;
         for (int plane = 0; plane < (prm->filmGrain.analyzeChroma ? 3 : 1); ++plane) {
-            auto protectSource = [&](const auto& evidence, const int blockWidth, const int blockHeight) {
+            auto protectSource = [&](const auto& evidence, const int blockWidth, const int blockHeight, const double sigmaLimit) {
                 if (blockWidth < 8 || blockHeight < 8) return;
                 // Include actual source levels, not just a block mean. Chroma may
                 // be uniform while the luma indexing its grain spans many levels.
@@ -2363,7 +2363,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 if (plane && (blockWidth < 16 || blockHeight < 16)) return;
                 const double mean = (plane ? evidence.chromaMean[plane - 1] : evidence.mean) / depthScale;
                 const double sigma = (plane ? evidence.chromaSigma[plane - 1] : evidence.sigma) / depthScale;
-                if (sigma > 0.5 || mean <= 20.0 || mean >= 232.0) return;
+                if (sigma > sigmaLimit || mean <= 20.0 || mean >= 232.0) return;
                 // An exactly constant colour block is direct evidence, even
                 // over textured luma (for example, monochrome title lettering).
                 // Require an active luma mean so quantized black bars do not
@@ -2392,11 +2392,14 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 const int blockHeight = std::min(FGS_BLOCK_SIZE, luma.height - (i / m_blocksX) * FGS_BLOCK_SIZE);
                 // Keep the existing detrended coarse evidence for gradients,
                 // and add raw finer evidence for small quiet source regions.
-                protectSource(metrics[i], blockWidth, blockHeight);
+                protectSource(metrics[i], blockWidth, blockHeight, 0.5);
+                // Smaller regions need stronger quiet-source evidence: one
+                // low-variance sample from genuine fine grain must not impose
+                // a persistent brightness cap across the rest of the frame.
                 for (int region = 0; region < 4; ++region) {
                     protectSource(metrics[i].sourceRegions[region],
                         std::min(FGS_QUIET_SIZE, blockWidth - (region % 2) * FGS_QUIET_SIZE),
-                        std::min(FGS_QUIET_SIZE, blockHeight - (region / 2) * FGS_QUIET_SIZE));
+                        std::min(FGS_QUIET_SIZE, blockHeight - (region / 2) * FGS_QUIET_SIZE), 0.3);
                 }
             }
         }
