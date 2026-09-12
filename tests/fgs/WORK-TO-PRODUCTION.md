@@ -1,61 +1,63 @@
 # FGS encoder and library repair: current work and handoff
 
-Status: **ordinary encoder and faster HDR validation deployed; retention
-diagnostics and comparison preparation complete on CPU; heavy quality/size
-experiments deferred until the running repair finishes**, 2026-09-11.
+Status: **ordinary source-quiet/recovery hotfix deployed; selected flicker repairs
+verified; ordinary ripple repair resumed. Broader automatic-retention trials
+remain deferred and manual-start only.** Verified 2026-09-12 17:14 UTC.
 
-**September 12 grain-flicker hotfix:** ordinary production now uses isolated
-core `3778447e` in Tdarr and the repair worker. This adds a 24-fit recovery hold
-and a 16-frame gradual synthesis restart with matching all-plane source residual.
-Unsafe models are still rejected; the ripple, syntax and chroma guards remain.
-The initial `e2c3a99d` hold removed nine original witnesses, but a full-file scan
-found a further Lost Tapes one-frame pulse. That output is now a retained
-negative. The second fix passes both source-referenced flash regressions, full
-Lost Tapes decoding, the existing GPU gate and fresh encodes inside the exact
-Tdarr 2.87.01 container. Intentional Gentlemen ramp changes were source-reviewed
-before accepting a separate positive; all numeric limits and old negatives remain.
+Production Tdarr and the repair worker use isolated core `273723b7`, binary
+SHA-256 `343327febbf057e156909ad23b2e9ed2de08bac6902aa654d7b0a914b02a7b40`. The exact Tdarr image is
+`nvenc-fidelity/tdarr-node:2.87.01-273723b7-20260912`. This includes the earlier 24-fit recovery
+hold and 16-fit gradual restart plus independent original-source luma/colour
+protection, bounded strength curves, coupled residual retention and partial-edge
+coverage. Unsafe grain models still fail; the ripple and syntax guards remain.
 
-See [the investigation and limits](FLICKER-20260912.md),
-[qualification](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/ramp-qualification.json),
-[live ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/work-plan.json)
-and [scope/title lists](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/SCOPE.md).
-The completed header audit covers 1,474 repaired versions. The additional fixed
-1,323-file source screen completed with 1,198 source comparisons, 107 weak
-decoded overlays and 18 incomplete first-pass comparisons. Further calibrated
-HDR measurements and VC-1/deinterlace alignment limitations are retained in the
-investigation report. Neither header flags nor one sampled scene establish a
-whole-file visibility verdict; the 5,293-file historical inventory is not fully
-temporally scoped.
+The known 8-bit failure and weak longer Lost Tapes artwork pulse are resolved.
+A full transition review found and fixed a separate opening-title colour defect.
+Both bit depths pass mixed-source tests, including partial edges and clean colour
+over textured luma. Genuine background grain must remain in the controls.
+The original quality canary passes unchanged; all five exact-image source checks
+pass. A fresh completed Gentlemen regression follows all-3,600-frame source
+review, a separately retained positive and an explicitly documented near-zero
+normalized-correlation eligibility correction. Old failures and negatives remain.
 
-Thirty-six distinct files were explicitly selected after source and recurrence
-review, including fourteen from the last nineteen-candidate shortlist. The
-[repair results and episode list](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/RESULTS.md)
-join current installation and independent verification receipts. Original and
-superseded versions are retained; no new download was needed for these selected
-files. A third pinned South Park regression rejects the old strong flash and
-accepts the new excerpt and final installed file at unchanged numerical limits.
-It adds no stage to normal Tdarr validation. Current queue admission and playback
-watchdog state are recorded in the linked live ledger and OPERATIONS.md.
+See [the source-guard work and evidence index](SOURCE-GUARD-20260912.md),
+[final qualification](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/qualification.json),
+[deployment and operations](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/OPERATIONS.md),
+[installed-file verification](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/remediation-verification.json)
+and [live follow-up ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/work-plan.json).
+The earlier [flicker report](FLICKER-20260912.md) and its 36-file repair results
+are historical snapshots. This follow-up replaces Lost Tapes S1E5 again from its
+retained source; the unique selected-file count remains 36. Its complete library
+container is **+14.627% / 32.822 MB** versus the preceding repair.
+Audio, subtitles, chapters, signalling, original and superseded files are retained
+and verified. No additional download was needed. The consolidated
+[36-file results](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/current-selected-repairs.csv) now total
+**+0.791%** versus their pre-flicker-repair containers; prior percentages remain
+historical snapshots.
 
-All 36 selected final files were independently verified at the September 12
-handoff, totaling 0.595% more container bytes. Eight surviving replacements use
-the earlier recovery hold; the other 28 use the refined ramp. The final admission
-hold is released and two ordinary 3778447e repair workers were observed running,
-with the existing Tdarr pause ownership and playback watchdog preserved.
+Two-run-per-arm ABBA samples show no measured slowdown. Median times were
+99.91 to 94.22 seconds for full Lost Tapes and
+96.37 to 91.40 for the 150-second Gentlemen fixture. Video-only container
+growth was 20.95% and 3.56%, respectively; it must not be confused with complete
+library-container growth. These are two-source measurements, not library forecasts.
+The ordinary Tdarr profile and validation flow are unchanged; no heavy developer
+test was added to per-file validation. The actual-runtime canary and monitor
+health pass for the new encoder. The hold was released, with 2 ordinary
+worker slots observed; pause ownership and playback yield remain in place.
 
-Qualification is for the current **10-bit output** flow. An 8-bit-output trial
-still adds excess texture on source-flat artwork. Weak longer grain bursts
-also remain in the full Lost Tapes test (including a seven-frame ramp to patch
-SD 1.77, versus source 0.21). Ordinary lossy fallback can attenuate fine grain.
-This is a fix for the tested strong flashes, not a universal fidelity guarantee.
+The known regressions are fixed, but this is not a universal fidelity certificate.
+Lossy AV1 can soften fine original grain or leave compression texture. Very thin
+source strips and persistent weak nonzero chroma-only retention remain limited
+by the documented policy. The 5,293-file historical inventory is not fully
+temporally cleared. Header flags and sampled windows are not damage counts or
+mass-download authority. Apple TV playback has not been verified here.
 
-The ramp is integrated here as `895b236f`/`9afba34f`, flash fixtures as `fb8d8c68`,
-and reviewed periodic baseline as `c9c4e00a`. The combined fidelity branch passes
-CPU tests and CUDA compilation; it is **not** the deployed binary and still
-needs its deferred quality/size comparisons. Header triage is `4d7b1b9b`; the South Park regression is `a4002fc8`.
-Retention GPU trials remain manual-start only after the ripple repair finishes.
-Before those trials, retain the historical `497caa64` results and add a current
-ordinary `3778447e` comparison; do not silently relabel old measurements.
+The source guard is integrated into the fidelity branch (core `ab13b1c7`), whose
+combined source compiled and passed CPU checks at `7f53d2f6`; later commits add
+fixtures, measurement tests and documentation. That broader branch is **not**
+the deployed binary. Its retention-cost and temporal/model-change campaign still
+requires the deferred GPU comparisons. Retain historical `497caa64`/`3778447e`
+results and add the qualified current ordinary `273723b7` arm when resuming.
 
 This is the canonical entry point for resuming this project. Read the current
 state and next steps here before using an older findings report or work ledger.
@@ -97,8 +99,9 @@ is `/opt/docker-apps/logs/fgs-ripple-repair-20260906/auto-retention-production-2
 The [repair-period preparation](FINDINGS-2026-09-10-RETENTION-PREPARATION.md)
 adds precise fallback diagnostics, prepares skipping unused covariance work,
 retains source/output references without copying payloads, and prepares
-matched-size comparisons. CPU tests pass. The CUDA changes still need GPU
-compilation and qualification; they are not a new production build.
+matched-size comparisons. CPU tests pass. The integrated branch now compiles with the source-guard work. These optional
+covariance/model changes still need deferred GPU output-preservation and quality
+qualification; compilation does not make them the ordinary production build.
 
 The [September 11 evidence inventory](FINDINGS-2026-09-11-EXISTING-CAMPAIGNS.md)
 recovers the July measurement campaign, Silo retention operating points,
@@ -125,10 +128,11 @@ jacket regression. The report tests pass; new media work remains deferred.
 | Revision | Role | State at this handoff |
 | --- | --- | --- |
 | `e2c3a99d` | First 24-fit recovery hold | Superseded; retained partial-fix baseline and rollback |
-| `3778447e` | Ordinary encoder with coupled source/grain recovery ramp | Deployed after source/GPU/container qualification; residual limits recorded |
+| `3778447e` | Prior recovery-ramp hotfix | Superseded ordinary baseline and rollback; residual limits retained in historical reports |
+| `273723b7` | Ordinary source-quiet and constant-colour protection | Deployed after source, GPU, exact-image, repeatability and speed/size qualification |
 | `497caa64` | Earlier ordinary encoder, `retain=0`, bilateral | Retained comparison/rollback baseline; superseded in production |
 | `9c1664d4` | Optional automatic retention | Quality/operational qualification recorded; not broadly enabled; all three complete-source outputs exceed the unchanged 10% trial cap |
-| `5450a4fc` | Precise fallback traces and skipping unused covariance work | CPU checks passed; new CUDA build and output-preservation checks deferred |
+| `5450a4fc` | Precise fallback traces and skipping unused covariance work | CPU checks and integrated CUDA compilation passed; separate output-preservation checks deferred |
 | `3ac80ceb` | Exact strength-curve comparison for model reuse | Full CPU suite and archived curve reproduction passed; intentional model decisions need GPU/temporal qualification |
 | `57c0e8ae` | Joined diagnostic reports and focused target selection | 13 diagnostic and seven tradeoff tests passed; six saved logs reanalyzed; no encoder code changed in this step |
 
@@ -141,7 +145,7 @@ measured baseline binaries are pinned in
 - Ordinary `497caa64`: SHA-256
   `bb7e75cbcb9097f1f1c7ac3347e7193c74caa6c7d57db1c3c77348cc27daf144`.
   Its retained artifact is `production-readiness-20260909/bin/nvencc-fidelity-497caa64`
-  under the repair log root. The host build input now contains `3778447e`;
+  under the repair log root. The host build input now contains `273723b7`;
   do not use that mutable path as the old comparison baseline.
 - Optional `9c1664d4`: SHA-256
   `8dff824c8d7360adac294f05e7c6032770f8594cf1c3b63961f50a854e3b0fec`.
@@ -149,13 +153,16 @@ measured baseline binaries are pinned in
   the repair log root.
 - Ordinary flow `/opt/docker-apps/configs/tdarr-flow/flows/AV1NVENCflow1.json`:
   SHA-256 `6cebd7cb63d540f61d9c142a9728ed4fbf0edaeaa3312eacae9ae7503126c7fe`,
-  verified again on September 11. Hashes are recorded identities, not a promise
+  verified again on September 12. Hashes are recorded identities, not a promise
   that a future installation is unchanged.
 
 The faster four-thread HDR validator is already deployed. Its 90 checks and
 measured sample timing are recorded in the September 10 ledger; this does not
 add the expensive development studies to routine Tdarr validation. The repair
 coordinator owns the current Tdarr pause. Isolated trial containers are stopped.
+
+The September 12 application upgrade preceded this encoder rollout; its initial
+encoder image is historical. The current runtime is pinned above.
 
 ## What happens next
 
