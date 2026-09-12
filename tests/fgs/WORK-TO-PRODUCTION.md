@@ -1,77 +1,87 @@
 # FGS encoder and library repair: current work and handoff
 
-Status: **ordinary source-quiet/recovery hotfix deployed; full library follow-up
-audit in progress. Broader automatic-retention trials remain deferred and
-manual-start only.** Updated 2026-09-12.
+Status: **qualified finer-source hotfix deployed; ordinary repairs resumed;
+full library follow-up audit in progress. Automatic-retention trials remain
+deferred and manual-start only.** Updated 2026-09-12.
 
-The [full library audit and current findings](FULL-AUDIT-20260912.md) now cover a
-5,578-file snapshot, including 5,263 AV1 files. It has repaired one additionally
-confirmed Regular Show episode with the unchanged deployed encoder, resolved
-all 80 prior VC-1 timing exclusions, and independently reproduced four old
-movie decoder failures. Two previously selected Steven Universe files have
-additional source-confirmed noise scenes. Current-build comparisons remove
-most of that noise but expose a remaining small-region source-guard limit.
-Repair admissions are paused for the finer-region correction and qualification.
-The full header and expanded decoded/source passes are still running; no
-blanket damage count follows from their flags. Read the
-[active audit ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/work-plan.json)
-for transient trial holds, jobs, pinned evidence, completed repairs and pending
-review. The 17:14 rollout qualification described below remains a dated snapshot.
+Production Tdarr and the repair worker now use isolated core `ef5c61fe`, binary
+SHA-256 `d8127dfa63011160dc222a41516452c269c2438269866b3da74f95e5ba4fd47b`.
+The exact image is `nvenc-fidelity/tdarr-node:2.87.01-ef5c61fe-20260912`, image ID
+`sha256:218540effe6149030631445914c8f35c6e81090326a8e4bbca55d0b57c3f50e4`.
+The prior `273723b7` deployment is retained for rollback. The production flow,
+25 local plugins, worker limits and routine validation are unchanged; all four
+custom runtime tools were verified. Both routine monitors passed for the installed binary, and two
+ordinary repair workers were observed after releasing the audit-owned hold.
+Pause ownership and Emby playback yield remain in place.
 
-Production Tdarr and the repair worker use isolated core `273723b7`, binary
-SHA-256 `343327febbf057e156909ad23b2e9ed2de08bac6902aa654d7b0a914b02a7b40`. The exact Tdarr image is
-`nvenc-fidelity/tdarr-node:2.87.01-273723b7-20260912`. This includes the earlier 24-fit recovery
-hold and 16-fit gradual restart plus independent original-source luma/colour
-protection, bounded strength curves, coupled residual retention and partial-edge
-coverage. Unsafe grain models still fail; the ripple and syntax guards remain.
+The audit demonstrated a gap in `273723b7`: a small clean source patch inside
+a larger textured analysis block could still receive strong grain. The deployed
+fix adds finer 16x16 luma / 8x8 colour source evidence while preserving the
+existing model-fitting region, ripple/syntax guards and temporal recovery.
+It adds no extra pixel reads from GPU global memory, kernel launches or host
+synchronization. Both bit depths pass all ten mixed-source controls, including
+the four small-region cases that reject the previous deployed build.
 
-The known 8-bit failure and weak longer Lost Tapes artwork pulse are resolved.
-A full transition review found and fixed a separate opening-title colour defect.
-Both bit depths pass mixed-source tests, including partial edges and clean colour
-over textured luma. Genuine background grain must remain in the controls.
-The original quality canary passes unchanged; all five exact-image source checks
-pass. A fresh completed Gentlemen regression follows all-3,600-frame source
-review, a separately retained positive and an explicitly documented near-zero
-normalized-correlation eligibility correction. Old failures and negatives remain.
+[The finer-source qualification](FINE-SOURCE-GUARD-20260912.md) records the
+source controls, full-frame periodic review, unchanged quality canary, five
+exact-image cases, HDR10 signalling check, installed repairs and limitations.
+[The full audit](FULL-AUDIT-20260912.md) records scope, evidence-based repair
+priorities, tools and outstanding coverage. The local
+[qualification](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/qualification.json),
+[rollout](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/rollout-record.json)
+and [operational restoration](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/final-additional-amphibia-operational-state.json)
+pin the exact tested and installed artifacts.
 
-See [the source-guard work and evidence index](SOURCE-GUARD-20260912.md),
-[final qualification](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/qualification.json),
-[deployment and operations](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/OPERATIONS.md),
-[installed-file verification](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/remediation-verification.json)
-and [live follow-up ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/work-plan.json).
-The earlier [flicker report](FLICKER-20260912.md) and its 36-file repair results
-are historical snapshots. That follow-up replaced Lost Tapes S1E5 again from its
-retained source; its unique selected-file count was 36. Its complete library
-container is **+14.627% / 32.822 MB** versus the preceding repair.
-Audio, subtitles, chapters, signalling, original and superseded files are retained
-and verified. No additional download was needed. The consolidated
-[36-file results](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/current-selected-repairs.csv) totalled
-**+0.791%** versus their pre-flicker-repair containers; prior percentages remain
-historical snapshots.
+Five files were repaired from retained originals during this audit: Regular
+Show S1E2 with then-current `273723b7`, plus Steven Universe S3E22/S1E23 and
+Amphibia S1E18/S1E11 with `ef5c61fe`. The latter four are repeated repairs of existing
+selections. The [37 distinct selected-file results](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/current-selected-repairs.csv)
+now total +1.620% versus their recorded pre-flicker-repair containers. This
+selection history is neither a complete damaged-file count nor whole-file
+perceptual clearance. All original and superseded files remain available.
 
-Two-run-per-arm ABBA samples show no measured slowdown. Median times were
-99.91 to 94.22 seconds for full Lost Tapes and
-96.37 to 91.40 for the 150-second Gentlemen fixture. Video-only container
-growth was 20.95% and 3.56%, respectively; it must not be confused with complete
-library-container growth. These are two-source measurements, not library forecasts.
-The ordinary Tdarr profile and validation flow are unchanged; no heavy developer
-test was added to per-file validation. The actual-runtime canary and monitor
-health pass for the new encoder. The hold was released, with 2 ordinary
-worker slots observed; pause ownership and playback yield remain in place.
+The two Steven source trials add 0.136% and 0.147% video-only bytes versus the
+previous `273723b7` trials; single-run encode times rose 0.83% and 0.64%.
+The actual installed containers are +13.24 MB and +4.87 MB versus the older
+`3778447e` repairs. Amphibia S1E18 grows 40.85 MB (+20.89%) versus its older
+repair; S1E11 grows 49.48 MB (+25.96%) versus its earlier partial-fix build.
+These comparisons use different baselines and must not be conflated
+or extrapolated across the library. Heavy audit tests were not added to Tdarr's
+per-file validation.
 
-The known regressions are fixed, but this is not a universal fidelity certificate.
-Lossy AV1 can soften fine original grain or leave compression texture. Very thin
-source strips and persistent weak nonzero chroma-only retention remain limited
-by the documented policy. The 5,293-file historical inventory is not fully
-temporally cleared. Header flags and sampled windows are not damage counts or
-mass-download authority. Apple TV playback has not been verified here.
+There is no universal fidelity certificate. Source review shows a fine-texture
+tradeoff at shared brightness levels: protecting clean artwork can also reduce
+some genuine fine grain elsewhere. The periodic regression was separately
+reviewed against all 3,600 source frames; the original change alert, old
+positives and failing negatives remain. No numeric detector limit was relaxed.
+Lossy base texture, very thin source regions, optional retention cost and actual
+Apple TV/Infuse playback remain distinct limitations or deferred work.
 
-The source guard is integrated into the fidelity branch (core `ab13b1c7`), whose
-combined source compiled and passed CPU checks at `7f53d2f6`; later commits add
-fixtures, measurement tests and documentation. That broader branch is **not**
-the deployed binary. Its retention-cost and temporal/model-change campaign still
-requires the deferred GPU comparisons. Retain historical `497caa64`/`3778447e`
-results and add the qualified current ordinary `273723b7` arm when resuming.
+The combined fidelity branch includes the new core at `704a8f8f`; its exact
+`03eb4796` build compiled and passed the CPU suite. That broader binary is
+**not deployed**. Later `e4ed723f` changes only audit tools: low storage now
+pauses the finite run without consuming pending files as media errors, and
+whole-movie timestamp matching avoids a quadratic scan. Twenty-eight audit CPU
+tests and retained real-movie alignment checks pass. Audit-only `708ae7ca`
+adds qualified explicit BT.601 mapping and fixes rounded window boundaries.
+The active helpers are pinned in `tools-v5/`; 31 Python tests, eight native CLI
+tests, display controls and real BT.601/unchanged SDR/PQ comparisons pass.
+Missing SD colour metadata remains a coverage limit. The finite v5 continuation
+reuses 86 completed results, queues 5,160 original versions and freshly pins 17
+replacements. Earlier results remain immutable and keep their method identities.
+
+Read the [active audit ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/work-plan.json)
+and [published coverage](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/published/status.json)
+for current jobs and timestamps. The original inventory has 5,578 videos,
+including 5,263 AV1. The finite catch-up queues cover replacements observed
+at their recorded times. Header and sampled decoded/source coverage remain
+unfinished. No diagnostic flag authorizes mass downloads.
+
+The earlier [source-guard report](SOURCE-GUARD-20260912.md),
+[flicker report](FLICKER-20260912.md) and `grain-recovery-followup-20260912/`
+describe their named older builds and dated qualifications. Their 36-file counts
+and earlier production pins are historical. The source-recovery download hold
+remains in force. No new download or optional retention campaign was started.
 
 This is the canonical entry point for resuming this project. Read the current
 state and next steps here before using an older findings report or work ledger.
@@ -82,7 +92,7 @@ to find the working state, evidence and remaining tasks from this document.
 
 The working checkout is `/home/bardie/git-repos/NVEnc-fgs-fidelity`, branch
 `feat/fgs-detail-fidelity-20260908`. Other NVEnc worktrees under `git-repos` are
-not necessarily on this branch. The current machine-readable ledger is
+not necessarily on this branch. The separate deferred-retention preparation ledger is
 [/opt/docker-apps/logs/fgs-ripple-repair-20260906/retention-prep-20260910/work-plan.json](/opt/docker-apps/logs/fgs-ripple-repair-20260906/retention-prep-20260910/work-plan.json).
 
 The goal is to finish the encoder improvements, resolve measured quality,
@@ -143,7 +153,10 @@ jacket regression. The report tests pass; new media work remains deferred.
 | --- | --- | --- |
 | `e2c3a99d` | First 24-fit recovery hold | Superseded; retained partial-fix baseline and rollback |
 | `3778447e` | Prior recovery-ramp hotfix | Superseded ordinary baseline and rollback; residual limits retained in historical reports |
-| `273723b7` | Ordinary source-quiet and constant-colour protection | Deployed after source, GPU, exact-image, repeatability and speed/size qualification |
+| `273723b7` | Coarse source-quiet and constant-colour protection | Superseded; retained qualified baseline and rollback |
+| `ef5c61fe` | Finer independent source protection | Deployed after mixed-source, whole-frame periodic/source review, exact-image, HDR10 and installed-file qualification |
+| `e4ed723f` | Audit storage and alignment hardening | 28 CPU tests and full retained-movie timestamp check pass; no encoder change |
+| `708ae7ca` | Audit BT.601 and window-boundary corrections | 31 Python tests, eight native CLI controls, display controls and real-file comparisons pass; diagnostic only |
 | `497caa64` | Earlier ordinary encoder, `retain=0`, bilateral | Retained comparison/rollback baseline; superseded in production |
 | `9c1664d4` | Optional automatic retention | Quality/operational qualification recorded; not broadly enabled; all three complete-source outputs exceed the unchanged 10% trial cap |
 | `5450a4fc` | Precise fallback traces and skipping unused covariance work | CPU checks and integrated CUDA compilation passed; separate output-preservation checks deferred |
@@ -159,7 +172,7 @@ measured baseline binaries are pinned in
 - Ordinary `497caa64`: SHA-256
   `bb7e75cbcb9097f1f1c7ac3347e7193c74caa6c7d57db1c3c77348cc27daf144`.
   Its retained artifact is `production-readiness-20260909/bin/nvencc-fidelity-497caa64`
-  under the repair log root. The host build input now contains `273723b7`;
+  under the repair log root. The host build input now contains `ef5c61fe`;
   do not use that mutable path as the old comparison baseline.
 - Optional `9c1664d4`: SHA-256
   `8dff824c8d7360adac294f05e7c6032770f8594cf1c3b63961f50a854e3b0fec`.
@@ -184,8 +197,10 @@ encoder image is historical. The current runtime is pinned above.
 The user explicitly confirmed manual start only: wait for the repair to finish
 and resume the trials when requested. Do not install a timer or trigger that
 starts them when the repair completes.
-The user's resource decision is to finish the current ripple repair before new
-substantial encodes, video decodes, metric sweeps or hardware profiling. The
+The user's resource decision is to finish the current ripple repair before the
+optional retention studies. The later authorization permits focused defect
+comparisons and this full audit during the repair; it does not start that
+deferred campaign. The
 latest observed state still has two active repair workers; use the live status
 when resuming, not this count or an old countdown. A failed or stalled service
 does not establish repair completion.
@@ -198,7 +213,8 @@ does not establish repair completion.
    candidate binaries in isolated build directories. Use `5450a4fc` separately
    from `3ac80ceb` to distinguish the covariance optimization from intentional
    temporal model changes. The existing comparison manifest still pins
-   `497caa64` and `9c1664d4`; it must not silently represent a newer build.
+   `497caa64` and `9c1664d4`; preserve those arms and add qualified current
+   ordinary `ef5c61fe` explicitly. It must not silently represent a newer build.
 3. Start with the six targets in
    [pilot-selection.json](/opt/docker-apps/logs/fgs-ripple-repair-20260906/retention-prep-20260910/fallback-profiles-20260911/pilot-selection.json)
    plus the existing jacket regression, about 270 seconds of source per arm.
@@ -241,8 +257,11 @@ in a row share the directory of that row's first path.
 | Path | What it answers |
 | --- | --- |
 | `full-temporal-audit-20260912/work-plan.json`, `OPERATIONS.md`, `published/status.json` | Current full-audit jobs, exact file versions, confirmed findings versus candidate measurements, trial holds and required finish |
-| `full-temporal-audit-20260912/inventory.json`, `headers/status.json`, `decoded-v3/status.json` | Explicit current-file snapshot, full displayed-header stage and bounded full-image/frame source review |
-| `full-temporal-audit-20260912/current-selected-repairs.json`, `installed-vc1-verification.json`, `vc1-exclusions-summary.json` | Cumulative selected-repair history, new source-backed installation and resolved VC-1 timing exclusions; not whole-library perceptual clearance |
+| `full-temporal-audit-20260912/inventory.json`, `headers/status.json`, `decoded-v5/status.json`, `resume-v5-20260912/plan.json` | Explicit current-file snapshot, full displayed-header stage and bounded full-image/frame source review |
+| `full-temporal-audit-20260912/current-selected-repairs.json`, `installed-vc1-verification.json`, `strict-installed-steven-verification.json`, `strict-installed-amphibia18-verification.json`, `strict-installed-amphibia11-verification.json` | 37-file selection history and all five audit installations, including independent decode, video-packet and retained-stream/source proofs |
+| `full-temporal-audit-20260912/qualification.json`, `rollout-record.json`, `final-additional-amphibia-operational-state.json` | Qualified ef5c61fe core, deployed image/runtime identities, monitors and restored repair admission |
+| `full-temporal-audit-20260912/resume-v5-20260912/plan.json`, `audit-tools-v5-qualification.json`, `storage-pause-20260912/evidence-relocation.json` | Reused completed evidence, qualified diagnostic corrections, pending checks, replacement catch-up and byte-verified evidence relocation |
+| `full-temporal-audit-20260912/published/repair-priorities.csv` | Preliminary human-reviewed repair priorities and source availability, separate from unreviewed diagnostic ranks |
 | `retention-prep-20260910/work-plan.json` | Current unfinished encoder objective, constraints, source hashes, completed CPU work and deferred steps |
 | `retention-prep-20260910/comparison-manifest.json`, `comparison-plan.json` | Original-source and binary pins, seven quality/size windows and 70 planned commands; none executed by this preparation |
 | `retention-prep-20260910/fallback-profiles-20260911/` | Six-log joins, 459,396 decisions, exact diagnostic target profiles, source/log hashes and verification |
@@ -364,7 +383,7 @@ the remaining storage-policy and grain-model limits.
 
 | Work | Required outcome |
 |---|---|
-| Production integration | Complete: pinned core 497caa64 deployed; real scheduler, staged outputs, live hashes and rollback verified |
+| Production integration | Qualified narrow core ef5c61fe deployed; runtime, source/periodic/HDR10 checks, installed repairs and rollback verified |
 | Storage policy | Ordinary retain=0 and existing savings rules; the size-policy decision follows matched-size quality and playback evidence |
 | Repeat variability | Bounded qualification complete; picture impact measured, operating policy recorded, no unsupported deterministic-output claim |
 | Format coverage | Available HDR10+/P7 MEL and true-interlace paths pass; FEL/uncertain source video is preserved |
@@ -373,7 +392,7 @@ the remaining storage-policy and grain-model limits.
 | Library remediation | Running in background; repair-worker DV guards and metadata fixes installed, evidence-based later recovery remains under the download hold |
 
 The active operational ledger is
-`/opt/docker-apps/logs/fgs-ripple-repair-20260906/production-readiness-20260909/work-plan.json`.
+`/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/work-plan.json`.
 It distinguishes completed foreground engineering from ongoing background
 repairs and explicitly deferred investigations.
 
