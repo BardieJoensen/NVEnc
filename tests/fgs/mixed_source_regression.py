@@ -144,7 +144,7 @@ def main():
         source,video=directory/'source.y4m',directory/'candidate.mkv'
         if video.exists():raise RuntimeError('Refusing to overwrite retained trial')
         generate(source,bits,edges,chroma_only,islands)
-        cmd=[str(args.nvencc),'--avsw','-i',str(source),'--codec','av1','--cqp','20',
+        cmd=[str(args.nvencc),'--avsw','-i',str(source),'--codec','av1',*rate_args,
              '--output-depth',str(bits),'--av1-film-grain','denoise=auto,chroma=auto,denoiser=bilateral',
              '--colormatrix','bt709','--colorprim','bt709','--transfer','bt709','--colorrange','limited',
              '--log-level','debug','--film-grain-table-out',str(directory/'planned.tbl'),'-o',str(video)]
