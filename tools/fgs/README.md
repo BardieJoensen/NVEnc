@@ -5,6 +5,38 @@ base picture. They help locate periodic, directional or unusually strong grain
 for visual review. They do not need an original encode and do not judge source
 detail, motion quality, or whole-film watchability.
 
+## Header transition triage
+
+`grain_transitions.cpp` reads the first video stream through FFmpeg's AV1
+`trace_headers` parser without decoding pixels. It follows all eight reference
+slots, displayed reference frames and reused grain parameters. CSV rows describe
+displayed grain flags, scaling maxima and original timestamps. A one/two-frame
+grain-on run is a review candidate; its scaling values do not establish visible
+flicker or justify replacement.
+
+```sh
+g++ -std=c++17 -O2 -Wall -Wextra -I tests/fgs tools/fgs/grain_transitions.cpp \
+    -o /tmp/fgs-grain-transitions \
+    $(pkg-config --cflags --libs libavformat libavcodec libavutil)
+/tmp/fgs-grain-transitions input.mkv > /tmp/displayed-grain.csv
+FGS_TRANSITIONS_BINARY=/tmp/fgs-grain-transitions python3 tests/fgs/test_grain_transitions.py
+```
+
+The final stderr JSON and exit status indicate parser completion. Missing
+reference state, ambiguous timestamps, incomplete packets or output failures
+fail the scan. Partial CSVs are not successful reports. This diagnostic expects
+one displayed frame per video packet and rejects other packetizations rather
+than guessing their timing. It does not decode or prove picture completeness;
+the receipt audit also compares frame counts with a prior full decode and
+checks the file identity before and after reading. A cleanly shortened input
+requires that external coverage check. This is outside routine Tdarr validation.
+
+The September 12 local qualification compares 22 retained old/current/fixed
+cases (48,786 displayed frames) with the earlier displayed-header tracker.
+Full-movie equivalence is additionally recorded for the first scanner build.
+Removing the text pipe reduces parser overhead on cached small clips; full-file
+elapsed time can still be dominated by storage and concurrent repair activity.
+
 ## Build and use
 
 The native tool needs C++17, FFmpeg development libraries and dav1d with
