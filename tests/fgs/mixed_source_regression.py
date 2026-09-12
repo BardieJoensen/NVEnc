@@ -132,12 +132,13 @@ def main():
     parser.add_argument('--nvencc',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--expect-rejected',action='store_true')
-    parser.add_argument('--cases',nargs='+',choices=['interior','edges','chroma_only','islands'],default=['interior','edges','chroma_only','islands'])
+    parser.add_argument('--cases',nargs='+',choices=['interior','edges','chroma_only','islands','islands_qvbr'],default=['interior','edges','chroma_only','islands','islands_qvbr'])
     args=parser.parse_args()
     args.output.mkdir(parents=True,exist_ok=True)
     results=[]
     for case,bits in [(case,bits) for case in args.cases for bits in [8,10]]:
-        edges=case=='edges';chroma_only=case=='chroma_only';islands=case=='islands';H=540 if edges else 544
+        edges=case=='edges';chroma_only=case=='chroma_only';islands=case.startswith('islands');H=540 if edges else 544
+        rate_args = ['--qvbr','34','--max-bitrate','50000','--preset','quality','--tune','hq','--lookahead','32','--lookahead-level','3','--aq','--aq-temporal'] if case=='islands_qvbr' else ['--cqp','20']
         quiet_planes = [1, 2] if chroma_only else [0, 1, 2]
         directory=args.output/case/str(bits);directory.mkdir(parents=True,exist_ok=True)
         source,video=directory/'source.y4m',directory/'candidate.mkv'
@@ -151,7 +152,7 @@ def main():
         with (directory/'encode.log').open('w') as log:
             subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=300)
         result=measure(video,bits,directory,edges,chroma_only,islands)
-        result.update(case=case,width=W,height=H)
+        result.update(case=case,width=W,height=H,rate_args=rate_args)
         # Separate FGS from ordinary lossy chroma prediction/quantization. In
         # this fixture conventional NVENC also leaves up to one native code
         # of chroma variation. Compare with that independently encoded control
@@ -165,7 +166,7 @@ def main():
                 '--colorprim','bt709','--transfer','bt709','--colorrange','limited','-o',str(control)]
             if raw:cc+=['--av1-film-grain','denoise=auto,chroma=auto,denoiser=bilateral',
                        '--film-grain-table-out',str(cd/'planned.tbl')]
-            else:cc+=['--cqp','20']
+            else:cc+=rate_args
             (cd/'encode-command.json').write_text(json.dumps(cc,indent=2)+'\n')
             with (cd/'encode.log').open('w') as log:
                 subprocess.run(cc,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=300)
