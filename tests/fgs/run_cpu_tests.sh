@@ -28,6 +28,9 @@ $CXX -std=c++17 -O2 -Wall tests/fgs/display_spatial_test.cpp -o "$OUT/fgs_displa
 $CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/synthesis_recovery_test.cpp -o "$OUT/fgs_synthesis_recovery_test"
 "$OUT/fgs_synthesis_recovery_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore \
+    tests/fgs/source_guard_test.cpp -o "$OUT/fgs_source_guard_test"
+"$OUT/fgs_source_guard_test"
 "$OUT/fgs_solver_test"
 "$OUT/fgs_local_strength_test"
 "$OUT/fgs_chroma_restore_test"
