@@ -2347,8 +2347,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 if (blockWidth < 8 || blockHeight < 8) return;
                 // Include actual source levels, not just a block mean. Chroma may
                 // be uniform while the luma indexing its grain spans many levels.
-                const int first = clamp(static_cast<int>(std::floor(evidence.minCode / depthScale)) - 1, 0, 255);
-                const int last = clamp(static_cast<int>(std::ceil(evidence.maxCode / depthScale)) + 1, 0, 255);
+                // Grain indexes reconstructed levels. Reserve a small code
+                // margin for ordinary lossy prediction/quantization around
+                // quiet source values, including small patch boundaries.
+                // This is bounded headroom, not a bound on arbitrary QP loss.
+                constexpr int reconstructedCodeMargin = 4;
+                const int first = clamp(static_cast<int>(std::floor(evidence.minCode / depthScale)) - reconstructedCodeMargin, 0, 255);
+                const int last = clamp(static_cast<int>(std::ceil(evidence.maxCode / depthScale)) + reconstructedCodeMargin, 0, 255);
                 // Neutral chroma in clipped black/white regions is not evidence
                 // about the active image's colour noise at neighboring levels.
                 if (evidence.maxCode / depthScale <= 20.0f
