@@ -248,7 +248,10 @@ int main(int argc, char **argv) {
             const double seconds = off.m.timestamp * tb;
             if(!std::isfinite(seconds) || (decoded>1 && seconds<=last_displayed))throw std::runtime_error("non-increasing displayed timestamp");
             last_displayed=seconds;
-            if (seconds >= stop) { dav1d_picture_unref(&off); break; }
+            // The header CSV and demuxer may round the same boundary timestamp
+            // to opposite sides of a double. Extended windows are half-open,
+            // with the same sub-microsecond tolerance used by the consumer.
+            if (seconds + (extended ? 1e-7 : 0) >= stop) { dav1d_picture_unref(&off); break; }
             if (seconds + 1e-7 >= next_sample) {
                 last = seconds;
                 if(sample_period>0)next_sample=start+(std::floor((seconds-start+1e-7)/sample_period)+1)*sample_period;
@@ -291,7 +294,7 @@ int main(int argc, char **argv) {
                   << ",\"measured_frames\":" << measured << ",\"last_seconds\":" << last << ",\"complete\":" << (fully_drained ? "true" : "false")
                   << ",\"elapsed_seconds\":" << std::chrono::duration<double>(std::chrono::steady_clock::now()-began).count()
                   << ",\"stream_index\":"<<video
-                  << ",\"interval_complete\":"<<((fully_drained || last_displayed>=stop)?"true":"false")
+                  << ",\"interval_complete\":"<<((fully_drained || last_displayed+(extended ? 1e-7 : 0)>=stop)?"true":"false")
                   << ",\"decoded_through_seconds\":"<<last_displayed;
         if(extended) {
             std::cout<<",\"schema\":\"fgs_reference_full_v1\",\"units\":\"PU21_banding_glare\",\"transfer\":\""<<mapper->transfer_name()

@@ -47,7 +47,7 @@ class DisplayMapper {
     // PU lookup spacing is quadratic in luminance, retaining precision near black.
     static constexpr int steps = 65536;
     std::vector<double> linear_, pu_;
-    double kr_, kb_, peak_signal_;
+    double kr_, kb_, luminance_r_, luminance_b_, peak_signal_;
     static double lookup(const std::vector<double>& lut, double x) {
         const double p = std::clamp(x, 0.0, 1.0)*steps;
         const int i = std::min(int(p), steps-1);
@@ -67,10 +67,20 @@ public:
         } else if (c.transfer != 1 && c.transfer != 6 && c.transfer != 14 && c.transfer != 15) {
             throw std::runtime_error("unspecified or unsupported transfer characteristic");
         }
-        if (!((c.matrix == 1 && c.primaries == 1) || (c.matrix == 9 && c.primaries == 9)))
-            throw std::runtime_error("reference mode supports explicitly tagged BT.709 or BT.2020 NCL");
-        kr_ = c.matrix == 9 ? .2627 : .2126;
-        kb_ = c.matrix == 9 ? .0593 : .0722;
+        const bool bt601 = (c.matrix == 5 || c.matrix == 6) && (c.primaries == 5 || c.primaries == 6);
+        if (!((c.matrix == 1 && c.primaries == 1) || (c.matrix == 9 && c.primaries == 9) || bt601))
+            throw std::runtime_error("reference mode requires supported explicit BT.601, BT.709 or BT.2020 NCL colour signalling");
+        kr_ = bt601 ? .299 : c.matrix == 9 ? .2627 : .2126;
+        kb_ = bt601 ? .114 : c.matrix == 9 ? .0593 : .0722;
+        luminance_r_ = kr_; luminance_b_ = kb_;
+        // BT.601 nonlinear Y' coefficients are not the colourimetric weights
+        // of linear RGB. Derive those weights from the signalled primaries
+        // and D65 white, as documented in README.md.
+        if (c.primaries == 5) {
+            luminance_r_ = .2220043099982308; luminance_b_ = .07134092407648639;
+        } else if (c.primaries == 6) {
+            luminance_r_ = .21237636070506752; luminance_b_ = .08656378236920957;
+        }
         peak_signal_=pq_signal(c.peak_nits);
         linear_.resize(steps+1); pu_.resize(steps+1);
         for (int i = 0; i <= steps; ++i) {
@@ -106,7 +116,7 @@ public:
             const double gain = luminance > 0 ? config.peak_nits*std::pow(luminance, hlg_gamma(config.peak_nits)-1) : 0;
             for (auto& value : light) value *= gain;
         }
-        const double luminance = kr_*light[0]+(1-kr_-kb_)*light[1]+kb_*light[2];
+        const double luminance = luminance_r_*light[0]+(1-luminance_r_-luminance_b_)*light[1]+luminance_b_*light[2];
         std::array<double,4> result{luminance,light[0],light[1],light[2]};
         for (auto& value : result) value = analytic ? pu21(value) : lookup(pu_,std::sqrt(std::clamp(value,0.0,10000.0)/10000));
         return result;

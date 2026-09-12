@@ -187,6 +187,7 @@ Display mapping follows these explicit scenarios:
 
 | Input | Reference mapping |
 | --- | --- |
+| SDR BT.601, explicitly tagged BT.470BG or SMPTE170M primaries | Gamma 2.4; 100-nit white, using the signalled primaries for linear luminance |
 | SDR BT.709 or BT.2020 NCL | Gamma 2.4; 100-nit white by default |
 | PQ BT.2020 NCL | Absolute BT.2100 EOTF, clipped to the chosen display peak |
 | HLG BT.2020 NCL | Inverse OETF and luminance-coupled OOTF/system gamma at the chosen peak |
@@ -199,6 +200,21 @@ unsupported colour metadata is rejected; it is never silently mapped as SDR.
 Multiple video streams require `--stream-index`, and attached pictures are
 excluded from automatic selection. Midstream geometry/colour changes, absent
 or non-increasing timestamps, empty windows and write failures are errors.
+
+BT.601 uses nonlinear Y' coefficients 0.299/0.587/0.114. Linear-light luminance
+uses weights derived from the signalled primary chromaticities and D65 white;
+these are different quantities. The colour definitions are independently
+available in [FFmpeg's colour-space tables](https://raw.githubusercontent.com/FFmpeg/FFmpeg/master/libavutil/csp.c).
+The CPU controls exercise primary-red reconstruction, colourimetric luminance,
+range/depth equivalence and LUT accuracy for both primary sets. This extends
+the existing gamma-2.4 reference scenario; it does not simulate historical CRTs.
+An explicit BT.709 assumption cannot override these SD tags. Unspecified SD
+transfer/primaries remain ineligible for a precise reference-display grade.
+
+Extended intervals are half-open, with a 1e-7-second boundary tolerance shared
+by native inspection and header-window selection. It prevents binary rounding
+of an excluded endpoint from demanding an extra frame. Actual timestamps and
+pixel/frame counts still have to match; no coverage threshold was relaxed.
 
 Absolute luminance is mapped through PU21 `banding_glare`. The transfer functions
 and HLG luminance coupling follow [ITU-R BT.2100-3](https://www.itu.int/rec/R-REC-BT.2100-3-202502-I/en).

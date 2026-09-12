@@ -78,5 +78,26 @@ class Coverage(unittest.TestCase):
         with mock.patch.object(m.shutil,'disk_usage',return_value=SimpleNamespace(free=6*1024**3)):
             m.require_storage(Path('.'))
 
+    def test_bt709_assumption_respects_explicit_colour_signalling(self):
+        self.assertTrue(m.permits_bt709_assumption({}))
+        self.assertTrue(m.permits_bt709_assumption(dict(color_transfer='bt709',color_space='bt709',color_primaries='bt709')))
+        for primary in ['bt470bg','smpte170m','unknown']:
+            self.assertFalse(m.permits_bt709_assumption(dict(color_space='smpte170m',color_primaries=primary)))
+        for transfer in ['smpte2084','arib-std-b67']:
+            self.assertFalse(m.permits_bt709_assumption(dict(color_transfer=transfer)))
+        self.assertFalse(m.permits_bt709_assumption(dict(color_primaries='bt2020')))
+
+    def test_rounded_stop_does_not_require_an_extra_frame(self):
+        # Actual 25-fps file: header CSV 87.981, demuxed binary time one ULP
+        # higher, profile stop 87.98100000000001. This is the excluded endpoint.
+        self.assertEqual(m.expected_window_times([87.901,87.941,87.981,88.021],87.901,87.98100000000001),
+                         [87.901,87.941])
+
+    def test_window_tolerance_keeps_nearby_interior_frames(self):
+        self.assertEqual(m.expected_window_times([1.,1.0001,1.9999,2.,2.0001],1.00000000000001,2.00000000000001),
+                         [1.,1.0001,1.9999])
+        for start,stop in [(1,1),(2,1),(0,float('nan'))]:
+            with self.assertRaises(ValueError):m.expected_window_times([1,2,3],start,stop)
+
 
 if __name__=='__main__':unittest.main()

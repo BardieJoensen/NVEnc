@@ -29,6 +29,22 @@ def require_storage(directory):
         raise AuditResourceUnavailable('audit evidence filesystem below 6 GiB reserve')
 
 
+def permits_bt709_assumption(video):
+    # Fill compatible unspecified fields only. Explicit SD matrix/primaries
+    # must reach the inspector unchanged instead of forcing a BT.709 override.
+    unknown = (None, 'unknown', 'unspecified')
+    return (video.get('color_transfer') in (*unknown, 'bt709', 'smpte170m')
+            and video.get('color_space') in (*unknown, 'bt709')
+            and video.get('color_primaries') in (*unknown, 'bt709'))
+
+
+def expected_window_times(times, start, stop):
+    if not math.isfinite(start) or not math.isfinite(stop) or stop <= start:
+        raise ValueError('invalid decoded window')
+    # Match the native inspector's half-open window policy at both ends.
+    return times[bisect.bisect_left(times,start-1e-7):bisect.bisect_left(times,stop-1e-7)]
+
+
 def summarize(path, metadata, expected):
     with Path(path).open() as stream: rows=list(csv.DictReader(stream))
     if (metadata.get('schema')!='fgs_reference_full_v1' or not metadata.get('interval_complete')
@@ -132,7 +148,7 @@ def inspect_file(item, header, binary, destination, pins, source_enabled=True):
                     d=d/('attempt-'+str(time.time_ns()));d.mkdir();csv_path=d/'frames.csv'
                 command=[str(binary),'--extended','--sample-period','0','--stream-index',str(item['video']['index'])]
                 v=item['video']
-                if v.get('color_transfer') not in ('smpte2084','arib-std-b67') and v.get('color_primaries')!='bt2020':
+                if permits_bt709_assumption(v):
                     command+=['--assume-bt709']
                 command+=[item['path'],str(csv_path),str(window['start']),str(window['stop'])]
                 with (d/'native.log').open('w') as log:
@@ -140,7 +156,7 @@ def inspect_file(item, header, binary, destination, pins, source_enabled=True):
                 (d/'command.json').write_text(json.dumps(command,indent=2)+'\n')
                 if native.returncode:raise RuntimeError('reference-display measurement failed; see native.log')
                 metadata=json.loads(native.stdout)
-                expected=times[bisect.bisect_left(times,window['start']-1e-7):bisect.bisect_left(times,window['stop'])]
+                expected=expected_window_times(times,window['start'],window['stop'])
                 row.update(status='decoded',metadata=metadata,decoded=summarize(csv_path,metadata,expected),
                     csv=str(csv_path),csv_sha256=audit.sha(csv_path))
                 if row['decoded']['grain_present_frames']==0:

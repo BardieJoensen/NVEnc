@@ -56,6 +56,32 @@ int main() {
         bool rejected=false;try { DisplayMapper invalid(bad); }catch(const std::runtime_error&) {rejected=true;}
         assert(rejected);
     }
+    // PAL/NTSC BT.601 use the same nonlinear Y'CbCr matrix but different
+    // colourimetric primary weights. Do not use .299 for linear red light.
+    for(int primary:{5,6})for(int matrix:{5,6})for(int depth:{8,10,12})for(bool full:{false,true}) {
+        config={};config.primaries=primary;config.matrix=matrix;config.depth=depth;config.full_range=full;
+        DisplayMapper mapper(config);
+        const double scale=1 << (depth-8),maximum=(1 << depth)-1;
+        const double y=(full?0:16*scale)+(full?maximum:219*scale)*.299;
+        const double u=128*scale-(full?maximum:224*scale)*.299/(2*(1-.114));
+        const double v=128*scale+(full?maximum:224*scale)/2;
+        const auto rgb=mapper.rgb_signal(y,u,v);
+        assert(near(rgb[0],1,1e-12) && near(rgb[1],0,1e-12) && near(rgb[2],0,1e-12));
+        const auto red=mapper.values({1,0,0},true);
+        const double red_nits=primary==5 ? 22.20043099982308 : 21.237636070506752;
+        assert(near(red[0],pu21(red_nits),1e-10));
+        assert(near(red[1],pu21(100),1e-10));
+        assert(std::abs(red[0]-pu21(29.9))>1);
+        for(int i=0;i<500;++i) {
+            const std::array<double,3> signal_rgb{signal(random),signal(random),signal(random)};
+            const auto fast=mapper.values(signal_rgb),reference=mapper.values(signal_rgb,true);
+            for(int c=0;c<4;++c)assert(std::abs(fast[c]-reference[c])<.01);
+        }
+    }
+    for(auto bad:std::vector<DisplayConfig>{{2,6,5},{1,6,2},{16,6,5},{18,6,6},{1,6,9}}) {
+        bool rejected=false;try { DisplayMapper invalid(bad); }catch(const std::runtime_error&) {rejected=true;}
+        assert(rejected);
+    }
     // Every pixel, including odd-width borders and tiny final strips, belongs
     // to exactly one tile; no downscale or overlap-counting inflates coverage.
     for(const auto dimensions:std::vector<std::array<int,2>>{{8,8},{49,49},{100,57},{1918,802},{1920,1080},{3840,2160}}) {

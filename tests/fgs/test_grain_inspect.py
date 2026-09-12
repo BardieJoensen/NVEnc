@@ -24,6 +24,8 @@ class InspectorCLI(unittest.TestCase):
         cls.clips = {}
         for name, pixel_format, transfer, matrix, primaries in (
             ('sdr', 'yuv420p', 'bt709', 'bt709', 'bt709'),
+            ('pal', 'yuv420p10le', 'bt709', 'smpte170m', 'bt470bg'),
+            ('ntsc', 'yuv420p', 'smpte170m', 'smpte170m', 'smpte170m'),
             ('pq', 'yuv420p10le', 'smpte2084', 'bt2020nc', 'bt2020'),
             ('hlg', 'yuv420p10le', 'arib-std-b67', 'bt2020nc', 'bt2020'),
             ('full12', 'yuv444p12le', 'smpte2084', 'bt2020nc', 'bt2020'),
@@ -84,6 +86,18 @@ class InspectorCLI(unittest.TestCase):
         self.assertEqual(metadata['transfer'], 'sdr_gamma24')
         self.inspect('pq', '--extended', '--assume-bt709', success=False)
 
+    def test_bt601_preserves_signalled_matrix_and_primaries(self):
+        for name,primary in [('pal',5),('ntsc',6)]:
+            with self.subTest(name=name):
+                metadata,rows=self.inspect(name,'--extended')
+                self.assertTrue(metadata['complete'])
+                self.assertFalse(metadata['assume_bt709_requested'])
+                self.assertEqual(metadata['matrix'],6)
+                self.assertEqual(metadata['primaries'],primary)
+                self.assertEqual(metadata['measured_pixels'],6*100*58)
+                self.assertTrue(all(float(r['luma_rms'])==0 for r in rows))
+                self.inspect(name,'--extended','--assume-bt709',success=False)
+
     def test_sampling_is_explicit_and_empty_intervals_cannot_complete(self):
         metadata, rows = self.inspect('sdr', '--extended', '--sample-period', '.125')
         self.assertEqual(metadata['decoded_frames'], 6)
@@ -92,6 +106,11 @@ class InspectorCLI(unittest.TestCase):
         self.inspect('sdr', '--extended', interval=(100, 101), success=False)
         for invalid in ('nan', '-1', '2junk'):
             self.inspect('sdr', '--extended', '--sample-period', invalid, success=False)
+
+    def test_extended_rounded_stop_is_half_open(self):
+        metadata,rows=self.inspect('sdr','--extended',interval=(0,.12500000000000003))
+        self.assertTrue(metadata['interval_complete'])
+        self.assertEqual([float(r['seconds']) for r in rows],[0.,.042,.083])
 
     def test_legacy_hdr_is_rejected_and_existing_output_is_preserved(self):
         self.inspect('pq', success=False)
