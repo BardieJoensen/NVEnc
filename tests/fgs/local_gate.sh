@@ -84,7 +84,7 @@ CEILING_MODEL="$FIXTURE_ROOT/taxi-metric-gamer.json"
 TAXI_CLIP="$FIXTURE_ROOT/taxi-coarse-24f.mkv"
 SUBSTITUTION_ENCODE="$FIXTURE_ROOT/taxi-widened-r4047.mkv"
 
-ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression grain_syntax flicker_regression)
+ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression grain_syntax flicker_regression mixed_source)
 # The GPU fixtures and export tests plus the offline adversarial
 # specimen. Deliberately excludes the libaom oracles and the canary, which need
 # real-film encodes. A pre-push hook long enough to be bypassed with
@@ -682,6 +682,31 @@ if want_stage flicker_regression; then
     else
         record fail "grain flash regression (see $REPORT_DIR/flicker-regression.log)"
         tail -20 "$REPORT_DIR/flicker-regression.log"
+    fi
+fi
+
+if want_stage mixed_source; then
+    log "stage: mixed-source interior and partial-edge regression"
+    mixed_negative="${FGS_GATE_MIXED_SOURCE_NEGATIVE:-$DOCKER_APPS/logs/fgs-ripple-repair-20260906/bin/nvencc-3778447e}"
+    mixed_negative_sha="${FGS_GATE_MIXED_SOURCE_NEGATIVE_SHA256:-b5cb35205ad2e29499fd26d6274780690df5fdc12495c9d525ce5ce6b7271883}"
+    [ -x "$mixed_negative" ] || die "set FGS_GATE_MIXED_SOURCE_NEGATIVE to the retained pre-source-guard encoder"
+    actual_mixed_sha=$(sha256sum -- "$mixed_negative")
+    [ "${actual_mixed_sha%% *}" = "$mixed_negative_sha" ] || die "mixed-source negative encoder identity mismatch"
+    if python3 "$HERE/mixed_source_regression.py" --nvencc "$mixed_negative" \
+        --expect-rejected --output "$REPORT_DIR/mixed-source-negative" \
+        > "$REPORT_DIR/mixed-source-negative.log" 2>&1; then
+        record pass "mixed-source detector rejects retained 3778447e in both depths and locations"
+    else
+        record fail "mixed-source negative control (see $REPORT_DIR/mixed-source-negative.log)"
+        tail -20 "$REPORT_DIR/mixed-source-negative.log"
+    fi
+    if python3 "$HERE/mixed_source_regression.py" --nvencc "$CANDIDATE_NVENCC" \
+        --output "$REPORT_DIR/mixed-source-candidate" \
+        > "$REPORT_DIR/mixed-source-candidate.log" 2>&1; then
+        record pass "mixed-source candidate preserves clean regions and genuine grain"
+    else
+        record fail "mixed-source candidate (see $REPORT_DIR/mixed-source-candidate.log)"
+        tail -20 "$REPORT_DIR/mixed-source-candidate.log"
     fi
 fi
 
