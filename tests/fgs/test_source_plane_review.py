@@ -25,6 +25,36 @@ class SourceReview(unittest.TestCase):
     def test_empty_alignment_is_explicitly_ineligible(self):
         with self.assertRaises(ValueError):m.align_indices([],[],0)
 
+    def test_full_movie_variable_cadence_and_offset(self):
+        # A long timestamp grid with cadence changes and container rounding,
+        # like the 213,039-picture retained Batman recurrence investigation.
+        steps=np.resize([.041,.042,.042,.083],213039)
+        source=np.cumsum(steps).tolist()
+        output=[t-.042+(.0004 if i%2 else -.0004) for i,t in enumerate(source)]
+        matches=m.align_indices(source,output,.042)
+        self.assertEqual(matches,list(enumerate(range(len(source)))))
+
+    def test_nearest_picture_and_earlier_tie(self):
+        self.assertEqual(m.align_indices([0.,1.,2.,3.,4.],[.5,1.75,3.5],0,.5),
+                         [(0,0),(2,1),(3,2)])
+
+    def test_closest_endpoint_can_be_inside_tolerance(self):
+        self.assertEqual(m.align_indices([0.,1.,2.],[-.001,1.,2.001],0),
+                         [(0,0),(1,1),(2,2)])
+
+    def test_two_output_frames_cannot_share_source_picture(self):
+        with self.assertRaisesRegex(ValueError,'every output picture'):
+            m.align_indices([0.,1.,2.],[0.,.001,2.],0)
+
+    def test_nonfinite_times_or_invalid_tolerance_fail(self):
+        for value in [float('nan'),float('inf'),-float('inf')]:
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):m.align_indices([0.,1.,value],[0.,1.,2.],0)
+                with self.assertRaises(ValueError):m.align_indices([0.,1.,2.],[0.,1.,value],0)
+                with self.assertRaises(ValueError):m.align_indices([0.,1.,2.],[0.,1.,2.],value)
+        for tolerance in [-1,float('nan'),float('inf')]:
+            with self.assertRaises(ValueError):m.align_indices([0.,1.,2.],[0.,1.,2.],0,tolerance)
+
     def test_chroma_only_pulse_is_measured(self):
         source=[np.full((4,32,32),32768,np.uint16),np.full((4,16,16),32768,np.uint16),np.full((4,16,16),32768,np.uint16)]
         on=[p.copy() for p in source]

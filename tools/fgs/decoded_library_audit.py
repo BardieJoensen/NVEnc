@@ -20,6 +20,15 @@ import library_audit as audit
 import source_plane_review as source_review
 
 
+class AuditResourceUnavailable(RuntimeError):
+    """The run must pause without consuming pending media as failed checks."""
+
+
+def require_storage(directory):
+    if shutil.disk_usage(directory).free < 6*1024**3:
+        raise AuditResourceUnavailable('audit evidence filesystem below 6 GiB reserve')
+
+
 def summarize(path, metadata, expected):
     with Path(path).open() as stream: rows=list(csv.DictReader(stream))
     if (metadata.get('schema')!='fgs_reference_full_v1' or not metadata.get('interval_complete')
@@ -113,8 +122,7 @@ def inspect_file(item, header, binary, destination, pins, source_enabled=True):
                 prior_evidence=anchor.get('evidence'),prior_role=anchor.get('role')))
         for index,window in enumerate(windows):
             audit.check_identity(item)
-            if shutil.disk_usage(destination).free<6*1024**3:
-                raise RuntimeError('audit evidence filesystem below 6 GiB reserve')
+            require_storage(destination)
             d=directory/f'window-{index:02d}';d.mkdir(exist_ok=True)
             row=dict(window,index=index,status='running')
             try:
@@ -152,6 +160,10 @@ def inspect_file(item, header, binary, destination, pins, source_enabled=True):
         audit.check_identity(item)
         if audit.signature(binary)!=pins['binary_signature']:raise RuntimeError('inspector changed')
         report.update(complete=True,status='measured' if all(w['status']=='decoded' for w in report['windows']) else 'measurement_errors')
+    except AuditResourceUnavailable as error:
+        report.update(status='resource_paused',error=str(error),paused_at=time.time())
+        audit.write(directory/'resource-paused.json',report)
+        raise
     except Exception as error:report.update(status='superseded' if 'snapshot superseded' in str(error) else 'error',error=str(error))
     report.update(finished_at=time.time(),scope='Full selected-window pixel coverage, calibrated source comparisons where available. Completion is measurement completion, not a whole-file watchability verdict.')
     audit.write(final,report)
@@ -177,10 +189,11 @@ def main():
         if args.limit:items=items[:args.limit]
         pending=list(items);results=[];began=time.time()
         manifest_sha=audit.sha(args.manifest)
-        def publish(waiting=False):
+        def publish(waiting=False,paused=None):
             audit.write(args.output_dir/'status.json',dict(updated_at=time.time(),started_at=began,total=len(items),processed=len(results),
                 counts=dict(collections.Counter(r['status'] for r in results)),waiting_for_headers=waiting,
                 phase_complete=not pending,audit_complete=False,manifest_sha256=manifest_sha,
+                paused_reason=paused,pending_files=len(pending),
                 scope='Selected windows cover every image pixel/frame; retained source comparisons are separate. Flags require visual and recurrence review.',
                 results=[{k:r[k] for k in ('key','version','status') if k in r} for r in results]))
         publish()
@@ -190,8 +203,16 @@ def main():
                 header=args.headers/item['key']/item['version']/'report.json'
                 if not header.exists():continue
                 h=json.loads(header.read_text())
-                if h.get('status')!='complete':r=dict(key=item['key'],version=item['version'],status='header_'+h['status'])
-                else:r=inspect_file(item,header,args.binary,args.output_dir,pins,not args.skip_sources)
+                try:
+                    require_storage(args.output_dir)
+                    if h.get('status')!='complete':r=dict(key=item['key'],version=item['version'],status='header_'+h['status'])
+                    else:r=inspect_file(item,header,args.binary,args.output_dir,pins,not args.skip_sources)
+                except AuditResourceUnavailable as error:
+                    # Leave this file and the rest of the manifest pending.
+                    # A restart after storage recovery can reuse valid results.
+                    publish(paused=str(error))
+                    print(json.dumps(dict(status='resource_paused',reason=str(error),pending=len(pending))),flush=True)
+                    return 75
                 pending.remove(item);results.append(r);publish();progressed=True
                 print(json.dumps(dict(processed=len(results),total=len(items),key=item['key'],status=r['status'])),flush=True)
             if not progressed:

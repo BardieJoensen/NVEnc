@@ -8,6 +8,7 @@ visibility units; review such candidates with the reference-display inspector.
 """
 import json
 import math
+from bisect import bisect_left
 from pathlib import Path
 import re
 import subprocess
@@ -59,10 +60,23 @@ def align_indices(source_times, output_times, offset, tolerance=.0021):
         raise ValueError('non-finite alignment time')
     if any(b<=a for times in (source_times,output_times) for a,b in zip(times,times[1:])):
         raise ValueError('non-increasing alignment time')
+    if not math.isfinite(tolerance) or tolerance < 0:
+        raise ValueError('invalid alignment tolerance')
     matches=[]
     for j,t in enumerate(output_times):
-        distances=np.abs(np.asarray(source_times)-(t+offset));i=int(np.argmin(distances))
-        if distances[i]<=tolerance:matches.append((i,j))
+        target=t+offset
+        # Sorted timestamps need only the two neighbours of the insertion
+        # point. Scanning every source frame for every output frame makes
+        # whole-film recurrence checks quadratic. Prefer the earlier picture
+        # on an exact tie, as numpy.argmin did in the original implementation.
+        right=bisect_left(source_times,target)
+        if right == 0:
+            i=0
+        elif right == len(source_times):
+            i=right-1
+        else:
+            i=right-1 if target-source_times[right-1] <= source_times[right]-target else right
+        if abs(source_times[i]-target)<=tolerance:matches.append((i,j))
     if len(matches)!=len(output_times) or len({i for i,j in matches})!=len(matches):
         raise ValueError('source alignment does not cover every output picture')
     return matches
