@@ -1,6 +1,10 @@
 #include <cstdlib>
 #include <iostream>
+#include <algorithm>
+// NVEnc common headers define this legacy macro after standard headers.
+#define clamp(x, lo, hi) (((x) <= (hi)) ? (((x) >= (lo)) ? (x) : (lo)) : (hi))
 #include "NVEncFilmGrainRecovery.h"
+#undef clamp
 
 static void require(bool value, const char *message) {
     if (!value) { std::cerr << message << '\n'; std::exit(1); }
