@@ -674,8 +674,11 @@ if want_stage flicker_regression; then
         > "$REPORT_DIR/flicker-regression.log" 2>&1 &&
         python3 "$HERE/flicker_regression.py" --nvencc "$CANDIDATE_NVENCC" --case losttapes \
         --root "$FIXTURE_ROOT" --output "$REPORT_DIR/flicker-recovery-regression" \
+        >> "$REPORT_DIR/flicker-regression.log" 2>&1 &&
+        python3 "$HERE/flicker_regression.py" --nvencc "$CANDIDATE_NVENCC" --case southpark \
+        --root "$FIXTURE_ROOT" --output "$REPORT_DIR/flicker-southpark-regression" \
         >> "$REPORT_DIR/flicker-regression.log" 2>&1; then
-        record pass "both grain flashes rejected and original flat texture retained"
+        record pass "all three grain flashes rejected and original flat texture retained"
     else
         record fail "grain flash regression (see $REPORT_DIR/flicker-regression.log)"
         tail -20 "$REPORT_DIR/flicker-regression.log"

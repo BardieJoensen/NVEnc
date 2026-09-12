@@ -37,11 +37,11 @@ Recovery survives low-confidence model-history resets. The ordinary safety
 checks still reject unsafe grain immediately; this policy does not guarantee
 that every possible future grain transition is invisible.
 
-The full local gate also runs `flicker_regression`: it decodes 16 aligned
-Amphibia frames against the pinned original and repaired negative, checks the
-originally uniform foreground patch, and bounds whole-picture source error.
+The full local gate also runs `flicker_regression`: it decodes aligned Amphibia,
+Lost Tapes and South Park frames against pinned originals and repaired negatives,
+checks originally uniform patches, and bounds whole-picture source error.
 The retained defect must fail. A missing fixture is an error. The thresholds
-are specific to this SDR/QVBR34 example, and are not a library-wide visibility
+are specific to these SDR/QVBR34 examples, and are not a library-wide visibility
 score. This development test does not add work to routine Tdarr validation.
 
 ```sh

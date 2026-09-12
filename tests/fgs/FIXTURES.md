@@ -25,6 +25,7 @@ must be revalidated against both the known-bad and corrected controls.
 | `taxi-metric-gamer.json` | Unmodified historical adversarial model, previously named `taxi_ceiling_q.json` |
 | `taxi-widened-r4047.mkv` | Rejected r4047 encoder's output from the same pinned Taxi clip; file-mode negative control |
 | `amphibia-flicker-e10-source.mkv`, `amphibia-flicker-e10-repaired-negative.mkv` | Exact original and ripple-repaired S1E10; decoded 05:56 grain-flash regression |
+| `southpark-flicker-source.mkv`, `southpark-flicker-negative.mkv` | Retained S23E7 original and old ripple repair; strong 19:05.269 pulse, eight source-aligned frames |
 
 The Amphibia pair was retained on September 12 by hard link, with zero payload
 bytes copied. The original uniform shirt patch at `(736,768,32,32)` acquires
@@ -33,6 +34,12 @@ then returns near zero on the adjacent grain-off frame. `flicker_regression.py`
 checks 16 aligned displayed frames and whole-picture source error. It must
 reject the pinned damaged encode before accepting a candidate. These are
 scene-specific regression limits, not a general visibility classifier.
+
+The South Park pair is also retained by hard link. At `(96,1056,16,16)`,
+source SD is zero and the old isolated grain pulse reaches about 17 levels;
+the 3778447e excerpt remains near 0.032. The source-patch 0.3 and whole-picture
+4.0 error limits are unchanged. This case extends the existing developer gate;
+it adds no stage to normal Tdarr validation.
 
 The FFV1 clips preserve decoded source pixels. The manifest records their hashes,
 source locations, extraction commands, reference binary identities, and recovery
