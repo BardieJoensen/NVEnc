@@ -2266,18 +2266,30 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         for (int plane = 0; plane < 3; ++plane) {
             build_strength_lut(params, bitDepth, predicted[plane], plane, diagnostics.templateGain[plane]);
         }
-        for (int i = 0; i < blockCount; ++i) {
-            if ((i % m_blocksX + 1) * FGS_BLOCK_SIZE > luma.width
-                || (i / m_blocksX + 1) * FGS_BLOCK_SIZE > luma.height) continue;
-            // Include actual source levels, not just a block mean. Chroma may
-            // be uniform while the luma indexing its grain spans many levels.
-            const int first = clamp(static_cast<int>(std::floor(metrics[i].minCode / depthScale)) - 1, 0, 255);
-            const int last = clamp(static_cast<int>(std::ceil(metrics[i].maxCode / depthScale)) + 1, 0, 255);
-            // Neutral chroma in clipped black/white regions is not evidence
-            // about the active image's colour noise at neighboring levels.
-            if (metrics[i].maxCode / depthScale <= 20.0f
-                || metrics[i].minCode / depthScale >= 232.0f) continue;
-            for (int plane = 0; plane < (prm->filmGrain.analyzeChroma ? 3 : 1); ++plane) {
+        // Source-supported restart and mixed artwork are mandatory guards.
+        // Persistent chroma-only retention is part of the opt-in fidelity
+        // mode: on genuine grain it can change NVENC's luma bit allocation.
+        // Process all luma evidence first so a later block protects chroma
+        // throughout the same frame, regardless of raster traversal order.
+        const bool fullChromaProtection = prm->filmGrain.residualRetain < 0.0f
+            || m_state->synthesisRecovery.gain() < 1.0;
+        for (int plane = 0; plane < (prm->filmGrain.analyzeChroma ? 3 : 1); ++plane) {
+            if (plane && !fullChromaProtection && !m_state->sourceCaps.hasProtection(0)) continue;
+            for (int i = 0; i < blockCount; ++i) {
+                const int blockWidth = std::min(FGS_BLOCK_SIZE, luma.width - (i % m_blocksX) * FGS_BLOCK_SIZE);
+                const int blockHeight = std::min(FGS_BLOCK_SIZE, luma.height - (i / m_blocksX) * FGS_BLOCK_SIZE);
+                if (blockWidth < 8 || blockHeight < 8) continue;
+                // Include actual source levels, not just a block mean. Chroma may
+                // be uniform while the luma indexing its grain spans many levels.
+                const int first = clamp(static_cast<int>(std::floor(metrics[i].minCode / depthScale)) - 1, 0, 255);
+                const int last = clamp(static_cast<int>(std::ceil(metrics[i].maxCode / depthScale)) + 1, 0, 255);
+                // Neutral chroma in clipped black/white regions is not evidence
+                // about the active image's colour noise at neighboring levels.
+                if (metrics[i].maxCode / depthScale <= 20.0f
+                    || metrics[i].minCode / depthScale >= 232.0f) continue;
+                // The existing kernels already measure partial edge blocks.
+                // Require 8x8 observations in the plane actually being checked.
+                if (plane && (blockWidth < 16 || blockHeight < 16)) continue;
                 const double mean = (plane ? metrics[i].chromaMean[plane - 1] : metrics[i].mean) / depthScale;
                 const double sigma = (plane ? metrics[i].chromaSigma[plane - 1] : metrics[i].sigma) / depthScale;
                 if (sigma > 0.5 || mean <= 20.0 || mean >= 232.0) continue;

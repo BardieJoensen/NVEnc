@@ -19,7 +19,7 @@ W, H, FRAMES = 960, 544, 64
 LEVELS = [64, 112, 160, 208]
 
 
-def generate(path, bits):
+def generate(path, bits, edges=False):
     rng = np.random.default_rng(20260912)
     scale = 1 << (bits - 8)
     dtype = np.uint8 if bits == 8 else np.dtype('<u2')
@@ -36,6 +36,12 @@ def generate(path, bits):
                 # Source chroma is clean while co-located luma remains noisy.
                 u[48:112, 256:336] = 128
                 v[160:224, 136:216] = 128
+            if edges:
+                # A unique quiet brightness exists only in the partial bottom
+                # block: 28 luma rows and 14 chroma rows, as in 1080p footage.
+                y[512:, 752:912] = 208
+                u[256:, 376:456] = 128
+                v[256:, 376:456] = 128
             target.write(b'FRAME\n')
             for plane in [y, u, v]:
                 target.write(np.rint(plane * scale).astype(dtype).tobytes())
@@ -71,18 +77,22 @@ def decode(video, grain, bits, log):
                 child.wait(timeout=30)
 
 
-def measure(video, bits, directory):
+def measure(video, bits, directory, edges=False):
     on = decode(video, 1, bits, directory/'grain-on.log')
     off = decode(video, 0, bits, directory/'grain-off.log')
     quiet = [(slice(128,192),slice(304,400)), (slice(64,96),slice(272,320)), (slice(176,208),slice(152,200))]
+    expected_mean = [112,128,128]
+    if edges:
+        quiet = [(slice(520,536),slice(784,880)), (slice(260,268),slice(392,440)), (slice(260,268),slice(392,440))]
+        expected_mean = [208,128,128]
     noisy = [(slice(256,480),slice(40,200)), (slice(128,240),slice(20,100)), (slice(128,240),slice(20,100))]
     rows = []
     try:
         for n in range(FRAMES):
             a,b=next(on),next(off)
-            rows.append(dict(frame=n,quiet_source=not 32<=n<36,
+            rows.append(dict(frame=n,quiet_source=edges or not 32<=n<36,
                 quiet_sigma=[float(a[p][quiet[p]].std()) for p in range(3)],
-                quiet_mean_error=[abs(float(a[p][quiet[p]].mean())-[112,128,128][p]) for p in range(3)],
+                quiet_mean_error=[abs(float(a[p][quiet[p]].mean())-expected_mean[p]) for p in range(3)],
                 quiet_added=[float(np.sqrt(np.mean((a[p][quiet[p]]-b[p][quiet[p]])**2))) for p in range(3)],
                 noisy_added=[float((a[p][noisy[p]]-b[p][noisy[p]]).std()) for p in range(3)],
                 noisy_total=[float(a[p][noisy[p]].std()) for p in range(3)]))
@@ -105,18 +115,21 @@ def measure(video, bits, directory):
 
 
 def main():
+    global H
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--nvencc',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--expect-rejected',action='store_true')
+    parser.add_argument('--cases',nargs='+',choices=['interior','edges'],default=['interior','edges'])
     args=parser.parse_args()
     args.output.mkdir(parents=True,exist_ok=True)
     results=[]
-    for bits in [8,10]:
-        directory=args.output/str(bits);directory.mkdir(exist_ok=True)
+    for case,bits in [(case,bits) for case in args.cases for bits in [8,10]]:
+        edges=case=='edges';H=540 if edges else 544
+        directory=args.output/case/str(bits);directory.mkdir(parents=True,exist_ok=True)
         source,video=directory/'source.y4m',directory/'candidate.mkv'
         if video.exists():raise RuntimeError('Refusing to overwrite retained trial')
-        generate(source,bits)
+        generate(source,bits,edges)
         cmd=[str(args.nvencc),'--avsw','-i',str(source),'--codec','av1','--cqp','20',
              '--output-depth',str(bits),'--av1-film-grain','denoise=auto,chroma=auto,denoiser=bilateral',
              '--colormatrix','bt709','--colorprim','bt709','--transfer','bt709','--colorrange','limited',
@@ -124,7 +137,8 @@ def main():
         (directory/'encode-command.json').write_text(json.dumps(cmd,indent=2)+'\n')
         with (directory/'encode.log').open('w') as log:
             subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=300)
-        result=measure(video,bits,directory)
+        result=measure(video,bits,directory,edges)
+        result.update(case=case,width=W,height=H)
         # Separate FGS from ordinary lossy chroma prediction/quantization. In
         # this fixture conventional NVENC also leaves up to one native code
         # of chroma variation. Compare with that independently encoded control
@@ -142,7 +156,7 @@ def main():
             (cd/'encode-command.json').write_text(json.dumps(cc,indent=2)+'\n')
             with (cd/'encode.log').open('w') as log:
                 subprocess.run(cc,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=300)
-            controls[label]=measure(control,bits,cd)
+            controls[label]=measure(control,bits,cd,edges)
         result['controls']=controls
         result['checks']['raw_source_preserved']=bool(np.all(np.array(controls['raw']['peak_quiet_sigma'])<=.3)
             and np.all(np.array(controls['raw']['peak_quiet_mean_error'])<=.3))
