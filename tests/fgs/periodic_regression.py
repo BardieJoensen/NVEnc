@@ -56,10 +56,10 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args(); args.output.mkdir(parents=True, exist_ok=True)
     pinned = fixtures.verify(args.root, json.loads(fixtures.MANIFEST.read_text()),
-                             ['gentlemen_clip', 'gentlemen_mesh_negative', 'gentlemen_guard_positive'])
+                             ['gentlemen_clip', 'gentlemen_mesh_negative', 'gentlemen_recovery_positive'])
     source = Path(pinned['gentlemen_clip']['path'])
     negative = Path(pinned['gentlemen_mesh_negative']['path'])
-    positive = Path(pinned['gentlemen_guard_positive']['path'])
+    positive = Path(pinned['gentlemen_recovery_positive']['path'])
     repo = Path(__file__).resolve().parents[2]
     scanner = args.output / 'scan'
     flags = shlex.split(subprocess.check_output(

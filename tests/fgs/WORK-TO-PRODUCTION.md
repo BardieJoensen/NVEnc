@@ -1,5 +1,11 @@
 # Encoder work through production
 
+September 12 isolated hotfix: see [FLICKER-20260912.md](FLICKER-20260912.md)
+and its operational ledger for the Amphibia grain-flicker investigation. This
+worktree starts at deployed `497caa64`; the historical September 9 status below
+does not describe the later fidelity branch. The canonical ongoing handoff is
+`/home/bardie/git-repos/NVEnc-fgs-fidelity/tests/fgs/WORK-TO-PRODUCTION.md`.
+
 Status: **in progress**, reconciled 2026-09-09 after the post-encode study.
 
 The goal is to finish the encoder improvements, resolve measured quality,

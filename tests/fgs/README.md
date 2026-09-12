@@ -31,6 +31,19 @@ ln -sf ../../tests/fgs/hooks/pre-push .git/hooks/pre-push
 
 ## Fast CPU tests
 
+The synthesis-recovery tests replay the reported short accepted/rejected fit
+patterns and require sustained usable analysis after a source-preserving gap.
+Recovery survives low-confidence model-history resets. The ordinary safety
+checks still reject unsafe grain immediately; this policy does not guarantee
+that every possible future grain transition is invisible.
+
+The full local gate also runs `flicker_regression`: it decodes 16 aligned
+Amphibia frames against the pinned original and repaired negative, checks the
+originally uniform foreground patch, and bounds whole-picture source error.
+The retained defect must fail. A missing fixture is an error. The thresholds
+are specific to this SDR/QVBR34 example, and are not a library-wide visibility
+score. This development test does not add work to routine Tdarr validation.
+
 ```sh
 bash tests/fgs/run_cpu_tests.sh
 ```

@@ -84,7 +84,7 @@ CEILING_MODEL="$FIXTURE_ROOT/taxi-metric-gamer.json"
 TAXI_CLIP="$FIXTURE_ROOT/taxi-coarse-24f.mkv"
 SUBSTITUTION_ENCODE="$FIXTURE_ROOT/taxi-widened-r4047.mkv"
 
-ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression grain_syntax)
+ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression grain_syntax flicker_regression)
 # The GPU fixtures and export tests plus the offline adversarial
 # specimen. Deliberately excludes the libaom oracles and the canary, which need
 # real-film encodes. A pre-push hook long enough to be bypassed with
@@ -664,6 +664,18 @@ if want_stage periodic_regression; then
     else
         record fail "periodic grain regression (see $REPORT_DIR/periodic-regression.log)"
         tail -20 "$REPORT_DIR/periodic-regression.log"
+    fi
+fi
+
+if want_stage flicker_regression; then
+    log "stage: source-referenced grain flash regression"
+    if python3 "$HERE/flicker_regression.py" --nvencc "$CANDIDATE_NVENCC" \
+        --root "$FIXTURE_ROOT" --output "$REPORT_DIR/flicker-regression" \
+        > "$REPORT_DIR/flicker-regression.log" 2>&1; then
+        record pass "known grain flash rejected and original flat texture retained"
+    else
+        record fail "grain flash regression (see $REPORT_DIR/flicker-regression.log)"
+        tail -20 "$REPORT_DIR/flicker-regression.log"
     fi
 fi
 

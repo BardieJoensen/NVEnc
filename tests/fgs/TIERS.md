@@ -16,6 +16,13 @@ the reason matters more than the arrangement.
 
 ## Why the GPU tier cannot be hosted
 
+The September 12 grain-flash regression adds a different failure class:
+repeated rejection/re-entry and flat-block eligibility changes can alternate
+source preservation with synthesized texture on adjacent frames. The CPU tier
+tests recovery state; the full local gate's `flicker_regression` additionally
+checks actual displayed pictures against the original and a retained negative.
+Bitstream validity and an aggregate quality score do not test this case.
+
 This is the whole point of the split, so it is worth being blunt about.
 
 Both defects that reached production on 2026-07-29 and 2026-07-30 — the fixed
