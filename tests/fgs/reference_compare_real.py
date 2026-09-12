@@ -92,16 +92,40 @@ def luma_occupancy(src, frames):
     brightnesses the film actually uses.
     """
     import numpy as np
-    r = subprocess.run(
-        ["ffmpeg", "-v", "error", "-i", src, "-vframes", str(frames),
-         "-pix_fmt", "gray", "-f", "rawvideo", "-"],
-        capture_output=True, timeout=3600)
-    if r.returncode or not r.stdout:
-        return None
-    a = np.frombuffer(r.stdout, dtype=np.uint8)
-    hist = np.bincount(a, minlength=256).astype(np.float64)
-    total = hist.sum()
-    return (hist / total) if total else None
+    geometry = probe(src, "stream=width,height")
+    if frames <= 0 or len(geometry) != 2 or not all(x.isdigit() for x in geometry):
+        raise RuntimeError("invalid luma occupancy input or frame count")
+    width, height = map(int, geometry)
+    frame_bytes = width * height * 2
+    if frame_bytes <= 0:
+        raise RuntimeError("empty luma occupancy geometry")
+    # A YUV-to-gray conversion expands limited-range luma to display gray.
+    # Grain curves instead index native codes. Extract Y first, preserving its
+    # range, and use a depth conversion only. Stream to bound memory at 4K.
+    command = ["ffmpeg", "-v", "error", "-threads", "2", "-i", src,
+               "-map", "0:v:0", "-frames:v", str(frames),
+               "-vf", "extractplanes=y", "-filter_threads", "1",
+               "-pix_fmt", "gray10le", "-f", "rawvideo", "-"]
+    hist = np.zeros(256, dtype=np.float64)
+    with tempfile.TemporaryFile() as errors:
+        child = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=errors)
+        try:
+            for _ in range(frames):
+                raw = child.stdout.read(frame_bytes)
+                if len(raw) != frame_bytes:
+                    raise RuntimeError("incomplete luma occupancy frame coverage")
+                values = np.frombuffer(raw, dtype="<u2")
+                if np.any(values > 1023):
+                    raise RuntimeError("luma occupancy depth mismatch")
+                hist += np.bincount(values >> 2, minlength=256)
+            if child.stdout.read(1) or child.wait(timeout=60):
+                raise RuntimeError("luma occupancy decoder failed or returned extra frames")
+        finally:
+            child.stdout.close()
+            if child.poll() is None:
+                child.terminate()
+                child.wait(timeout=30)
+    return hist / hist.sum()
 
 
 def weighted_rms(values, weights):
