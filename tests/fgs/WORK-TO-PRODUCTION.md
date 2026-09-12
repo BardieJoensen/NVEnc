@@ -4,28 +4,41 @@ Status: **ordinary encoder and faster HDR validation deployed; retention
 diagnostics and comparison preparation complete on CPU; heavy quality/size
 experiments deferred until the running repair finishes**, 2026-09-11.
 
-**September 12 grain-flicker fix:** the ordinary encoder now uses isolated
-commit `e2c3a99d` in Tdarr and the repair workers. Rejected or unusable fits could
-previously restart synthesized grain for only one/two frames. The fix requires
-sustained usable evidence before restarting it, without weakening ripple guards.
-The original ripple gate, new source-referenced flash regression and actual
-Tdarr 2.87.01 runtime check pass. See [the investigation and limitations](FLICKER-20260912.md)
-and the [live ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/work-plan.json)
-for build hashes, deployment, per-scene checks, selected repairs and scope.
-All nine reviewed/reported episode replacements passed their original witness
-checks and were installed. Full-file header scans then found another strong
-Lost Tapes S1E5 pulse at 01:30.257; the 24-fit hold alone is a partial fix.
-The source and that `e2c3a99d` counterexample are retained. A coupled source/grain
-restart ramp (`3778447e`) is now being qualified in the isolated flicker worktree;
-it is not yet deployed. The live ledger takes precedence over the earlier
-successful per-scene checks. The separate header scope and reviewed title lists
-are in [SCOPE.md](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/SCOPE.md).
+**September 12 grain-flicker hotfix:** ordinary production now uses isolated
+core `3778447e` in Tdarr and the repair worker. This adds a 24-fit recovery hold
+and a 16-frame gradual synthesis restart with matching all-plane source residual.
+Unsafe models are still rejected; the ripple, syntax and chroma guards remain.
+The initial `e2c3a99d` hold removed nine original witnesses, but a full-file scan
+found a further Lost Tapes one-frame pulse. That output is now a retained
+negative. The second fix passes both source-referenced flash regressions, full
+Lost Tapes decoding, the existing GPU gate and fresh encodes inside the exact
+Tdarr 2.87.01 container. Intentional Gentlemen ramp changes were source-reviewed
+before accepting a separate positive; all numeric limits and old negatives remain.
 
-The first fix/regression are integrated here as `63b6cebb`; its combined
-fidelity build compiles and passes CPU tests but is not the deployed binary.
-Header triage was added here as `4d7b1b9b`. The newer ramp still needs integration
-and qualification. Deferred retention GPU trials remain manual-start only after
-the ripple repair finishes.
+See [the investigation and limits](FLICKER-20260912.md),
+[qualification](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/ramp-qualification.json),
+[live ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/work-plan.json)
+and [scope/title lists](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/SCOPE.md).
+Seven further source-backed repairs are selected: five more Amphibia files,
+Batman: The Dark Knight Returns and the remaining Lost Tapes case. The live
+ledger and receipts record their current installation/verification state.
+Initial and superseded versions are retained. Header candidates are not a
+visibly damaged-file count; the initial 1,464 repaired-version audit does not
+cover the entire historical library.
+
+Qualification is for the current **10-bit output** flow. An 8-bit-output trial
+still adds excess texture on source-flat artwork. Weak longer grain bursts
+also remain in the full Lost Tapes test (including a seven-frame ramp to patch
+SD 1.77, versus source 0.21). Ordinary lossy fallback can attenuate fine grain.
+This is a fix for the tested strong flashes, not a universal fidelity guarantee.
+
+The ramp is integrated here as `895b236f`/`9afba34f`, flash fixtures as `fb8d8c68`,
+and reviewed periodic baseline as `c9c4e00a`. The combined fidelity branch passes
+CPU tests and CUDA compilation; it is **not** the deployed binary and still
+needs its deferred quality/size comparisons. Header triage is `4d7b1b9b`.
+Retention GPU trials remain manual-start only after the ripple repair finishes.
+Before those trials, retain the historical `497caa64` results and add a current
+ordinary `3778447e` comparison; do not silently relabel old measurements.
 
 This is the canonical entry point for resuming this project. Read the current
 state and next steps here before using an older findings report or work ledger.
@@ -94,8 +107,8 @@ jacket regression. The report tests pass; new media work remains deferred.
 
 | Revision | Role | State at this handoff |
 | --- | --- | --- |
-| `e2c3a99d` | Ordinary encoder with 24-fit recovery hold | Deployed; original reported flash scenes fixed, later Lost Tapes counterexample under refinement |
-| `3778447e` | Coupled source/grain recovery ramp | Isolated candidate; qualification in progress, not deployed |
+| `e2c3a99d` | First 24-fit recovery hold | Superseded; retained partial-fix baseline and rollback |
+| `3778447e` | Ordinary encoder with coupled source/grain recovery ramp | Deployed after source/GPU/container qualification; residual limits recorded |
 | `497caa64` | Earlier ordinary encoder, `retain=0`, bilateral | Retained comparison/rollback baseline; superseded in production |
 | `9c1664d4` | Optional automatic retention | Quality/operational qualification recorded; not broadly enabled; all three complete-source outputs exceed the unchanged 10% trial cap |
 | `5450a4fc` | Precise fallback traces and skipping unused covariance work | CPU checks passed; new CUDA build and output-preservation checks deferred |
@@ -111,7 +124,7 @@ measured baseline binaries are pinned in
 - Ordinary `497caa64`: SHA-256
   `bb7e75cbcb9097f1f1c7ac3347e7193c74caa6c7d57db1c3c77348cc27daf144`.
   Its retained artifact is `production-readiness-20260909/bin/nvencc-fidelity-497caa64`
-  under the repair log root. The host build input now contains `e2c3a99d`;
+  under the repair log root. The host build input now contains `3778447e`;
   do not use that mutable path as the old comparison baseline.
 - Optional `9c1664d4`: SHA-256
   `8dff824c8d7360adac294f05e7c6032770f8594cf1c3b63961f50a854e3b0fec`.
