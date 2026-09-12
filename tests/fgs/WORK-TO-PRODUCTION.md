@@ -19,12 +19,23 @@ See [the investigation and limits](FLICKER-20260912.md),
 [qualification](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/ramp-qualification.json),
 [live ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/work-plan.json)
 and [scope/title lists](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/SCOPE.md).
-Seven further source-backed repairs are selected: five more Amphibia files,
-Batman: The Dark Knight Returns and the remaining Lost Tapes case. The live
-ledger and receipts record their current installation/verification state.
-Initial and superseded versions are retained. Header candidates are not a
-visibly damaged-file count; the initial 1,464 repaired-version audit does not
-cover the entire historical library.
+The completed header audit covers 1,474 repaired versions. The additional fixed
+1,323-file source screen completed with 1,198 source comparisons, 107 weak
+decoded overlays and 18 incomplete first-pass comparisons. Further calibrated
+HDR measurements and VC-1/deinterlace alignment limitations are retained in the
+investigation report. Neither header flags nor one sampled scene establish a
+whole-file visibility verdict; the 5,293-file historical inventory is not fully
+temporally scoped.
+
+Thirty-six distinct files were explicitly selected after source and recurrence
+review, including fourteen from the last nineteen-candidate shortlist. The
+[repair results and episode list](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/RESULTS.md)
+join current installation and independent verification receipts. Original and
+superseded versions are retained; no new download was needed for these selected
+files. A third pinned South Park regression rejects the old strong flash and
+accepts the new excerpt and final installed file at unchanged numerical limits.
+It adds no stage to normal Tdarr validation. Current queue admission and playback
+watchdog state are recorded in the linked live ledger and OPERATIONS.md.
 
 Qualification is for the current **10-bit output** flow. An 8-bit-output trial
 still adds excess texture on source-flat artwork. Weak longer grain bursts
@@ -35,7 +46,7 @@ This is a fix for the tested strong flashes, not a universal fidelity guarantee.
 The ramp is integrated here as `895b236f`/`9afba34f`, flash fixtures as `fb8d8c68`,
 and reviewed periodic baseline as `c9c4e00a`. The combined fidelity branch passes
 CPU tests and CUDA compilation; it is **not** the deployed binary and still
-needs its deferred quality/size comparisons. Header triage is `4d7b1b9b`.
+needs its deferred quality/size comparisons. Header triage is `4d7b1b9b`; the South Park regression is `a4002fc8`.
 Retention GPU trials remain manual-start only after the ripple repair finishes.
 Before those trials, retain the historical `497caa64` results and add a current
 ordinary `3778447e` comparison; do not silently relabel old measurements.
@@ -142,7 +153,7 @@ coordinator owns the current Tdarr pause. Isolated trial containers are stopped.
 
 ## What happens next
 
-**GPU trials are prepared, not running or scheduled to start automatically.**
+**Retention GPU trials are prepared, not running or scheduled to start automatically.**
 The user explicitly confirmed manual start only: wait for the repair to finish
 and resume the trials when requested. Do not install a timer or trigger that
 starts them when the repair completes.
