@@ -107,6 +107,11 @@
       "file": "gentlemen-source-guard-positive-33m-150s.mkv",
       "sha256": "bcc46593c0957d0128048707ba84d691b0554ff903e5993cae5c2d6428354f63",
       "bytes": 50298665
+    },
+    "gentlemen_fine_source_positive": {
+      "file": "gentlemen-fine-source-positive-33m-150s.mkv",
+      "sha256": "af87536485e4b30c69383f960ab4a682c9ef89b3d2d164a3659f61aa7b9c6c55",
+      "bytes": 50813666
     }
   },
   "provenance": {
@@ -280,6 +285,20 @@
       "decision": "accept separately retained source-guard baseline",
       "limits": "All old positives and labelled negatives retained; numeric detector and source limits unchanged. Source-aligned metrics and still review, not a universal perceptual certificate.",
       "reviewed_at": 1789231309.2778037
+    },
+    "gentlemen_fine_source_positive": {
+      "encoder_core": "ef5c61fe62232e6917d3d2a7adc248bac06d5ae4",
+      "encoder_sha256": "d8127dfa63011160dc222a41516452c269c2438269866b3da74f95e5ba4fd47b",
+      "source_review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/strict-periodic-source-review.json",
+      "critical_scenes": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/strict-periodic-critical-scenes.json",
+      "visual_review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/strict-periodic-visual-review.json",
+      "decoded_frames": 3600,
+      "source_frames_reviewed": 3600,
+      "grain_schedule_unchanged": true,
+      "source_review_changed_group_frames": 1695,
+      "decision": "accept separately retained fine-source baseline",
+      "limits": "All old positives and labelled negatives retained; numeric detector and source limits unchanged. Source-aligned metrics and still review, not a universal perceptual certificate.",
+      "reviewed_at": 1789245950.6375623
     }
   },
   "canary_revalidation": {
