@@ -43,6 +43,7 @@
 
 #include "NVEncFilterFilmGrain.h"
 #include "NVEncFilmGrainRecovery.h"
+#include "NVEncFilmGrainSourceGuard.h"
 #include "NVEncFilmGrainModel.h"
 #include "NVEncFilterDegrain.h"
 #include "NVEncFilterDenoiseFFT3D.h"
@@ -83,6 +84,8 @@ struct FilmGrainBlockMetric {
     float tensorXY;
     float tensorYY;
     float spatialCorrelation;
+    float chromaMean[2];
+    float chromaSigma[2];
     uint32_t flat;
 };
 
@@ -430,6 +433,57 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
         reduce4[0] / fmaxf(reduce5[0], 1e-12f)));
     out.flat = isFlat ? 1u : 0u;
     metrics[blockIndex] = out;
+}
+
+// Source-only chroma evidence, including blocks excluded from AR training.
+// Keep this before the existing metrics readback: no new host synchronization.
+template<typename Type, int shift, int components>
+__global__ void kernel_fgs_chroma_source_metrics(const uint8_t *__restrict__ src, const int pitch,
+    const int width, const int height, const int blocksX, const int component, const int channel,
+    FilmGrainBlockMetric *__restrict__ metrics) {
+    constexpr int blockSize = FGS_BLOCK_SIZE / 2;
+    constexpr int threads = 64;
+    const int index = blockIdx.x;
+    const int tid = threadIdx.x;
+    const int x0 = (index % blocksX) * blockSize;
+    const int y0 = (index / blocksX) * blockSize;
+    const int bw = min(blockSize, width - x0);
+    const int bh = min(blockSize, height - y0);
+    if (bw < 8 || bh < 8) return;
+    const int count = bw * bh;
+    __shared__ float tile[blockSize * blockSize];
+    __shared__ float reduce[threads];
+    __shared__ float mean;
+    float sum = 0.0f;
+    for (int i = tid; i < count; i += threads) {
+        const float value = static_cast<float>(load_code<Type, shift>(
+            src, pitch, x0 + i % bw, y0 + i / bw, component, components));
+        tile[i] = value;
+        sum += value;
+    }
+    reduce[tid] = sum;
+    __syncthreads();
+    for (int stride = threads / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) reduce[tid] += reduce[tid + stride];
+        __syncthreads();
+    }
+    if (tid == 0) mean = reduce[0] / count;
+    __syncthreads();
+    float variance = 0.0f;
+    for (int i = tid; i < count; i += threads) {
+        const float residual = tile[i] - mean;
+        variance += residual * residual;
+    }
+    reduce[tid] = variance;
+    __syncthreads();
+    for (int stride = threads / 2; stride > 0; stride >>= 1) {
+        if (tid < stride) reduce[tid] += reduce[tid + stride];
+        __syncthreads();
+    }
+    if (tid == 0) {
+        metrics[index].chromaMean[channel] = mean;
+        metrics[index].chromaSigma[channel] = sqrtf(fmaxf(0.0f, reduce[0] / count));
+    }
 }
 
 __global__ void kernel_fgs_motion_confidence(uint8_t *__restrict__ flatMask,
@@ -797,11 +851,28 @@ static float auto_retain_from_detail_risk(const float detailRisk) {
 }
 
 template<typename Type, int shift>
-static RGY_ERR launch_flat_metrics(const RGYFrameInfo& luma, FilmGrainBlockMetric *metrics,
-    const int blocksX, const int blocksY, const int bitDepth, cudaStream_t stream) {
+static RGY_ERR launch_flat_metrics(const RGYFrameInfo *source, const bool analyzeChroma,
+    FilmGrainBlockMetric *metrics, const int blocksX, const int blocksY, const int bitDepth,
+    cudaStream_t stream) {
+    const auto luma = getPlane(source, RGY_PLANE_Y);
     kernel_fgs_flat_metrics<Type, shift><<<blocksX * blocksY, FGS_FLAT_THREADS, 0, stream>>>(
         luma.ptr[0], luma.pitch[0], luma.width, luma.height, blocksX, bitDepth, metrics);
-    return err_to_rgy(cudaGetLastError());
+    auto sts = err_to_rgy(cudaGetLastError());
+    if (sts != RGY_ERR_NONE || !analyzeChroma) return sts;
+    const bool semiPlanar = source->csp == RGY_CSP_NV12 || source->csp == RGY_CSP_P010;
+    for (int c = 0; c < 2; ++c) {
+        const auto chroma = getPlane(source, static_cast<RGY_PLANE>(RGY_PLANE_U + (semiPlanar ? 0 : c)));
+        if (semiPlanar) {
+            kernel_fgs_chroma_source_metrics<Type, shift, 2><<<blocksX * blocksY, 64, 0, stream>>>(
+                chroma.ptr[0], chroma.pitch[0], source->width / 2, source->height / 2,
+                blocksX, c, c, metrics);
+        } else {
+            kernel_fgs_chroma_source_metrics<Type, shift, 1><<<blocksX * blocksY, 64, 0, stream>>>(
+                chroma.ptr[0], chroma.pitch[0], chroma.width, chroma.height, blocksX, 0, c, metrics);
+        }
+        if ((sts = err_to_rgy(cudaGetLastError())) != RGY_ERR_NONE) return sts;
+    }
+    return RGY_ERR_NONE;
 }
 
 static RGY_ERR launch_motion_confidence(uint8_t *flatMask, const int fgsBlocksX, const int fgsBlocksY,
@@ -1607,15 +1678,15 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     switch (source->csp) {
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
-        sts = launch_flat_metrics<uint8_t, 0>(luma,
+        sts = launch_flat_metrics<uint8_t, 0>(source, prm->filmGrain.analyzeChroma,
             static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream);
         break;
     case RGY_CSP_YV12_10:
-        sts = launch_flat_metrics<uint16_t, 0>(luma,
+        sts = launch_flat_metrics<uint16_t, 0>(source, prm->filmGrain.analyzeChroma,
             static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream);
         break;
     case RGY_CSP_P010:
-        sts = launch_flat_metrics<uint16_t, 6>(luma,
+        sts = launch_flat_metrics<uint16_t, 6>(source, prm->filmGrain.analyzeChroma,
             static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream);
         break;
     default:
@@ -2106,6 +2177,44 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     } else if (prm->filmGrain.residualRetain < 0.0f) {
         m_state->fidelityRecoveryFrames = 0;
     }
+    FilmGrainQuietSourceGuard quietSource;
+    if (modelValid && params.applyGrain) {
+        float predicted[3][FGS_STRENGTH_LUT_SIZE];
+        for (int plane = 0; plane < 3; ++plane) {
+            build_strength_lut(params, bitDepth, predicted[plane], plane, diagnostics.templateGain[plane]);
+        }
+        // Evaluate the selected, full-strength model before the recovery ramp.
+        // A small current gain must not admit a source-incompatible model that
+        // will become visibly wrong as recovery progresses. The cache remains
+        // unscaled; an incompatible model cannot be borrowed on the next frame.
+        for (int i = 0; i < blockCount; ++i) {
+            if ((i % m_blocksX + 1) * FGS_BLOCK_SIZE > luma.width
+                || (i / m_blocksX + 1) * FGS_BLOCK_SIZE > luma.height) continue;
+            const double x = metrics[i].mean / depthScale;
+            const int left = clamp(static_cast<int>(std::floor(x)), 0, FGS_STRENGTH_LUT_SIZE - 1);
+            const int right = std::min(left + 1, FGS_STRENGTH_LUT_SIZE - 1);
+            const double fraction = clamp(x - left, 0.0, 1.0);
+            for (int plane = 0; plane < (prm->filmGrain.analyzeChroma ? 3 : 1); ++plane) {
+                const double modeled = (predicted[plane][left] * (1.0 - fraction)
+                    + predicted[plane][right] * fraction) / depthScale;
+                const double mean = plane ? metrics[i].chromaMean[plane - 1] / depthScale : x;
+                const double sigma = (plane ? metrics[i].chromaSigma[plane - 1] : metrics[i].sigma) / depthScale;
+                quietSource.observe(plane, mean, sigma, modeled);
+            }
+        }
+    }
+    const bool quietSourceFallback = quietSource.needsSource();
+    if (quietSourceFallback) {
+        diagnostics.sourceFidelityFallback = true;
+        diagnostics.modelHeld = false;
+        modelValid = false;
+        m_state->lastParamsValid = false;
+        m_state->pendingParamsValid = false;
+        m_state->pendingStreak = 0;
+        m_state->heldStreak = 0;
+        std::memset(&params, 0, sizeof(params));
+        if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
+    }
     const bool recoveryAllowed = m_state->synthesisRecovery.allow(modelValid,
         freshFitValid || diagnostics.freshModel, diagnostics.modelFrames >= prm->filmGrain.modelWindow);
     const bool recoveryHeld = modelValid && !recoveryAllowed;
@@ -2240,7 +2349,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             pointsCr += strsprintf(_T(" %d:%d"), params.pointCrValue[i], params.pointCrScaling[i]);
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
-            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d rejected=%d recoveryHeld=%d recoveryFrames=%d recoveryGain=%.4f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
+            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d rejected=%d recoveryHeld=%d recoveryFrames=%d recoveryGain=%.4f quietSource=%d quietConflicts=%llu/%llu/%llu quietExcess=%.3f/%.3f/%.3f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             modelValid ? 1 : 0, diagnostics.sceneReset ? 1 : 0, diagnostics.modelHeld ? 1 : 0,
@@ -2250,6 +2359,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             diagnostics.strengthFitError[0], diagnostics.strengthFitError[1], diagnostics.strengthFitError[2],
             diagnostics.sourceFidelityFallback ? 1 : 0, diagnostics.freshModel ? 1 : 0, diagnostics.rejectedModel ? 1 : 0,
             recoveryHeld ? 1 : 0, m_state->synthesisRecovery.frames(), recoveryGain,
+            quietSourceFallback ? 1 : 0,
+            static_cast<unsigned long long>(quietSource.conflictingBlocks[0]),
+            static_cast<unsigned long long>(quietSource.conflictingBlocks[1]),
+            static_cast<unsigned long long>(quietSource.conflictingBlocks[2]),
+            quietSource.maxExcess[0], quietSource.maxExcess[1], quietSource.maxExcess[2],
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,
