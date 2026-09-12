@@ -28,8 +28,8 @@ struct FilmGrainQuietSourceGuard {
         }
         // Avoid clipped range endpoints: this test cannot infer missing grain
         // from black bars or saturated code values. Other synthesis/range
-        // validation remains independent. A full source block supplies 1024
-        // luma or 256 chroma observations; a single such conflict is evidence.
+        // validation remains independent. Callers require at least 8x8 source
+        // samples, including valid partial blocks at the image boundary.
         if (mean8 <= 20.0 || mean8 >= 232.0 || sourceSigma8 > 0.5) return;
         ++quietBlocks[plane];
         const double excess = modeledSigma8 - sourceSigma8;
@@ -178,6 +178,10 @@ public:
         return size;
     }
     double gain(int plane, int x) const { return gains_[plane][x]; }
+    bool hasProtection(int plane) const {
+        return std::any_of(gains_[plane].begin(), gains_[plane].end(),
+            [](double gain) { return gain < 1.0; });
+    }
 private:
     std::array<std::array<double, 256>, 3> gains_;
     std::array<std::array<uint8_t, 256>, 3> holds_;
