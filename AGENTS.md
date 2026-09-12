@@ -1,5 +1,12 @@
 # NVEnc
 
+## FGS project context
+
+For encoder grain, ripple/flicker repair, Tdarr or retention work, start with
+[the current handoff](tests/fgs/WORK-TO-PRODUCTION.md) and its source-guard report.
+They identify deployed versus experimental cores, source evidence and remaining
+work. Historical reports describe their named dates, not the current runtime.
+
 NVIDIAのGPU/APUに搭載されているHWエンコーダ(NVENC)をNVENC SDKを介して呼び出す。
 単体で動作するコマンドライン版とAviUtl/AviUtl2出力プラグイン版がある。
 
