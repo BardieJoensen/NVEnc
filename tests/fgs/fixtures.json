@@ -102,6 +102,11 @@
       "file": "southpark-flicker-negative.mkv",
       "sha256": "ae630f5d3dd9d4ab9846bf96d08f8e76c61f52d4252463b61ec2bc0ed2e88b32",
       "bytes": 753613359
+    },
+    "gentlemen_source_guard_positive": {
+      "file": "gentlemen-source-guard-positive-33m-150s.mkv",
+      "sha256": "bcc46593c0957d0128048707ba84d691b0554ff903e5993cae5c2d6428354f63",
+      "bytes": 50298665
     }
   },
   "provenance": {
@@ -261,6 +266,20 @@
       "retention": "Hard links to unchanged retained original and old ripple repair before selected replacement",
       "references": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/southpark-flicker-fixtures.json",
       "review": "Eight aligned frames at 19:05.269; source-flat step patch SD 0, old pulse about 17, 3778447e output about 0.032. Limits unchanged."
+    },
+    "gentlemen_source_guard_positive": {
+      "encoder_core": "273723b7710ec8b2f01c68714ce52a722f0d8d99",
+      "encoder_sha256": "343327febbf057e156909ad23b2e9ed2de08bac6902aa654d7b0a914b02a7b40",
+      "source_review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/constant-periodic-source-review.json",
+      "critical_scenes": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/constant-periodic-critical-scenes.json",
+      "visual_review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/constant-periodic-visual-review.json",
+      "decoded_frames": 3600,
+      "source_frames_reviewed": 3600,
+      "grain_schedule_unchanged": true,
+      "source_review_changed_group_frames": 1701,
+      "decision": "accept separately retained source-guard baseline",
+      "limits": "All old positives and labelled negatives retained; numeric detector and source limits unchanged. Source-aligned metrics and still review, not a universal perceptual certificate.",
+      "reviewed_at": 1789231309.2778037
     }
   },
   "canary_revalidation": {
