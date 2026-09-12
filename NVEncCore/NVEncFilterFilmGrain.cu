@@ -42,6 +42,7 @@
 #include <vector>
 
 #include "NVEncFilterFilmGrain.h"
+#include "NVEncFilmGrainRecovery.h"
 #include "NVEncFilmGrainModel.h"
 #include "NVEncFilterDegrain.h"
 #include "NVEncFilterDenoiseFFT3D.h"
@@ -1045,6 +1046,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
     int pendingStreak;
     int framesSinceModelUpdate;
     int heldStreak;
+    fgsmodel::FilmGrainSynthesisRecovery synthesisRecovery;
     bool sourceFallbackActive;
     int fidelityRecoveryFrames;
 
@@ -1057,7 +1059,8 @@ struct NVEncFilterFilmGrain::AnalyzerState {
     void advanceModelAge() {
         if (framesSinceModelUpdate < std::numeric_limits<int>::max()) ++framesSinceModelUpdate;
     }
-    void clear() {
+    void clear(const bool resetRecovery = false) {
+        if (resetRecovery) synthesisRecovery.reset();
         history.clear();
         previousBlockMeans.clear();
         stableNoise = 0.0f;
@@ -1172,7 +1175,7 @@ NVEncFilterFilmGrain::~NVEncFilterFilmGrain() {
 
 void NVEncFilterFilmGrain::resetTemporalState() {
     m_detailReferenceValid = false;
-    if (m_state) m_state->clear();
+    if (m_state) m_state->clear(true);
     if (m_fft3d) m_fft3d->resetTemporalState();
     if (m_motionDegrain) m_motionDegrain->resetTemporalState();
 }
@@ -1455,7 +1458,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         }
     }
     if (!m_state) m_state = std::make_unique<AnalyzerState>();
-    m_state->clear();
+    m_state->clear(true);
     setFilterInfo(prm->print());
     m_param = prm;
     return RGY_ERR_NONE;
@@ -1575,6 +1578,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     if (!prm->filmGrain.enable || interlaced(*source)
         || getCudaMemcpyKind(source->mem_type, output->mem_type) != cudaMemcpyDeviceToDevice) {
         m_detailReferenceValid = false;
+        m_state->synthesisRecovery.preserveSource();
         if (cleanBase != source && (sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
         attachResult();
         return RGY_ERR_NONE;
@@ -1643,6 +1647,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // later frames.  The next reliable region must build a fresh window.
         diagnostics.sceneReset = !m_state->history.empty();
         m_state->clear();
+        m_state->synthesisRecovery.preserveSource();
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=0 reset=%d flat=%d/%d window=0\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             diagnostics.sceneReset ? 1 : 0, diagnostics.flatBlocks, diagnostics.totalBlocks);
@@ -1912,10 +1917,12 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     bool modelValid = diagnostics.modelFrames >= prm->filmGrain.minModelFrames
         && build_film_grain_params(combined, bitDepth, prm->filmGrain.analyzeChroma,
             prm->filmGrain.clipToRestrictedRange, params, diagnostics, prm->filmGrain.residualRetain < 0.0f);
+    const bool freshFitValid = modelValid;
     if (diagnostics.rejectedModel) {
         // A rejected feedback model must not borrow an unrelated previous
         // scene's grain through the normal transient-fit fallback. Preserve
-        // this source frame, and accept a fresh stable fit when one is ready.
+        // this source frame; the independent recovery gate below requires
+        // sustained usable evidence before synthesis can resume.
         m_state->lastParamsValid = false;
         m_state->pendingParamsValid = false;
         m_state->pendingStreak = 0;
@@ -2082,6 +2089,18 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     } else if (prm->filmGrain.residualRetain < 0.0f) {
         m_state->fidelityRecoveryFrames = 0;
     }
+    const bool recoveryAllowed = m_state->synthesisRecovery.allow(modelValid,
+        freshFitValid || diagnostics.freshModel, diagnostics.modelFrames >= prm->filmGrain.modelWindow);
+    const bool recoveryHeld = modelValid && !recoveryAllowed;
+    if (recoveryHeld) {
+        // A history reset must not turn a one/two-frame acceptable fit into
+        // an isolated synthetic overlay. All planes keep the original source;
+        // no unsafe fit or stale model is emitted to bridge the gap.
+        modelValid = false;
+        diagnostics.modelHeld = false;
+        std::memset(&params, 0, sizeof(params));
+        if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
+    }
     diagnostics.reliable = modelValid;
     if (modelValid && params.applyGrain && diagnostics.residualRetain > 0.0f) {
         // Residual retention: keep retain * (source - clean) in the base luma
@@ -2171,7 +2190,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             pointsCr += strsprintf(_T(" %d:%d"), params.pointCrValue[i], params.pointCrScaling[i]);
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
-            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d rejected=%d scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
+            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d rejected=%d recoveryHeld=%d recoveryFrames=%d scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             modelValid ? 1 : 0, diagnostics.sceneReset ? 1 : 0, diagnostics.modelHeld ? 1 : 0,
@@ -2180,6 +2199,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             diagnostics.detailRisk, diagnostics.residualRetain, diagnostics.grainCorrelation,
             diagnostics.strengthFitError[0], diagnostics.strengthFitError[1], diagnostics.strengthFitError[2],
             diagnostics.sourceFidelityFallback ? 1 : 0, diagnostics.freshModel ? 1 : 0, diagnostics.rejectedModel ? 1 : 0,
+            recoveryHeld ? 1 : 0, m_state->synthesisRecovery.frames(),
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,
@@ -2207,7 +2227,7 @@ void NVEncFilterFilmGrain::close() {
     m_strengthLut.reset();
     m_sceneCounts.reset();
     m_modelStats.reset();
-    if (m_state) m_state->clear();
+    if (m_state) m_state->clear(true);
     m_blocksX = 0;
     m_blocksY = 0;
     m_nFrameIdx = 0;
