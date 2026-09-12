@@ -999,6 +999,23 @@ static RGY_ERR launch_residual_retain(const RGYFrameInfo& lumaDst, const RGYFram
     return err_to_rgy(cudaGetLastError());
 }
 
+// Couple post-recovery synthesis strength to the retained source residual on
+// every plane, including both interleaved chroma components of NV12/P010.
+template<typename Type, int shift>
+static RGY_ERR launch_recovery_blend(RGYFrameInfo *output, const RGYFrameInfo *source,
+    const int bitDepth, const double gain, const double lumaRetained, cudaStream_t stream) {
+    for (int plane = 0; plane < RGY_CSP_PLANES[output->csp]; ++plane) {
+        const float blend = static_cast<float>(fgsmodel::film_grain_recovery_source_blend(
+            gain, plane == 0 ? lumaRetained : 0.0));
+        if (blend <= 0.0f) continue;
+        const auto dst = getPlane(output, static_cast<RGY_PLANE>(plane));
+        const auto src = getPlane(source, static_cast<RGY_PLANE>(plane));
+        const auto sts = launch_residual_retain<Type, shift>(dst, src, bitDepth, blend, stream);
+        if (sts != RGY_ERR_NONE) return sts;
+    }
+    return RGY_ERR_NONE;
+}
+
 template<typename Type, int shift, int components>
 static RGY_ERR launch_bilateral(const RGYFrameInfo& dst, const RGYFrameInfo& src,
     const int width, const int height, const int bitDepth, const float sigma,
@@ -2137,6 +2154,39 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             return sts;
         }
     }
+    const double recoveryGain = m_state->synthesisRecovery.gain();
+    if (modelValid && params.applyGrain && recoveryGain < 1.0) {
+        // Matching source blending avoids a denoised dip while synthesis is
+        // introduced. Model-history decisions keep their unscaled parameters.
+        for (uint32_t i = 0; i < params.numYPoints; ++i) {
+            params.pointYScaling[i] = static_cast<uint8_t>(std::lround(params.pointYScaling[i] * recoveryGain));
+        }
+        for (uint32_t i = 0; i < params.numCbPoints; ++i) {
+            params.pointCbScaling[i] = static_cast<uint8_t>(std::lround(params.pointCbScaling[i] * recoveryGain));
+        }
+        for (uint32_t i = 0; i < params.numCrPoints; ++i) {
+            params.pointCrScaling[i] = static_cast<uint8_t>(std::lround(params.pointCrScaling[i] * recoveryGain));
+        }
+        switch (output->csp) {
+        case RGY_CSP_NV12:
+        case RGY_CSP_YV12:
+            sts = launch_recovery_blend<uint8_t, 0>(output, source, bitDepth, recoveryGain, diagnostics.residualRetain, stream);
+            break;
+        case RGY_CSP_YV12_10:
+            sts = launch_recovery_blend<uint16_t, 0>(output, source, bitDepth, recoveryGain, diagnostics.residualRetain, stream);
+            break;
+        case RGY_CSP_P010:
+            sts = launch_recovery_blend<uint16_t, 6>(output, source, bitDepth, recoveryGain, diagnostics.residualRetain, stream);
+            break;
+        default:
+            sts = RGY_ERR_UNSUPPORTED;
+            break;
+        }
+        if (sts != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("Failed to blend film-grain recovery: %s.\n"), get_err_mes(sts));
+            return sts;
+        }
+    }
     if (modelValid && params.applyGrain && !m_tableOutPath.empty()) {
         recordTableEntry(source->timestamp, source->duration, params);
     }
@@ -2190,7 +2240,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             pointsCr += strsprintf(_T(" %d:%d"), params.pointCrValue[i], params.pointCrScaling[i]);
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
-            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d rejected=%d recoveryHeld=%d recoveryFrames=%d scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
+            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d rejected=%d recoveryHeld=%d recoveryFrames=%d recoveryGain=%.4f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             modelValid ? 1 : 0, diagnostics.sceneReset ? 1 : 0, diagnostics.modelHeld ? 1 : 0,
@@ -2199,7 +2249,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             diagnostics.detailRisk, diagnostics.residualRetain, diagnostics.grainCorrelation,
             diagnostics.strengthFitError[0], diagnostics.strengthFitError[1], diagnostics.strengthFitError[2],
             diagnostics.sourceFidelityFallback ? 1 : 0, diagnostics.freshModel ? 1 : 0, diagnostics.rejectedModel ? 1 : 0,
-            recoveryHeld ? 1 : 0, m_state->synthesisRecovery.frames(),
+            recoveryHeld ? 1 : 0, m_state->synthesisRecovery.frames(), recoveryGain,
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,
