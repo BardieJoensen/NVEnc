@@ -295,6 +295,19 @@ use this handoff and live state for current deployment and queue decisions.
 
 ### Retained media, archives and scratch space
 
+The user explicitly requested space care and authorized moving completed work
+to cold storage or cleaning it up. Check `/`, `/opt/docker-apps`, `/home` and
+`/tmp/downloads` separately; they are different filesystems. Put large new
+scratch outputs on `/tmp/downloads`, and retained experiment payloads on
+`/media/storage1/tdarr-audit-evidence`. Keep small ledgers and indexes in the
+application log tree. Archive completed work after checking active references,
+verify copied bytes, and preserve evidence paths and regression controls.
+The September 12 cleanup is recorded in
+[the storage ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/storage-cleanup-20260912/README.md).
+Its receipt identifies original and archive paths, file hashes, metadata and
+any ownership changes. Consult it before removing an archive or treating a
+relocated artifact's new inode as evidence of changed media content.
+
 - `/media/merged-storage/validation-fixtures/nvenc-fgs/v1` holds the pinned
   source clips and labelled positive/negative controls in
   [FIXTURES.md](FIXTURES.md) and [fixtures.json](fixtures.json).
