@@ -82,7 +82,8 @@ def measure(video, bits, directory):
             a,b=next(on),next(off)
             rows.append(dict(frame=n,quiet_source=not 32<=n<36,
                 quiet_sigma=[float(a[p][quiet[p]].std()) for p in range(3)],
-                quiet_added=[float((a[p][quiet[p]]-b[p][quiet[p]]).std()) for p in range(3)],
+                quiet_mean_error=[abs(float(a[p][quiet[p]].mean())-[112,128,128][p]) for p in range(3)],
+                quiet_added=[float(np.sqrt(np.mean((a[p][quiet[p]]-b[p][quiet[p]])**2))) for p in range(3)],
                 noisy_added=[float((a[p][noisy[p]]-b[p][noisy[p]]).std()) for p in range(3)],
                 noisy_total=[float(a[p][noisy[p]].std()) for p in range(3)]))
         if next(on,None) is not None or next(off,None) is not None:
@@ -91,12 +92,14 @@ def measure(video, bits, directory):
         on.close();off.close()
     peak=np.max([r['quiet_sigma'] for r in rows if r['quiet_source']],axis=0)
     added=np.max([r['quiet_added'] for r in rows if r['quiet_source']],axis=0)
+    mean_error=np.max([r['quiet_mean_error'] for r in rows if r['quiet_source']],axis=0)
     background=np.median([r['noisy_added'] for r in rows[8:]],axis=0)
     total=np.median([r['noisy_total'] for r in rows[8:]],axis=0)
     checks=dict(no_invented_grain=bool(np.all(added<=.3)),
                 genuine_grain_present=bool(np.all(background>np.array([.5,.15,.15]))),
                 background_variance_preserved=bool(np.all(total>np.array([1.5,.4,.4]))))
     return dict(bits=bits,frames=len(rows),peak_quiet_sigma=peak.tolist(),peak_quiet_added=added.tolist(),
+                peak_quiet_mean_error=mean_error.tolist(),
                 median_background_grain_sigma=background.tolist(),median_background_total_sigma=total.tolist(),
                 checks=checks,passed=all(checks.values()),per_frame=rows)
 
@@ -141,9 +144,11 @@ def main():
                 subprocess.run(cc,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=300)
             controls[label]=measure(control,bits,cd)
         result['controls']=controls
-        result['checks']['raw_source_preserved']=bool(np.all(np.array(controls['raw']['peak_quiet_sigma'])<=.3))
+        result['checks']['raw_source_preserved']=bool(np.all(np.array(controls['raw']['peak_quiet_sigma'])<=.3)
+            and np.all(np.array(controls['raw']['peak_quiet_mean_error'])<=.3))
         result['checks']['encoded_source_preserved']=bool(np.all(np.array(result['peak_quiet_sigma'])
-            <=np.array(controls['conventional']['peak_quiet_sigma'])+.3))
+            <=np.array(controls['conventional']['peak_quiet_sigma'])+.3)
+            and np.all(np.array(result['peak_quiet_mean_error'])<=np.array(controls['conventional']['peak_quiet_mean_error'])+.3))
         result['checks']['quiet_source_preserved']=all(result['checks'][k] for k in
             ['no_invented_grain','raw_source_preserved','encoded_source_preserved'])
         result['passed']=all(result['checks'].values())
