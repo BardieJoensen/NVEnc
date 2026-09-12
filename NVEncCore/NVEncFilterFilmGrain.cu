@@ -77,6 +77,8 @@ constexpr int FGS_BILATERAL_RADIUS = 2;
 struct FilmGrainBlockMetric {
     float mean;
     float sigma;
+    float minCode;
+    float maxCode;
     float score;
     float coherence;
     float repeatability;
@@ -286,6 +288,8 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     float localSumY = 0.0f;
     float localNormX = 0.0f;
     float localNormY = 0.0f;
+    float localMin = 65535.0f;
+    float localMax = 0.0f;
     for (int index = tid; index < count; index += FGS_FLAT_THREADS) {
         const int x = index % bw;
         const int y = index / bw;
@@ -293,6 +297,8 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
         const float xn = (2.0f * x - (bw - 1)) / bw;
         const float value = static_cast<float>(tile[index]);
         localSum += value;
+        localMin = fminf(localMin, value);
+        localMax = fmaxf(localMax, value);
         localSumX += value * xn;
         localSumY += value * yn;
         localNormX += xn * xn;
@@ -305,6 +311,10 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     __shared__ float reduce4[FGS_FLAT_THREADS];
     __shared__ float reduce5[FGS_FLAT_THREADS];
     __shared__ int reduceCount[FGS_FLAT_THREADS];
+    __shared__ float reduceMin[FGS_FLAT_THREADS];
+    __shared__ float reduceMax[FGS_FLAT_THREADS];
+    __shared__ float minimum;
+    __shared__ float maximum;
     __shared__ float mean;
     __shared__ float planeX;
     __shared__ float planeY;
@@ -313,6 +323,8 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     reduce2[tid] = localSumY;
     reduce3[tid] = localNormX;
     reduce4[tid] = localNormY;
+    reduceMin[tid] = localMin;
+    reduceMax[tid] = localMax;
     __syncthreads();
     for (int stride = FGS_FLAT_THREADS / 2; stride > 0; stride >>= 1) {
         if (tid < stride) {
@@ -321,11 +333,15 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
             reduce2[tid] += reduce2[tid + stride];
             reduce3[tid] += reduce3[tid + stride];
             reduce4[tid] += reduce4[tid + stride];
+            reduceMin[tid] = fminf(reduceMin[tid], reduceMin[tid + stride]);
+            reduceMax[tid] = fmaxf(reduceMax[tid], reduceMax[tid + stride]);
         }
         __syncthreads();
     }
     if (tid == 0) {
         mean = reduce0[0] / count;
+        minimum = reduceMin[0];
+        maximum = reduceMax[0];
         planeX = reduce1[0] / fmaxf(reduce3[0], 1e-12f);
         planeY = reduce2[0] / fmaxf(reduce4[0], 1e-12f);
     }
@@ -416,6 +432,8 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
 
     FilmGrainBlockMetric out = {};
     out.mean = mean;
+    out.minCode = minimum;
+    out.maxCode = maximum;
     out.sigma = sqrtf(fmaxf(variance, 0.0f));
     out.score = varNorm > varThreshold ? 1.0f / (1.0f + expf(-scoreArg)) : 0.0f;
     // Random grain has similar gradient energy in every direction, while
@@ -1087,6 +1105,64 @@ static RGY_ERR launch_recovery_blend(RGYFrameInfo *output, const RGYFrameInfo *s
     return RGY_ERR_NONE;
 }
 
+// Return the removed source residual where its brightness-indexed synthesis
+// was limited. Use the same horizontal luma pair as AV1 chroma scaling.
+template<typename Type, int shift, int components, bool chroma>
+__global__ void kernel_fgs_source_curve_blend(uint8_t *dst, const int dstPitch,
+    const uint8_t *src, const int srcPitch, const uint8_t *luma, const int lumaPitch,
+    const int lumaWidth, const int width, const int height, const int bitDepth,
+    const float *blendLut) {
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+    if (x >= width || y >= height) return;
+    const int guide = chroma ? ((load_code<Type, shift>(luma, lumaPitch, 2*x, 2*y)
+        + load_code<Type, shift>(luma, lumaPitch, min(2*x+1, lumaWidth-1), 2*y) + 1) >> 1)
+        : load_code<Type, shift>(dst, dstPitch, x, y);
+    const int depthShift = bitDepth - 8;
+    const int index = min(255, guide >> depthShift);
+    const float fraction = static_cast<float>(guide & ((1 << depthShift) - 1)) / (1 << depthShift);
+    for (int c = 0; c < components; ++c) {
+        const float *lut = blendLut + c * FGS_STRENGTH_LUT_SIZE;
+        const float retain = lut[index] + (lut[min(index+1,255)] - lut[index]) * fraction;
+        if (retain <= 0.0f) continue;
+        const int clean = load_code<Type, shift>(dst, dstPitch, x, y, c, components);
+        const int original = load_code<Type, shift>(src, srcPitch, x, y, c, components);
+        const int value = min((1 << bitDepth)-1, max(0, __float2int_rn(clean + retain * (original-clean))));
+        store_code<Type, shift>(dst, dstPitch, x, y, value, c, components);
+    }
+}
+
+template<typename Type, int shift>
+static RGY_ERR launch_source_curve_blend(RGYFrameInfo *output, const RGYFrameInfo *source,
+    const int bitDepth, const float *lut, cudaStream_t stream) {
+    const auto dstY = getPlane(output, RGY_PLANE_Y);
+    const auto srcY = getPlane(source, RGY_PLANE_Y);
+    const dim3 block(32,8);
+    const dim3 gridY(divCeil(dstY.width,32),divCeil(dstY.height,8));
+    kernel_fgs_source_curve_blend<Type,shift,1,false><<<gridY,block,0,stream>>>(
+        dstY.ptr[0],dstY.pitch[0],srcY.ptr[0],srcY.pitch[0],dstY.ptr[0],dstY.pitch[0],
+        dstY.width,dstY.width,dstY.height,bitDepth,lut);
+    auto sts=err_to_rgy(cudaGetLastError());
+    if (sts != RGY_ERR_NONE) return sts;
+    const bool semiPlanar=output->csp==RGY_CSP_NV12 || output->csp==RGY_CSP_P010;
+    const dim3 gridC(divCeil(output->width/2,32),divCeil(output->height/2,8));
+    for (int c=0;c<(semiPlanar?1:2);++c) {
+        const auto dst=getPlane(output,static_cast<RGY_PLANE>(RGY_PLANE_U+c));
+        const auto src=getPlane(source,static_cast<RGY_PLANE>(RGY_PLANE_U+c));
+        if (semiPlanar) {
+            kernel_fgs_source_curve_blend<Type,shift,2,true><<<gridC,block,0,stream>>>(
+                dst.ptr[0],dst.pitch[0],src.ptr[0],src.pitch[0],dstY.ptr[0],dstY.pitch[0],
+                dstY.width,output->width/2,output->height/2,bitDepth,lut+FGS_STRENGTH_LUT_SIZE);
+        } else {
+            kernel_fgs_source_curve_blend<Type,shift,1,true><<<gridC,block,0,stream>>>(
+                dst.ptr[0],dst.pitch[0],src.ptr[0],src.pitch[0],dstY.ptr[0],dstY.pitch[0],
+                dstY.width,dst.width,dst.height,bitDepth,lut+(c+1)*FGS_STRENGTH_LUT_SIZE);
+        }
+        if ((sts=err_to_rgy(cudaGetLastError())) != RGY_ERR_NONE) return sts;
+    }
+    return RGY_ERR_NONE;
+}
+
 template<typename Type, int shift, int components>
 static RGY_ERR launch_bilateral(const RGYFrameInfo& dst, const RGYFrameInfo& src,
     const int width, const int height, const int bitDepth, const float sigma,
@@ -1135,6 +1211,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
     int framesSinceModelUpdate;
     int heldStreak;
     fgsmodel::FilmGrainSynthesisRecovery synthesisRecovery;
+    fgsmodel::FilmGrainSourceCaps sourceCaps;
     bool sourceFallbackActive;
     int fidelityRecoveryFrames;
 
@@ -1148,7 +1225,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
         if (framesSinceModelUpdate < std::numeric_limits<int>::max()) ++framesSinceModelUpdate;
     }
     void clear(const bool resetRecovery = false) {
-        if (resetRecovery) synthesisRecovery.reset();
+        if (resetRecovery) { synthesisRecovery.reset(); sourceCaps.reset(); }
         history.clear();
         previousBlockMeans.clear();
         stableNoise = 0.0f;
@@ -1250,7 +1327,7 @@ tstring NVEncFilterParamFilmGrain::print() const {
 NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_denoiseWork(), m_detailReference(), m_detailConfidence(), m_detailReferenceValid(false), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(),
-    m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
+    m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sourceBlendLut(), m_sceneCounts(), m_modelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWriter(),
     m_state(std::make_unique<AnalyzerState>()), m_blocksX(0), m_blocksY(0) {
     m_name = _T("film-grain");
@@ -1439,12 +1516,14 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     m_blockMask = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY);
     m_sigmaMap = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(float));
     m_strengthLut = std::make_unique<CUMemBufPair>(3 * FGS_STRENGTH_LUT_SIZE * sizeof(float));
+    m_sourceBlendLut = std::make_unique<CUMemBufPair>(3 * FGS_STRENGTH_LUT_SIZE * sizeof(float));
     m_sceneCounts = std::make_unique<CUMemBufPair>(8 * sizeof(uint32_t));
     m_modelStats = std::make_unique<CUMemBufPair>(sizeof(FilmGrainGpuStats));
     if ((sts = m_blockMetrics->alloc()) != RGY_ERR_NONE
         || (sts = m_blockMask->alloc()) != RGY_ERR_NONE
         || (sts = m_sigmaMap->alloc()) != RGY_ERR_NONE
         || (sts = m_strengthLut->alloc()) != RGY_ERR_NONE
+        || (sts = m_sourceBlendLut->alloc()) != RGY_ERR_NONE
         || (sts = m_sceneCounts->alloc()) != RGY_ERR_NONE
         || (sts = m_modelStats->alloc()) != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("Failed to allocate film-grain analysis buffers: %s.\n"), get_err_mes(sts));
@@ -2178,40 +2257,56 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         m_state->fidelityRecoveryFrames = 0;
     }
     FilmGrainQuietSourceGuard quietSource;
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 unlimitedParams = params;
+    m_state->sourceCaps.advance(modelValid && (freshFitValid || diagnostics.freshModel));
     if (modelValid && params.applyGrain) {
         float predicted[3][FGS_STRENGTH_LUT_SIZE];
+        const uint8_t *values[3] = { params.pointYValue, params.pointCbValue, params.pointCrValue };
+        const uint32_t counts[3] = { params.numYPoints, params.numCbPoints, params.numCrPoints };
         for (int plane = 0; plane < 3; ++plane) {
             build_strength_lut(params, bitDepth, predicted[plane], plane, diagnostics.templateGain[plane]);
         }
-        // Evaluate the selected, full-strength model before the recovery ramp.
-        // A small current gain must not admit a source-incompatible model that
-        // will become visibly wrong as recovery progresses. The cache remains
-        // unscaled; an incompatible model cannot be borrowed on the next frame.
         for (int i = 0; i < blockCount; ++i) {
             if ((i % m_blocksX + 1) * FGS_BLOCK_SIZE > luma.width
                 || (i / m_blocksX + 1) * FGS_BLOCK_SIZE > luma.height) continue;
-            const double x = metrics[i].mean / depthScale;
-            const int left = clamp(static_cast<int>(std::floor(x)), 0, FGS_STRENGTH_LUT_SIZE - 1);
-            const int right = std::min(left + 1, FGS_STRENGTH_LUT_SIZE - 1);
-            const double fraction = clamp(x - left, 0.0, 1.0);
+            // Include actual source levels, not just a block mean. Chroma may
+            // be uniform while the luma indexing its grain spans many levels.
+            const int first = clamp(static_cast<int>(std::floor(metrics[i].minCode / depthScale)) - 1, 0, 255);
+            const int last = clamp(static_cast<int>(std::ceil(metrics[i].maxCode / depthScale)) + 1, 0, 255);
             for (int plane = 0; plane < (prm->filmGrain.analyzeChroma ? 3 : 1); ++plane) {
-                const double modeled = (predicted[plane][left] * (1.0 - fraction)
-                    + predicted[plane][right] * fraction) / depthScale;
-                const double mean = plane ? metrics[i].chromaMean[plane - 1] / depthScale : x;
+                const double mean = (plane ? metrics[i].chromaMean[plane - 1] : metrics[i].mean) / depthScale;
                 const double sigma = (plane ? metrics[i].chromaSigma[plane - 1] : metrics[i].sigma) / depthScale;
+                if (sigma > 0.5 || mean <= 20.0 || mean >= 232.0) continue;
+                double modeled = std::max(predicted[plane][first], predicted[plane][last]) / depthScale;
+                for (uint32_t j = 0; j < counts[plane]; ++j) {
+                    if (values[plane][j] >= first && values[plane][j] <= last) {
+                        modeled = std::max(modeled, static_cast<double>(predicted[plane][values[plane][j]]) / depthScale);
+                    }
+                }
                 quietSource.observe(plane, mean, sigma, modeled);
+                if (modeled - sigma > 0.25) {
+                    m_state->sourceCaps.preserveCurveInterval(plane, values[plane], counts[plane], first, last);
+                }
             }
         }
     }
-    const bool quietSourceFallback = quietSource.needsSource();
+    bool sourceCurveLimited = false;
+    if (modelValid && params.applyGrain) {
+        sourceCurveLimited |= m_state->sourceCaps.lowerCurve(0, params.pointYValue, params.pointYScaling, params.numYPoints);
+        sourceCurveLimited |= m_state->sourceCaps.lowerCurve(1, params.pointCbValue, params.pointCbScaling, params.numCbPoints);
+        sourceCurveLimited |= m_state->sourceCaps.lowerCurve(2, params.pointCrValue, params.pointCrScaling, params.numCrPoints);
+    }
+    bool nonzeroCurve = false;
+    for (uint32_t i = 0; i < params.numYPoints; ++i) nonzeroCurve |= params.pointYScaling[i] != 0;
+    for (uint32_t i = 0; i < params.numCbPoints; ++i) nonzeroCurve |= params.pointCbScaling[i] != 0;
+    for (uint32_t i = 0; i < params.numCrPoints; ++i) nonzeroCurve |= params.pointCrScaling[i] != 0;
+    const bool quietSourceFallback = quietSource.invalid || (sourceCurveLimited && !nonzeroCurve);
     if (quietSourceFallback) {
         diagnostics.sourceFidelityFallback = true;
         diagnostics.modelHeld = false;
         modelValid = false;
-        m_state->lastParamsValid = false;
-        m_state->pendingParamsValid = false;
-        m_state->pendingStreak = 0;
-        m_state->heldStreak = 0;
+        // The temporal model cache still owns the original, unscaled fit.
+        // Never publish the limited curve as fresh statistical evidence.
         std::memset(&params, 0, sizeof(params));
         if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
     }
@@ -2296,6 +2391,49 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             return sts;
         }
     }
+    if (modelValid && params.applyGrain && sourceCurveLimited) {
+        // Reproduce the same integer scaling on the original curve, then use
+        // the actual signalled ratio. Couple it to any earlier scalar source
+        // retention/recovery; reducing synthesis alone would blur the picture.
+        if (diagnostics.residualRetain > 0.0f) {
+            const float retain = diagnostics.residualRetain;
+            const float synthScale = std::sqrt(std::max(0.0f, 1.0f-retain*retain));
+            for (uint32_t i=0;i<unlimitedParams.numYPoints;++i)
+                unlimitedParams.pointYScaling[i]=static_cast<uint8_t>(std::lround(unlimitedParams.pointYScaling[i]*synthScale));
+        }
+        if (recoveryGain < 1.0) {
+            for (uint32_t i=0;i<unlimitedParams.numYPoints;++i)
+                unlimitedParams.pointYScaling[i]=static_cast<uint8_t>(std::lround(unlimitedParams.pointYScaling[i]*recoveryGain));
+            for (uint32_t i=0;i<unlimitedParams.numCbPoints;++i)
+                unlimitedParams.pointCbScaling[i]=static_cast<uint8_t>(std::lround(unlimitedParams.pointCbScaling[i]*recoveryGain));
+            for (uint32_t i=0;i<unlimitedParams.numCrPoints;++i)
+                unlimitedParams.pointCrScaling[i]=static_cast<uint8_t>(std::lround(unlimitedParams.pointCrScaling[i]*recoveryGain));
+        }
+        auto blendLut=static_cast<float *>(m_sourceBlendLut->ptrHost);
+        for (int plane=0;plane<3;++plane) {
+            float original[FGS_STRENGTH_LUT_SIZE], limited[FGS_STRENGTH_LUT_SIZE];
+            build_strength_lut(unlimitedParams,bitDepth,original,plane,diagnostics.templateGain[plane]);
+            build_strength_lut(params,bitDepth,limited,plane,diagnostics.templateGain[plane]);
+            const double retained=plane==0 ? diagnostics.residualRetain : 0.0;
+            const double prior=std::sqrt(std::max(0.0,1.0-recoveryGain*recoveryGain*(1.0-retained*retained)));
+            for (int x=0;x<FGS_STRENGTH_LUT_SIZE;++x) {
+                const double gain=original[x]>1e-12f ? clamp(static_cast<double>(limited[x])/original[x],0.0,1.0) : 1.0;
+                blendLut[plane*FGS_STRENGTH_LUT_SIZE+x]=static_cast<float>(film_grain_recovery_source_blend(gain,prior));
+            }
+        }
+        // Separate pinned storage avoids reusing a still-pending DMA source
+        // when the level-compensation LUT is populated immediately below.
+        if ((sts=m_sourceBlendLut->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
+        const auto lut=static_cast<const float *>(m_sourceBlendLut->ptrDevice);
+        switch (output->csp) {
+        case RGY_CSP_NV12:
+        case RGY_CSP_YV12: sts=launch_source_curve_blend<uint8_t,0>(output,source,bitDepth,lut,stream); break;
+        case RGY_CSP_YV12_10: sts=launch_source_curve_blend<uint16_t,0>(output,source,bitDepth,lut,stream); break;
+        case RGY_CSP_P010: sts=launch_source_curve_blend<uint16_t,6>(output,source,bitDepth,lut,stream); break;
+        default: sts=RGY_ERR_UNSUPPORTED; break;
+        }
+        if (sts != RGY_ERR_NONE) return sts;
+    }
     if (modelValid && params.applyGrain && !m_tableOutPath.empty()) {
         recordTableEntry(source->timestamp, source->duration, params);
     }
@@ -2349,7 +2487,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             pointsCr += strsprintf(_T(" %d:%d"), params.pointCrValue[i], params.pointCrScaling[i]);
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
-            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d rejected=%d recoveryHeld=%d recoveryFrames=%d recoveryGain=%.4f quietSource=%d quietConflicts=%llu/%llu/%llu quietExcess=%.3f/%.3f/%.3f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
+            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d rejected=%d recoveryHeld=%d recoveryFrames=%d recoveryGain=%.4f quietSource=%d sourceLimited=%d quietConflicts=%llu/%llu/%llu quietExcess=%.3f/%.3f/%.3f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             modelValid ? 1 : 0, diagnostics.sceneReset ? 1 : 0, diagnostics.modelHeld ? 1 : 0,
@@ -2359,7 +2497,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             diagnostics.strengthFitError[0], diagnostics.strengthFitError[1], diagnostics.strengthFitError[2],
             diagnostics.sourceFidelityFallback ? 1 : 0, diagnostics.freshModel ? 1 : 0, diagnostics.rejectedModel ? 1 : 0,
             recoveryHeld ? 1 : 0, m_state->synthesisRecovery.frames(), recoveryGain,
-            quietSourceFallback ? 1 : 0,
+            quietSourceFallback ? 1 : 0, sourceCurveLimited ? 1 : 0,
             static_cast<unsigned long long>(quietSource.conflictingBlocks[0]),
             static_cast<unsigned long long>(quietSource.conflictingBlocks[1]),
             static_cast<unsigned long long>(quietSource.conflictingBlocks[2]),
@@ -2389,6 +2527,7 @@ void NVEncFilterFilmGrain::close() {
     m_blockMask.reset();
     m_sigmaMap.reset();
     m_strengthLut.reset();
+    m_sourceBlendLut.reset();
     m_sceneCounts.reset();
     m_modelStats.reset();
     if (m_state) m_state->clear(true);
