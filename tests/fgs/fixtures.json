@@ -62,6 +62,21 @@
       "file": "hornets-invalid-chroma-1495-35s.mkv",
       "sha256": "9068d9fe536d0d45fe7a38979855e56e7bd824e256cdcfb3a82aab61cba4453d",
       "bytes": 27543006
+    },
+    "amphibia_flicker_source": {
+      "file": "amphibia-flicker-e10-source.mkv",
+      "sha256": "842b5ee22fa8691a586ad1fd053e479529f237a3d5fbb6e37e3ddfbc977bd3c3",
+      "bytes": 525696362
+    },
+    "amphibia_flicker_negative": {
+      "file": "amphibia-flicker-e10-repaired-negative.mkv",
+      "sha256": "4c1bd91a75075232520f444d9a3e32570ea57675fd60935dcf2f1ca8fa2624a8",
+      "bytes": 191422187
+    },
+    "gentlemen_recovery_positive": {
+      "file": "gentlemen-recovery-positive-33m-150s.mkv",
+      "sha256": "5e3579d491f1c20bfd4abc179aa4b4e4b07fa631a11a937b9a7929f0e5493f87",
+      "bytes": 48365709
     }
   },
   "provenance": {
@@ -181,7 +196,19 @@
       "positive_encoder_commit": "e778a88b3f825a51e9f91122e29d99ec6a2dca4e",
       "positive_encoder_sha256": "5423d8abda1d2c248f25508c311ed4ca0eda08462e1ebc6bce95fba22e830249",
       "positive": "Complete 3600-frame production-setting output from the September 6 full gate, after the reviewed synthesis_texture_v1 repair. Same pinned source and settings as periodic_regression.py.",
-      "negative": "Production AV1 QVBR30/bilateral settings; all poles <0.95 but visible diagonal mesh at clip 84.5s (episode 34:24.5)."
+      "negative": "Production AV1 QVBR30/bilateral settings; all poles <0.95 but visible diagonal mesh at clip 84.5s (episode 34:24.5).",
+      "recovery_positive": {
+        "encoder_commit": "e2c3a99d2896741ac8e0e24d0e274e70acbd885f",
+        "encoder_sha256": "ee72bd946ebb3295f9cfa88238761e7528d73dd032d39541fa4a11f9b7a5522a",
+        "review": "FLICKER-20260912.md; reviewed 442 grain removals and zero additions against original source, all critical ripple anchors pass; fine source grain partly attenuated by lossy fallback encoding",
+        "source_review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/periodic-source-review.json",
+        "critical_scenes": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/periodic-critical-scenes.json"
+      }
+    },
+    "amphibia_flicker": {
+      "retention": "Hard links to exact retained H.264 source and installed e778a88b AV1 negative; originals unchanged",
+      "references": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/references.json",
+      "review": "FLICKER-20260912.md; aligned 16-frame 05:56 shirt patch and full-frame source fidelity"
     }
   },
   "canary_revalidation": {

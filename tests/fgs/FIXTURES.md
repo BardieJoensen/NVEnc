@@ -24,6 +24,15 @@ must be revalidated against both the known-bad and corrected controls.
 | `taxi-source-6f.y4m`, `taxi-clean-6f.y4m`, `taxi-reference.tbl` | First six Taxi frames and the pinned r4050 bilateral clean base/model |
 | `taxi-metric-gamer.json` | Unmodified historical adversarial model, previously named `taxi_ceiling_q.json` |
 | `taxi-widened-r4047.mkv` | Rejected r4047 encoder's output from the same pinned Taxi clip; file-mode negative control |
+| `amphibia-flicker-e10-source.mkv`, `amphibia-flicker-e10-repaired-negative.mkv` | Exact original and ripple-repaired S1E10; decoded 05:56 grain-flash regression |
+
+The Amphibia pair was retained on September 12 by hard link, with zero payload
+bytes copied. The original uniform shirt patch at `(736,768,32,32)` acquires
+roughly 2.7 levels of spatial standard deviation on isolated grain-on frames,
+then returns near zero on the adjacent grain-off frame. `flicker_regression.py`
+checks 16 aligned displayed frames and whole-picture source error. It must
+reject the pinned damaged encode before accepting a candidate. These are
+scene-specific regression limits, not a general visibility classifier.
 
 The FFV1 clips preserve decoded source pixels. The manifest records their hashes,
 source locations, extraction commands, reference binary identities, and recovery
@@ -74,6 +83,17 @@ check texture, amplitude and temporal changes, while the retained negative must
 fail. The positive is a reviewed regression reference, not proof of perfect
 texture everywhere. Changing its grain scheduling or amplitude requires explicit
 review of a new baseline; do not regenerate it automatically from a candidate.
+
+The September 12 recovery baseline is separately retained as
+`gentlemen-recovery-positive-33m-150s.mkv`. It is the reviewed e2c3a99d output;
+the earlier positive and known mesh negative remain available. The transition
+fix preserves source input on 442 additional frames and adds synthesis on none.
+All 442 changed frames and their neighbours were compared with the original;
+luma and chroma pixel error improved on every changed frame. Fine source grain
+is partly attenuated by ordinary lossy encoding during fallback. The three
+original source-fidelity anchors still pass, and the mesh negative still fails.
+The whole-sequence gate uses this reviewed baseline with unchanged comparison
+limits. See [FLICKER-20260912.md](FLICKER-20260912.md) for evidence and limits.
 
 `hornets-invalid-chroma-1495-35s.mkv` retains original AV1 packets from an older
 library output. Both dav1d and libaom reject a one-sided chroma grain model in
