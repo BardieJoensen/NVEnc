@@ -518,6 +518,16 @@ Completed full-title results and measured validation times are recorded in
 ### Mixed-source grain and partial image edges
 
 The full developer gate includes `mixed_source`. It generates deterministic
+cases for quiet artwork, partial bottom edges and constant colour over noisy
+luma, each at 8-bit and 10-bit output. The latter also rejects the retained
+`c2c7384b` intermediate fix when run with `--cases chroma_only`.
+
+The real-source flash stage includes the Lost Tapes opening credits: sixteen
+aligned native-U frames reject invented colour on source-neutral lettering.
+The source and older negative are the existing Lost Tapes pinned fixtures;
+this adds no routine per-file Tdarr stage.
+
+The mixed-source fixture contains
 noisy backgrounds with clean foreground and colour regions, including a
 disappearance/reappearance and a separate brightness found only in a partial
 bottom block. Both 8-bit and 10-bit outputs must keep added grain and raw-filter

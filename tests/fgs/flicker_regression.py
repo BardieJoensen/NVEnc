@@ -24,6 +24,8 @@ CASES = {
                      start=90.12, frames=8, patch=(288, 560, 16, 16), seek='00:01:00', encode_frames=1080),
     'southpark': dict(source='southpark_flicker_source', negative='southpark_flicker_negative',
                      start=1145.14, frames=8, patch=(96, 1056, 16, 16), seek='00:18:10', encode_frames=1560),
+    'losttapes_colour': dict(source='losttapes_recovery_source', negative='losttapes_recovery_negative',
+                     start=3.66, frames=16, patch=(544, 272, 16, 16), seek='00:00:00', encode_frames=240, plane='u'),
 }
 
 
@@ -50,7 +52,9 @@ def assess(source, candidate, patch=PATCH):
                 source_rms=rms.tolist(), texture_limit=0.3, source_rms_limit=4.0)
 
 
-def decode(path, prefix, start=START, frames=FRAMES):
+def decode(path, prefix, start=START, frames=FRAMES, plane=None):
+    if plane not in (None, 'u', 'v'):
+        raise ValueError('unsupported native colour plane')
     probe = json.loads(subprocess.check_output(
         ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries',
          'stream=start_time,codec_name', '-of', 'json', str(path)], timeout=30))
@@ -62,20 +66,22 @@ def decode(path, prefix, start=START, frames=FRAMES):
     # Those excerpts are short; trim their original displayed PTS.
     if abs(float(stream.get('start_time', 0))) < 0.1:
         command += ['-ss', str(start)]
+    pixel_filter = f'format=yuv420p10le,extractplanes={plane}' if plane else 'format=gray16le'
+    width, height, scale = (960, 540, 4.0) if plane else (1920, 1080, 256.0)
     command += ['-i', str(path), '-map', '0:v:0', '-an', '-sn', '-frames:v', str(frames),
-                '-fps_mode', 'passthrough', '-vf', f'trim=start={start},format=gray16le,showinfo',
+                '-fps_mode', 'passthrough', '-vf', f'trim=start={start},{pixel_filter},showinfo',
                 '-filter_threads', '1', '-f', 'rawvideo', '-']
     prefix.with_suffix('.command.json').write_text(json.dumps(command, indent=2) + '\n')
     with prefix.with_suffix('.log').open('w') as log:
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=log, check=True, timeout=180)
-    if len(result.stdout) != frames * 1080 * 1920 * 2:
+    if len(result.stdout) != frames * height * width * 2:
         raise RuntimeError('missing decoded regression frames')
     times = [float(t) for t in re.findall(r' n:\s*\d+ pts:\s*-?\d+ pts_time:([0-9.]+)',
                                          prefix.with_suffix('.log').read_text())][:frames]
     if len(times) != frames or any(b <= a for a, b in zip(times, times[1:])):
         raise RuntimeError('incomplete or non-increasing decoded timestamps')
-    pixels = np.frombuffer(result.stdout, dtype='<u2').reshape(frames, 1080, 1920)
-    return times, pixels.astype(np.float32) / 256.0
+    pixels = np.frombuffer(result.stdout, dtype='<u2').reshape(frames, height, width)
+    return times, pixels.astype(np.float32) / scale
 
 
 def main():
@@ -103,9 +109,9 @@ def main():
         (args.output / 'encode-command.json').write_text(json.dumps(command, indent=2) + '\n')
         with (args.output / 'encode.log').open('w') as log:
             subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=240)
-    source_pts, source = decode(source_path, args.output / 'source', case['start'], case['frames'])
-    negative_pts, negative = decode(Path(pinned[case['negative']]['path']), args.output / 'negative', case['start'], case['frames'])
-    candidate_pts, picture = decode(candidate, args.output / 'candidate', case['start'], case['frames'])
+    source_pts, source = decode(source_path, args.output / 'source', case['start'], case['frames'], case.get('plane'))
+    negative_pts, negative = decode(Path(pinned[case['negative']]['path']), args.output / 'negative', case['start'], case['frames'], case.get('plane'))
+    candidate_pts, picture = decode(candidate, args.output / 'candidate', case['start'], case['frames'], case.get('plane'))
     if source_pts != negative_pts or source_pts != candidate_pts:
         raise RuntimeError('source, negative and candidate frames are not aligned')
     positive_control = assess(source, source, case['patch'])
@@ -113,7 +119,8 @@ def main():
     candidate_result = assess(source, picture, case['patch'])
     report = dict(candidate_sha256=hashlib.sha256(args.nvencc.read_bytes()).hexdigest(),
                   candidate_video=str(candidate), candidate_video_sha256=hashlib.sha256(candidate.read_bytes()).hexdigest(),
-                  case=args.case, fixtures=pinned, seconds=source_pts, patch=case['patch'], units='8-bit-equivalent full-range grayscale',
+                  case=args.case, fixtures=pinned, seconds=source_pts, patch=case['patch'],
+                  units='8-bit-equivalent native ' + case['plane'] if case.get('plane') else '8-bit-equivalent full-range grayscale',
                   positive_control=positive_control, negative=negative_result, candidate=candidate_result,
                   scope='Pinned flash and source fidelity only; not a universal flicker or quality certificate')
     (args.output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
