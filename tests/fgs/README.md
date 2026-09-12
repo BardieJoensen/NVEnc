@@ -514,3 +514,26 @@ distinct from the trial's measured-baseline limit.
 
 Completed full-title results and measured validation times are recorded in
 [the post-encode integration findings](FINDINGS-2026-09-09-INTEGRATION.md).
+
+### Mixed-source grain and partial image edges
+
+The full developer gate includes `mixed_source`. It generates deterministic
+noisy backgrounds with clean foreground and colour regions, including a
+disappearance/reappearance and a separate brightness found only in a partial
+bottom block. Both 8-bit and 10-bit outputs must keep added grain and raw-filter
+error below 0.3 native eight-bit codes in the clean regions. Genuine grain at
+other levels must remain present. A conventional NVENC control separates lossy
+prediction/quantization from FGS; encoded clean-region variation and mean error
+may exceed that matched control by no more than 0.3 codes. Real-source flash
+regression thresholds remain unchanged.
+
+```sh
+python3 tests/fgs/mixed_source_regression.py --nvencc /path/to/candidate --output /fresh/results
+python3 tests/fgs/mixed_source_regression.py --nvencc /path/to/3778447e --expect-rejected --output /fresh/negative
+```
+
+The full gate uses the immutable retained 3778447e binary as its negative.
+On another installation, set `FGS_GATE_MIXED_SOURCE_NEGATIVE` and
+`FGS_GATE_MIXED_SOURCE_NEGATIVE_SHA256` to an explicitly retained build of that
+revision. This reference must not follow the production encoder path. These
+checks run in the developer gate, not once per file in the Tdarr flow.
