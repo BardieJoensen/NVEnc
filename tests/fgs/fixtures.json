@@ -92,6 +92,16 @@
       "file": "gentlemen-ramp-positive-33m-150s.mkv",
       "sha256": "972fdd30f6e8876946c656ed7e87cf7d7b4769756f54c15d439755e4eada4a77",
       "bytes": 48568269
+    },
+    "southpark_flicker_source": {
+      "file": "southpark-flicker-source.mkv",
+      "sha256": "78d22fbbbaa38a67be5fc7e4bfdd5093b15fec09d1b40e5bec8deaada8472126",
+      "bytes": 3909409715
+    },
+    "southpark_flicker_negative": {
+      "file": "southpark-flicker-negative.mkv",
+      "sha256": "ae630f5d3dd9d4ab9846bf96d08f8e76c61f52d4252463b61ec2bc0ed2e88b32",
+      "bytes": 753613359
     }
   },
   "provenance": {
@@ -246,6 +256,11 @@
       "limits": "Still-frame review plus aligned source metrics and complete decoded temporal descriptors; not a universal perceptual pass. Old positives and mesh negative retained; numeric gates unchanged.",
       "negative_retained": true,
       "reviewed_at": 1789209897.0049336
+    },
+    "southpark_flicker": {
+      "retention": "Hard links to unchanged retained original and old ripple repair before selected replacement",
+      "references": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/southpark-flicker-fixtures.json",
+      "review": "Eight aligned frames at 19:05.269; source-flat step patch SD 0, old pulse about 17, 3778447e output about 0.032. Limits unchanged."
     }
   },
   "canary_revalidation": {

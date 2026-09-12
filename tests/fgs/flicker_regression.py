@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Source-referenced regressions for two repaired one-frame grain flashes.
+"""Source-referenced regressions for repaired one-frame grain flashes.
 
 Private media stays in the fixture store. This checks decoded picture texture,
 including a pinned negative, rather than treating apply_grain=0 as a defect.
@@ -22,6 +22,8 @@ CASES = {
                      start=START, frames=FRAMES, patch=PATCH, seek='00:05:40', encode_frames=720),
     'losttapes': dict(source='losttapes_recovery_source', negative='losttapes_recovery_negative',
                      start=90.12, frames=8, patch=(288, 560, 16, 16), seek='00:01:00', encode_frames=1080),
+    'southpark': dict(source='southpark_flicker_source', negative='southpark_flicker_negative',
+                     start=1145.14, frames=8, patch=(96, 1056, 16, 16), seek='00:18:10', encode_frames=1560),
 }
 
 
@@ -41,7 +43,7 @@ def assess(source, candidate, patch=PATCH):
     candidate_sd = candidate[:, y:y+height, x:x+width].std(axis=(1, 2))
     rms = np.sqrt(np.mean((candidate - source) ** 2, axis=(1, 2)))
     # Limits are specific to the pinned SDR/QVBR34 scenes. The known defects
-    # reach about 2.8/3.38 SD in the originally uniform patches, versus <0.06 for
+    # reach about 2.8/3.38/17 SD in the originally uniform patches, versus <0.06 for
     # source-preserving frames. Also reject a blurred/blank/shifted picture.
     return dict(passed=bool(candidate_sd.max() <= 0.3 and rms.max() <= 4.0),
                 source_patch_sd=source_sd.tolist(), output_patch_sd=candidate_sd.tolist(),
