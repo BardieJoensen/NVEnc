@@ -2044,7 +2044,9 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     auto sts = RGY_ERR_NONE;
     if (prm->filmGrain.denoiser == FGS_DENOISE_MOTION) {
         if (!m_motionDegrain) return RGY_ERR_INVALID_CALL;
-        if (m_state->stableNoise > 0.0f) {
+        // A drain call can have no source picture. Keep the threshold from
+        // the last real input instead of reading a null/empty frame CSP.
+        if (pInputFrame && pInputFrame->ptr[0] && m_state->stableNoise > 0.0f) {
             // Grain-only SAD is ~1.6*sigma*blockArea, so a useful scene-change
             // threshold must scale with the measured noise: high enough that
             // same-scene grain never trips it, low enough that a hard cut
