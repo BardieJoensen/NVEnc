@@ -677,8 +677,11 @@ if want_stage flicker_regression; then
         >> "$REPORT_DIR/flicker-regression.log" 2>&1 &&
         python3 "$HERE/flicker_regression.py" --nvencc "$CANDIDATE_NVENCC" --case southpark \
         --root "$FIXTURE_ROOT" --output "$REPORT_DIR/flicker-southpark-regression" \
+        >> "$REPORT_DIR/flicker-regression.log" 2>&1 &&
+        python3 "$HERE/flicker_regression.py" --nvencc "$CANDIDATE_NVENCC" --case losttapes_colour \
+        --root "$FIXTURE_ROOT" --output "$REPORT_DIR/flicker-colour-regression" \
         >> "$REPORT_DIR/flicker-regression.log" 2>&1; then
-        record pass "all three grain flashes rejected and original flat texture retained"
+        record pass "three grain flashes and opening colour defect rejected; source texture retained"
     else
         record fail "grain flash regression (see $REPORT_DIR/flicker-regression.log)"
         tail -20 "$REPORT_DIR/flicker-regression.log"
@@ -686,7 +689,7 @@ if want_stage flicker_regression; then
 fi
 
 if want_stage mixed_source; then
-    log "stage: mixed-source interior and partial-edge regression"
+    log "stage: mixed-source interior, partial-edge and constant-colour regression"
     mixed_negative="${FGS_GATE_MIXED_SOURCE_NEGATIVE:-$DOCKER_APPS/logs/fgs-ripple-repair-20260906/bin/nvencc-3778447e}"
     mixed_negative_sha="${FGS_GATE_MIXED_SOURCE_NEGATIVE_SHA256:-b5cb35205ad2e29499fd26d6274780690df5fdc12495c9d525ce5ce6b7271883}"
     [ -x "$mixed_negative" ] || die "set FGS_GATE_MIXED_SOURCE_NEGATIVE to the retained pre-source-guard encoder"
@@ -695,7 +698,7 @@ if want_stage mixed_source; then
     if python3 "$HERE/mixed_source_regression.py" --nvencc "$mixed_negative" \
         --expect-rejected --output "$REPORT_DIR/mixed-source-negative" \
         > "$REPORT_DIR/mixed-source-negative.log" 2>&1; then
-        record pass "mixed-source detector rejects retained 3778447e in both depths and locations"
+        record pass "mixed-source detector rejects retained 3778447e in all six cases"
     else
         record fail "mixed-source negative control (see $REPORT_DIR/mixed-source-negative.log)"
         tail -20 "$REPORT_DIR/mixed-source-negative.log"
