@@ -19,7 +19,7 @@ W, H, FRAMES = 960, 544, 64
 LEVELS = [64, 112, 160, 208]
 
 
-def generate(path, bits, edges=False, chroma_only=False):
+def generate(path, bits, edges=False, chroma_only=False, islands=False):
     rng = np.random.default_rng(20260912)
     scale = 1 << (bits - 8)
     dtype = np.uint8 if bits == 8 else np.dtype('<u2')
@@ -32,11 +32,19 @@ def generate(path, bits, edges=False, chroma_only=False):
             u = 128 + rng.normal(0, 1.2, (H//2, W//2))
             v = 128 + rng.normal(0, 1.2, (H//2, W//2))
             if not 32 <= n < 36:
-                if not chroma_only:
+                if islands:
+                    # Each clean region fits inside one quarter of a textured
+                    # 32x32 model block. Coarse statistics cannot establish
+                    # that grain belongs on these small source regions.
+                    y[112:128, 272:288] = 112
+                    u[64:72, 272:280] = 128
+                    v[184:192, 152:160] = 128
+                elif not chroma_only:
                     y[96:224, 272:432] = 112
                 # Source chroma is clean while co-located luma remains noisy.
-                u[48:112, 256:336] = 128
-                v[160:224, 136:216] = 128
+                if not islands:
+                    u[48:112, 256:336] = 128
+                    v[160:224, 136:216] = 128
             if edges:
                 # A unique quiet brightness exists only in the partial bottom
                 # block: 28 luma rows and 14 chroma rows, as in 1080p footage.
@@ -78,7 +86,7 @@ def decode(video, grain, bits, log):
                 child.wait(timeout=30)
 
 
-def measure(video, bits, directory, edges=False, chroma_only=False):
+def measure(video, bits, directory, edges=False, chroma_only=False, islands=False):
     on = decode(video, 1, bits, directory/'grain-on.log')
     off = decode(video, 0, bits, directory/'grain-off.log')
     quiet = [(slice(128,192),slice(304,400)), (slice(64,96),slice(272,320)), (slice(176,208),slice(152,200))]
@@ -86,6 +94,8 @@ def measure(video, bits, directory, edges=False, chroma_only=False):
     if edges:
         quiet = [(slice(520,536),slice(784,880)), (slice(260,268),slice(392,440)), (slice(260,268),slice(392,440))]
         expected_mean = [208,128,128]
+    if islands:
+        quiet = [(slice(112,128),slice(272,288)), (slice(64,72),slice(272,280)), (slice(184,192),slice(152,160))]
     noisy = [(slice(256,480),slice(40,200)), (slice(128,240),slice(20,100)), (slice(128,240),slice(20,100))]
     rows = []
     try:
@@ -122,17 +132,17 @@ def main():
     parser.add_argument('--nvencc',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--expect-rejected',action='store_true')
-    parser.add_argument('--cases',nargs='+',choices=['interior','edges','chroma_only'],default=['interior','edges','chroma_only'])
+    parser.add_argument('--cases',nargs='+',choices=['interior','edges','chroma_only','islands'],default=['interior','edges','chroma_only','islands'])
     args=parser.parse_args()
     args.output.mkdir(parents=True,exist_ok=True)
     results=[]
     for case,bits in [(case,bits) for case in args.cases for bits in [8,10]]:
-        edges=case=='edges';chroma_only=case=='chroma_only';H=540 if edges else 544
+        edges=case=='edges';chroma_only=case=='chroma_only';islands=case=='islands';H=540 if edges else 544
         quiet_planes = [1, 2] if chroma_only else [0, 1, 2]
         directory=args.output/case/str(bits);directory.mkdir(parents=True,exist_ok=True)
         source,video=directory/'source.y4m',directory/'candidate.mkv'
         if video.exists():raise RuntimeError('Refusing to overwrite retained trial')
-        generate(source,bits,edges,chroma_only)
+        generate(source,bits,edges,chroma_only,islands)
         cmd=[str(args.nvencc),'--avsw','-i',str(source),'--codec','av1','--cqp','20',
              '--output-depth',str(bits),'--av1-film-grain','denoise=auto,chroma=auto,denoiser=bilateral',
              '--colormatrix','bt709','--colorprim','bt709','--transfer','bt709','--colorrange','limited',
@@ -140,7 +150,7 @@ def main():
         (directory/'encode-command.json').write_text(json.dumps(cmd,indent=2)+'\n')
         with (directory/'encode.log').open('w') as log:
             subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=300)
-        result=measure(video,bits,directory,edges,chroma_only)
+        result=measure(video,bits,directory,edges,chroma_only,islands)
         result.update(case=case,width=W,height=H)
         # Separate FGS from ordinary lossy chroma prediction/quantization. In
         # this fixture conventional NVENC also leaves up to one native code
@@ -159,7 +169,7 @@ def main():
             (cd/'encode-command.json').write_text(json.dumps(cc,indent=2)+'\n')
             with (cd/'encode.log').open('w') as log:
                 subprocess.run(cc,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=300)
-            controls[label]=measure(control,bits,cd,edges,chroma_only)
+            controls[label]=measure(control,bits,cd,edges,chroma_only,islands)
         result['controls']=controls
         result['checks']['raw_source_preserved']=bool(np.all(np.array(controls['raw']['peak_quiet_sigma'])[quiet_planes]<=.3)
             and np.all(np.array(controls['raw']['peak_quiet_mean_error'])[quiet_planes]<=.3))
