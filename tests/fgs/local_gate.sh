@@ -689,7 +689,7 @@ if want_stage flicker_regression; then
 fi
 
 if want_stage mixed_source; then
-    log "stage: mixed-source interior, partial-edge and constant-colour regression"
+    log "stage: mixed-source interior, edge, colour and small-region regression"
     mixed_negative="${FGS_GATE_MIXED_SOURCE_NEGATIVE:-$DOCKER_APPS/logs/fgs-ripple-repair-20260906/bin/nvencc-3778447e}"
     mixed_negative_sha="${FGS_GATE_MIXED_SOURCE_NEGATIVE_SHA256:-b5cb35205ad2e29499fd26d6274780690df5fdc12495c9d525ce5ce6b7271883}"
     [ -x "$mixed_negative" ] || die "set FGS_GATE_MIXED_SOURCE_NEGATIVE to the retained pre-source-guard encoder"
@@ -698,10 +698,23 @@ if want_stage mixed_source; then
     if python3 "$HERE/mixed_source_regression.py" --nvencc "$mixed_negative" \
         --expect-rejected --output "$REPORT_DIR/mixed-source-negative" \
         > "$REPORT_DIR/mixed-source-negative.log" 2>&1; then
-        record pass "mixed-source detector rejects retained 3778447e in all six cases"
+        record pass "mixed-source detector rejects retained 3778447e in all ten cases"
     else
         record fail "mixed-source negative control (see $REPORT_DIR/mixed-source-negative.log)"
         tail -20 "$REPORT_DIR/mixed-source-negative.log"
+    fi
+    fine_negative="${FGS_GATE_FINE_SOURCE_NEGATIVE:-$DOCKER_APPS/logs/fgs-ripple-repair-20260906/bin/nvencc-273723b7}"
+    fine_negative_sha="${FGS_GATE_FINE_SOURCE_NEGATIVE_SHA256:-343327febbf057e156909ad23b2e9ed2de08bac6902aa654d7b0a914b02a7b40}"
+    [ -x "$fine_negative" ] || die "set FGS_GATE_FINE_SOURCE_NEGATIVE to the retained coarse-source-guard encoder"
+    actual_fine_sha=$(sha256sum -- "$fine_negative")
+    [ "${actual_fine_sha%% *}" = "$fine_negative_sha" ] || die "fine-source negative encoder identity mismatch"
+    if python3 "$HERE/mixed_source_regression.py" --nvencc "$fine_negative" \
+        --cases islands islands_qvbr --expect-rejected --output "$REPORT_DIR/fine-source-negative" \
+        > "$REPORT_DIR/fine-source-negative.log" 2>&1; then
+        record pass "small-region detector rejects retained 273723b7 at both depths and rate settings"
+    else
+        record fail "fine-source negative control (see $REPORT_DIR/fine-source-negative.log)"
+        tail -20 "$REPORT_DIR/fine-source-negative.log"
     fi
     if python3 "$HERE/mixed_source_regression.py" --nvencc "$CANDIDATE_NVENCC" \
         --output "$REPORT_DIR/mixed-source-candidate" \
