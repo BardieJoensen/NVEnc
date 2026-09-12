@@ -518,8 +518,10 @@ Completed full-title results and measured validation times are recorded in
 ### Mixed-source grain and partial image edges
 
 The full developer gate includes `mixed_source`. It generates deterministic
-cases for quiet artwork, partial bottom edges and constant colour over noisy
-luma, each at 8-bit and 10-bit output. The latter also rejects the retained
+cases for quiet artwork, partial bottom edges, constant colour over noisy
+luma, and small clean regions inside textured model blocks, each at 8-bit and
+10-bit output. The small-region case also uses Tdarr's QVBR 34/quality/HQ/AQ
+settings, with a separate matched conventional encode. Constant colour rejects the retained
 `c2c7384b` intermediate fix when run with `--cases chroma_only`.
 
 The real-source flash stage includes the Lost Tapes opening credits: sixteen
@@ -547,3 +549,11 @@ On another installation, set `FGS_GATE_MIXED_SOURCE_NEGATIVE` and
 `FGS_GATE_MIXED_SOURCE_NEGATIVE_SHA256` to an explicitly retained build of that
 revision. This reference must not follow the production encoder path. These
 checks run in the developer gate, not once per file in the Tdarr flow.
+
+The small-region cases additionally reject the retained `273723b7` encoder.
+Its source guard sees only 32x32 luma/16x16 chroma statistics; the newer case
+requires protection of 16x16 luma/8x8 chroma regions within those blocks. The
+first finer-statistics candidate still allowed grain when lossy reconstructed
+brightness moved outside the protected range; these same tests retain that
+failure. Set `FGS_GATE_FINE_SOURCE_NEGATIVE` and
+`FGS_GATE_FINE_SOURCE_NEGATIVE_SHA256` to a pinned copy on other installations.
