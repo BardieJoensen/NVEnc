@@ -12,12 +12,20 @@ The original ripple gate, new source-referenced flash regression and actual
 Tdarr 2.87.01 runtime check pass. See [the investigation and limitations](FLICKER-20260912.md)
 and the [live ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/work-plan.json)
 for build hashes, deployment, per-scene checks, selected repairs and scope.
-Nine reviewed/reported source-backed episode repairs are being processed;
-E10 has passed the new witness check and been installed. A header scope scan
-continues; header candidates are not a visibly damaged-file total. The fix and
-regression are integrated here as `63b6cebb`; this later development build
-compiles and passes CPU tests but is not the deployed binary. Deferred retention
-GPU trials remain manual-start only after the ripple repair finishes.
+All nine reviewed/reported episode replacements passed their original witness
+checks and were installed. Full-file header scans then found another strong
+Lost Tapes S1E5 pulse at 01:30.257; the 24-fit hold alone is a partial fix.
+The source and that `e2c3a99d` counterexample are retained. A coupled source/grain
+restart ramp (`3778447e`) is now being qualified in the isolated flicker worktree;
+it is not yet deployed. The live ledger takes precedence over the earlier
+successful per-scene checks. The separate header scope and reviewed title lists
+are in [SCOPE.md](/opt/docker-apps/logs/fgs-ripple-repair-20260906/amphibia-flicker-fix-20260912/SCOPE.md).
+
+The first fix/regression are integrated here as `63b6cebb`; its combined
+fidelity build compiles and passes CPU tests but is not the deployed binary.
+Header triage was added here as `4d7b1b9b`. The newer ramp still needs integration
+and qualification. Deferred retention GPU trials remain manual-start only after
+the ripple repair finishes.
 
 This is the canonical entry point for resuming this project. Read the current
 state and next steps here before using an older findings report or work ledger.
@@ -86,7 +94,9 @@ jacket regression. The report tests pass; new media work remains deferred.
 
 | Revision | Role | State at this handoff |
 | --- | --- | --- |
-| `497caa64` | Ordinary encoder, `retain=0`, bilateral | Deployed in Tdarr and repair workers; ripple protection and ordinary integration qualified |
+| `e2c3a99d` | Ordinary encoder with 24-fit recovery hold | Deployed; original reported flash scenes fixed, later Lost Tapes counterexample under refinement |
+| `3778447e` | Coupled source/grain recovery ramp | Isolated candidate; qualification in progress, not deployed |
+| `497caa64` | Earlier ordinary encoder, `retain=0`, bilateral | Retained comparison/rollback baseline; superseded in production |
 | `9c1664d4` | Optional automatic retention | Quality/operational qualification recorded; not broadly enabled; all three complete-source outputs exceed the unchanged 10% trial cap |
 | `5450a4fc` | Precise fallback traces and skipping unused covariance work | CPU checks passed; new CUDA build and output-preservation checks deferred |
 | `3ac80ceb` | Exact strength-curve comparison for model reuse | Full CPU suite and archived curve reproduction passed; intentional model decisions need GPU/temporal qualification |
@@ -100,8 +110,9 @@ measured baseline binaries are pinned in
 
 - Ordinary `497caa64`: SHA-256
   `bb7e75cbcb9097f1f1c7ac3347e7193c74caa6c7d57db1c3c77348cc27daf144`.
-  The deployed host artifact is `/opt/docker-apps/build/tdarr-node/nvencc`;
-  the manifest also names its retained study copy.
+  Its retained artifact is `production-readiness-20260909/bin/nvencc-fidelity-497caa64`
+  under the repair log root. The host build input now contains `e2c3a99d`;
+  do not use that mutable path as the old comparison baseline.
 - Optional `9c1664d4`: SHA-256
   `8dff824c8d7360adac294f05e7c6032770f8594cf1c3b63961f50a854e3b0fec`.
   Its retained path is under `auto-retention-production-20260910/bin/` in
