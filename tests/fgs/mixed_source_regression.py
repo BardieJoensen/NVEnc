@@ -19,7 +19,7 @@ W, H, FRAMES = 960, 544, 64
 LEVELS = [64, 112, 160, 208]
 
 
-def generate(path, bits, edges=False):
+def generate(path, bits, edges=False, chroma_only=False):
     rng = np.random.default_rng(20260912)
     scale = 1 << (bits - 8)
     dtype = np.uint8 if bits == 8 else np.dtype('<u2')
@@ -32,7 +32,8 @@ def generate(path, bits, edges=False):
             u = 128 + rng.normal(0, 1.2, (H//2, W//2))
             v = 128 + rng.normal(0, 1.2, (H//2, W//2))
             if not 32 <= n < 36:
-                y[96:224, 272:432] = 112
+                if not chroma_only:
+                    y[96:224, 272:432] = 112
                 # Source chroma is clean while co-located luma remains noisy.
                 u[48:112, 256:336] = 128
                 v[160:224, 136:216] = 128
@@ -77,7 +78,7 @@ def decode(video, grain, bits, log):
                 child.wait(timeout=30)
 
 
-def measure(video, bits, directory, edges=False):
+def measure(video, bits, directory, edges=False, chroma_only=False):
     on = decode(video, 1, bits, directory/'grain-on.log')
     off = decode(video, 0, bits, directory/'grain-off.log')
     quiet = [(slice(128,192),slice(304,400)), (slice(64,96),slice(272,320)), (slice(176,208),slice(152,200))]
@@ -105,7 +106,8 @@ def measure(video, bits, directory, edges=False):
     mean_error=np.max([r['quiet_mean_error'] for r in rows if r['quiet_source']],axis=0)
     background=np.median([r['noisy_added'] for r in rows[8:]],axis=0)
     total=np.median([r['noisy_total'] for r in rows[8:]],axis=0)
-    checks=dict(no_invented_grain=bool(np.all(added<=.3)),
+    quiet_planes = [1, 2] if chroma_only else [0, 1, 2]
+    checks=dict(no_invented_grain=bool(np.all(added[quiet_planes]<=.3)),
                 genuine_grain_present=bool(np.all(background>np.array([.5,.15,.15]))),
                 background_variance_preserved=bool(np.all(total>np.array([1.5,.4,.4]))))
     return dict(bits=bits,frames=len(rows),peak_quiet_sigma=peak.tolist(),peak_quiet_added=added.tolist(),
@@ -120,16 +122,17 @@ def main():
     parser.add_argument('--nvencc',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--expect-rejected',action='store_true')
-    parser.add_argument('--cases',nargs='+',choices=['interior','edges'],default=['interior','edges'])
+    parser.add_argument('--cases',nargs='+',choices=['interior','edges','chroma_only'],default=['interior','edges','chroma_only'])
     args=parser.parse_args()
     args.output.mkdir(parents=True,exist_ok=True)
     results=[]
     for case,bits in [(case,bits) for case in args.cases for bits in [8,10]]:
-        edges=case=='edges';H=540 if edges else 544
+        edges=case=='edges';chroma_only=case=='chroma_only';H=540 if edges else 544
+        quiet_planes = [1, 2] if chroma_only else [0, 1, 2]
         directory=args.output/case/str(bits);directory.mkdir(parents=True,exist_ok=True)
         source,video=directory/'source.y4m',directory/'candidate.mkv'
         if video.exists():raise RuntimeError('Refusing to overwrite retained trial')
-        generate(source,bits,edges)
+        generate(source,bits,edges,chroma_only)
         cmd=[str(args.nvencc),'--avsw','-i',str(source),'--codec','av1','--cqp','20',
              '--output-depth',str(bits),'--av1-film-grain','denoise=auto,chroma=auto,denoiser=bilateral',
              '--colormatrix','bt709','--colorprim','bt709','--transfer','bt709','--colorrange','limited',
@@ -137,7 +140,7 @@ def main():
         (directory/'encode-command.json').write_text(json.dumps(cmd,indent=2)+'\n')
         with (directory/'encode.log').open('w') as log:
             subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=300)
-        result=measure(video,bits,directory,edges)
+        result=measure(video,bits,directory,edges,chroma_only)
         result.update(case=case,width=W,height=H)
         # Separate FGS from ordinary lossy chroma prediction/quantization. In
         # this fixture conventional NVENC also leaves up to one native code
@@ -156,13 +159,13 @@ def main():
             (cd/'encode-command.json').write_text(json.dumps(cc,indent=2)+'\n')
             with (cd/'encode.log').open('w') as log:
                 subprocess.run(cc,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=300)
-            controls[label]=measure(control,bits,cd,edges)
+            controls[label]=measure(control,bits,cd,edges,chroma_only)
         result['controls']=controls
-        result['checks']['raw_source_preserved']=bool(np.all(np.array(controls['raw']['peak_quiet_sigma'])<=.3)
-            and np.all(np.array(controls['raw']['peak_quiet_mean_error'])<=.3))
-        result['checks']['encoded_source_preserved']=bool(np.all(np.array(result['peak_quiet_sigma'])
-            <=np.array(controls['conventional']['peak_quiet_sigma'])+.3)
-            and np.all(np.array(result['peak_quiet_mean_error'])<=np.array(controls['conventional']['peak_quiet_mean_error'])+.3))
+        result['checks']['raw_source_preserved']=bool(np.all(np.array(controls['raw']['peak_quiet_sigma'])[quiet_planes]<=.3)
+            and np.all(np.array(controls['raw']['peak_quiet_mean_error'])[quiet_planes]<=.3))
+        result['checks']['encoded_source_preserved']=bool(np.all(np.array(result['peak_quiet_sigma'])[quiet_planes]
+            <=np.array(controls['conventional']['peak_quiet_sigma'])[quiet_planes]+.3)
+            and np.all(np.array(result['peak_quiet_mean_error'])[quiet_planes]<=np.array(controls['conventional']['peak_quiet_mean_error'])[quiet_planes]+.3))
         result['checks']['quiet_source_preserved']=all(result['checks'][k] for k in
             ['no_invented_grain','raw_source_preserved','encoded_source_preserved'])
         result['passed']=all(result['checks'].values())
