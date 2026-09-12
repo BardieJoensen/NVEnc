@@ -1,8 +1,22 @@
 # FGS encoder and library repair: current work and handoff
 
-Status: **ordinary source-quiet/recovery hotfix deployed; selected flicker repairs
-verified; ordinary ripple repair resumed. Broader automatic-retention trials
-remain deferred and manual-start only.** Verified 2026-09-12 17:14 UTC.
+Status: **ordinary source-quiet/recovery hotfix deployed; full library follow-up
+audit in progress. Broader automatic-retention trials remain deferred and
+manual-start only.** Updated 2026-09-12.
+
+The [full library audit and current findings](FULL-AUDIT-20260912.md) now cover a
+5,578-file snapshot, including 5,263 AV1 files. It has repaired one additionally
+confirmed Regular Show episode with the unchanged deployed encoder, resolved
+all 80 prior VC-1 timing exclusions, and independently reproduced four old
+movie decoder failures. Two previously selected Steven Universe files have
+additional source-confirmed noise scenes. Current-build comparisons remove
+most of that noise but expose a remaining small-region source-guard limit.
+Repair admissions are paused for the finer-region correction and qualification.
+The full header and expanded decoded/source passes are still running; no
+blanket damage count follows from their flags. Read the
+[active audit ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/work-plan.json)
+for transient trial holds, jobs, pinned evidence, completed repairs and pending
+review. The 17:14 rollout qualification described below remains a dated snapshot.
 
 Production Tdarr and the repair worker use isolated core `273723b7`, binary
 SHA-256 `343327febbf057e156909ad23b2e9ed2de08bac6902aa654d7b0a914b02a7b40`. The exact Tdarr image is
@@ -26,12 +40,12 @@ See [the source-guard work and evidence index](SOURCE-GUARD-20260912.md),
 [installed-file verification](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/remediation-verification.json)
 and [live follow-up ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/work-plan.json).
 The earlier [flicker report](FLICKER-20260912.md) and its 36-file repair results
-are historical snapshots. This follow-up replaces Lost Tapes S1E5 again from its
-retained source; the unique selected-file count remains 36. Its complete library
+are historical snapshots. That follow-up replaced Lost Tapes S1E5 again from its
+retained source; its unique selected-file count was 36. Its complete library
 container is **+14.627% / 32.822 MB** versus the preceding repair.
 Audio, subtitles, chapters, signalling, original and superseded files are retained
 and verified. No additional download was needed. The consolidated
-[36-file results](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/current-selected-repairs.csv) now total
+[36-file results](/opt/docker-apps/logs/fgs-ripple-repair-20260906/grain-recovery-followup-20260912/current-selected-repairs.csv) totalled
 **+0.791%** versus their pre-flicker-repair containers; prior percentages remain
 historical snapshots.
 
@@ -226,6 +240,9 @@ in a row share the directory of that row's first path.
 
 | Path | What it answers |
 | --- | --- |
+| `full-temporal-audit-20260912/work-plan.json`, `OPERATIONS.md`, `published/status.json` | Current full-audit jobs, exact file versions, confirmed findings versus candidate measurements, trial holds and required finish |
+| `full-temporal-audit-20260912/inventory.json`, `headers/status.json`, `decoded-v3/status.json` | Explicit current-file snapshot, full displayed-header stage and bounded full-image/frame source review |
+| `full-temporal-audit-20260912/current-selected-repairs.json`, `installed-vc1-verification.json`, `vc1-exclusions-summary.json` | Cumulative selected-repair history, new source-backed installation and resolved VC-1 timing exclusions; not whole-library perceptual clearance |
 | `retention-prep-20260910/work-plan.json` | Current unfinished encoder objective, constraints, source hashes, completed CPU work and deferred steps |
 | `retention-prep-20260910/comparison-manifest.json`, `comparison-plan.json` | Original-source and binary pins, seven quality/size windows and 70 planned commands; none executed by this preparation |
 | `retention-prep-20260910/fallback-profiles-20260911/` | Six-log joins, 459,396 decisions, exact diagnostic target profiles, source/log hashes and verification |

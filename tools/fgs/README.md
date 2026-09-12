@@ -3,10 +3,58 @@
 For current encoder/repair state, retained evidence and the next development
 steps, start with [the work and handoff](../../tests/fgs/WORK-TO-PRODUCTION.md).
 
-These read-only tools measure the grain that an AV1 decoder adds to a decoded
-base picture. They help locate periodic, directional or unusually strong grain
-for visual review. They do not need an original encode and do not judge source
-detail, motion quality, or whole-film watchability.
+The native tools measure the grain that an AV1 decoder adds to a decoded base
+picture. They help locate periodic, directional or unusually strong grain for
+visual review without requiring the original. The finite library audit can also
+compare retained originals in explicitly aligned windows. These measurements
+do not by themselves grade source detail, motion quality or whole-film
+watchability.
+
+## Finite library audit
+
+`library_audit.py` checks every displayed header in an explicit AV1 snapshot.
+It selects up to twelve windows across short and longer grain runs, both ends
+of longer pulses, grain-off gaps, amplitude changes, sustained grain and
+timeline controls. `decoded_library_audit.py` consumes those reports, measures
+every displayed frame and image pixel in each window, and optionally adds
+previously reviewed scene anchors. `source_plane_review.py` performs the
+separate native-plane source comparison. It needs NumPy and FFmpeg/FFprobe.
+
+```sh
+python3 tools/fgs/library_audit.py inventory.json \
+    --output-dir /scratch/audit/headers --scratch /scratch/audit/work --workers 2
+python3 tools/fgs/decoded_library_audit.py inventory.json \
+    --headers /scratch/audit/headers --output-dir /scratch/audit/decoded \
+    --binary /path/to/fgs-grain-inspect --binary-sha256 VERIFIED_SHA256
+```
+
+The inventory schema is `fgs_library_audit_v1`. It pins `header_binary`,
+`header_binary_sha256`, and a `files` array. Each AV1 entry supplies `key`,
+`version`, `path`, `codec`, and the current `signature` (`device`, `inode`,
+`size`, `mtime_ns`), plus probed `video` index, geometry and colour metadata.
+Optional `expected_frames` binds a prior independent full decode. Retained
+`sources` have paths, current signatures and provenance; they are never
+inferred from filename codec labels. Optional `review_anchors` contain explicit
+seconds and evidence. The current native-header/source workflow expects the
+main picture to be the first video stream; the decoded inspector separately
+checks the explicit stream index. Other stream layouts need explicit admission.
+
+Source timing is calibrated at the first displayed picture and independently
+checked against picture content in each window. Every decoded output picture
+must have a unique source match. Quiet-region texture uses mean-subtracted
+grain RMS; uniform code-level shifts and range endpoints are reported separately.
+Source statistics cover complete 16x16 luma and 8x8 chroma blocks and identify
+uncovered edge strips. The reference-display inspector covers every pixel.
+Native HDR code levels are not display-visibility units.
+
+File and tool identities, artifact hashes, decoded/header timestamps and frame
+counts bind each report. Interrupted, changed, missing or unsupported inputs
+remain explicit. `phase_complete` describes execution coverage; it never means
+that the library is visually clear. No flag starts a repair, download or timer.
+These are offline audit jobs, outside routine Tdarr validation. The
+[September 12 audit](../../tests/fgs/FULL-AUDIT-20260912.md) records real SDR/HDR,
+VC-1 alignment, clipping-negative and old/repaired-colour controls, runtime pins
+and the remaining whole-library review.
 
 ## Header transition triage
 
