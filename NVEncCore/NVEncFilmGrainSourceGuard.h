@@ -2,8 +2,10 @@
 #define NVENC_FILM_GRAIN_SOURCE_GUARD_H
 
 #include <array>
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 
 namespace fgsmodel {
 
@@ -56,15 +58,16 @@ public:
         if (!freshFit) return;
         for (int p = 0; p < 3; ++p) for (int x = 0; x < 256; ++x) {
             if (holds_[p][x]) --holds_[p][x];
-            else if (gains_[p][x] < 1.0) gains_[p][x] += 1.0 / rampFrames;
+            else if (gains_[p][x] < 1.0) gains_[p][x] = std::min(1.0, gains_[p][x] + 1.0 / rampFrames);
         }
     }
-    void preserveRange(int plane, int begin, int end) {
+    void preserveRange(int plane, int begin, int end, double gain = 0.0) {
         if (plane < 0 || plane >= 3) return;
         if (begin < 0) begin = 0;
         if (end > 255) end = 255;
+        gain = std::max(0.0, std::min(1.0, gain));
         for (int x = begin; x <= end; ++x) {
-            gains_[plane][x] = 0.0;
+            gains_[plane][x] = std::min(gains_[plane][x], gain);
             holds_[plane][x] = holdFrames;
         }
     }
@@ -87,6 +90,92 @@ public:
             scalings[i] = reduced;
         }
         return changed;
+    }
+
+    // Match the normative eight-bit AV1 scaling lookup, including its fixed
+    // point slope and rounding. The high-bit-depth lookup interpolates these
+    // entries, so an entrywise bound also bounds the higher-depth table.
+    static int lookup(const uint8_t *values, const uint8_t *scalings,
+        uint32_t count, int x) {
+        if (!count) return 0;
+        if (x <= values[0]) return scalings[0];
+        for (uint32_t i = 0; i + 1 < count; ++i) {
+            if (x < values[i + 1]) {
+                const int distance = values[i + 1] - values[i];
+                const int slope = (static_cast<int>(scalings[i + 1]) - scalings[i])
+                    * ((65536 + distance / 2) / distance);
+                return scalings[i] + ((slope * (x - values[i]) + 32768) >> 16);
+            }
+        }
+        return scalings[count - 1];
+    }
+
+    // Fit a bounded curve around the actual protected levels instead of
+    // zeroing the old model's sometimes distant bracketing knots. Greedy
+    // removal only lowers the current polyline. A final normative-LUT check
+    // handles interpolation rounding and never permits an envelope overshoot.
+    // At most 256 samples and O(256^2) simple operations; no heap allocation.
+    uint32_t refitCurve(int plane, uint8_t *values, uint8_t *scalings,
+        uint32_t count, uint32_t capacity, bool& changed) const {
+        if (!count) return count;
+        bool limited = false;
+        std::array<int, 256> envelope;
+        for (int x = 0; x < 256; ++x) {
+            const int original = lookup(values, scalings, count, x);
+            envelope[x] = static_cast<int>(std::floor(original * gains_[plane][x]));
+            limited |= envelope[x] != original;
+        }
+        if (!limited) return count;
+        changed = true;
+        struct Point { int value, previous, next; bool live; };
+        std::array<Point, 256> points;
+        for (int x = 0; x < 256; ++x) points[x] = {envelope[x], x - 1, x + 1, true};
+        points[255].next = -1;
+        for (int remaining = 256; remaining > static_cast<int>(capacity); --remaining) {
+            double best = std::numeric_limits<double>::infinity();
+            int remove = -1, leftValue = 0, rightValue = 0;
+            for (int b = points[0].next; b != 255; b = points[b].next) {
+                const int a = points[b].previous, c = points[b].next;
+                int ya = points[a].value, yc = points[c].value;
+                const double atB = (ya * (c - b) + yc * (b - a)) / static_cast<double>(c - a);
+                if (atB > points[b].value) {
+                    const double gain = points[b].value / atB;
+                    ya = static_cast<int>(std::floor(ya * gain));
+                    yc = static_cast<int>(std::floor(yc * gain));
+                }
+                double cost = (b - a) * (points[a].value + points[b].value)
+                    + (c - b) * (points[b].value + points[c].value)
+                    - (c - a) * (ya + yc);
+                if (points[a].previous >= 0)
+                    cost += (a - points[a].previous) * (points[a].value - ya);
+                if (points[c].next >= 0)
+                    cost += (points[c].next - c) * (points[c].value - yc);
+                if (cost < best) { best = cost; remove = b; leftValue = ya; rightValue = yc; }
+            }
+            const int a = points[remove].previous, c = points[remove].next;
+            points[a].value = leftValue;
+            points[c].value = rightValue;
+            points[a].next = c;
+            points[c].previous = a;
+            points[remove].live = false;
+        }
+        uint32_t size = 0;
+        for (int x = 0; x >= 0; x = points[x].next) {
+            values[size] = static_cast<uint8_t>(x);
+            scalings[size++] = static_cast<uint8_t>(points[x].value);
+        }
+        for (uint32_t i = 0; i + 1 < size; ++i) {
+            // Lowering endpoints cannot increase either neighboring segment.
+            for (;;) {
+                int excess = 0;
+                for (int x = values[i]; x <= values[i + 1]; ++x)
+                    excess = std::max(excess, lookup(values + i, scalings + i, 2, x) - envelope[x]);
+                if (!excess) break;
+                scalings[i] = static_cast<uint8_t>(std::max(0, static_cast<int>(scalings[i]) - excess));
+                scalings[i + 1] = static_cast<uint8_t>(std::max(0, static_cast<int>(scalings[i + 1]) - excess));
+            }
+        }
+        return size;
     }
     double gain(int plane, int x) const { return gains_[plane][x]; }
 private:
