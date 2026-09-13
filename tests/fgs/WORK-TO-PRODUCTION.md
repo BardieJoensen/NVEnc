@@ -2,7 +2,16 @@
 
 Status: **qualified finer-source hotfix deployed; ordinary repairs resumed;
 full library follow-up audit in progress. Automatic-retention trials remain
-deferred and manual-start only.** Updated 2026-09-12.
+deferred and manual-start only.** Updated 2026-09-13.
+
+September 13 operations: the decoded audit now runs two files concurrently
+through the unchanged, qualified v5 measurement tools, ordered by the sources'
+original cleanup deadlines. A scoped qbitmanager hold protects 320 source
+torrents while review is pending. The repair coordinator already resumes the
+two ordinary Tdarr transcode workers after its ready queue and active workers
+remain empty for five minutes, subject to playback ownership.
+See [audit acceleration and source retention](FINDINGS-2026-09-13-AUDIT-THROUGHPUT.md)
+for service names, qualification, release policy and the live evidence ledger.
 
 Production Tdarr and the repair worker now use isolated core `ef5c61fe`, binary
 SHA-256 `d8127dfa63011160dc222a41516452c269c2438269866b3da74f95e5ba4fd47b`.
