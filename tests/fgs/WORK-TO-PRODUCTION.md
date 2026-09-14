@@ -19,9 +19,14 @@ Read [the FEL production report](FEL-PRODUCTION-20260914.md) and
 [live work ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/work-plan.json)
 for exact pins, active units, failures retained as controls and remaining release
 gates. The focused checkout is `/home/bardie/git-repos/NVEnc-fgs-fel`; the
-combined branch includes its changes through `296993f9`, but the broader encoder
-is not the isolated candidate. Its CPU suite passes; a separate integrated CUDA
-build is being checked. The [initial FEL trial report](FEL-RECONSTRUCTION-20260914.md)
+combined branch includes its changes through `2d72d779`, but the broader encoder
+is not the isolated candidate. Its CPU suite passes and integrated `296993f9`
+compiled successfully. The subsequent host-tool changes add graph-entry evidence
+checks and exact native TrueHD clock preservation; the staged library fixture
+and shifted-audio negative controls pass. A separate finite unit will validate
+the completed full encode with the current library tracks. Complete Bumblebee
+preparation is also running without another GPU encode. The
+[initial FEL trial report](FEL-RECONSTRUCTION-20260914.md)
 retains its historical scope. Actual player/HDR approval and complete-film
 qualification remain pending. The canary owns its Tdarr pause and restores it
 after encoding or on failure. Deferred retention trials remain manual-start only.
@@ -202,7 +207,8 @@ jacket regression. The report tests pass; new media work remains deferred.
 | `273723b7` | Coarse source-quiet and constant-colour protection | Superseded; retained qualified baseline and rollback |
 | `ef5c61fe` | Finer independent source protection | Deployed after mixed-source, whole-frame periodic/source review, exact-image, HDR10 and installed-file qualification |
 | `a72f589e` | Isolated FEL scene schedule and fatal drain correction | Short controls passed; full canary running; not deployed |
-| `296993f9` | FEL tools/core changes integrated with broader work branch | CPU suite passes; compilation in progress; not the isolated candidate and not deployed |
+| `296993f9` | FEL tools/core changes integrated with broader work branch | CPU suite and compilation pass; not the isolated candidate and not deployed |
+| `2d72d779` | Later graph and native TrueHD timing qualification | Host-only additions; real staged mux and negative controls pass; full library qualification remains in progress |
 | `e4ed723f` | Audit storage and alignment hardening | 28 CPU tests and full retained-movie timestamp check pass; no encoder change |
 | `708ae7ca` | Audit BT.601 and window-boundary corrections | 31 Python tests, eight native CLI controls, display controls and real-file comparisons pass; diagnostic only |
 | `497caa64` | Earlier ordinary encoder, `retain=0`, bilateral | Retained comparison/rollback baseline; superseded in production |
