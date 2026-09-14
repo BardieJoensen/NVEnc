@@ -40,5 +40,19 @@ class OrderTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             order.pictures(fixture() + [line('log2_max_pic_order_cnt_lsb_minus4', 12)])
 
+    def test_matching_layer_counts_cannot_hide_tail_picture_gaps(self):
+        data = order.pictures(fixture())
+        data['pictures'] = [[19, 0, 1], [1, 3, 1]]
+        data['frames'] = 2
+        with self.assertRaisesRegex(ValueError, 'POC coverage'): order.compare(data, data, 2)
+
+    def test_each_idr_group_must_be_complete(self):
+        data = order.pictures(fixture())
+        data['pictures'] += [[20, 0, 1], [1, 2, 1], [1, 1, 1]]
+        data['frames'] = 6
+        self.assertEqual(order.compare(data, data, 6)['idr_groups'], 2)
+        data['pictures'][1][1] = 3
+        with self.assertRaisesRegex(ValueError, 'picture 0'): order.compare(data, data, 6)
+
 
 if __name__ == '__main__': unittest.main()

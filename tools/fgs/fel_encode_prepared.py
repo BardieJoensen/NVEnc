@@ -104,6 +104,9 @@ def encode(prepared, job, runtime_image, encoder_image, encoder, encoder_sha256,
         raise ValueError('Encoder binary identity changed')
     config = json.loads((prepared / 'reconstruct.json').read_text())
     metadata = Path(config['metadata'])
+    layer_order = json.loads((metadata / 'layer-order.json').read_text())
+    if layer_order.get('contiguous_display_order') is not True:
+        raise ValueError('Complete source picture continuity must be independently verified')
     mr = json.loads((metadata / 'metadata-report.json').read_text())
     if (mr.get('complete') is not True or mr.get('reconstruction_contract') != 'p7-fel-pq-bt2020-v2'
             or mr.get('native_arithmetic_bounds_checked') is not True

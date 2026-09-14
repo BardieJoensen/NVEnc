@@ -68,12 +68,34 @@ def trace(path, ffmpeg='ffmpeg', timeout=3600):
     return result
 
 
+def continuity(layer):
+    """Require contiguous POCs in each closed IDR group.
+
+    This qualified path deliberately excludes POC wrap within a group. Counting
+    equal BL/EL pictures alone misses a common stream-copy excerpt problem: a
+    future reference picture remains after intervening B pictures were cut.
+    """
+    rows = layer['pictures']
+    starts = [n for n, row in enumerate(rows) if row[0] in (19, 20)]
+    if not starts or starts[0] != 0:
+        raise ValueError('Contiguous qualification requires an initial IDR')
+    groups = []
+    for first, end in zip(starts, starts[1:] + [len(rows)]):
+        values = sorted(row[1] for row in rows[first:end])
+        if values != list(range(end - first)):
+            raise ValueError(f'Incomplete or unqualified POC coverage in IDR group at picture {first}')
+        groups.append(end - first)
+    return dict(contiguous_display_order=True, idr_groups=len(groups),
+                longest_idr_group=max(groups), poc_wrap_within_group_supported=False)
+
+
 def compare(bl, el, frames):
     if frames <= 0 or bl['frames'] != frames or el['frames'] != frames:
         raise ValueError('BL/EL/expected picture count mismatch')
     if bl['poc_bits'] != el['poc_bits'] or bl['pictures'] != el['pictures']:
         raise ValueError('BL/EL picture order, random-access type or temporal layer mismatch')
-    return dict(complete=True, frames=frames, method='ffmpeg_hevc_trace_headers_picture_order_v1',
+    return dict(complete=True, frames=frames, **continuity(bl),
+        method='ffmpeg_hevc_trace_headers_picture_order_v2',
         limitation='Checks demultiplexed pair correspondence; source provenance and decoded RPU/picture checks are also required.')
 
 
