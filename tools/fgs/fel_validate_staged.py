@@ -10,7 +10,7 @@ import sys
 import time
 
 import fel_metadata as fm
-from fel_prepare import signature
+from fel_prepare import clock, signature
 
 
 def packet_times(path, stream_indexes, log):
@@ -39,7 +39,18 @@ def packet_times(path, stream_indexes, log):
     return [dict(packets=counts[index], sha256=hashes[index].hexdigest()) for index in stream_indexes]
 
 
-def validate(job, helpers, scanner, scanner_sha256, rpu_checker, rpu_checker_sha256, expected_static):
+def retained_clock(packets, fps, expected):
+    """Require the library timeline to match the pictures being reconstructed."""
+    observed = clock(packets, Fraction(fps))
+    if (observed['frames'] != expected['frames']
+            or Fraction(observed['fps']) != Fraction(expected['fps'])
+            or Fraction(observed['first_pts']) != Fraction(expected['first_pts'])):
+        raise ValueError('Retained library picture clock differs from the original')
+    return observed
+
+
+def validate(job, helpers, scanner, scanner_sha256, rpu_checker, rpu_checker_sha256,
+             expected_static, *, retained_library=None, library_signature=None):
     job, helpers = Path(job), Path(helpers)
     if fm.sha(scanner) != scanner_sha256 or fm.sha(rpu_checker) != rpu_checker_sha256:
         raise ValueError('Validation tool identity changed')
@@ -52,9 +63,16 @@ def validate(job, helpers, scanner, scanner_sha256, rpu_checker, rpu_checker_sha
         raise ValueError('A completed, unchanged canary encode is required')
     source = Path(encoding['source'])
     if signature(source) != encoding['source_signature']: raise ValueError('Retained source changed')
+    if (retained_library is None) != (library_signature is None):
+        raise ValueError('Library path and expected identity must be supplied together')
+    retained = source if retained_library is None else Path(retained_library)
+    retained_signature = encoding['source_signature'] if library_signature is None else library_signature
+    if signature(retained) != retained_signature: raise ValueError('Retained track source changed')
     directory = job / 'validation'; directory.mkdir(exist_ok=False)
     record = dict(passed=False, installed=False, stage='checking_video', started_at=time.time(),
         scope='complete automated mux/decode/metadata qualification; physical playback remains separate',
+        source=str(source), source_signature=encoding['source_signature'],
+        retained_track_source=str(retained), retained_track_signature=retained_signature,
         commands=[], helpers_sha256={p.name: fm.sha(p) for p in helpers.glob('*.py')})
     def save():
         path = directory / 'validation.new.json'
@@ -64,8 +82,21 @@ def validate(job, helpers, scanner, scanner_sha256, rpu_checker, rpu_checker_sha
         repair.run(command, directory / name, timeout=timeout)
     save()
     try:
-        before, video_info = repair.probe(source), repair.probe(encoded)
-        (directory / 'source-probe.json').write_text(json.dumps(before, indent=2) + '\n')
+        before, video_info = repair.probe(retained), repair.probe(encoded)
+        (directory / 'retained-probe.json').write_text(json.dumps(before, indent=2) + '\n')
+        if retained_library is not None:
+            record['stage'] = 'checking_library_alignment'; save()
+            run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_packets',
+                 '-show_entries', 'packet=pts_time', '-of', 'json', str(retained)],
+                'library-clock.json')
+            packets = json.loads((directory / 'library-clock.json').read_text())['packets']
+            record['library_clock'] = retained_clock(packets,
+                repair.video(before)['avg_frame_rate'], encoding['clock'])
+            del packets
+            original_info = repair.probe(source)
+            (directory / 'source-probe.json').write_text(json.dumps(original_info, indent=2) + '\n')
+            record['library_content_alignment'] = repair.content_check(source, retained, original_info, before)
+            record['stage'] = 'checking_video'; save()
         fm.require_fields(repair.video(video_info), dict(codec_name='av1', width=3840, height=2160,
             pix_fmt='yuv420p10le', color_range='tv', color_space='bt2020nc', color_transfer='smpte2084',
             color_primaries='bt2020', chroma_location='left'), 'encoded video')
@@ -100,10 +131,10 @@ def validate(job, helpers, scanner, scanner_sha256, rpu_checker, rpu_checker_sha
         record['stage'] = 'muxing'; save()
         completed = job / 'complete.mkv'
         if completed.exists(): raise ValueError('Final canary output already exists')
-        order = repair.replacement_track_order(encoded, source)
+        order = repair.replacement_track_order(encoded, retained)
         run(['mkvmerge', '--engage', 'keep_whitespaces_in_text_subtitles', '--track-order', order,
             '-o', str(completed), '--no-audio', '--no-subtitles', '--no-buttons', '--no-attachments',
-            '--no-global-tags', '--no-chapters', str(encoded), '--no-video', str(source)], 'mux.log')
+            '--no-global-tags', '--no-chapters', str(encoded), '--no-video', str(retained)], 'mux.log')
         after = repair.probe(completed)
         (directory / 'final-probe.json').write_text(json.dumps(after, indent=2) + '\n')
         if repair.video_signal_summary(repair.video(after)) != repair.video_signal_summary(repair.video(video_info)):
@@ -112,16 +143,16 @@ def validate(job, helpers, scanner, scanner_sha256, rpu_checker, rpu_checker_sha
             raise ValueError('Retained track metadata or attachments changed')
         record['chapters'] = dict(passed=True, method='ffprobe_exact')
         if repair.chapter_summary(before) != repair.chapter_summary(after):
-            record['chapters'] = repair.compare_stored_chapters(source, completed, directory)
+            record['chapters'] = repair.compare_stored_chapters(retained, completed, directory)
         record['stage'] = 'checking_retained_tracks'; save()
-        old_hashes = repair.stream_hashes(source, directory / 'source-stream-hashes.txt', before)
+        old_hashes = repair.stream_hashes(retained, directory / 'retained-stream-hashes.txt', before)
         new_hashes = repair.stream_hashes(completed, directory / 'final-stream-hashes.txt', after)
         record['retained_payloads'] = dict(passed=True, method='exact_stream_hashes')
         if old_hashes != new_hashes:
             record['retained_payloads'] = repair.compare_nonvideo_payloads(
-                source, completed, before, after, old_hashes, new_hashes, directory)
+                retained, completed, before, after, old_hashes, new_hashes, directory)
         timings = []
-        for path, info, label in [(source, before, 'source'), (completed, after, 'final')]:
+        for path, info, label in [(retained, before, 'retained'), (completed, after, 'final')]:
             indexes = [v['index'] for v in info['streams'] if v['codec_type'] in ['audio', 'subtitle']]
             timings.append(packet_times(path, indexes, directory / (label + '-packet-times.log')))
         if timings[0] != timings[1]: raise ValueError('Retained audio/subtitle packet timing changed')
@@ -148,9 +179,11 @@ def validate(job, helpers, scanner, scanner_sha256, rpu_checker, rpu_checker_sha
         decoded = [int(line.split('=', 1)[1]) for line in progress.read_text().splitlines() if line.startswith('frame=')]
         if not decoded or decoded[-1] != count: raise ValueError('Incomplete strict decoded output')
         if signature(source) != encoding['source_signature']: raise ValueError('Retained source changed')
+        if signature(retained) != retained_signature: raise ValueError('Retained track source changed')
         record.update(passed=True, stage='automated_checks_passed', frames=count,
             output=str(completed), output_sha256=fm.sha(completed), output_bytes=completed.stat().st_size,
             source_bytes=source.stat().st_size, finished_at=time.time(),
+            retained_track_source_bytes=retained.stat().st_size,
             physical_playback_qualified=False, source_decode_validation_required=True)
     except BaseException as error:
         record.update(stage='failed', error=repr(error), failed_at=time.time())

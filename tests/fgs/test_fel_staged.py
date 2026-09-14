@@ -5,10 +5,24 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools/fgs'))
-from fel_validate_staged import packet_times
+from fel_validate_staged import packet_times, retained_clock
 
 
 class StagedTests(unittest.TestCase):
+    def test_library_clock_rejects_a_different_cut_offset_or_cadence(self):
+        expected = dict(frames=4, fps='24000/1001', first_pts='0')
+        packets = [{'pts_time': value} for value in ['0', '0.042', '0.083', '0.125']]
+        self.assertEqual(retained_clock(packets, '24000/1001', expected)['frames'], 4)
+        # HEVC decode-order packets may be reordered; the display clock matters.
+        self.assertEqual(retained_clock(packets[::-1], '24000/1001', expected)['frames'], 4)
+        for wrong in [packets[:-1], packets + [{'pts_time': '0.167'}],
+                      packets[:2] + packets[3:], packets[:3] + [packets[2]],
+                      [{'pts_time': value} for value in ['0.010', '0.052', '0.093', '0.135']]]:
+            with self.subTest(packets=wrong), self.assertRaises(ValueError):
+                retained_clock(wrong, '24000/1001', expected)
+        with self.assertRaises(ValueError):
+            retained_clock(packets, '25', expected)
+
     def test_audio_timing_check_detects_offset_with_unchanged_samples(self):
         with tempfile.TemporaryDirectory() as temp:
             d = Path(temp); source, shifted = d / 'source.mka', d / 'shifted.mka'
