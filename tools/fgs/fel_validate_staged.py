@@ -13,10 +13,50 @@ import fel_metadata as fm
 from fel_prepare import clock, signature
 
 
-def packet_times(path, stream_indexes, log):
+def native_frame_times(path):
+    """Read Matroska frame starts; mkvextract appends an inferred end, not a frame.
+
+    Verified against MKVToolNix 82.0 src/extract/tracks.cpp::close_timestamp_files.
+    TrueHD decoding determines the final audio duration from unchanged samples.
+    """
+    with Path(path).open() as source:
+        if source.readline().strip() != '# timestamp format v2':
+            raise ValueError('Unsupported native timestamp export')
+        previous, count = None, 0
+        for line in source:
+            value = Decimal(line.strip()) / 1000
+            if not value.is_finite() or (previous is not None and value < previous):
+                raise ValueError('Invalid native audio timestamp order')
+            if previous is not None: yield previous
+            previous, count = value, count + 1
+        if count < 2: raise ValueError('Missing native audio frames or end marker')
+
+
+def truehd_timestamps(path, info, directory, run, label):
+    """Export the existing TrueHD clock before its packetizer recalculates it."""
+    audio = [s for s in info['streams'] if s['codec_type'] == 'audio']
+    if not any(s['codec_name'] == 'truehd' for s in audio): return []
+    run(['mkvmerge', '-J', str(path)], label + '-track-ids.json', timeout=120)
+    tracks = json.loads((directory / (label + '-track-ids.json')).read_text())['tracks']
+    tracks = [t for t in tracks if t['type'] == 'audio']
+    if len(tracks) != len(audio): raise ValueError('Retained audio track identification differs')
+    selected = []
+    for stream, track in zip(audio, tracks):
+        if (stream['codec_name'] == 'truehd') != (track['properties']['codec_id'] == 'A_TRUEHD'):
+            raise ValueError('TrueHD track identity differs between readers')
+        if stream['codec_name'] != 'truehd': continue
+        output = directory / f'{label}-truehd-{track["id"]}-timestamps.txt'
+        selected.append(dict(stream_index=stream['index'], track_id=track['id'], path=str(output)))
+    run(['mkvextract', str(path), 'timestamps_v2'] +
+        [f'{v["track_id"]}:{v["path"]}' for v in selected], label + '-native-timestamps.log')
+    return selected
+
+
+def packet_times(path, stream_indexes, log, native_timestamps=None):
     """Hash every retained stream's packet timing without a huge JSON array."""
     hashes = {index: hashlib.sha256() for index in stream_indexes}
     counts = {index: 0 for index in stream_indexes}
+    native = {index: native_frame_times(value) for index, value in (native_timestamps or {}).items()}
     command = ['ffprobe', '-v', 'error', '-show_packets', '-show_entries',
                'packet=stream_index,pts_time,duration_time', '-of', 'compact=p=0', str(path)]
     with Path(log).open('w') as stderr:
@@ -26,16 +66,32 @@ def packet_times(path, stream_indexes, log):
                 row = dict(part.split('=', 1) for part in line.strip().split('|') if '=' in part)
                 index = int(row.get('stream_index', -1))
                 if index not in hashes: continue
+                if index in native:
+                    try: stored = next(native[index])
+                    except StopIteration: raise ValueError('More TrueHD packets than stored timestamps')
+                    pts = row.get('pts_time', 'N/A')
+                    if pts != 'N/A' and Decimal(pts) != stored:
+                        raise ValueError('Demuxed TrueHD PTS differs from its native Matroska clock')
+                    # FFprobe can omit the PTS of a second access unit in one
+                    # block. Only the exact stored clock may fill that omission.
+                    row['pts_time'] = str(stored)
                 times = []
                 for key in ['pts_time', 'duration_time']:
                     value = row.get(key, 'N/A')
                     times.append(value if value == 'N/A' else str(Decimal(value).normalize()))
                 hashes[index].update(('|'.join(times) + '\n').encode())
+                # Preserve codec trimming as well as packet starts/durations.
+                trim = [row.get(key, 'N/A') for key in ('skip_samples', 'discard_padding',
+                                                       'skip_reason', 'discard_reason')]
+                hashes[index].update(('|'.join(trim) + '\n').encode())
                 counts[index] += 1
             if process.wait() != 0: raise RuntimeError('Retained packet timing scan failed')
+            for values in native.values():
+                if next(values, None) is not None: raise ValueError('Fewer TrueHD packets than stored timestamps')
         finally:
             if process.poll() is None: process.kill()
             process.wait(); process.stdout.close()
+            for values in native.values(): values.close()
     return [dict(packets=counts[index], sha256=hashes[index].hexdigest()) for index in stream_indexes]
 
 
@@ -129,12 +185,16 @@ def validate(job, helpers, scanner, scanner_sha256, rpu_checker, rpu_checker_sha
             raise ValueError('Static HDR differs from the decoded qualified reference')
         record['metadata'] = hdr
         record['stage'] = 'muxing'; save()
+        original_timing = truehd_timestamps(retained, before, directory, run, 'retained')
+        timestamp_options = [item for value in original_timing
+                             for item in ['--timestamps', f'{value["track_id"]}:{value["path"]}']]
         completed = job / 'complete.mkv'
         if completed.exists(): raise ValueError('Final canary output already exists')
         order = repair.replacement_track_order(encoded, retained)
         run(['mkvmerge', '--engage', 'keep_whitespaces_in_text_subtitles', '--track-order', order,
             '-o', str(completed), '--no-audio', '--no-subtitles', '--no-buttons', '--no-attachments',
-            '--no-global-tags', '--no-chapters', str(encoded), '--no-video', str(retained)], 'mux.log')
+            '--no-global-tags', '--no-chapters', str(encoded), '--no-video'] +
+            timestamp_options + [str(retained)], 'mux.log')
         after = repair.probe(completed)
         (directory / 'final-probe.json').write_text(json.dumps(after, indent=2) + '\n')
         if repair.video_signal_summary(repair.video(after)) != repair.video_signal_summary(repair.video(video_info)):
@@ -151,10 +211,15 @@ def validate(job, helpers, scanner, scanner_sha256, rpu_checker, rpu_checker_sha
         if old_hashes != new_hashes:
             record['retained_payloads'] = repair.compare_nonvideo_payloads(
                 retained, completed, before, after, old_hashes, new_hashes, directory)
+        final_timing = truehd_timestamps(completed, after, directory, run, 'final')
+        record['native_truehd_timestamps'] = dict(source=original_timing, final=final_timing,
+            method='explicit original Matroska frame starts; inferred trailing end is not a frame')
         timings = []
         for path, info, label in [(retained, before, 'retained'), (completed, after, 'final')]:
             indexes = [v['index'] for v in info['streams'] if v['codec_type'] in ['audio', 'subtitle']]
-            timings.append(packet_times(path, indexes, directory / (label + '-packet-times.log')))
+            native = original_timing if label == 'retained' else final_timing
+            timings.append(packet_times(path, indexes, directory / (label + '-packet-times.log'),
+                                        {v['stream_index']: v['path'] for v in native}))
         if timings[0] != timings[1]: raise ValueError('Retained audio/subtitle packet timing changed')
         record['retained_packet_timing'] = timings[0]
         for path, label in [(encoded, 'encoded'), (completed, 'final')]:

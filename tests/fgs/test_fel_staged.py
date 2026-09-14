@@ -5,10 +5,25 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools/fgs'))
-from fel_validate_staged import packet_times, retained_clock
+from fel_validate_staged import native_frame_times, packet_times, retained_clock
 
 
 class StagedTests(unittest.TestCase):
+    def test_native_audio_starts_keep_duplicates_and_exclude_only_the_end_marker(self):
+        from decimal import Decimal
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp) / 'timestamps.txt'
+            p.write_text('# timestamp format v2\n0\n0\n2\n3\n4\n5\n')
+            self.assertEqual(list(native_frame_times(p)),
+                             [Decimal(v) for v in ['0', '0', '.002', '.003', '.004']])
+            for value in ['# timestamp format v2\n0\n',
+                          '# timestamp format v2\n0\n2\n1\n',
+                          '# timestamp format v2\n0\nNaN\n',
+                          '# timestamp format v1\n0\n1\n']:
+                p.write_text(value)
+                with self.subTest(value=value), self.assertRaises(ValueError):
+                    list(native_frame_times(p))
+
     def test_library_clock_rejects_a_different_cut_offset_or_cadence(self):
         expected = dict(frames=4, fps='24000/1001', first_pts='0')
         packets = [{'pts_time': value} for value in ['0', '0.042', '0.083', '0.125']]
