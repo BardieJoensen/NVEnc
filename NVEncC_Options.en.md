@@ -962,6 +962,21 @@ Load AV1 film-grain synthesis parameters from a standard AOM `filmgrn1` table. P
 
 This option is AV1-only and incompatible with parallel encoding. For meaningful synthesis, the source should already have its grain removed. The public NVIDIA API does not accept table grain seeds, so the NVIDIA encoder chooses the bitstream grain seeds.
 
+### --film-grain-scene-cuts &lt;path&gt;
+
+Optional scene boundaries for `--av1-film-grain denoiser=bilateral`.
+The first line is `FGS_SCENE_CUTS_V1 <total-frame-count>`; following lines are
+strictly increasing, zero-based source frame indices, one per line. A schedule
+may contain no boundaries. Blank lines after the header are ignored.
+
+At each listed frame, FGS discards the previous scene's model before analysis;
+model rejection, quiet-source protection and gradual synthesis recovery remain
+active. This does not force an encoder keyframe or enable automatic retention.
+Use only with a frame-preserving input starting at frame zero. Trimming,
+skipping, duplicate frames and an incomplete or overlong input cause an error.
+The schedule must describe the exact submitted pictures; prepare it again after
+editing the source. Without this option, scene detection is unchanged.
+
 ### --film-grain-table-out &lt;path&gt;
 Write the film grain measured by `--av1-film-grain` as a standard AOM `filmgrn1` table. Consecutive frames holding the same model are merged into one `[start,end)` interval in the table's 10 MHz timebase; periods without detected grain become gaps.
 

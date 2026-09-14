@@ -857,6 +857,21 @@ Bluray 的输出 (默认: 关)
 
 此选项仅适用于AV1，并且与并行编码不兼容。为了获得有意义的合成效果，输入源应已去除颗粒。公开的NVIDIA API不接受表中的颗粒种子，因此比特流中的颗粒种子由NVIDIA编码器选择。
 
+### --film-grain-scene-cuts &lt;path&gt;
+
+Optional scene boundaries for `--av1-film-grain denoiser=bilateral`.
+The first line is `FGS_SCENE_CUTS_V1 <total-frame-count>`; following lines are
+strictly increasing, zero-based source frame indices, one per line. A schedule
+may contain no boundaries. Blank lines after the header are ignored.
+
+At each listed frame, FGS discards the previous scene's model before analysis;
+model rejection, quiet-source protection and gradual synthesis recovery remain
+active. This does not force an encoder keyframe or enable automatic retention.
+Use only with a frame-preserving input starting at frame zero. Trimming,
+skipping, duplicate frames and an incomplete or overlong input cause an error.
+The schedule must describe the exact submitted pictures; prepare it again after
+editing the source. Without this option, scene detection is unchanged.
+
 ### --film-grain-table-out &lt;path&gt;
 将`--av1-film-grain`测量的胶片颗粒写出为标准AOM `filmgrn1` 表。保持相同模型的连续帧会合并为10 MHz时间基下的一个`[start,end)`区间；未检测到颗粒的时段表示为间隙。
 
