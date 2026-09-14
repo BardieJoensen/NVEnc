@@ -36,6 +36,8 @@ def create_graph(config):
         raise ValueError('Metadata preparation did not pass')
     if report.get('reconstruction_contract') != 'p7-fel-pq-bt2020-v2':
         raise ValueError('Reconstruction input contract has not been verified')
+    if report.get('native_arithmetic_bounds_checked') is not True:
+        raise ValueError('Native reconstruction arithmetic has not been bounded')
     for name, expected in config['component_sha256'].items():
         if name not in ['BL.hevc', 'EL.hevc', 'RPU.bin'] or sha(directory / name) != expected:
             raise ValueError('Changed or unknown prepared component: ' + name)
@@ -50,6 +52,8 @@ def create_graph(config):
         or any(layer_order.get(layer, {}).get('sha256') != config['component_sha256'][name]
                for layer, name in [('bl', 'BL.hevc'), ('el', 'EL.hevc')])):
         raise ValueError('Missing or mismatched independent layer-order check')
+    if layer_order.get('contiguous_display_order') is not True:
+        raise ValueError('Prepared pictures do not have verified source continuity')
     for relative, expected in config['runtime_sha256'].items():
         if sha(runtime / relative) != expected:
             raise ValueError('Changed reconstruction dependency: ' + relative)
