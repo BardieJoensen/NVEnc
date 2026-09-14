@@ -2094,7 +2094,7 @@ RGY_ERR NVEncFilterFilmGrain::finishTable() {
     if (!m_sceneSchedule.complete()) {
         AddMessage(RGY_LOG_ERROR, _T("Incomplete FGS scene schedule: received %d of %d frames.\n"),
             m_sceneSchedule.seen(), m_sceneSchedule.frames());
-        return RGY_ERR_INVALID_DATA;
+        return RGY_ERR_INVALID_PARAM;
     }
     if (!m_tableWriter) return RGY_ERR_NONE;
     tstring error;
@@ -2166,7 +2166,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     if (!m_sceneSchedule.consume(source->inputFrameId, explicitSceneCut)) {
         AddMessage(RGY_LOG_ERROR, _T("FGS scene schedule lost frame correspondence at input frame %d (expected %d of %d).\n"),
             source->inputFrameId, m_sceneSchedule.seen(), m_sceneSchedule.frames());
-        return RGY_ERR_INVALID_DATA;
+        return RGY_ERR_INVALID_PARAM;
     }
     if (explicitSceneCut) {
         // Clear model history before denoising/fitting this frame. Preserve the
