@@ -1,19 +1,30 @@
 # FGS encoder and library repair: current work and handoff
 
 Status: **qualified finer-source hotfix deployed; ten non-FEL holds repaired;
-ordinary Tdarr resumed. Primary library audit pass complete; current-version
+ordinary Tdarr restored after those repairs, now temporarily paused for the
+manually started full FEL canary. Primary library audit pass complete; current-version
 catch-up and review remain. Automatic-retention trials remain deferred and
 manual-start only.** Updated 2026-09-14.
 
-September 14 FEL reconstruction trial: eight short windows from the four held
-originals reconstruct successfully; 15 valid AV1/control outputs pass complete
-decoding and clock/colour checks. Beasts' grain transition is an explicit model
-rejection/source fallback with gradual recovery; a source cut was not detected
-three frames earlier. The exact reproduction and no-FGS control are retained.
-This is untrimmed PQ picture reconstruction, not a finished Dolby Vision
-metadata/production path. The four originals remain held, Tdarr has resumed,
-and no further trials are scheduled. Read [the FEL reconstruction report](FEL-RECONSTRUCTION-20260914.md)
-and its linked ledger for qualification limits and remaining work.
+September 14 FEL production work: the complete Beasts canary, independent full
+source-layer decodes and source-matched comparisons are running as finite,
+manually started jobs. Candidate `a72f589e` starts at ordinary `ef5c61fe` and adds
+verified scene boundaries plus fatal pipeline-error propagation. Prepared
+metadata, frame correspondence, bounded reconstruction and current-library track
+preservation tools are implemented and integrated here. Eight constructed
+sequences pass their 1,252-picture checks; their source-contiguous prefixes total
+1,244 pictures. The corrected playback pack uses those prefixes. All four
+originals remain held; no FEL replacement or new production encoder is installed.
+Read [the FEL production report](FEL-PRODUCTION-20260914.md) and
+[live work ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/work-plan.json)
+for exact pins, active units, failures retained as controls and remaining release
+gates. The focused checkout is `/home/bardie/git-repos/NVEnc-fgs-fel`; the
+combined branch includes its changes through `296993f9`, but the broader encoder
+is not the isolated candidate. Its CPU suite passes; a separate integrated CUDA
+build is being checked. The [initial FEL trial report](FEL-RECONSTRUCTION-20260914.md)
+retains its historical scope. Actual player/HDR approval and complete-film
+qualification remain pending. The canary owns its Tdarr pause and restores it
+after encoding or on failure. Deferred retention trials remain manual-start only.
 
 September 14 audit: the primary decoded pass finished successfully at 10:57 UTC
 with 4,896 measured and 264 superseded versions. Current-version catch-up and
@@ -190,6 +201,8 @@ jacket regression. The report tests pass; new media work remains deferred.
 | `3778447e` | Prior recovery-ramp hotfix | Superseded ordinary baseline and rollback; residual limits retained in historical reports |
 | `273723b7` | Coarse source-quiet and constant-colour protection | Superseded; retained qualified baseline and rollback |
 | `ef5c61fe` | Finer independent source protection | Deployed after mixed-source, whole-frame periodic/source review, exact-image, HDR10 and installed-file qualification |
+| `a72f589e` | Isolated FEL scene schedule and fatal drain correction | Short controls passed; full canary running; not deployed |
+| `296993f9` | FEL tools/core changes integrated with broader work branch | CPU suite passes; compilation in progress; not the isolated candidate and not deployed |
 | `e4ed723f` | Audit storage and alignment hardening | 28 CPU tests and full retained-movie timestamp check pass; no encoder change |
 | `708ae7ca` | Audit BT.601 and window-boundary corrections | 31 Python tests, eight native CLI controls, display controls and real-file comparisons pass; diagnostic only |
 | `497caa64` | Earlier ordinary encoder, `retain=0`, bilateral | Retained comparison/rollback baseline; superseded in production |
@@ -220,8 +233,9 @@ measured baseline binaries are pinned in
 
 The faster four-thread HDR validator is already deployed. Its 90 checks and
 measured sample timing are recorded in the September 10 ledger; this does not
-add the expensive development studies to routine Tdarr validation. The repair
-coordinator owns the current Tdarr pause. Isolated trial containers are stopped.
+add the expensive development studies to routine Tdarr validation. The current
+FEL canary owns its temporary Tdarr admission pause. Existing work may
+finish with the recorded GPU headroom; playback yielding remains active.
 
 The September 12 application upgrade preceded this encoder rollout; its initial
 encoder image is historical. The current runtime is pinned above.
@@ -236,9 +250,10 @@ The user's resource decision is to finish the current ripple repair before the
 optional retention studies. The later authorization permits focused defect
 comparisons and this full audit during the repair; it does not start that
 deferred campaign. The
-latest observed state still has two active repair workers; use the live status
-when resuming, not this count or an old countdown. A failed or stalled service
-does not establish repair completion.
+ordinary repair queue completed on September 14 with four FEL holds remaining;
+the focused FEL work described above is separately authorized. Use the live
+status when resuming, not an old countdown. A failed or stalled service does not
+establish repair completion.
 
 1. Read this document and the current preparation ledger. Check the working
    branch/changes, live repair queue, worker state and pause ownership. Preserve
