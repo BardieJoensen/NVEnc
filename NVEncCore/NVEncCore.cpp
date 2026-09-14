@@ -6628,6 +6628,13 @@ RGY_ERR NVEncCore::Encode() {
                     if (stopwatchOutput) stopwatchOutput->add(0, 0);
                 }
             }
+            // MORE_DATA marks a drained task, but a real filter/writer error
+            // must survive this outer loop. Resetting err on the next iteration
+            // could otherwise report success after dropping a final frame.
+            if (err < RGY_ERR_NONE && err != RGY_ERR_MORE_DATA
+                && err != RGY_ERR_MORE_SURFACE && err != RGY_ERR_MORE_BITSTREAM) {
+                break;
+            }
             if (dataqueue.empty()) {
                 // taskを前方からひとつづつ出力が残っていないかチェック(主にcheckptsの処理のため)
                 for (size_t itask = flushedTaskGet; itask < m_pipelineTasks.size(); itask++) {
