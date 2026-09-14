@@ -61,3 +61,7 @@ python3 tests/fgs/test_retention_tradeoff.py
 python3 tests/fgs/test_hdr_metadata_trace.py
 python3 tests/fgs/test_dovi_conversion_regression.py
 python3 tests/fgs/test_flicker_regression.py
+python3 tests/fgs/test_fel_metadata.py
+python3 tests/fgs/test_fel_layer_order.py
+python3 tests/fgs/test_fel_prepare.py
+python3 tests/fgs/test_fel_process.py
