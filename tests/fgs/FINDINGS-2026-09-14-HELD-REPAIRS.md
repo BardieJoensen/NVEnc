@@ -1,15 +1,22 @@
 # September 14 held repairs and FEL conversion scope
 
-Implementation and full-file qualification are in progress. This report does
-not mark the ten retries installed before their worker receipts confirm it.
-The live ledger is
+All ten non-FEL held repairs are installed and independently verified. The
+finite batch completed at 12:42:53 UTC; Tdarr resumed automatically at 12:49:08
+UTC and both GPU workers were observed processing the ordinary backlog.
+The repair queue now records **1,880 installed, four FEL holds, zero ready**.
+Daniel Sloss's separate timing correction is also installed with rollback.
+The completion ledger is
 [/opt/docker-apps/logs/fgs-ripple-repair-20260906/held-repairs-review-20260914/implementation](/opt/docker-apps/logs/fgs-ripple-repair-20260906/held-repairs-review-20260914/implementation).
+Read `final-verification.json` for installed hashes and validation,
+`final-operational-state.json` for restoration, and `reviewed-repairs-run.json`
+for each admission and result. This covers these repairs, not whole-library
+perceptual clearance.
 
 ## What was wrong
 
 The original queue reached 1,870 installed replacements and 14 holds. All 14
-retained originals were available on September 14. Ten holds can use the
-existing source-repair path after focused validation corrections:
+retained originals were available on September 14. Ten holds were resolved
+through the existing source-repair path after focused validation corrections:
 
 | Files | Evidence and correction |
 | --- | --- |
@@ -26,12 +33,29 @@ copy is `/opt/docker-apps/scripts/fgs_repair_media_guard.py`. Per-file policies
 pin library/source signatures and evidence SHA-256; incomplete or changed
 evidence cannot authorize an exception. Source originals are never modified.
 
-The new chapter and subtitle paths pass on the actual retained candidate
-files. These candidates use historical encoder builds and are only diagnostic
-controls: they are not being relabelled or installed as current-build repairs.
-The ten repairs are rerun with production core `ef5c61fe`, binary SHA-256
+The new chapter and subtitle paths passed on the retained diagnostic candidates
+and on the final installed files. All ten installed videos use production core
+`ef5c61fe`, binary SHA-256
 `d8127dfa63011160dc222a41516452c269c2438269866b3da74f95e5ba4fd47b`.
+Nine were newly encoded; Scrubs reused an already-qualified encode from that
+same build after verifying its source, command and output hashes, then remuxed
+and completed full validation. No old-build video was relabelled as current.
 The ordinary Tdarr flow, encoder core and its routine validation are unchanged.
+
+All 24 relevant regression tests pass: 13 media-preservation/policy tests,
+eight repair alignment tests and three Dolby Vision guard tests. Complete
+source decoding measured 698,229 pictures across the eight Borgen/Bridge
+episodes, all at 40 ms intervals with no decode errors. Each encoded and final
+muxed output matches its complete source clock and frame count. Final full-file
+libdav1d decoding completed for all ten outputs (935,911 pictures); both grain
+scans and chapter/nonvideo preservation checks passed. Installed SHA-256
+hashes were rechecked against receipts, original source identities remained
+unchanged, and every prior library version remains available for rollback.
+
+The ten containers total 23,255,999,564 bytes versus 21,228,171,454 bytes for
+their immediately preceding library files: +2,027,828,110 bytes (+9.55%). This
+is a measured comparison for this selected repair batch, not an estimate for
+the rest of the library or automatic retention.
 
 ## Daniel Sloss: Hubris timing correction
 
@@ -91,25 +115,33 @@ No FEL trial, replacement, new download or optional retention campaign was
 started by this repair batch. The existing P7 MEL build admission pin is also
 unchanged; this batch contains no MEL source needing that path.
 
-## Running and resuming the finite batch
+## Completed batch and remaining work
 
-`fgs-held-reviewed-repairs-20260914.service` admits only the ten listed files,
-at most two individual repair workers. It waits for current Tdarr jobs to
-finish and for each reviewed source-clock result to qualify. The normal
-coordinator remains active under `worker-admission-hold.json`, owned by
-`held-repairs-fixes-20260914`, to manage Tdarr pause ownership and Emby yield.
+`fgs-held-reviewed-repairs-20260914.service` completed successfully and is
+inactive. It admitted only the ten listed files, at most two workers, after
+draining current Tdarr jobs and qualifying each reviewed source. Its owned
+admission hold was released only after all ten installed; the normal
+coordinator reclassified the four FEL inputs as held, then resumed Tdarr under
+its existing five-minute idle rule. No repair worker remains active, and the
+coordinator no longer owns a Tdarr pause. The live coordinator still preserves
+Emby playback yield. The earlier two-file mux starter was superseded before
+admission and is inactive.
+
 The primary library CPU audit pass finished at 10:57 UTC (4,896 measured,
 264 superseded, zero pending in that manifest). Current-version catch-up and
-review remain pending.
+review remain pending, including these replacements and new ordinary Tdarr
+AV1 outputs. Published coverage was refreshed after the repairs. Two recorded
+Scrubs measurement errors are unsupported/missing colour metadata, not proven
+decode failures; two obsolete movie paths now correspond to upgraded H.264
+releases. Diagnostic candidate counts are not confirmed damage or download
+lists. See the audit's `acceleration-20260913/completed-pass-20260914/` receipts.
 
 `implementation/reviewed-repairs-run.json` records per-file commands, code
 hashes and results. Per-file state under the main repair ledger remains the
 installation authority. A held worker exit is not success even when its process
-returns zero. The batch releases only its own admission hold after all ten
-files have installed; the coordinator then handles remaining FEL holds and
-resumes Tdarr under its existing five-minute idle rule. If a qualification or
-repair holds, inspect the receipt and resolve it before retrying. The earlier
-two-file mux starter was superseded before admission and is not active.
+returns zero. Do not rerun this completed batch or repeatedly retry FEL through
+the ordinary path. FEL reconstruction needs separate implementation and
+qualification; the four retained sources remain available for that work.
 
 The source download/recovery hold, qbitmanager source-retention tags and
 manual-start-only retention-trial policy remain in force.

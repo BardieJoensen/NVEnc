@@ -1,20 +1,24 @@
 # FGS encoder and library repair: current work and handoff
 
-Status: **qualified finer-source hotfix deployed; ordinary repairs resumed;
-full library follow-up audit in progress. Automatic-retention trials remain
-deferred and manual-start only.** Updated 2026-09-14.
+Status: **qualified finer-source hotfix deployed; ten non-FEL holds repaired;
+ordinary Tdarr resumed. Primary library audit pass complete; current-version
+catch-up and review remain. Automatic-retention trials remain deferred and
+manual-start only.** Updated 2026-09-14.
 
 September 14 audit: the primary decoded pass finished successfully at 10:57 UTC
 with 4,896 measured and 264 superseded versions. Current-version catch-up and
 review remain pending; this is not whole-library clearance.
 
-September 14 held-repair work: the qualified Daniel Sloss timestamp correction
-is installed with rollback. Ten non-FEL holds are being resolved through
-source-clock qualification and narrow chapter/SubRip preservation checks, using
-the same deployed encoder. Four FEL sources remain held; the earlier DV fix
-normalized metadata and did not reconstruct FEL. See
-[held repairs and FEL scope](FINDINGS-2026-09-14-HELD-REPAIRS.md) and its live
-batch receipt before assuming the earlier 1,870/14 snapshot is current.
+September 14 held-repair work: all ten non-FEL holds are installed and verified,
+using source-clock qualification and narrow chapter/SubRip preservation checks
+with the same deployed encoder. The queue now records 1,880 installed, four
+FEL holds and zero ready. Tdarr resumed automatically at 12:49 UTC with both GPU
+workers processing the backlog. The qualified Daniel Sloss timestamp correction
+is separately installed with rollback. The earlier DV fix normalized MEL
+metadata and did not reconstruct FEL. See
+[held repairs and FEL scope](FINDINGS-2026-09-14-HELD-REPAIRS.md),
+`implementation/final-verification.json` and `final-operational-state.json`
+in its linked ledger for the exact completion and retained-source evidence.
 
 September 13 operations: the decoded audit now runs two files concurrently
 through the unchanged, qualified v5 measurement tools, ordered by the sources'

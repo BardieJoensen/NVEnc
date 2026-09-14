@@ -35,3 +35,8 @@
 +                library, completed, before, after, before_hashes, after_hashes, directory)
 +        if media_policy:
 +            state['reviewed_final_cadence'] = validate_reviewed_output(completed, media_policy, directory, 'final')
+--- a/scripts/fgs-ripple-coordinator.py
++++ b/scripts/fgs-ripple-coordinator.py
+@@ -73 +73 @@
+-Each replacement is encoded from a retained or recovered original. The worker verifies source alignment, complete video decoding, grain synthesis stability and texture, geometry, cadence, duration, and identical existing audio/subtitle packet hashes. Chapters, attachments and stream metadata are preserved. Installation uses an atomic rename through mergerfs and keeps the previous file on the same physical drive.
++Each replacement is encoded from a retained or recovered original. The worker verifies source alignment, complete video decoding, grain synthesis stability and texture, geometry, cadence, and duration. Audio and non-SubRip subtitle payload hashes must match exactly. A SubRip hash difference is accepted only when every cue retains its timing, text and internal formatting and the difference is one removed terminal CRLF; packet evidence is retained. Chapter checks distinguish stored structure from an inferred final end. Attachments and stream metadata are preserved. Installation uses an atomic rename through mergerfs and keeps the previous file on the same physical drive.
