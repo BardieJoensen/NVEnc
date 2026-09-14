@@ -98,7 +98,9 @@ at most two individual repair workers. It waits for current Tdarr jobs to
 finish and for each reviewed source-clock result to qualify. The normal
 coordinator remains active under `worker-admission-hold.json`, owned by
 `held-repairs-fixes-20260914`, to manage Tdarr pause ownership and Emby yield.
-The full-library CPU audit remains running.
+The primary library CPU audit pass finished at 10:57 UTC (4,896 measured,
+264 superseded, zero pending in that manifest). Current-version catch-up and
+review remain pending.
 
 `implementation/reviewed-repairs-run.json` records per-file commands, code
 hashes and results. Per-file state under the main repair ledger remains the

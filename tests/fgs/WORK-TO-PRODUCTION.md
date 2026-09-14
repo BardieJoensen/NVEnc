@@ -4,6 +4,10 @@ Status: **qualified finer-source hotfix deployed; ordinary repairs resumed;
 full library follow-up audit in progress. Automatic-retention trials remain
 deferred and manual-start only.** Updated 2026-09-14.
 
+September 14 audit: the primary decoded pass finished successfully at 10:57 UTC
+with 4,896 measured and 264 superseded versions. Current-version catch-up and
+review remain pending; this is not whole-library clearance.
+
 September 14 held-repair work: the qualified Daniel Sloss timestamp correction
 is installed with rollback. Ten non-FEL holds are being resolved through
 source-clock qualification and narrow chapter/SubRip preservation checks, using

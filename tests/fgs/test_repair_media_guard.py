@@ -88,6 +88,12 @@ class Chapters(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'Chapters document'):
             guard.chapter_tree('<other/>')
 
+    def test_empty_extraction_cannot_clear_a_chapter_mismatch(self):
+        with tempfile.TemporaryDirectory() as folder, mock.patch.object(guard.subprocess, 'run') as run:
+            run.return_value.stdout = ''
+            with self.assertRaisesRegex(RuntimeError, 'missing stored chapter evidence'):
+                guard.compare_stored_chapters('before', 'after', folder)
+
 
 class Cadence(unittest.TestCase):
     def test_requires_every_picture_on_the_original_clock(self):
@@ -133,6 +139,7 @@ class Cadence(unittest.TestCase):
     def test_expanded_fields_need_separate_progressive_passages_without_woven_motion(self):
         with tempfile.TemporaryDirectory() as name:
             root = Path(name); clockpath = root/'clock.json'; fieldpath = root/'fields.json'; policypath = root/'policy.json'
+            errorpath = root/'errors.log'; errorpath.write_text('')
             item = dict(path='library', source='original', source_signature={'inode':1}, library_signature={'inode':2})
             clockpath.write_text(json.dumps(dict(path='original', source_signature=item['source_signature'],
                 complete=True, regular_25fps=True, count=1001, first_us=0, last_us=40000000,
@@ -144,6 +151,7 @@ class Cadence(unittest.TestCase):
                 fieldpath.write_text(json.dumps(dict(path='original', source_signature=item['source_signature'], samples=rows)))
                 entry = dict(item, fps=25, policy='decoded_25fps_progressive_v1', reviewed_field_passages=True,
                              clock_evidence=str(clockpath), clock_evidence_sha256=guard.file_sha256(clockpath),
+                             clock_error_log=str(errorpath), clock_error_log_sha256=guard.file_sha256(errorpath),
                              field_evidence=str(fieldpath), field_evidence_sha256=guard.file_sha256(fieldpath))
                 policypath.write_text(json.dumps(dict(version=1, files={'library':entry})))
                 return guard.reviewed_policy(item, dict(reviewed_media_policy=str(policypath),

@@ -42,9 +42,11 @@ def compare_stored_chapters(library, completed, directory):
         result = subprocess.run(['mkvextract', str(path), 'chapters'], capture_output=True,
                                 text=True, check=True, timeout=180)
         xml = result.stdout
-        # With no chapters mkvextract returns no XML. Only a matching absence
-        # can pass; an extraction error or malformed document still fails.
-        tree = chapter_tree(xml) if xml.strip() else None
+        # This fallback is called because the probes disagree. Empty extractions
+        # cannot explain that disagreement and must not turn it into a pass.
+        if not xml.strip():
+            raise RuntimeError('missing stored chapter evidence for a probe mismatch')
+        tree = chapter_tree(xml)
         output = Path(directory) / (label + '-stored-chapters.xml')
         output.write_text(xml)
         documents.append((tree, file_sha256(output)))
@@ -146,10 +148,13 @@ def reviewed_policy(item, config):
     for field in ('source', 'source_signature', 'library_signature'):
         if entry[field] != item[field]:
             raise RuntimeError('reviewed media identity changed: ' + field)
+    for field in ('clock_evidence', 'clock_error_log'):
+        if not entry.get(field) or not entry.get(field + '_sha256'):
+            raise RuntimeError('missing complete source clock evidence')
     for field in ('clock_evidence', 'clock_error_log', 'field_evidence'):
         if field in entry and file_sha256(entry[field]) != entry[field + '_sha256']:
             raise RuntimeError('reviewed source evidence changed')
-    if entry.get('clock_error_log') and Path(entry['clock_error_log']).read_text().strip():
+    if Path(entry['clock_error_log']).read_text().strip():
         raise RuntimeError('reviewed source clock decode reported errors')
     clock = json.loads(Path(entry['clock_evidence']).read_text())
     n = clock.get('count', 0)
