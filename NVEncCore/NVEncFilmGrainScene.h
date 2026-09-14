@@ -43,12 +43,15 @@ public:
     bool consume(const int inputFrameId, bool& sceneCut) {
         sceneCut = false;
         if (!enabled()) return true;
-        if (inputFrameId != m_seen || m_seen >= m_frames) return false;
+        if (m_failed || inputFrameId != m_seen || m_seen >= m_frames) {
+            m_failed = true;
+            return false;
+        }
         sceneCut = std::binary_search(m_cuts.begin(), m_cuts.end(), m_seen);
         ++m_seen;
         return true;
     }
-    bool complete() const { return !enabled() || m_seen == m_frames; }
+    bool complete() const { return !m_failed && (!enabled() || m_seen == m_frames); }
     bool enabled() const { return m_frames > 0; }
     int frames() const { return m_frames; }
     int seen() const { return m_seen; }
@@ -64,5 +67,6 @@ private:
     }
     int m_frames = 0;
     int m_seen = 0;
+    bool m_failed = false;
     std::vector<int> m_cuts;
 };
