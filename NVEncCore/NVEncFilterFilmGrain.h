@@ -39,6 +39,7 @@
 #include "NVEncFilter.h"
 #include "NVEncFilmGrain.h"
 #include "NVEncFilmGrainModel.h"
+#include "NVEncFilmGrainScene.h"
 #include "nvEncodeAPI.h"
 
 enum FGSDenoiseEngine : int {
@@ -115,6 +116,7 @@ class NVEncFilterParamFilmGrain : public NVEncFilterParam {
 public:
     NVEncFilmGrainAnalyzerConfig filmGrain;
     std::pair<int, int> compute_capability;
+    tstring sceneCutPath;          // optional frame-preserving source schedule
     tstring tableOutPath;          // write measured grain as an AOM filmgrn1 table (empty = off)
     rgy_rational<int> timebase;    // timebase of the frame timestamps (for the table's 10 MHz intervals)
 
@@ -170,6 +172,7 @@ private:
     std::unique_ptr<CUMemBufPair> m_sceneCounts;
     std::unique_ptr<CUMemBufPair> m_modelStats;
     std::unique_ptr<AnalyzerState> m_state;
+    NVEncFilmGrainSceneSchedule m_sceneSchedule;
     tstring m_tableOutPath;
     rgy_rational<int> m_tableTimebase;
     int64_t m_tableFrameDuration10MHz;

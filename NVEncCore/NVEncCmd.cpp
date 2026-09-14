@@ -326,6 +326,7 @@ tstring encoder_help() {
         _T("                                  retain-max=0.0-0.5     cap automatic residual blending\n")
         _T("                                   (default: 0.5; does not cap source fallback or file size)\n")
         _T("   --film-grain-table <path>    [AV1] read film grain parameters from an AOM filmgrn1 table.\n")
+        _T("   --film-grain-scene-cuts <path> source scene schedule for bilateral FGS (frame-preserving input)\n")
         _T("   --film-grain-table-out <path> write the measured film grain as an AOM filmgrn1 table\n")
         _T("                                  (with --av1-film-grain; also usable with --codec raw to\n")
         _T("                                   produce a denoised base + grain table for another encoder).\n")
@@ -1315,6 +1316,15 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (IS_OPTION("film-grain-scene-cuts")) {
+        if (i + 1 < nArgNum && strInput[i + 1][0] != 0 && strInput[i + 1][0] != _T('-')) {
+            pParams->av1.filmGrainSceneCuts = strInput[++i];
+        } else {
+            print_cmd_error_invalid_value(option_name, _T("a scene schedule path is required"));
+            return 1;
+        }
+        return 0;
+    }
     if (IS_OPTION("film-grain-table-out")) {
         if (i + 1 < nArgNum && strInput[i + 1][0] != 0 && strInput[i + 1][0] != _T('-')) {
             pParams->av1.filmGrainTableOut = strInput[++i];
@@ -1974,6 +1984,7 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
         }
         OPT_STR_PATH(_T("--film-grain-table"), av1.filmGrainTable);
         OPT_STR_PATH(_T("--film-grain-table-out"), av1.filmGrainTableOut);
+        OPT_STR_PATH(_T("--film-grain-scene-cuts"), av1.filmGrainSceneCuts);
         OPT_LST_CX(_T("--tile-columns"),  av1, tilesCols,      list_av1_tiles);
         OPT_LST_CX(_T("--tile-rows"),     av1, tilesRows,      list_av1_tiles);
         OPT_LST_CX(_T("--part-size-min"), av1, partMin,        list_part_size_av1);

@@ -961,6 +961,21 @@ GPUでフィルムグレインを解析し、解析したグレインをエン�
 
 AV1専用で、並列エンコードとの併用はできない。有意な合成結果を得るには、入力ソースからあらかじめグレインを除去しておく必要がある。公開されているNVIDIA APIではテーブルのグレインシードを指定できないため、ビットストリームのグレインシードはNVIDIAエンコーダが選択する。
 
+### --film-grain-scene-cuts &lt;path&gt;
+
+Optional scene boundaries for `--av1-film-grain denoiser=bilateral`.
+The first line is `FGS_SCENE_CUTS_V1 <total-frame-count>`; following lines are
+strictly increasing, zero-based source frame indices, one per line. A schedule
+may contain no boundaries. Blank lines after the header are ignored.
+
+At each listed frame, FGS discards the previous scene's model before analysis;
+model rejection, quiet-source protection and gradual synthesis recovery remain
+active. This does not force an encoder keyframe or enable automatic retention.
+Use only with a frame-preserving input starting at frame zero. Trimming,
+skipping, duplicate frames and an incomplete or overlong input cause an error.
+The schedule must describe the exact submitted pictures; prepare it again after
+editing the source. Without this option, scene detection is unchanged.
+
 ### --film-grain-table-out &lt;path&gt;
 `--av1-film-grain`で測定したフィルムグレインを標準AOM `filmgrn1` テーブルとして書き出す。同じモデルを保持する連続フレームは、10 MHzタイムベースの1つの`[start,end)`区間にまとめられ、グレインが検出されない期間はギャップとして表現される。
 

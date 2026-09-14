@@ -42,6 +42,7 @@
 #include <vector>
 
 #include "NVEncFilterFilmGrain.h"
+#include <fstream>
 #include "NVEncFilmGrainRecovery.h"
 #include "NVEncFilmGrainSourceGuard.h"
 #include "NVEncFilmGrainModel.h"
@@ -1880,6 +1881,18 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         AddMessage(RGY_LOG_ERROR, _T("Unsupported colorspace: %s.\n"), RGY_CSP_NAMES[prm->frameIn.csp]);
         return RGY_ERR_UNSUPPORTED;
     }
+    m_sceneSchedule = {};
+    if (!prm->sceneCutPath.empty()) {
+        std::ifstream scheduleFile(prm->sceneCutPath.c_str());
+        std::string error;
+        if (prm->filmGrain.denoiser != FGS_DENOISE_BILATERAL
+            || !m_sceneSchedule.load(scheduleFile, error)) {
+            AddMessage(RGY_LOG_ERROR, _T("Invalid bilateral FGS scene schedule: %s\n"), char_to_tstring(error).c_str());
+            return RGY_ERR_INVALID_PARAM;
+        }
+        AddMessage(RGY_LOG_INFO, _T("film-grain: explicit scene schedule, %d frames, %d boundaries\n"),
+            m_sceneSchedule.frames(), static_cast<int>(m_sceneSchedule.cuts()));
+    }
     auto& config = prm->filmGrain;
     config.denoisePasses = clamp(config.denoisePasses, 1, 2);
     config.modelWindow = clamp(config.modelWindow, 1, 32);
@@ -2078,6 +2091,11 @@ void NVEncFilterFilmGrain::recordTableEntry(const int64_t timestamp, const int64
 }
 
 RGY_ERR NVEncFilterFilmGrain::finishTable() {
+    if (!m_sceneSchedule.complete()) {
+        AddMessage(RGY_LOG_ERROR, _T("Incomplete FGS scene schedule: received %d of %d frames.\n"),
+            m_sceneSchedule.seen(), m_sceneSchedule.frames());
+        return RGY_ERR_INVALID_DATA;
+    }
     if (!m_tableWriter) return RGY_ERR_NONE;
     tstring error;
     const bool written = m_tableWriter->write(m_tableEntries, error);
@@ -2142,6 +2160,20 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         }
     } else if (!pInputFrame || !pInputFrame->ptr[0]) {
         return RGY_ERR_NONE;
+    }
+
+    bool explicitSceneCut = false;
+    if (!m_sceneSchedule.consume(source->inputFrameId, explicitSceneCut)) {
+        AddMessage(RGY_LOG_ERROR, _T("FGS scene schedule lost frame correspondence at input frame %d (expected %d of %d).\n"),
+            source->inputFrameId, m_sceneSchedule.seen(), m_sceneSchedule.frames());
+        return RGY_ERR_INVALID_DATA;
+    }
+    if (explicitSceneCut) {
+        // Clear model history before denoising/fitting this frame. Preserve the
+        // source caps and synthesis recovery guard just like a detected cut.
+        m_state->clear();
+        m_detailReferenceValid = false;
+        AddMessage(RGY_LOG_DEBUG, _T("fgs-scene explicit frame=%d\n"), source->inputFrameId);
     }
 
     *pOutputFrameNum = 1;
@@ -2236,7 +2268,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         m_detailReferenceValid = false;
         // Do not allow a model from before a low-confidence gap to reappear on
         // later frames.  The next reliable region must build a fresh window.
-        diagnostics.sceneReset = !m_state->history.empty();
+        diagnostics.sceneReset = explicitSceneCut || !m_state->history.empty();
         m_state->clear();
         m_state->synthesisRecovery.preserveSource();
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=0 reset=%d flat=%d/%d window=0 ")
@@ -2459,7 +2491,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         m_detailReferenceValid = true;
     }
 
-    bool sceneReset = false;
+    bool sceneReset = explicitSceneCut;
     bool motionSceneCut = false;
     if (sceneCutNearestDirection && sceneCutBlockThreshold > 0) {
         const auto counts = static_cast<const uint32_t *>(m_sceneCounts->ptrHost);
