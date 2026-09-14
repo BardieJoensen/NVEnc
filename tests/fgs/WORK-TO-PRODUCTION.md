@@ -2,7 +2,15 @@
 
 Status: **qualified finer-source hotfix deployed; ordinary repairs resumed;
 full library follow-up audit in progress. Automatic-retention trials remain
-deferred and manual-start only.** Updated 2026-09-13.
+deferred and manual-start only.** Updated 2026-09-14.
+
+September 14 held-repair work: the qualified Daniel Sloss timestamp correction
+is installed with rollback. Ten non-FEL holds are being resolved through
+source-clock qualification and narrow chapter/SubRip preservation checks, using
+the same deployed encoder. Four FEL sources remain held; the earlier DV fix
+normalized metadata and did not reconstruct FEL. See
+[held repairs and FEL scope](FINDINGS-2026-09-14-HELD-REPAIRS.md) and its live
+batch receipt before assuming the earlier 1,870/14 snapshot is current.
 
 September 13 operations: the decoded audit now runs two files concurrently
 through the unchanged, qualified v5 measurement tools, ordered by the sources'

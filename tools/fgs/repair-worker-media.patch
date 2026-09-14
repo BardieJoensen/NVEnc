@@ -1,0 +1,37 @@
+--- a/scripts/fgs-ripple-repair.py
++++ b/scripts/fgs-ripple-repair.py
+@@ -11,0 +12,2 @@
++from fgs_repair_media_guard import (compare_stored_chapters, compare_nonvideo_payloads,
++                                    reviewed_policy, validate_reviewed_output)
+@@ -448,0 +451,2 @@
++        media_policy = reviewed_policy(item, config)
++        state['reviewed_media_policy'] = media_policy
+@@ -459 +463,5 @@
+-        if '--vpp-rtgmc' in item['prefix'] + item['suffix']:
++        if media_policy and media_policy.get('reviewed_field_passages'):
++            state['source_field_check'] = {'mode': 'reviewed_progressive_passages',
++                'evidence': media_policy['field_evidence'],
++                'evidence_sha256': media_policy['field_evidence_sha256']}
++        elif '--vpp-rtgmc' in item['prefix'] + item['suffix']:
+@@ -509 +517,4 @@
+-        if abs(rate(new_video) - rate(old_video)) > 0.01: raise RuntimeError('repaired frame rate differs')
++        expected_fps = media_policy['fps'] if media_policy else rate(old_video)
++        if abs(rate(new_video) - expected_fps) > 0.01: raise RuntimeError('repaired frame rate differs')
++        if media_policy:
++            state['reviewed_output_cadence'] = validate_reviewed_output(encoded, media_policy, directory)
+@@ -535 +546,3 @@
+-        if chapter_summary(before) != chapter_summary(after): raise RuntimeError('chapters changed')
++        state['chapter_preservation'] = {'method': 'ffprobe_chapters_exact', 'passed': True}
++        if chapter_summary(before) != chapter_summary(after):
++            state['chapter_preservation'] = compare_stored_chapters(library, completed, directory)
+@@ -537,2 +550,8 @@
+-        if stream_hashes(library, directory / 'before-stream-hashes.txt', before) != stream_hashes(completed, directory / 'after-stream-hashes.txt', after):
+-            raise RuntimeError('audio or subtitle payload changed')
++        before_hashes = stream_hashes(library, directory / 'before-stream-hashes.txt', before)
++        after_hashes = stream_hashes(completed, directory / 'after-stream-hashes.txt', after)
++        state['nonvideo_payload_preservation'] = {'method': 'exact_stream_hashes', 'passed': True}
++        if before_hashes != after_hashes:
++            state['nonvideo_payload_preservation'] = compare_nonvideo_payloads(
++                library, completed, before, after, before_hashes, after_hashes, directory)
++        if media_policy:
++            state['reviewed_final_cadence'] = validate_reviewed_output(completed, media_policy, directory, 'final')

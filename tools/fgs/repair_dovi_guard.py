@@ -36,7 +36,7 @@ def classify(summary):
 
 def admit_p7(kind, encoder_sha256, arguments):
     if kind != 'MEL':
-        raise ValueError('Dolby Vision FEL repair held: AV1 cannot preserve its per-pixel enhancement')
+        raise ValueError('Dolby Vision FEL repair held: this repair path does not reconstruct its enhancement layer')
     if encoder_sha256 != P7_ENCODER:
         raise ValueError('P7 MEL repair requires the qualified RPU-normalizing encoder')
     for flag, expected in [('--dolby-vision-rpu', 'copy'), ('--dolby-vision-profile', '10.1')]:
