@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec /trial/prefix/bin/vspipe --requests 2 "$@"

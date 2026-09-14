@@ -1,0 +1,9 @@
+diff --git a/test/engine/bake-test.vpy b/test/engine/bake-test.vpy
+index c56aa96..9f408ac 100755
+--- a/test/engine/bake-test.vpy
++++ b/test/engine/bake-test.vpy
+@@ -1,2 +1,4 @@
+ import vapoursynth as vs
+ core = vs.core
++core.num_threads = 4
++core.max_cache_size = 256

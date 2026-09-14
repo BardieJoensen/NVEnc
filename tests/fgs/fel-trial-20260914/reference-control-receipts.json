@@ -1,0 +1,45 @@
+{
+  "compat-fixture.json": {
+    "command": [
+      "docker",
+      "exec",
+      "fgs-fel-trial-20260914",
+      "bash",
+      "/trial/scripts/env.sh",
+      "vspipe",
+      "--requests",
+      "2",
+      "/trial/scripts/compat_fixture.vpy",
+      "-"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 18.477621336933225,
+    "sha256": "904eedfe68bdc6ed70ee7a3f3ef71fa2f259d8555df1b148b5295873c11fc92f",
+    "expected_sha256": "904eedfe68bdc6ed70ee7a3f3ef71fa2f259d8555df1b148b5295873c11fc92f",
+    "passed": true,
+    "scope": "One published 150-frame original DoViBaker RGB checksum; not independent full-library qualification."
+  },
+  "final-graph-fixture.json": {
+    "command": [
+      "docker",
+      "exec",
+      "fgs-fel-trial-20260914",
+      "bash",
+      "/trial/scripts/env.sh",
+      "vspipe",
+      "--requests",
+      "2",
+      "/trial/scripts/final_graph_fixture.vpy",
+      "-"
+    ],
+    "returncode": 0,
+    "sha256": "768a9ebe3bd512a834db8f36e426b686ca3164ed11578d5571029122395bda1d",
+    "expected_sha256": "768a9ebe3bd512a834db8f36e426b686ca3164ed11578d5571029122395bda1d",
+    "passed": true,
+    "elapsed_seconds": 7.061048575909808
+  },
+  "missing-rpu-control.json": {
+    "passed": true,
+    "expected_error": "FelBaker: RPU data is missing"
+  }
+}

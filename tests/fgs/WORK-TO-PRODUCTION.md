@@ -5,6 +5,16 @@ ordinary Tdarr resumed. Primary library audit pass complete; current-version
 catch-up and review remain. Automatic-retention trials remain deferred and
 manual-start only.** Updated 2026-09-14.
 
+September 14 FEL reconstruction trial: eight short windows from the four held
+originals reconstruct successfully; 15 valid AV1/control outputs pass complete
+decoding and clock/colour checks. Beasts' grain transition is an explicit model
+rejection/source fallback with gradual recovery; a source cut was not detected
+three frames earlier. The exact reproduction and no-FGS control are retained.
+This is untrimmed PQ picture reconstruction, not a finished Dolby Vision
+metadata/production path. The four originals remain held, Tdarr has resumed,
+and no further trials are scheduled. Read [the FEL reconstruction report](FEL-RECONSTRUCTION-20260914.md)
+and its linked ledger for qualification limits and remaining work.
+
 September 14 audit: the primary decoded pass finished successfully at 10:57 UTC
 with 4,896 measured and 264 superseded versions. Current-version catch-up and
 review remain pending; this is not whole-library clearance.
