@@ -39,6 +39,13 @@ result remains `encoded_unvalidated` in scratch. Validation preserves tracks,
 checks complete metadata/clock/payloads and decodes the final staged container.
 Neither function installs a library replacement.
 
+TrueHD tracks use their exported native Matroska frame starts explicitly during
+the staged mux. The validator checks them against every known FFprobe packet
+timestamp, fills an omitted access-unit timestamp only from its stored clock,
+and compares the complete timeline, durations and codec trimming. The trailing
+inferred end in an `mkvextract timestamps_v2` file is not a frame. The report
+records the actual mux regression, successful fixture and shifted-audio controls.
+
 For a library repair, give `validate(...)` both `retained_library` and its
 previously captured `library_signature`. The mux then retains that file's
 current tracks, attachments and chapters. Before muxing, it checks every library

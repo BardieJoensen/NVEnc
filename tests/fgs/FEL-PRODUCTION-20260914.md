@@ -23,9 +23,11 @@ the deferred automatic-retention changes. Nothing starts that campaign.
 | Candidate encoder core | `a72f589ea2fab66da2f1d3515e5d3189326d7089` |
 | Candidate binary SHA-256 | `19869914b1f0081b3d4b8326f0e9f1802f8ca4ca77a06fe2d37b70accfb0a788` |
 | Candidate encoder container base | `sha256:218540effe6149030631445914c8f35c6e81090326a8e4bbca55d0b57c3f50e4` |
-| Qualified reconstruction runtime | `sha256:5f604f00fa9ed29b530cdfa0c6629e894aac73c1996a77ae80f27eabea2e0404` |
+| Active full-canary reconstruction runtime, v2 | `sha256:5f604f00fa9ed29b530cdfa0c6629e894aac73c1996a77ae80f27eabea2e0404` |
+| Subsequently qualified runtime, v3 | `sha256:56d34f39bda207ea97f08195e1bd3df25e897f3b8709d9b5ed16a66f5d8215bd` |
 | Full-canary host harness | `11c4fcb52c7cfa569676e9ca02d7e95015aa6b31`, frozen in `scratch/pinned-canary-v2` |
 | Subsequent source-continuity guard | `9851de57`; independently applied to the complete prepared source |
+| Current-library validation harness | `86fbcc2f`, frozen in `scratch/pinned-library-v3`; includes explicit native TrueHD clocks |
 | Ordinary production encoder | `ef5c61fe`, SHA-256 `d8127dfa63011160dc222a41516452c269c2438269866b3da74f95e5ba4fd47b` |
 
 The production node image, ordinary flow, 25 local plugins and routine validator
@@ -33,6 +35,12 @@ remain unchanged. The candidate binary is bind-mounted into disposable trial
 containers. The FEL runtime is a separate image and has not been installed into
 the Tdarr node. Its receipt identifies every packaged file and the base image.
 It packages the previously built dependencies; it is not a new from-source build.
+Runtime v3 also requires arithmetic and source-continuity evidence at the graph
+entry point. Both rejection controls pass. Its complete-source 164-picture
+Beasts window is byte-identical to the matching reconstructed reference prefix.
+The initial hash comparison mistakenly retained `XLENGTH=165` in that prefix's
+Y4M header. Correcting only the length field produces the exact streamed hash;
+no picture bytes or acceptance limits changed. The initial failure is retained.
 
 The only original titles in scope are Bumblebee (2018), TRON: Legacy (2010),
 Transformers: Rise of the Beasts (2023), and Transformers: The Last Knight
@@ -177,6 +185,8 @@ from overlap periods are not isolated throughput benchmarks.
 | `fgs-fel-full-canary-20260914` | Direct pipeline controls, full encode, pause restoration, staged mux and validation |
 | `fgs-fel-source-decode-20260914` | Independent strict decoding of both complete HEVC source layers |
 | `fgs-fel-full-comparison-20260914` | Wait for this encode, then compare two precisely matched source windows |
+| `fgs-fel-full-library-20260914` | Qualify the completed encode with the current library's tracks and native TrueHD clocks |
+| `fgs-fel-bumblebee-prepare-20260914` | Prepare and verify the next complete retained source, without a GPU encode |
 
 These are manually started transient units, with deadlines and no restart or
 boot schedule. They do not start unrelated trials. The full canary restores
@@ -201,6 +211,39 @@ canary remains frozen on its earlier harness; this library option does not alter
 that active job or install anything. The separately bounded
 `fgs-fel-library-handoff-20260914` unit records the four current track inventories
 and the complete Beasts library alignment in `library-handoff.json`.
+That preflight is now complete. All four library copies have different track
+selections from their originals; all retain Opus and TrueHD, with fewer embedded
+subtitles. Beasts' complete 182,867-picture library clock matches its original,
+and the two source-content witnesses pass. The library mux must retain those
+current selections.
+
+### TrueHD timing preservation
+
+The end-to-end library fixture exposed a separate mux issue: MKVToolNix 82's
+TrueHD packetizer recalculates audio timestamps. In the controlled fixture,
+1,369 of 8,220 TrueHD packet starts moved by 1 ms despite identical audio bytes.
+Disabling lacing and changing the container time scale did not preserve them.
+
+The new staged path exports the original native Matroska TrueHD frame starts
+and supplies them explicitly when muxing. The packet validator verifies every
+known FFprobe PTS against that native clock. If FFprobe omits an access unit's
+PTS, only its actual stored frame start may fill the omission. Frame counts,
+packet durations and codec trimming remain checked. The extra inferred end
+line written by mkvextract is not an audio frame; this was verified against
+the [82.0 source](https://mkvtoolnix.download/sources/mkvtoolnix-82.0.tar.xz).
+No timing tolerance was widened.
+
+The repeated fixture passes complete video/HDR/RPU decoding and preservation
+of real Opus/TrueHD audio, interleaved SubRip with whitespace, an attachment and
+chapters. A deliberate 100 ms TrueHD offset retains the audio bytes but fails
+the timing comparison; a mismatched native-clock proof also fails. An initial
+negative fixture accidentally changed track order and is retained separately.
+
+The original full canary stays frozen on its earlier validator and may hold on
+this strict TrueHD check. The separate `qualify_full_library.py` unit reuses only
+its completed, hash-verified encoded video and performs the corrected full
+validation with current library tracks. It pins the helper scripts, binaries
+and host media tools. It neither installs a replacement nor releases sources.
 
 The two source comparison windows begin at original pictures 36,554 and
 115,251, with 164 and 100 contiguous reference pictures. Exact RPU sequence
@@ -247,13 +290,17 @@ All paths below are relative to that ledger unless marked `scratch`.
 | Whole RPU/static HDR verification | `static-hdr-roundtrip.json`, `roundtrip-parser-controls.json` |
 | Arithmetic checks and source continuity | `parameter-bounds.json`, `contract-revalidation.json`, `picture-continuity.json` |
 | Scalar reconstruction reference | `scratch/arithmetic-reference/*/result.json` |
-| Runtime package and controls | `runtime-build-v2.log`, `runtime-qualification.json`, `scratch/runtime-context-v2/fel/runtime-receipt.json` |
+| Runtime packages and controls | `runtime-build-v2.log`, `runtime-qualification.json`, `runtime-qualification-v3.json`, `runtime-v3-prefix-header-correction.json`, `scratch/runtime-context-v*/fel/runtime-receipt.json` |
 | Full source preparation | `scratch/full-beasts/preparation.json` and `metadata/` |
 | Active complete-film job | `full-canary.json`, `run_full_canary.py`, `canary-harness-pin-v2.json` |
 | Full source and decoded output checks | `full-source-decode.json`, `scratch/full-canary/validation/validation.json` when created |
 | Source-matched full encode measurements | `full-reference-comparison.json`, `post_full_alignment.py` |
 | Comparison seek controls | `comparison-seek-controls.json`: all four known frame starts pass |
 | Current library track inventory/alignment | `library-handoff.json`, `scratch/library-handoff/` |
+| Current library mux and exact TrueHD controls | `staged-library-fixture-v2.json`, `truehd-clock-negative-controls.json`; original failures and alternative mux controls remain separate |
+| Full current-library qualification | `full-library-qualification.json`, `qualify_full_library.py`, `library-harness-pin-v3.json` |
+| Next complete-source preparation | `bumblebee-preparation.json`, `scratch/full-bumblebee/preparation.json` |
+| Broader branch integration | `branch-integration.json`, `main-cpu.log`, `main-build.json`; compiled `296993f9` remains undeployed |
 | Every-frame grain and sparse texture | `decoded-grain-observation.json`, `beasts-texture-comparison.json` |
 | Validated playback copies | `playback-pack.json`; earlier receipts keep their superseded names |
 
