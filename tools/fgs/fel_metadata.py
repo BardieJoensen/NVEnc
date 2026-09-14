@@ -13,6 +13,7 @@ from itertools import zip_longest
 import json
 from pathlib import Path
 import subprocess
+from fel_parameter_bounds import verify as verify_parameter_bounds
 
 
 YCC = [9574, 0, 13802, 9574, -1540, -5348, 9574, 17610, 0]
@@ -153,6 +154,7 @@ def verify_frame(source, output):
         num_x_partitions_minus1=0, num_y_partitions_minus1=0,
         nlq_method_idc='LinearDeadzone'), 'source mapping')
     verify_reconstruction_contract(source)
+    verify_parameter_bounds(source)
     dm = source['vdr_dm_data']
     require_fields(dm, dict(compressed=False, signal_eotf=65535, signal_eotf_param0=0,
         signal_eotf_param1=0, signal_eotf_param2=0, signal_color_space=0,
@@ -213,6 +215,7 @@ def verify(source_json, output_json, expected_frames):
     return dict(frames=frames, scenes=scenes, identity_mapping=True,
                 display_metadata_preserved=True, source_gamut='BT.2020',
                 reconstruction_contract='p7-fel-pq-bt2020-v2',
+                native_arithmetic_bounds_checked=True,
                 authoring_level6=authoring_level6,
                 active_area_policy='unchanged; pixels must not be cropped')
 

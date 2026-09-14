@@ -106,6 +106,7 @@ def encode(prepared, job, runtime_image, encoder_image, encoder, encoder_sha256,
     metadata = Path(config['metadata'])
     mr = json.loads((metadata / 'metadata-report.json').read_text())
     if (mr.get('complete') is not True or mr.get('reconstruction_contract') != 'p7-fel-pq-bt2020-v2'
+            or mr.get('native_arithmetic_bounds_checked') is not True
             or mr['frames'] != proof['clock']['frames']):
         raise ValueError('Qualified complete metadata preparation is required')
     seconds = float(Fraction(proof['clock']['duration']))

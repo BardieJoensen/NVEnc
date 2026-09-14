@@ -55,7 +55,7 @@ def bundle(runtime, output, base_image):
     copy('/lib/x86_64-linux-gnu/libpython3.12.so.1.0', 'python/lib/libpython3.12.so.1.0')
     shutil.copytree('/usr/lib/python3.12', root / 'python/lib/python3.12',
                     ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
-    for name in ['fel_input.vpy', 'fel_reconstruct.py', 'fel_metadata.py']:
+    for name in ['fel_input.vpy', 'fel_reconstruct.py', 'fel_metadata.py', 'fel_parameter_bounds.py']:
         copy(Path(__file__).parent / name, 'tools/' + name)
     receipt = dict(base_image=base_image, base_tag=base_tag, qualified_binaries=QUALIFIED,
         python_packages=subprocess.check_output(['dpkg-query', '-W',

@@ -34,7 +34,10 @@ def fixture():
     mapping = dict(vdr_rpu_id=0, mapping_color_space=0, mapping_chroma_format_idc=0,
         num_x_partitions_minus1=0, num_y_partitions_minus1=0,
         nlq_method_idc='LinearDeadzone', nlq_num_pivots_minus2=0,
-        nlq_pred_pivot_value=[0, 1023], nlq={'nlq_offset': [512, 512, 512]},
+        nlq_pred_pivot_value=[0, 1023], nlq={'nlq_offset': [512, 512, 512],
+            'vdr_in_max_int': [0] * 3, 'vdr_in_max': [1048576] * 3,
+            'linear_deadzone_slope_int': [0] * 3, 'linear_deadzone_slope': [2048] * 3,
+            'linear_deadzone_threshold_int': [0] * 3, 'linear_deadzone_threshold': [0] * 3},
         curves=[copy.deepcopy(fm.IDENTITY_CURVE) for _ in range(3)])
     source = dict(dovi_profile=7, el_type='FEL', header=header,
                   rpu_data_mapping=mapping, vdr_dm_data=dm)
