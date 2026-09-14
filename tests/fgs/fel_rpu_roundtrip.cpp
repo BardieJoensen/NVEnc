@@ -6,6 +6,9 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <iomanip>
+#include <map>
+#include <sstream>
 #include <stdexcept>
 #include <vector>
 #include "rpu_parser.h"
@@ -26,6 +29,7 @@ static uint64_t leb() {
 }
 int main() {
     size_t count = 0;
+    std::map<std::pair<int, std::string>, uint64_t> staticHdr;
     try {
         while (std::cin.peek() != EOF) {
             const auto header = byte();
@@ -41,6 +45,13 @@ int main() {
             std::vector<uint8_t> payload(size);
             std::cin.read(reinterpret_cast<char *>(payload.data()), static_cast<std::streamsize>(size));
             if (std::cin.gcount() != static_cast<std::streamsize>(size)) throw std::runtime_error("truncated metadata OBU");
+            if (!payload.empty() && (payload[0] == 1 || payload[0] == 2)) {
+                if (payload.size() != (payload[0] == 1 ? 6 : 26) || payload.back() != 0x80)
+                    throw std::runtime_error("unsupported static HDR metadata framing");
+                std::ostringstream hex;
+                for (const auto value : payload) hex << std::hex << std::setw(2) << std::setfill('0') << int(value);
+                ++staticHdr[{payload[0], hex.str()}];
+            }
             const std::array<uint8_t, 8> prefix = {4, 0xb5, 0, 0x3b, 0, 0, 8, 0};
             if (payload.size() < prefix.size() || std::memcmp(payload.data(), prefix.data(), prefix.size())) continue;
             auto *rpu = dovi_parse_itu_t35_dovi_metadata_obu(payload.data() + 1, payload.size() - 1);
@@ -64,7 +75,15 @@ int main() {
             ++count;
         }
         if (!count) throw std::runtime_error("no Dolby RPUs found");
-        std::cerr << "{\"complete\":true,\"rpus\":" << count << "}\n";
+        std::cerr << "{\"complete\":true,\"rpus\":" << count << ",\"static_hdr\":[";
+        bool comma = false;
+        for (const auto& [key, occurrences] : staticHdr) {
+            if (comma) std::cerr << ',';
+            comma = true;
+            std::cerr << "{\"type\":" << key.first << ",\"payload_hex\":\"" << key.second
+                      << "\",\"count\":" << occurrences << '}';
+        }
+        std::cerr << "]}\n";
     } catch (const std::exception& error) {
         std::cerr << "RPU round-trip failed after " << count << " RPUs: " << error.what() << "\n";
         return 1;

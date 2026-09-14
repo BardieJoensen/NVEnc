@@ -1,0 +1,160 @@
+"""Validate and remux a complete FEL canary without installing it."""
+from decimal import Decimal
+from fractions import Fraction
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+import fel_metadata as fm
+from fel_prepare import signature
+
+
+def packet_times(path, stream_indexes, log):
+    """Hash every retained stream's packet timing without a huge JSON array."""
+    hashes = {index: hashlib.sha256() for index in stream_indexes}
+    counts = {index: 0 for index in stream_indexes}
+    command = ['ffprobe', '-v', 'error', '-show_packets', '-show_entries',
+               'packet=stream_index,pts_time,duration_time', '-of', 'compact=p=0', str(path)]
+    with Path(log).open('w') as stderr:
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=stderr, text=True)
+        try:
+            for line in process.stdout:
+                row = dict(part.split('=', 1) for part in line.strip().split('|') if '=' in part)
+                index = int(row.get('stream_index', -1))
+                if index not in hashes: continue
+                times = []
+                for key in ['pts_time', 'duration_time']:
+                    value = row.get(key, 'N/A')
+                    times.append(value if value == 'N/A' else str(Decimal(value).normalize()))
+                hashes[index].update(('|'.join(times) + '\n').encode())
+                counts[index] += 1
+            if process.wait() != 0: raise RuntimeError('Retained packet timing scan failed')
+        finally:
+            if process.poll() is None: process.kill()
+            process.wait(); process.stdout.close()
+    return [dict(packets=counts[index], sha256=hashes[index].hexdigest()) for index in stream_indexes]
+
+
+def validate(job, helpers, scanner, scanner_sha256, rpu_checker, rpu_checker_sha256, expected_static):
+    job, helpers = Path(job), Path(helpers)
+    if fm.sha(scanner) != scanner_sha256 or fm.sha(rpu_checker) != rpu_checker_sha256:
+        raise ValueError('Validation tool identity changed')
+    sys.path.insert(0, str(helpers))
+    spec = importlib.util.spec_from_file_location('fel_repair_checks', helpers / 'fgs-ripple-repair.py')
+    repair = importlib.util.module_from_spec(spec); spec.loader.exec_module(repair)
+    encoded = job / 'encoded.mkv'
+    encoding = json.loads((job / 'encode.json').read_text())
+    if encoding['stage'] != 'encoded_unvalidated' or fm.sha(encoded) != encoding['encoded_sha256']:
+        raise ValueError('A completed, unchanged canary encode is required')
+    source = Path(encoding['source'])
+    if signature(source) != encoding['source_signature']: raise ValueError('Retained source changed')
+    directory = job / 'validation'; directory.mkdir(exist_ok=False)
+    record = dict(passed=False, installed=False, stage='checking_video', started_at=time.time(),
+        scope='complete automated mux/decode/metadata qualification; physical playback remains separate',
+        commands=[], helpers_sha256={p.name: fm.sha(p) for p in helpers.glob('*.py')})
+    def save():
+        path = directory / 'validation.new.json'
+        path.write_text(json.dumps(record, indent=2) + '\n'); path.replace(directory / 'validation.json')
+    def run(command, name, timeout=12 * 3600):
+        record['commands'].append(command); save()
+        repair.run(command, directory / name, timeout=timeout)
+    save()
+    try:
+        before, video_info = repair.probe(source), repair.probe(encoded)
+        (directory / 'source-probe.json').write_text(json.dumps(before, indent=2) + '\n')
+        fm.require_fields(repair.video(video_info), dict(codec_name='av1', width=3840, height=2160,
+            pix_fmt='yuv420p10le', color_range='tv', color_space='bt2020nc', color_transfer='smpte2084',
+            color_primaries='bt2020', chroma_location='left'), 'encoded video')
+        dv = next(d for d in repair.video(video_info)['side_data_list'] if d['side_data_type'] == 'DOVI configuration record')
+        fm.require_fields(dv, dict(dv_profile=10, dv_bl_signal_compatibility_id=1,
+            bl_present_flag=1, el_present_flag=0, rpu_present_flag=1), 'encoded Dolby configuration')
+        run([str(scanner), str(encoded)], 'encoded-grain-scan.json')
+        repair.validate_grain_scan(json.loads((directory / 'encoded-grain-scan.json').read_text()))
+        a = ['ffmpeg', '-v', 'error', '-nostdin', '-i', str(encoded), '-map', '0:v:0', '-c', 'copy', '-f', 'obu', '-']
+        b = [str(rpu_checker)]; record['commands'] += [a, b]; save()
+        with (directory / 'roundtrip-rpu.bin').open('wb') as out, (directory / 'roundtrip.json').open('w') as log, (directory / 'obu-extract.log').open('w') as errors:
+            first = subprocess.Popen(a, stdout=subprocess.PIPE, stderr=errors)
+            second = subprocess.Popen(b, stdin=first.stdout, stdout=out, stderr=log); first.stdout.close()
+            try:
+                rc2 = second.wait(timeout=3600); rc1 = first.wait(timeout=60)
+                if rc1 or rc2: raise RuntimeError('Complete Dolby/static HDR extraction failed')
+            finally:
+                for process in [first, second]:
+                    if process.poll() is None: process.kill()
+                    process.wait()
+        hdr = json.loads((directory / 'roundtrip.json').read_text())
+        prepared = Path(encoding['prepared'])
+        graph = json.loads((prepared / 'reconstruct.json').read_text())
+        expected_rpu = Path(graph['metadata']) / 'pq-rpu.bin'
+        if (hdr.get('complete') is not True or hdr['rpus'] != encoding['expected_frames']
+                or fm.sha(directory / 'roundtrip-rpu.bin') != fm.sha(expected_rpu)):
+            raise ValueError('Complete Dolby metadata or frame correspondence changed')
+        if ({(v['type'], v['payload_hex']) for v in hdr['static_hdr']} !=
+            {(v['type'], v['payload_hex']) for v in expected_static}):
+            raise ValueError('Static HDR differs from the decoded qualified reference')
+        record['metadata'] = hdr
+        record['stage'] = 'muxing'; save()
+        completed = job / 'complete.mkv'
+        if completed.exists(): raise ValueError('Final canary output already exists')
+        order = repair.replacement_track_order(encoded, source)
+        run(['mkvmerge', '--engage', 'keep_whitespaces_in_text_subtitles', '--track-order', order,
+            '-o', str(completed), '--no-audio', '--no-subtitles', '--no-buttons', '--no-attachments',
+            '--no-global-tags', '--no-chapters', str(encoded), '--no-video', str(source)], 'mux.log')
+        after = repair.probe(completed)
+        (directory / 'final-probe.json').write_text(json.dumps(after, indent=2) + '\n')
+        if repair.video_signal_summary(repair.video(after)) != repair.video_signal_summary(repair.video(video_info)):
+            raise ValueError('Final mux changed video signalling')
+        if repair.nonvideo_summary(before) != repair.nonvideo_summary(after):
+            raise ValueError('Retained track metadata or attachments changed')
+        record['chapters'] = dict(passed=True, method='ffprobe_exact')
+        if repair.chapter_summary(before) != repair.chapter_summary(after):
+            record['chapters'] = repair.compare_stored_chapters(source, completed, directory)
+        record['stage'] = 'checking_retained_tracks'; save()
+        old_hashes = repair.stream_hashes(source, directory / 'source-stream-hashes.txt', before)
+        new_hashes = repair.stream_hashes(completed, directory / 'final-stream-hashes.txt', after)
+        record['retained_payloads'] = dict(passed=True, method='exact_stream_hashes')
+        if old_hashes != new_hashes:
+            record['retained_payloads'] = repair.compare_nonvideo_payloads(
+                source, completed, before, after, old_hashes, new_hashes, directory)
+        timings = []
+        for path, info, label in [(source, before, 'source'), (completed, after, 'final')]:
+            indexes = [v['index'] for v in info['streams'] if v['codec_type'] in ['audio', 'subtitle']]
+            timings.append(packet_times(path, indexes, directory / (label + '-packet-times.log')))
+        if timings[0] != timings[1]: raise ValueError('Retained audio/subtitle packet timing changed')
+        record['retained_packet_timing'] = timings[0]
+        for path, label in [(encoded, 'encoded'), (completed, 'final')]:
+            run(['ffmpeg', '-v', 'error', '-nostdin', '-i', str(path), '-map', '0:v:0',
+                 '-c', 'copy', '-f', 'hash', '-hash', 'sha256', '-'], label + '-video-hash.txt')
+        if (directory / 'encoded-video-hash.txt').read_text() != (directory / 'final-video-hash.txt').read_text():
+            raise ValueError('Mux changed the encoded video payload')
+        run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_packets',
+            '-show_entries', 'packet=pts_time', '-of', 'csv=p=0', str(completed)], 'final-clock.csv')
+        fps, count = Fraction(encoding['clock']['fps']), 0
+        with (directory / 'final-clock.csv').open() as times:
+            for count, line in enumerate(times, 1):
+                if abs(Fraction(line.strip()) - Fraction(count - 1) / fps) > Fraction(1, 1000):
+                    raise ValueError('Final video clock differs from the source')
+        if count != encoding['expected_frames']: raise ValueError('Final video frame count differs')
+        record['stage'] = 'strict_full_decode'; save()
+        progress = directory / 'decode-progress.txt'
+        run(['ffmpeg', '-v', 'error', '-nostdin', '-xerror', '-err_detect', 'explode', '-threads', '2',
+            '-c:v', 'libdav1d', '-i', str(completed), '-map', '0:v:0', '-an', '-sn', '-dn',
+            '-fps_mode', 'passthrough', '-progress', str(progress), '-stats_period', '30',
+            '-f', 'null', '-'], 'strict-decode.log')
+        decoded = [int(line.split('=', 1)[1]) for line in progress.read_text().splitlines() if line.startswith('frame=')]
+        if not decoded or decoded[-1] != count: raise ValueError('Incomplete strict decoded output')
+        if signature(source) != encoding['source_signature']: raise ValueError('Retained source changed')
+        record.update(passed=True, stage='automated_checks_passed', frames=count,
+            output=str(completed), output_sha256=fm.sha(completed), output_bytes=completed.stat().st_size,
+            source_bytes=source.stat().st_size, finished_at=time.time(),
+            physical_playback_qualified=False, source_decode_validation_required=True)
+    except BaseException as error:
+        record.update(stage='failed', error=repr(error), failed_at=time.time())
+        raise
+    finally:
+        save()
+    return record
