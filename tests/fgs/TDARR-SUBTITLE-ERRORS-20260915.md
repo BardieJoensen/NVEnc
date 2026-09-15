@@ -49,8 +49,15 @@ settings, worker limits, decode checks, timing tolerances or grain thresholds.
   containers. The existing archive and plugin bytes are available for rollback.
   Production encoder remains `ef5c61fe`, SHA-256
   `d8127dfa63011160dc222a41516452c269c2438269866b3da74f95e5ba4fd47b`.
-- MobLand S01E07 and Horns were requeued at 09:00 UTC. These full jobs must pass
-  the remaining normal validation stages before being called successful.
+- MobLand S01E07 and Horns were requeued at 09:00 UTC. S01E07 completed with
+  `Transcode success` before 09:10 UTC: metadata, all 58,828 video packets in the
+  grain-synthesis scan, five visual-provenance samples, and the final video/audio
+  packet screen passed. Tdarr installed the 1.432 GiB output from its 3.697 GiB
+  input. The final packet screen took 17.9 seconds; the synthesis scan took
+  8.2 seconds. These were existing checks, not newly added validation work.
+- The other nine MobLand episodes were then admitted. Horns and the remaining
+  episodes are still being retried; do not count them as complete from queue
+  removal alone.
 
 The old failed job caches had already been removed by Tdarr. Retries therefore
 encode from the retained library originals. The finite, manually started
