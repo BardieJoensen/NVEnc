@@ -1,0 +1,28 @@
+--- a/FlowPlugins/LocalFlowPlugins/audio/applySubtitlePolicy/1.0.0/index.js
++++ b/FlowPlugins/LocalFlowPlugins/audio/applySubtitlePolicy/1.0.0/index.js
+@@ -8,6 +8,14 @@
+     args.variables.ffmpegCommand.streams.forEach(s => {
+-        if (s.codec_type === 'subtitle' && !s.removed && !policy.keepSubtitle(s, plan)) {
++        if (s.codec_type !== 'subtitle' || s.removed) return;
++        if (!policy.keepSubtitle(s, plan)) {
+             s.removed = true;
+             args.jobLog(`[subtitle-policy] Removing unselected ${policy.language(s)} subtitle ${s.index}`);
++            return;
+         }
++        // FFmpeg otherwise promotes the first subtitle when none is default.
++        // A relative flag preserves forced/accessibility and any other flags;
++        // Tdarr resolves outputIndex after pruning and inserting audio tracks.
++        s.outputArgs = s.outputArgs || [];
++        s.outputArgs.push('-disposition:{outputIndex}',
++            Number((s.disposition || {}).default || 0) === 1 ? '+default' : '-default');
+     });
+--- a/FlowPlugins/LocalFlowPlugins/video/validateTranscodeOutput/1.0.0/index.js
++++ b/FlowPlugins/LocalFlowPlugins/video/validateTranscodeOutput/1.0.0/index.js
+@@ -1675,4 +1675,5 @@
+ var normalizeLanguage = function (stream) {
+-    var language = String(((stream.tags || {}).language) || 'und').toLowerCase();
+-    return language || 'und';
++    // Compare ISO language aliases semantically, as the frozen selection policy
++    // does. Matroska tools may spell the same language as deu/ger or fra/fre.
++    return require('../../../audio/resolveAudioPolicy/1.0.0/policy.js').language(stream);
+ };

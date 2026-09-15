@@ -1,35 +1,50 @@
 # FGS encoder and library repair: current work and handoff
 
-Status: **qualified finer-source hotfix deployed; ten non-FEL holds repaired;
-ordinary Tdarr restored after those repairs, now temporarily paused for the
-manually started full FEL canary. Primary library audit pass complete; current-version
-catch-up and review remain. Automatic-retention trials remain deferred and
-manual-start only.** Updated 2026-09-14.
+Status: **qualified finer-source encoder deployed; ordinary Tdarr running.
+The complete Beasts FEL candidate passed automated library mux/decode checks;
+physical playback and the remaining FEL production gates are pending. Eleven
+ordinary Tdarr subtitle metadata errors were diagnosed and their two plugin
+fixes deployed; full retries are in progress. Primary library audit pass complete;
+current-version catch-up and review remain. Automatic-retention trials remain
+deferred and manual-start only.** Updated 2026-09-15.
 
-September 14 FEL production work: the complete Beasts canary, independent full
-source-layer decodes and source-matched comparisons are running as finite,
-manually started jobs. Candidate `a72f589e` starts at ordinary `ef5c61fe` and adds
-verified scene boundaries plus fatal pipeline-error propagation. Prepared
-metadata, frame correspondence, bounded reconstruction and current-library track
-preservation tools are implemented and integrated here. Eight constructed
-sequences pass their 1,252-picture checks; their source-contiguous prefixes total
-1,244 pictures. The corrected playback pack uses those prefixes. All four
-originals remain held; no FEL replacement or new production encoder is installed.
+September 15 Tdarr errors: MobLand S01E01–S01E10 were rejected because the
+post-encode FFmpeg remux automatically marked the first subtitle as default.
+Horns was rejected because the validator treated German `deu`/`ger` aliases as
+different languages. Both are corrected in two local plugins; the ordinary
+encoder binary, flow, quality settings and validation decode workload remain
+unchanged. The 105-test suite, deployed-node checks and actual-file remux
+controls pass. Full retries started with S01E07 and Horns; the other nine
+MobLand episodes are admitted only after S01E07 succeeds. Read
+[the diagnosis and patch record](TDARR-SUBTITLE-ERRORS-20260915.md) and
+[live retry status](/opt/docker-apps/logs/tdarr-errors-20260915/retry-status.json)
+for completion. All eleven originals were preserved by the rejecting validator.
+
+September 15 FEL results: the complete Beasts candidate passed the corrected
+current-library mux validator, including all 182,867 output pictures, full strict
+libdav1d decoding, every RPU/static-HDR check, retained track bytes, chapters and
+native TrueHD clocks. Both complete source-layer decodes also passed. Source-
+matched comparisons finished; these two measured windows are not whole-film
+perceptual approval. The earlier frozen canary's TrueHD timing failure remains
+recorded; the corrected qualification reused the same completed video. Complete
+Bumblebee preparation passed (163,840 frames), without another GPU encode.
+No FEL replacement or new encoder was installed, and all four originals remain
+held. The user plans to check Apple TV/Infuse later.
+
 Read [the FEL production report](FEL-PRODUCTION-20260914.md) and
 [live work ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/work-plan.json)
-for exact pins, active units, failures retained as controls and remaining release
-gates. The focused checkout is `/home/bardie/git-repos/NVEnc-fgs-fel`; the
-combined branch includes its changes through `2d72d779`, but the broader encoder
-is not the isolated candidate. Its CPU suite passes and integrated `296993f9`
-compiled successfully. The subsequent host-tool changes add graph-entry evidence
-checks and exact native TrueHD clock preservation; the staged library fixture
-and shifted-audio negative controls pass. A separate finite unit will validate
-the completed full encode with the current library tracks. Complete Bumblebee
-preparation is also running without another GPU encode. The
-[initial FEL trial report](FEL-RECONSTRUCTION-20260914.md)
-retains its historical scope. Actual player/HDR approval and complete-film
-qualification remain pending. The canary owns its Tdarr pause and restores it
-after encoding or on failure. Deferred retention trials remain manual-start only.
+for exact pins and remaining release gates. The focused checkout is
+`/home/bardie/git-repos/NVEnc-fgs-fel`; candidate `a72f589e` starts at ordinary
+`ef5c61fe` and adds verified scene boundaries plus fatal pipeline-error
+propagation. The combined branch includes these changes, but its compiled
+`296993f9` is not the isolated GPU-qualified candidate. Prepared metadata,
+source correspondence, bounded reconstruction and current-library preservation
+checks are implemented. Runtime v3 adds graph-entry evidence requirements;
+exact native TrueHD clocks and shifted-audio rejection controls pass.
+The [initial FEL trial report](FEL-RECONSTRUCTION-20260914.md) retains its
+historical scope. Actual player/HDR approval, other complete-film qualifications
+and guarded FEL installation remain pending. Deferred retention trials remain
+manual-start only.
 
 September 14 audit: the primary decoded pass finished successfully at 10:57 UTC
 with 4,896 measured and 264 superseded versions. Current-version catch-up and
@@ -59,8 +74,9 @@ Production Tdarr and the repair worker now use isolated core `ef5c61fe`, binary
 SHA-256 `d8127dfa63011160dc222a41516452c269c2438269866b3da74f95e5ba4fd47b`.
 The exact image is `nvenc-fidelity/tdarr-node:2.87.01-ef5c61fe-20260912`, image ID
 `sha256:218540effe6149030631445914c8f35c6e81090326a8e4bbca55d0b57c3f50e4`.
-The prior `273723b7` deployment is retained for rollback. The production flow,
-25 local plugins, worker limits and routine validation are unchanged; all four
+The prior `273723b7` deployment is retained for rollback. At that encoder deployment, the production flow,
+25 local plugins, worker limits and routine validation were unchanged; the
+September 15 subtitle-only plugin corrections are recorded above. All four
 custom runtime tools were verified. Both routine monitors passed for the installed binary, and two
 ordinary repair workers were observed after releasing the audit-owned hold.
 Pause ownership and Emby playback yield remain in place.
