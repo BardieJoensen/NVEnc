@@ -1,10 +1,28 @@
 # FEL reconstruction: production qualification in progress
 
-Updated September 14, 2026. **The complete Beasts canary is running; no FEL
-replacement is installed. The four originals remain held.** Read the live
-[canary receipt](/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/full-canary.json)
-before interpreting this dated progress record. A completed short experiment
-does not close the production task.
+Updated September 15, 2026. **The complete Beasts candidate passed automated
+qualification with current-library tracks. No FEL replacement is installed;
+actual playback approval and other production gates remain open. All four
+originals remain held.** The authoritative result is the corrected
+[full-library receipt](/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/full-library-qualification.json).
+The earlier frozen canary's TrueHD timing failure remains separate historical
+evidence; the corrected validation reused its completed video.
+
+The full candidate has 182,867 pictures and passed strict libdav1d decoding,
+all RPU/static-HDR checks, chapter and retained-payload checks, and exact native
+TrueHD clock preservation. Both complete source-layer decodes passed. The
+staged library mux is 11,533,838,971 bytes, versus 10,342,050,816 bytes for the
+current library file and 66,993,725,383 bytes for the original remux. Its video
+container is 8,420,626,323 bytes. These are different source/fidelity baselines;
+full-file size is not a matched-quality comparison.
+
+The two precisely aligned reference windows finished at average PQ-code PSNR
+48.423216 and 51.125299 dB (164 and 100 pictures). These measurements do not
+establish whole-film visual equivalence or correct physical Dolby playback.
+Complete Bumblebee preparation also passed, with 163,840 frames; its full
+reconstruction/encode is not yet qualified. The user will review Apple TV/Infuse
+later. All finite September 14 units have finished, and their Tdarr pause was
+restored. September 15 ordinary Tdarr retries are a separate task.
 
 The canonical project entry point remains
 [WORK-TO-PRODUCTION.md](/home/bardie/git-repos/NVEnc-fgs-fidelity/tests/fgs/WORK-TO-PRODUCTION.md).
@@ -30,8 +48,9 @@ the deferred automatic-retention changes. Nothing starts that campaign.
 | Current-library validation harness | `86fbcc2f`, frozen in `scratch/pinned-library-v3`; includes explicit native TrueHD clocks |
 | Ordinary production encoder | `ef5c61fe`, SHA-256 `d8127dfa63011160dc222a41516452c269c2438269866b3da74f95e5ba4fd47b` |
 
-The production node image, ordinary flow, 25 local plugins and routine validator
-remain unchanged. The candidate binary is bind-mounted into disposable trial
+This FEL work did not change the production node image, ordinary flow or
+plugins. The separate September 15 subtitle metadata correction changed two
+Tdarr plugins; see the canonical handoff for that deployment. The candidate binary is bind-mounted into disposable trial
 containers. The FEL runtime is a separate image and has not been installed into
 the Tdarr node. Its receipt identifies every packaged file and the base image.
 It packages the previously built dependencies; it is not a new from-source build.
@@ -166,7 +185,7 @@ Known CLL/FALL values are retained. These are authoring values, not measurements
 of the new lossy encodes. The earlier all-1,000-nit clips remain picture
 diagnostics but are not qualified fallback-mastering examples for those titles.
 
-## Current complete-film trial
+## Complete-film trial design and results
 
 The manual, finite canary uses the complete Beasts original. Preparation has
 verified every source timestamp, all metadata, layer order, arithmetic ranges
@@ -176,8 +195,8 @@ RPU attached to every decoded EL picture during reconstruction.
 The producer is capped at four CPUs/6 GiB, the encoder at two CPUs/4 GiB,
 and each independent CPU validation unit at two CPUs/3 GiB. Swap is disabled
 for these limits. Active ordinary Tdarr jobs may finish alongside startup when
-at least 8 GiB of GPU memory is free; new Tdarr admission remains paused until
-the canary encode ends. Emby playback pauses both canary containers. Measurements
+at least 8 GiB of GPU memory is free; new Tdarr admission was paused until
+the canary encode ended. Emby playback pauses both canary containers. Measurements
 from overlap periods are not isolated throughput benchmarks.
 
 | User unit | Purpose |
@@ -193,8 +212,8 @@ boot schedule. They do not start unrelated trials. The full canary restores
 Tdarr before its subsequent CPU mux/decode validation. A failure leaves media
 staged and the original holds intact.
 
-The final staged container will retain the original source's audio, subtitles,
-attachments and chapters. Validation checks retained payloads, all retained
+The initial staged container retained the original source's audio, subtitles,
+attachments and chapters; its older TrueHD timing check rejected that mux. Validation checks retained payloads, all retained
 packet timestamps, exact encoded-video payload preservation during muxing,
 complete Dolby/static HDR data, the full video clock and strict decoded count.
 It also waits for the separate source-layer decode evidence. This canary uses
@@ -206,9 +225,9 @@ The reusable validator now accepts an explicit current-library path and expected
 identity for that subsequent staged mux. It requires the complete library video
 clock to match the reconstruction clock, applies the existing source-content
 alignment checks and rechecks both file identities. Negative controls reject
-missing/extra pictures, timestamp offsets and changed cadence. The running
-canary remains frozen on its earlier harness; this library option does not alter
-that active job or install anything. The separately bounded
+missing/extra pictures, timestamp offsets and changed cadence. The original
+canary remained frozen on its earlier harness. The subsequent corrected
+full-library qualification passed without installing anything. The separately bounded
 `fgs-fel-library-handoff-20260914` unit records the four current track inventories
 and the complete Beasts library alignment in `library-handoff.json`.
 That preflight is now complete. All four library copies have different track
@@ -239,21 +258,22 @@ chapters. A deliberate 100 ms TrueHD offset retains the audio bytes but fails
 the timing comparison; a mismatched native-clock proof also fails. An initial
 negative fixture accidentally changed track order and is retained separately.
 
-The original full canary stays frozen on its earlier validator and may hold on
-this strict TrueHD check. The separate `qualify_full_library.py` unit reuses only
+The original full canary was frozen on its earlier validator and rejected
+this strict TrueHD check as anticipated. The separate `qualify_full_library.py` unit reuses only
 its completed, hash-verified encoded video and performs the corrected full
 validation with current library tracks. It pins the helper scripts, binaries
 and host media tools. It neither installs a replacement nor releases sources.
 
 The two source comparison windows begin at original pictures 36,554 and
 115,251, with 164 and 100 contiguous reference pictures. Exact RPU sequence
-matching establishes their source locations. Preserve the two raw reference
-Y4Ms until `full-reference-comparison.json` reports measurement completion.
+matching establishes their source locations. Both comparisons are complete in `full-reference-comparison.json`. The raw
+reference Y4Ms can be archived with their receipts after dependent jobs finish.
 
 ## Remaining release gates
 
-1. Complete the full encode, independent source decodes, final mux checks and
-   full-source comparisons; review observed speed, size and texture behavior.
+1. Review completed Beasts speed, size and measured texture results. Its full
+   encode, independent source decodes and corrected final mux checks passed.
+   The two reference windows do not cover every scene in the film.
 2. Verify actual HDR/player behavior. The review clips are in
    `/media/merged-storage/media/test-encodes/FEL-production-20260914`. They are
    lossy candidates, repeated three times, with no audio. Ignore loop joins.
@@ -292,8 +312,8 @@ All paths below are relative to that ledger unless marked `scratch`.
 | Scalar reconstruction reference | `scratch/arithmetic-reference/*/result.json` |
 | Runtime packages and controls | `runtime-build-v2.log`, `runtime-qualification.json`, `runtime-qualification-v3.json`, `runtime-v3-prefix-header-correction.json`, `scratch/runtime-context-v*/fel/runtime-receipt.json` |
 | Full source preparation | `scratch/full-beasts/preparation.json` and `metadata/` |
-| Active complete-film job | `full-canary.json`, `run_full_canary.py`, `canary-harness-pin-v2.json` |
-| Full source and decoded output checks | `full-source-decode.json`, `scratch/full-canary/validation/validation.json` when created |
+| Initial complete-film job (older timing check rejected mux) | `full-canary.json`, `run_full_canary.py`, `canary-harness-pin-v2.json` |
+| Full source and decoded output checks | `full-source-decode.json`, `scratch/full-library-v3/validation/validation.json` (passed) |
 | Source-matched full encode measurements | `full-reference-comparison.json`, `post_full_alignment.py` |
 | Comparison seek controls | `comparison-seek-controls.json`: all four known frame starts pass |
 | Current library track inventory/alignment | `library-handoff.json`, `scratch/library-handoff/` |
