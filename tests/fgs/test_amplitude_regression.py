@@ -55,6 +55,66 @@ class AmplitudeRegressionTest(unittest.TestCase):
         wrong = self.source + 5.1
         self.assertFalse(assess(self.source, wrong, wrong, reference)['passed'])
 
+    def test_independent_source_supported_grain_is_not_pixel_loss(self):
+        # The same stationary picture and two independent noise realizations.
+        # This is exactly the distinction a grain-synthesis check must make;
+        # no encoder-produced positive or release candidate is used here.
+        shape = (FRAMES, 256, 256)
+        clean = np.full(shape, 80, dtype=np.float32)
+        rng = np.random.default_rng(431)
+        source = clean + rng.normal(0, .8, shape).astype(np.float32)
+        restored = clean + rng.normal(0, .8, shape).astype(np.float32)
+        result = assess(source, restored, clean, clean)
+        self.assertFalse(result['legacy_pixelwise_on_check']['passed'])
+        self.assertTrue(result['passed'])
+
+    def test_grain_on_a_clean_source_is_rejected_below_absolute_cap(self):
+        clean = np.full((FRAMES, 256, 256), 80, dtype=np.float32)
+        noisy = clean + np.random.default_rng(433).normal(0, .8, clean.shape).astype(np.float32)
+        result = assess(clean, noisy, clean, clean)
+        self.assertTrue(result['synthesis_passed'])
+        self.assertFalse(result['source_texture_check']['passed'])
+        self.assertFalse(result['passed'])
+
+    def test_too_much_grain_on_a_noisy_source_is_rejected(self):
+        clean = np.full((FRAMES, 256, 256), 80, dtype=np.float32)
+        rng = np.random.default_rng(439)
+        source = clean + rng.normal(0, .8, clean.shape).astype(np.float32)
+        noisy = clean + rng.normal(0, 1.8, clean.shape).astype(np.float32)
+        result = assess(source, noisy, clean, clean)
+        self.assertTrue(result['synthesis_passed'])
+        self.assertFalse(result['source_texture_check']['passed'])
+        self.assertFalse(result['passed'])
+
+    def test_coarse_overlay_cannot_hide_in_a_correct_base(self):
+        clean = np.full((FRAMES, 256, 256), 80, dtype=np.float32)
+        y, x = np.indices((256, 256))
+        overlay = np.where((x//32+y//32) % 2, .8, -.8).astype(np.float32)
+        result = assess(clean, clean + overlay, clean, clean)
+        self.assertTrue(result['base_source_check']['passed'])
+        self.assertTrue(result['synthesis_passed'])
+        self.assertFalse(result['displayed_coarse_source_check']['passed'])
+        self.assertFalse(result['passed'])
+
+    def test_new_blur_cannot_hide_behind_grain(self):
+        rng = np.random.default_rng(443)
+        y, x = np.indices((256, 256))
+        picture = (80 + 2*((x//2) % 2)).astype(np.float32)
+        source = np.repeat(picture[None], FRAMES, axis=0)
+        blurred = np.full(source.shape, 81, dtype=np.float32)
+        noisy = blurred + rng.normal(0, .8, source.shape).astype(np.float32)
+        result = assess(source, noisy, blurred, source)
+        self.assertFalse(result['base_source_check']['passed'])
+        self.assertFalse(result['passed'])
+
+    def test_no_source_texture_coverage_is_not_synthesis_clearance(self):
+        noise = np.random.default_rng(449).normal(0, .05, self.source.shape).astype(np.float32)
+        result = assess(self.source, self.source + noise, self.source, self.source)
+        self.assertTrue(result['synthesis_passed'])
+        self.assertEqual(max(result['source_texture_check']['source_flat_tile_counts']), 0)
+        self.assertFalse(result['source_texture_check']['passed'])
+        self.assertFalse(result['passed'])
+
 
 if __name__ == "__main__":
     unittest.main()
