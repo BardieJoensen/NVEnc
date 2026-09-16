@@ -1,6 +1,8 @@
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest import mock
+import tempfile
 import numpy as np
 
 spec=importlib.util.spec_from_file_location('source_plane_review',Path(__file__).parents[2]/'tools/fgs/source_plane_review.py')
@@ -8,6 +10,45 @@ m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 
 
 class SourceReview(unittest.TestCase):
+    def review_with_source_times(self, initial, recovered, recovered_level=128):
+        times=[10+i*.04 for i in range(12)]
+        def fake_decode(path,start,width,height,count,directory,name,grain=None,**kwargs):
+            selected=initial if name=='source' else recovered if name=='source-preroll' else times
+            value=recovered_level if name=='source-preroll' else 128
+            planes=[np.full((len(selected),108,192),value*256,np.uint16),
+                    np.full((len(selected),54,96),128*256,np.uint16),
+                    np.full((len(selected),54,96),128*256,np.uint16)]
+            return planes,selected
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(m,'decode',side_effect=fake_decode) as decode:
+            result=m.review('source','output',10,192,108,0,Path(d))
+        return result,decode.call_args_list
+
+    def test_source_preroll_restores_all_original_output_pictures(self):
+        times=[10+i*.04 for i in range(16)]
+        result,calls=self.review_with_source_times(times[2:],times)
+        self.assertEqual(result['status'],'source_compared')
+        self.assertEqual(result['alignment']['output_pts'],times[:12])
+        self.assertEqual(result['measurements']['frames'],12)
+        self.assertEqual(result['source_recovery']['preroll_seconds'],10)
+        self.assertEqual(calls[-1].kwargs,{'preroll_seconds':10})
+
+    def test_source_preroll_cannot_hide_a_remaining_missing_picture(self):
+        times=[10+i*.04 for i in range(16)]
+        with self.assertRaisesRegex(ValueError,'every output picture'):
+            self.review_with_source_times(times[2:],times[:5]+times[6:])
+
+    def test_source_preroll_does_not_bypass_content_correspondence(self):
+        times=[10+i*.04 for i in range(16)]
+        result,_=self.review_with_source_times(times[2:],times,160)
+        self.assertEqual(result['status'],'alignment_review_required')
+        self.assertFalse(result['source_measurement_eligible'])
+
+    def test_valid_source_window_has_no_new_decode_or_result_fields(self):
+        times=[10+i*.04 for i in range(16)]
+        result,calls=self.review_with_source_times(times,times)
+        self.assertEqual(len(calls),3)
+        self.assertNotIn('source_recovery',result)
+
     def test_constant_reader_time_offset_is_explicit(self):
         self.assertEqual(m.align_indices([.042,.083,.125],[0,.042,.083],.042),[(0,0),(1,1),(2,2)])
 

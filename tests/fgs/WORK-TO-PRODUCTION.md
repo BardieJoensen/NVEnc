@@ -1,12 +1,13 @@
 # FGS encoder and library repair: current work and handoff
 
-Status: **the focused ordinary-mode amplitude correction `2fa6cfd0` is
-qualified and deployed. Seven selected follow-up repairs are installed and
-postchecked; Play Dirty and Eric Andre S05E10 now run through normal replacement
-and preservation checks using their qualified full-run trials. Tdarr remains
-paused and the repair coordinator stopped until their installed-version checks
-finish. The current-version audit continues. FEL playback/production gates and
-manual-only automatic-retention studies remain separate and deferred.**
+Status: **ordinary core `2fa6cfd0` is deployed and its nine selected follow-up
+repairs are installed and postchecked. Broader source review found remaining
+excess synthesis in this build; normal workers stay paused under the existing
+owned fidelity hold. The isolated `95736a03` source-variance prototype is building
+and is not qualified or deployed. Finite current-version scans and retries are
+complete: 5,354 display measurements, 127 native-only measurements and two
+source-pairing gaps among 5,483 current AV1 files. Visual review remains open.
+FEL playback and manual-only automatic-retention studies remain separate.**
 Updated 2026-09-16.
 
 Read `amplitude-qualification.json`, `amplitude-rollout/report.json`,
@@ -45,9 +46,38 @@ and rejects both retained bad witnesses. See
 [the amplitude regression and limits](AMPLITUDE-GUARD-20260916.md).
 Do not reinterpret sampled passes as whole-library perceptual clearance.
 
-The separately owned `fgs-current-city-fidelity-20260916` hold stays until the
-two selected replacements are postchecked. Do not release it based on the seven
-earlier completions. Sources/backups remain protected. Integration commit `5f197758` in the broader fidelity branch passes the full
+The separately owned `fgs-current-city-fidelity-20260916` hold remains for the
+new source-support failure. Do not release it on nine-repair or scan completion.
+`amplitude-scope-pilot-review.json` records ten new source/pilot comparisons:
+five improved witnesses, four conspicuous remaining mismatches (Severance
+S02E02, Taskmaster DK S10E01/S10E05, Chestnut Man S01E02) and a further Sugar
+S02E07 mismatch awaiting severity/recurrence review. No extra replacements or
+downloads are selected from these stills. Six initial short-clip extraction
+failures have successful diagnostic retries with explicit timestamp passthrough;
+the initial failures are retained.
+
+The Severance 2232.439-second light-panel source sigma is 0.977 codes versus
+13.865 codes of added synthesis. Native 12-frame measurements and actual
+source/on/off images are in its `amplitude-scope-pilots/` evidence. The new
+`/home/bardie/git-repos/NVEnc-fgs-source-variance` worktree, branch
+`fix/fgs-source-variance-20260916`, tests an 8x8 luma total-variance ceiling,
+including thin near-white regions excluded by the quiet-source guard. Read its
+`tests/fgs/SOURCE-VARIANCE-20260916.md` and live `source-variance/` receipts.
+CPU checks pass; GPU, negative controls, genuine grain, whole-source behavior
+and performance remain unqualified. Two local build setup failures (missing
+untracked cargo-c cache and uninitialized pinned submodules) remain recorded.
+The retry uses the existing cache read-only and local exact submodule revisions;
+networking remains disabled. Sources/backups remain protected.
+
+The fourteen later display/source pairing errors are restored using the
+already-qualified ten-second source preroll, preserving every original output
+picture and four unchanged positive controls. They cover Flame and Citron plus
+one window each in Scrubs S04E21/S03E15. `source-window-retry/` retains the
+original failures, restored measurements and fork qualification. This recovery
+is now in the fork's display source helper, with 18 source-review and 13 native
+controls passing. It changes audit recovery only. Current follow-up reports
+contain 5,945 source-compared windows, 96 grain-absent windows and 308 unpaired
+windows; the separate two native Scrubs source-decoder gaps remain open. Integration commit `5f197758` in the broader fidelity branch passes the full
 CPU suite (`amplitude-branch-integration.json`). That does not qualify or deploy
 the combined GPU binary, and
 future FEL qualification must include this ordinary-core correction.
@@ -64,12 +94,13 @@ measurements and 129 native-source checks for SD files lacking colour tags.
 Source discovery adds 202 retained originals: 585 of 611 now have candidates
 for per-window source alignment, and 23 additional torrents are held against
 cleanup. The 515 diagnostic candidates remain a review queue, not a damaged-file
-list. Thirty distinct files have actual visual observations. Owl House
+list. Forty distinct files have actual visual observations. Owl House
 S02E08 and Adventure Time S07E25 are repaired from retained originals, with zero
 strong source-flat frames in the previously affected measured regions and fresh
 installed-version checks. All 611 header scans pass. Native measurements cover
 127 of 129 versions; two early-picture source-pairing gaps remain explicit.
-Operational pause timeouts have qualified retries; display measurements continue.
+Operational pause timeouts have qualified retries. All finite scans/retries
+finished at 09:04 UTC; source/display gaps remain explicit in `reconciliation/`.
 
 Whole-image amplitude now complements quiet-source area in review ordering.
 The older Gentlemen S01E01 repair has a severe pattern around 38:45 despite a
@@ -80,9 +111,10 @@ remain documented. Steven Universe S02E27 and Regular Show S02E06 pass 24
 source windows each; full-duration selected-region stronger events fall from
 670/1,055 to zero, with improved source/old/current visual witnesses. Their
 retained-source replacements are installed and pass fresh 12/13-window checks.
-All seven completions, sizes and rollback paths are recorded in the live ledger
-`seven-repairs-completed.json`. Play Dirty
-is a separate deployed-image trial of the severe full-image city witness.
+All nine completions, sizes and rollback paths are recorded in the live ledger
+`nine-repairs-completed.json`, including Play Dirty and Eric Andre S05E10
+with `2fa6cfd0`. Their installed containers grow 9.5771% / 1.3377% versus
+their prior installed files; these are different baselines from video trial deltas.
 The additional full-image-ranked witnesses include genuine added grain and
 intentional source effects; neither priority list is a damaged-file list.
 The remaining recurrence and contextual review work stays open.
@@ -346,6 +378,13 @@ The September 12 application upgrade preceded this encoder rollout; its initial
 encoder image is historical. The current runtime is pinned above.
 
 ## What happens next
+
+The immediate ordinary-core work is the remaining source-support failure above.
+Finish the `source-variance/` experiments and preserve all failing controls.
+The finite audit scan is complete; source-window gap review and watchability
+classification remain open. Do not release the runtime admission hold because
+nine repairs or the scan have finished. The separate retention plan below is
+still deferred.
 
 **Retention GPU trials are prepared, not running or scheduled to start automatically.**
 The user explicitly confirmed manual start only: wait for the repair to finish

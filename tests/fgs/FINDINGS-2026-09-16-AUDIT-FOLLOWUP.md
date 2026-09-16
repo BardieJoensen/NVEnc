@@ -1,10 +1,30 @@
 # Approved audit follow-up — September 16
 
-Status: **both approved films and two retained-source episode repairs installed
-and postchecked; current-version audit and source-backed review running.**
-A further Gentlemen S01E01 replacement is passing normal installation gates.
-The comprehensive audit remains open. Production encoder and routine Tdarr
-validation are unchanged.
+Status: **nine selected replacements installed and postchecked; finite scans
+and retries complete. Ordinary `2fa6cfd0` is deployed, but broader source review
+found remaining excessive synthesis. Tdarr stays paused and the coordinator
+stopped under the existing owned fidelity hold. The isolated `95736a03`
+source-variance prototype is building; it is not qualified or deployed. Routine
+Tdarr validation is unchanged.**
+
+Current reconciliation: 5,354 reference-display measurements, 127 native-only
+measurements and two source-pairing gaps across 5,483 AV1 files. Forty distinct
+files have actual visual observations. Of 510 current diagnostic candidates,
+491 remain without a recorded visual review; this is not a damaged-file count.
+A bounded source-seek retry then restored all 14 remaining display/source
+window errors, with the same output pictures and four exactly unchanged
+positive controls. The current follow-up ledger has 5,945 source-compared,
+96 grain-absent and 308 unpaired windows. The original failures remain in
+`reconciliation-before-source-window-retry/`; the two native Scrubs source-
+decoder gaps remain unresolved. Completion of the finite scan is not completion
+of perceptual review.
+
+`nine-repairs-completed.json` includes the completed Play Dirty / Eric Andre
+S05E10 replacements and fresh installed-version checks. Do not release the
+worker hold based on those completions: the later ten short pilots improve five
+witnesses but retain four conspicuous mismatches and one further unresolved
+mismatch. `amplitude-scope-pilot-review.json` pins the comparisons; the current
+[canonical handoff](WORK-TO-PRODUCTION.md) identifies the prototype and gates.
 
 Start with [live progress and job health](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/status.json)
 and the [local work record](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/README.md).
@@ -254,12 +274,15 @@ review backlog. Its completion never means whole-library perceptual clearance.
 
 ## Required finish
 
-1. All seven earlier selected repairs are installed and postchecked. The later
-   amplitude correction is qualified and deployed. Finish normal preservation
-   and exact installed-version checks for Play Dirty and Eric Andre before
-   releasing its separately owned admission hold and resuming ordinary encoding.
-2. Finish the 611-file queues; resolve failures and later changed versions.
-   Preserve the native route's display-mapping limitation.
+1. All nine selected repairs are installed and postchecked. Keep ordinary
+   encoding paused for the remaining source-support failure. Qualify the
+   isolated source-variance prototype against bad and genuine-grain controls,
+   real witnesses, full sources, HDR, prior regressions and performance before
+   considering deployment and release of the separately owned admission hold.
+2. The 611-file queues and retries are complete, including fourteen restored
+   display/source windows. Keep the two native source-decoder and missing-colour
+   gaps explicit. Investigate new versions and unresolved correspondence without
+   relaxing alignment or assigning missing colour metadata.
 3. Complete contextual candidate review and recurrence using both source-quiet
    and full-image priorities; qualify further repairs where severity/persistence
    warrants them. The five mapped HDR stills retain their playback limitation.
@@ -295,7 +318,8 @@ coordinator was stopped, Tdarr remains paused, and a separately owned
 `worker-admission-hold.json` blocks new repairs. Read-only audit jobs and source
 protection continue. At that pause, no production binary changed and no Play Dirty replacement
 was installed. The later qualified rollout below supersedes that state; the
-owned operational hold remains until the two new installations are postchecked.
+owned operational hold now remains for the later source-support failure; the
+two new installations are complete and postchecked.
 No optional-retention campaign was started.
 
 ## Qualified amplitude correction and rollout
@@ -368,7 +392,8 @@ worker's full decoding, grain, timing, audio/subtitle/attachment/chapters and
 atomic installation gates. `amplitude-repairs/` retains previous receipts and
 normal worker logs; `amplitude-repair-verification/` measures exact installed
 versions with prior witnesses included. Tdarr stays paused and the owned city
-hold remains until these finish. No further download is selected.
+hold remains for the later source-support failure. These two repairs are now
+complete and postchecked; no further download is selected.
 
 The broader fidelity branch commit `5f197758` incorporates the same mandatory entry condition
 while preserving optional local/covariance/chroma guards. Its combined binary
@@ -379,7 +404,7 @@ Future FEL release work must incorporate and qualify this core correction.
 The deferred automatic-retention campaign remains manual-start only.
 
 High-ranked Bridge and Severance witnesses contain strong source effects and
-do not justify repairs from their flags alone. Thirty distinct files have actual
+do not justify repairs from their flags alone. Forty distinct files have actual
 visual observations; the initial 515 candidates remain a review queue rather
 than a damaged-file count. All 9 second-batch selected-region recurrence scans
 are complete. Current coverage and the reconciled review backlog remain in the

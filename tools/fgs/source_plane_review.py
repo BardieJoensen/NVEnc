@@ -151,12 +151,29 @@ def review(source_path, output_path, start, width, height, source_offset, direct
     on,on_times=decode(output_path,start,width,height,12,directory,'on',1)
     off,off_times=decode(output_path,start,width,height,12,directory,'off',0)
     if on_times!=off_times:raise RuntimeError('grain-on/off picture timing differs')
-    matches=align_indices(source_times,on_times,source_offset)
+    source_recovery=None
+    try:
+        matches=align_indices(source_times,on_times,source_offset)
+    except ValueError as error:
+        if str(error) != 'source alignment does not cover every output picture':
+            raise
+        # A source seek may omit reference-dependent leading pictures or use
+        # a different container start offset. Reuse the qualified bounded
+        # preroll, then require every original output timestamp and the same
+        # source-content match. Keep the failed first decode logs intact.
+        source_recovery=dict(initial_error=str(error),preroll_seconds=10)
+        del source
+        source,source_times=decode(source_path,start+source_offset,width,height,16,
+            directory,'source-preroll',preroll_seconds=10)
+        matches=align_indices(source_times,on_times,source_offset)
     si,oi=zip(*matches);source=[p[list(si)] for p in source];on=[p[list(oi)] for p in on];off=[p[list(oi)] for p in off]
     rms=[float(np.sqrt(np.mean((coarse_picture(a)-coarse_picture(b))**2))) for a,b in zip(source[0],off[0])]
     alignment=dict(source_offset_seconds=source_offset,coarse_picture_rms=rms,source_pts=[source_times[i] for i in si],output_pts=[on_times[i] for i in oi],
         passed=max(rms)<=4.0,criterion='all aligned sampled coarse luma pictures within 4 native eight-bit RMS; diagnostic threshold, not a fidelity grade')
     if not alignment['passed']:
-        return dict(status='alignment_review_required',alignment=alignment,source_measurement_eligible=False)
-    return dict(status='source_compared',source_measurement_eligible=True,alignment=alignment,
-                measurements=measure_planes(source,on,off,alignment['output_pts']))
+        result=dict(status='alignment_review_required',alignment=alignment,source_measurement_eligible=False)
+    else:
+        result=dict(status='source_compared',source_measurement_eligible=True,alignment=alignment,
+                    measurements=measure_planes(source,on,off,alignment['output_pts']))
+    if source_recovery:result['source_recovery']=source_recovery
+    return result
