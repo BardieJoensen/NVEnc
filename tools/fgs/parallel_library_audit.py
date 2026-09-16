@@ -28,6 +28,21 @@ def ordered_items(items, priorities, completed):
         -item.get('installed_at', 0), item['path']))
 
 
+def header_phase_complete(path, consumer_started, now=None):
+    now = time.time() if now is None else now
+    try:
+        state = json.loads(Path(path).read_text())
+    except FileNotFoundError:
+        # The producer can still be loading its manifest when the consumer
+        # starts. Allow bounded startup, without silently waiting forever.
+        if now-consumer_started < 60:
+            return False
+        raise RuntimeError('header producer did not publish its initial status')
+    if not state.get('phase_complete') and now-state['updated_at'] > 15000:
+        raise RuntimeError('header producer stopped publishing; manual resume required')
+    return state.get('phase_complete', False)
+
+
 def run_queue(items, workers, header_for, measure, publish, resource_error,
               headers_finished, stop, sleep=time.sleep):
     """Only the coordinator publishes; failed admission keeps a file pending."""
@@ -74,11 +89,17 @@ def run_queue(items, workers, header_for, measure, publish, resource_error,
                 continue
             if paused is not None or stop.is_set():
                 break
-            if pending and headers_finished():
-                results.extend(dict(key=item['key'], version=item['version'],
-                                    status='header_missing') for item in pending)
-                pending.clear()
-                break
+            if pending:
+                try:
+                    finished = headers_finished()
+                except Exception as error:
+                    paused = 'header producer status unavailable: ' + str(error)
+                    break
+                if finished:
+                    results.extend(dict(key=item['key'], version=item['version'],
+                                        status='header_missing') for item in pending)
+                    pending.clear()
+                    break
             if pending:
                 publish(results, pending, active, paused)
                 sleep(10)
@@ -180,10 +201,7 @@ def main():
             return result
 
         def headers_finished():
-            state = json.loads((args.headers/'status.json').read_text())
-            if not state.get('phase_complete') and time.time()-state['updated_at'] > 15000:
-                raise RuntimeError('header producer stopped publishing; manual resume required')
-            return state.get('phase_complete', False)
+            return header_phase_complete(args.headers/'status.json', began)
 
         return run_queue(items, args.workers, header_for, measure, publish,
                          method.AuditResourceUnavailable, headers_finished, stop)

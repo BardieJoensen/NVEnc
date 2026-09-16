@@ -56,6 +56,36 @@ These are offline audit jobs, outside routine Tdarr validation. The
 VC-1 alignment, clipping-negative and old/repaired-colour controls, runtime pins
 and the remaining whole-library review.
 
+### Missing colour metadata
+
+`native_source_audit.py` handles source-backed inputs whose colour tags cannot
+support reference-display mapping. It never guesses a transfer function or
+labels native code levels as display visibility. Its result status is
+`native_measured_display_unavailable`, separate from display-based measurements.
+
+```sh
+python3 tools/fgs/native_source_audit.py missing-colour-manifest.json \
+    --headers /scratch/audit/headers --output-dir /scratch/audit/native-source \
+    --measurement-tools /path/to/frozen-qualified-tools \
+    --qualification /path/to/source-tool-qualification.json
+```
+
+The qualification pins `library_audit.py`, `decoded_library_audit.py` and
+`source_plane_review.py`. Every selected displayed frame must match the header
+timestamps, with all native Y/U/V samples present. Source pairing covers every
+output picture and retains the existing independent content-alignment threshold.
+Noise and uniform code shifts remain separate. A changed grain-free picture,
+missing frame or partial colour plane fails measurement. Source statistics
+still use complete blocks and report uncovered edge strips. Missing display
+coverage and visual review remain explicit limitations.
+
+Nine CPU controls and two actual untagged SD episodes qualify 24 windows,
+336 displayed frames and 24 source comparisons. The parallel scheduler also
+tolerates startup before the header producer creates its status file; missing
+or stalled producers checkpoint pending work rather than consume media as
+failures. Eleven scheduler tests cover startup, concurrency and resource limits.
+See the [September 16 record](../../tests/fgs/FINDINGS-2026-09-16-AUDIT-FOLLOWUP.md).
+
 ## Header transition triage
 
 `grain_transitions.cpp` reads the first video stream through FFmpeg's AV1

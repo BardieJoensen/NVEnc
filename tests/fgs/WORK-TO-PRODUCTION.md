@@ -2,11 +2,22 @@
 
 Status: **qualified finer-source encoder deployed; ordinary Tdarr running.
 The complete Beasts FEL candidate passed automated library mux/decode checks;
-physical playback and the remaining FEL production gates are pending. Eleven
-ordinary Tdarr subtitle metadata errors were diagnosed and their two plugin
-fixes deployed; full retries are in progress. Primary library audit pass complete;
-current-version catch-up and review remain. Automatic-retention trials remain
-deferred and manual-start only.** Updated 2026-09-15.
+physical playback and the remaining FEL production gates are pending. All eleven
+ordinary Tdarr subtitle error retries succeeded. Two approved extended-cut
+originals were recovered and are encoding; current-version audit and candidate
+review are running. Automatic-retention trials remain deferred and manual-start
+only.** Updated 2026-09-16.
+
+September 16: the user approved recovery/retranscode of the two extended Girl
+films with confirmed multi-second story-scene gaps, completion of current-version
+coverage and review of remaining diagnostic candidates. Both exact originals
+(77.26 GB total) are downloaded and encoding with the ordinary qualified core.
+This is a narrow two-release exception; the general recovery hold remains intact.
+The immutable follow-up covers 611 current AV1 versions: 482 qualified display
+measurements and 129 native-source checks for SD files lacking colour tags.
+The 515 diagnostic candidates remain a review queue, not a damaged-file list.
+Read the [follow-up and qualification record](FINDINGS-2026-09-16-AUDIT-FOLLOWUP.md)
+and [live job health and coverage](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/status.json).
 
 September 15 Tdarr errors: MobLand S01E01–S01E10 were rejected because the
 post-encode FFmpeg remux automatically marked the first subtitle as default.
@@ -147,8 +158,9 @@ unfinished. No diagnostic flag authorizes mass downloads.
 The earlier [source-guard report](SOURCE-GUARD-20260912.md),
 [flicker report](FLICKER-20260912.md) and `grain-recovery-followup-20260912/`
 describe their named older builds and dated qualifications. Their 36-file counts
-and earlier production pins are historical. The source-recovery download hold
-remains in force. No new download or optional retention campaign was started.
+and earlier production pins are historical. The general recovery download hold
+remains in force; the September 16 two-release approval above is the only new
+recovery exception. No optional retention campaign was started.
 
 This is the canonical entry point for resuming this project. Read the current
 state and next steps here before using an older findings report or work ledger.

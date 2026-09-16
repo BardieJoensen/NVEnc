@@ -1,5 +1,7 @@
 import importlib.util
+import json
 from pathlib import Path
+import tempfile
 import threading
 import unittest
 
@@ -96,6 +98,34 @@ class ParallelAudit(unittest.TestCase):
             m.ordered_items([item('a'),item('a')], {}, set())
         with self.assertRaisesRegex(ValueError, 'multiple versions'):
             m.ordered_items([item('a'),dict(item('a'),version='v2')], {}, set())
+
+    def test_consumer_can_start_before_header_status_exists(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'status.json'
+            self.assertFalse(m.header_phase_complete(path, 100, now=100.2))
+            with self.assertRaisesRegex(RuntimeError, 'initial status'):
+                m.header_phase_complete(path, 100, now=161)
+            path.write_text(json.dumps(dict(phase_complete=False, updated_at=162)))
+            self.assertFalse(m.header_phase_complete(path, 100, now=163))
+
+    def test_stale_producer_is_not_completed_coverage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'status.json'
+            path.write_text(json.dumps(dict(phase_complete=False, updated_at=100)))
+            with self.assertRaisesRegex(RuntimeError, 'stopped publishing'):
+                m.header_phase_complete(path, 100, now=15101)
+
+    def test_header_producer_failure_keeps_work_pending_and_publishes_pause(self):
+        updates=[]
+        def failed():
+            raise RuntimeError('producer gone')
+        code=m.run_queue([item('a')],1,lambda _:None,lambda *_:self.fail('no header'),
+            lambda results,pending,active,paused:updates.append((list(results),list(pending),paused)),
+            ResourcePause,failed,threading.Event())
+        self.assertEqual(code,75)
+        self.assertEqual(updates[-1][0],[])
+        self.assertEqual(updates[-1][1],[item('a')])
+        self.assertIn('producer gone',updates[-1][2])
 
 
 if __name__ == '__main__':
