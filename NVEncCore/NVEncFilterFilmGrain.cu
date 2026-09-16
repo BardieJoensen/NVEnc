@@ -2360,14 +2360,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 const auto& evidence = metrics[i].sourceVarianceRegions[region];
                 const double mean = evidence.mean / depthScale;
                 const double sigma = evidence.sigma / depthScale;
-                const int level = clamp(static_cast<int>(std::lround(mean)), 0, 255);
-                const double modeled = predicted[0][level] / depthScale;
+                const int first = clamp(static_cast<int>(std::floor(evidence.minCode / depthScale)) - 4, 0, 255);
+                const int last = clamp(static_cast<int>(std::ceil(evidence.maxCode / depthScale)) + 4, 0, 255);
+                const double modeled = film_grain_range_peak(predicted[0], values[0], counts[0], first, last) / depthScale;
                 const double gain = sourceVariance.observe(mean, sigma, modeled,
                     std::min(8, blockWidth - (region % 4) * 8),
                     std::min(8, blockHeight - (region / 4) * 8));
                 if (gain < 1.0) {
-                    const int first = clamp(static_cast<int>(std::floor(evidence.minCode / depthScale)) - 4, 0, 255);
-                    const int last = clamp(static_cast<int>(std::ceil(evidence.maxCode / depthScale)) + 4, 0, 255);
                     m_state->sourceCaps.preserveRange(0, first, last, gain);
                 }
             }
