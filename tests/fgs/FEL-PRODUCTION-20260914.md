@@ -1,4 +1,19 @@
-# FEL reconstruction: production qualification in progress
+# FEL reconstruction: held; original HEVC films restored
+
+September 16 user decision: **keep FEL encoding disabled and restore the original
+HEVC versions in Movies.** Bumblebee, TRON: Legacy, Transformers: Rise of the
+Beasts and Transformers: The Last Knight now use the unchanged retained remuxes.
+Physical source and library paths share the same inodes, preserving every byte
+without another 249.91 GB of video payload. Their previous AV1 versions remain
+as 55.51 GB of rollback backups. Emby and Radarr identify all four as HEVC;
+their folders are excluded from Tdarr and stale AV1 database entries were removed.
+Source cleanup protection remains intact. See the
+[restoration receipt](/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/original-restore-20260916/report.json).
+
+FEL experiments and rollout are deferred pending an explicit new user decision.
+The qualifications below describe the earlier candidate. Its current-library
+track validation used the prior AV1 files; any future candidate must use fresh
+track inventories and identities from the restored originals.
 
 Updated September 16, 2026. **The complete Beasts candidate passed automated
 qualification with current-library tracks. The user reports no visible mistakes
@@ -272,6 +287,9 @@ matching establishes their source locations. Both comparisons are complete in `f
 reference Y4Ms can be archived with their receipts after dependent jobs finish.
 
 ## Remaining release gates
+
+These are deferred prerequisites, not permission to resume FEL development or
+replace the restored originals. The explicit user hold takes precedence.
 
 1. Review completed Beasts speed, size and measured texture results. Its full
    encode, independent source decodes and corrected final mux checks passed.

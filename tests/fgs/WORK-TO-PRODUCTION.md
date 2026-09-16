@@ -8,8 +8,29 @@ and completed ten short trials; review and broader qualification remain pending.
 It is not deployed. Finite current-version scans and retries are
 complete: 5,354 display measurements, 127 native-only measurements and two
 source-pairing gaps among 5,483 current AV1 files. Visual review remains open.
-FEL playback and manual-only automatic-retention studies remain separate.**
+FEL encoding is held at the user's request; all four untouched HEVC originals
+are restored in Movies. Automatic-retention studies remain manual-start only.**
 Updated 2026-09-16.
+
+September 16 source/repair reconciliation: 1,882 installed repair receipts resolve
+to 1,874 unchanged outputs, five later changes at the same path and three newer
+movie releases. Of the unchanged outputs, 1,872 predate the latest amplitude
+build; age alone does not establish damage. The diagnostic review queue includes
+509 repaired paths. The two completed Girl-film sources have returned to ordinary
+`radarr-longterm` handling and 30-day total-seeding limits. The other 343 audit
+tags remain: 340 have outstanding dependency review, one retains the Play Dirty
+regression source, and two protect FEL originals. The other two FEL originals
+already have non-cleanup NordicBits policy. Seeding was never paused by these tags.
+
+Ordinary Tdarr had resumed by the restoration preflight. New admission was paused
+again; the two running jobs (Neagley S01E01 and Reacher S04E08) finished successfully
+and need current-version audit. The cause of the intervening resume is not
+established; the Emby watchdog did not report owning or releasing this pause.
+After excluding the four restored HEVC films, the current Tdarr AV1 index has
+5,481 paths, including those two new versions beyond the finite audit snapshot.
+The node is paused with no active workers. Read
+[repair lineage, source releases and original restoration](SOURCE-RELEASE-20260916.md)
+and its live receipts before releasing further sources or resuming FEL work.
 
 Read `amplitude-qualification.json`, `amplitude-rollout/report.json`,
 `amplitude-repairs/status.json` and `amplitude-repair-verification/status.json`
@@ -154,6 +175,12 @@ Tdarr exclusion were removed as requested, and Emby's index was verified clear.
 Original test clips and qualification evidence remain available. The
 [feedback and cleanup receipt](/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/emby-playback-pack-20260916/cleanup-20260916.json)
 records the exact observation; it does not release the remaining FEL gates.
+The user subsequently requested the untouched HEVC originals in Movies and
+disabled FEL encoding. All four are restored through hardlinks, with the old
+AV1 versions backed up, exact source-inode identity verified, Emby/Radarr
+metadata refreshed and the four folders excluded from Tdarr. The historical
+FEL candidate's library-track qualification no longer describes these restored
+library track selections. Future FEL work requires an explicit new user decision.
 
 Read [the FEL production report](FEL-PRODUCTION-20260914.md) and
 [live work ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/work-plan.json)
