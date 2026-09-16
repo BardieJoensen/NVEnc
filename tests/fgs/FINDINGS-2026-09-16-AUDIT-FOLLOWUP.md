@@ -254,9 +254,10 @@ review backlog. Its completion never means whole-library perceptual clearance.
 
 ## Required finish
 
-1. All seven selected repairs are installed and postchecked. Their admission
-   holds were released, but the later Play Dirty deployed-build failure has a
-   separate active hold. Isolate and qualify a correction before resuming encoding.
+1. All seven earlier selected repairs are installed and postchecked. The later
+   amplitude correction is qualified and deployed. Finish normal preservation
+   and exact installed-version checks for Play Dirty and Eric Andre before
+   releasing its separately owned admission hold and resuming ordinary encoding.
 2. Finish the 611-file queues; resolve failures and later changed versions.
    Preserve the native route's display-mapping limitation.
 3. Complete contextual candidate review and recurrence using both source-quiet
@@ -269,7 +270,7 @@ All eleven September 15 ordinary Tdarr error retries succeeded. Four FEL
 repairs remain separately held for production/playback qualifications. Optional
 retention GPU trials remain manual-start only and were not started here.
 
-## Current deployed-build failure: Play Dirty
+## Previous deployed-build failure: Play Dirty (`ef5c61fe`)
 
 The full-source trial **fails actual visual qualification**. The exact deployed
 image retains severe source-absent grain across the city at 856.375 s and strong
@@ -282,8 +283,7 @@ establish full-picture fidelity.
 
 `city-reproducer/` records a bounded 30-second default-mode encode in the exact
 production image, with debug model traces. Around 856.375 s the source estimate
-is much lower than the held grain curve still being emitted. This is a lead,
-not a completed root-cause finding. Independently paired native source/on/off
+is much lower than the held grain curve still being emitted. This lead was isolated by the default-mode correction described below. Independently paired native source/on/off
 decodes find median source 16x16 sigma 8.69 versus synthesized-grain sigma 26.13
 (native code values normalized to eight bits); 4,034 of 6,000 blocks exceed
 source sigma by both 1.5x and one code value. Source variance includes real
@@ -293,6 +293,94 @@ structure, so this is strong excess evidence, not a qualified new detector.
 operational pause. There were zero active Tdarr workers. The idle repair
 coordinator was stopped, Tdarr remains paused, and a separately owned
 `worker-admission-hold.json` blocks new repairs. Read-only audit jobs and source
-protection continue. No production binary changed, no Play Dirty replacement
-was installed and no optional-retention campaign was started. Resume only after
-a qualified correction or explicitly reviewed operational decision.
+protection continue. At that pause, no production binary changed and no Play Dirty replacement
+was installed. The later qualified rollout below supersedes that state; the
+owned operational hold remains until the two new installations are postchecked.
+No optional-retention campaign was started.
+
+## Qualified amplitude correction and rollout
+
+Isolated worktree `/home/bardie/git-repos/NVEnc-fgs-amplitude`, branch
+`fix/fgs-held-amplitude-20260916`, commit `2fa6cfd0` starts at `ef5c61fe`.
+Two condition changes make the existing per-picture model-strength fit/recovery
+mandatory; previously it ran only when `residualRetain < 0`. Existing statistics,
+recovery limits and hysteresis are reused. Optional retention stays off and no
+GPU analysis pass is added. Qualified binary SHA-256:
+`ef4799f6e7110e1057d8f728586d45e382b1ce3aa75c035403da35f05ca4b946`.
+
+Both 30-second reproductions and a complete Play Dirty encode remove the
+conspicuous overlay at 856.375 s and 5727.625 s in actual source/candidate image
+inspection. Full video sizes are 2,176,573,745 versus 2,172,225,990 bytes
+(+0.2002%). Elapsed times are 795.97 versus 850.26 seconds under differing load;
+this is not a controlled speed claim. Full strict grain-on libdav1d decoding
+passes all 183,661 displayed frames. Twenty-four previous/new source windows
+pass. The corrected Eric Andre S05E10 full trial passes 24 source windows and
+all 20,052 displayed frames; the actually viewed 457.758-second scene loses the
+conspicuous source-absent speckles. Full-episode recurrence is not established.
+
+The initial city source-RMS ceiling of four failed and remains recorded in
+`city-amplitude-qualification/amplitude-negative-control/`. Candidate synthesis
+is zero at both 12-frame witnesses. A full ordinary no-FGS encode with identical
+remaining settings establishes that city RMS peaks are 4.910 for the candidate
+and 4.908 for plain NVENC. Their sampled VMAF means are 88.961 and 88.959, versus
+71.631 for the retained bad encode. Dialogue means are 96.508, 96.556 and 92.585.
+These are short-window scores, not whole-movie results. The independent reference
+separates ordinary compression loss from excessive synthesis.
+
+The new structured-scene regression requires synthesis RMS <=3 and candidate
+source-RMS excess over that independent reference <=0.15 for every frame and
+<=0.05 on average. Actual maximum excess is 0.0112 (city) and 0.0044 (dialogue).
+Both bad witnesses fail synthesis. Source, all four media identities, timestamps,
+independent reference and selected encoder SHA are verified. The original
+absolute diagnostic remains advisory in the new report. These scene-specific
+limits are not a universal quality claim. The full local GPU gate now requires
+a pinned amplitude manifest and rejects missing manifests/wrong encoders.
+The checker is not added to routine Tdarr validation.
+
+The original full GPU/reference gate passes 16 stages and records a deliberate
+periodic-fixture change alert. All 3,600 source frames were then measured: 263
+pictures lose synthesis, zero gain it; mean Y RMS improves from 0.994 to 0.924,
+mean U/V improve too, and maximum per-frame Y RMS increase is 0.194. Original
+jacket/periodic assertions pass, worst changed stills were reviewed, and a fresh
+same-binary repeat passes a separately pinned positive fixture. Original alerts,
+positives and bad controls remain retained; no periodic threshold was loosened.
+The initially interrupted repeat attempt has an explicit operator receipt.
+
+Real HDR10 pairs use 720 frames each from two protected Transformers originals,
+3840x2160 PQ/BT.2020 at ordinary QVBR29. Old/new timestamps and metadata match;
+three native 12-frame comparisons per pair have identical measured errors.
+Each pair's video sizes are equal. These tests do not qualify FEL/DV or actual
+HDR player presentation. A fresh encode in the final runtime reproduces every
+one of the 720 qualified city frames exactly, including decoded timestamps.
+The original core CPU suite and the new checker/gate/admission controls pass.
+
+`amplitude-qualification.json` SHA-pins the complete release evidence. The
+new runtime `nvenc-fidelity/tdarr-node:2.87.01-2fa6cfd0-20260916`, ID
+`sha256:f37f59c608bbfc74ed0bfdae43c31db4ce6698ca4be99d3a41275fe2972d5907`,
+replaces only the encoder binary and labels over the prior runtime. Deployment
+verifies four tools, current 25 local plugins, flow and worker limits, retaining
+the September 15 subtitle fixes. `amplitude-rollout/report.json` records success
+and rollback pins; old image/configuration/binary remain available.
+
+`amplitude-repair-selection.json` selects only Play Dirty and Eric Andre from
+retained originals. Their preencoded full-run candidates still pass the normal
+worker's full decoding, grain, timing, audio/subtitle/attachment/chapters and
+atomic installation gates. `amplitude-repairs/` retains previous receipts and
+normal worker logs; `amplitude-repair-verification/` measures exact installed
+versions with prior witnesses included. Tdarr stays paused and the owned city
+hold remains until these finish. No further download is selected.
+
+The broader fidelity branch commit `5f197758` incorporates the same mandatory entry condition
+while preserving optional local/covariance/chroma guards. Its combined binary
+passes the full CPU suite and still requires its own GPU qualification; it is
+not the deployed artifact. `amplitude-branch-integration.json` records the
+reviewed optional-null path and exact source/CPU identities.
+Future FEL release work must incorporate and qualify this core correction.
+The deferred automatic-retention campaign remains manual-start only.
+
+High-ranked Bridge and Severance witnesses contain strong source effects and
+do not justify repairs from their flags alone. Thirty distinct files have actual
+visual observations; the initial 515 candidates remain a review queue rather
+than a damaged-file count. All 9 second-batch selected-region recurrence scans
+are complete. Current coverage and the reconciled review backlog remain in the
+live ledger; source-region recurrences are not whole-image perceptual clearance.

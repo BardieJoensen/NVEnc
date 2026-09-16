@@ -1,30 +1,56 @@
 # FGS encoder and library repair: current work and handoff
 
-Status: **seven selected follow-up repairs are installed and postchecked, but
-new encoding is paused after the deployed `ef5c61fe` image failed a broader
-Play Dirty source comparison. The exact trial retains excessive grain in the
-city shot and a later dialogue scene. The idle repair coordinator is stopped
-and a separately owned admission hold prevents new repairs. Read-only audit
-queues continue. Cause isolation and a qualified correction are pending.
-FEL playback/production gates and manual-only automatic-retention studies
-remain separate and deferred.** Updated 2026-09-16.
+Status: **the focused ordinary-mode amplitude correction `2fa6cfd0` is
+qualified and deployed. Seven selected follow-up repairs are installed and
+postchecked; Play Dirty and Eric Andre S05E10 now run through normal replacement
+and preservation checks using their qualified full-run trials. Tdarr remains
+paused and the repair coordinator stopped until their installed-version checks
+finish. The current-version audit continues. FEL playback/production gates and
+manual-only automatic-retention studies remain separate and deferred.**
+Updated 2026-09-16.
 
-Current blocker: read `city-fidelity-hold.json`,
-`next-trial-visuals/31f295cbb640d53811d6/visual-qualification.json` and
-`city-reproducer/` in the live September 16 ledger. A bounded 30-second default-
-mode trial reproduces the held-model behavior: measured source noise falls while
-a much stronger prior model remains signalled. The flat-source-only numerical
-trial gate passes, but the actual whole-image comparison fails; **never use that
-narrow pass as installation approval**. The isolated diagnostic worktree is
-`/home/bardie/git-repos/NVEnc-fgs-amplitude`, branch
-`fix/fgs-held-amplitude-20260916`, starting at deployed `ef5c61fe`. Its initial
-ablation makes the existing amplitude-fit/recovery path mandatory without
-enabling residual retention; it is not qualified or deployed.
-Native decoded measurements confirm
-large excess over local source variance in thousands of city blocks. The exact
-cause and fix are not yet established. Do not resume Tdarr/coordinator or remove
-the `fgs-current-city-fidelity-20260916` hold merely because the seven earlier
-selected replacements finished. Their separate passed evidence remains valid.
+Read `amplitude-qualification.json`, `amplitude-rollout/report.json`,
+`amplitude-repairs/status.json` and `amplitude-repair-verification/status.json`
+in the [live September 16 ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/README.md).
+The deployed build is from `/home/bardie/git-repos/NVEnc-fgs-amplitude`, branch
+`fix/fgs-held-amplitude-20260916`, commit
+`2fa6cfd09dadd4705d08da07ddea90fb72be56c0`. Binary SHA-256 is
+`ef4799f6e7110e1057d8f728586d45e382b1ce3aa75c035403da35f05ca4b946`;
+image `nvenc-fidelity/tdarr-node:2.87.01-2fa6cfd0-20260916`, ID
+`sha256:f37f59c608bbfc74ed0bfdae43c31db4ce6698ca4be99d3a41275fe2972d5907`.
+The prior `ef5c61fe` image, binary and configuration are retained for rollback.
+All four runtime tool hashes, current 25 plugin files, flow and worker limits
+were checked. Routine validation and optional-retention settings are unchanged.
+
+The broader Play Dirty source comparison exposed excessive grain that the
+flat-source-only diagnostic could not assess. Ordinary encoding skipped the
+existing current-picture model-strength fit/recovery because its entry condition
+required optional retention. The two-condition correction makes that protection
+mandatory using existing statistics; no GPU analysis pass was added. Both
+widely separated movie witnesses and the Eric Andre story witness improve in
+actual source/old/candidate comparisons. Full strict decodes, selected source
+windows, prior GPU/reference/ripple/flicker/source controls, real HDR10 pairs
+and a fresh exact-runtime 720-frame reproduction qualify the isolated release.
+The complete Play Dirty video grows 0.2002% versus the previous image's trial;
+single-run encode timing is not a speed guarantee.
+
+Two initial checks intentionally remain as evidence. The periodic fixture
+changed on 263 of 3,600 pictures; all-frame source errors improved, no new grain
+pictures appeared, worst changes were visually reviewed and a fresh repeat
+passes a separate new positive fixture. The initial city source-RMS limit of
+4.0 also rejects ordinary no-FGS NVENC at the same settings. A separate
+same-settings reference establishes ordinary compression loss there; the new
+structured-scene check bounds added synthesis and error above that reference,
+and rejects both retained bad witnesses. See
+[the amplitude regression and limits](AMPLITUDE-GUARD-20260916.md).
+Do not reinterpret sampled passes as whole-library perceptual clearance.
+
+The separately owned `fgs-current-city-fidelity-20260916` hold stays until the
+two selected replacements are postchecked. Do not release it based on the seven
+earlier completions. Sources/backups remain protected. Integration commit `5f197758` in the broader fidelity branch passes the full
+CPU suite (`amplitude-branch-integration.json`). That does not qualify or deploy
+the combined GPU binary, and
+future FEL qualification must include this ordinary-core correction.
 
 
 September 16: the user approved recovery/retranscode of the two extended Girl
@@ -38,7 +64,7 @@ measurements and 129 native-source checks for SD files lacking colour tags.
 Source discovery adds 202 retained originals: 585 of 611 now have candidates
 for per-window source alignment, and 23 additional torrents are held against
 cleanup. The 515 diagnostic candidates remain a review queue, not a damaged-file
-list. Twenty-seven distinct files have actual visual observations. Owl House
+list. Thirty distinct files have actual visual observations. Owl House
 S02E08 and Adventure Time S07E25 are repaired from retained originals, with zero
 strong source-flat frames in the previously affected measured regions and fresh
 installed-version checks. All 611 header scans pass. Native measurements cover
@@ -125,9 +151,9 @@ remain empty for five minutes, subject to playback ownership.
 See [audit acceleration and source retention](FINDINGS-2026-09-13-AUDIT-THROUGHPUT.md)
 for service names, qualification, release policy and the live evidence ledger.
 
-Production Tdarr and the repair worker now use isolated core `ef5c61fe`, binary
+The September 12 deployment used isolated core `ef5c61fe`, binary
 SHA-256 `d8127dfa63011160dc222a41516452c269c2438269866b3da74f95e5ba4fd47b`.
-The exact image is `nvenc-fidelity/tdarr-node:2.87.01-ef5c61fe-20260912`, image ID
+That historical image is `nvenc-fidelity/tdarr-node:2.87.01-ef5c61fe-20260912`, image ID
 `sha256:218540effe6149030631445914c8f35c6e81090326a8e4bbca55d0b57c3f50e4`.
 The prior `273723b7` deployment is retained for rollback. At that encoder deployment, the production flow,
 25 local plugins, worker limits and routine validation were unchanged; the
@@ -137,7 +163,7 @@ ordinary repair workers were observed after releasing the audit-owned hold.
 Pause ownership and Emby playback yield remain in place.
 
 The audit demonstrated a gap in `273723b7`: a small clean source patch inside
-a larger textured analysis block could still receive strong grain. The deployed
+a larger textured analysis block could still receive strong grain. That
 fix adds finer 16x16 luma / 8x8 colour source evidence while preserving the
 existing model-fitting region, ripple/syntax guards and temporal recovery.
 It adds no extra pixel reads from GPU global memory, kernel launches or host
@@ -277,7 +303,8 @@ jacket regression. The report tests pass; new media work remains deferred.
 | `e2c3a99d` | First 24-fit recovery hold | Superseded; retained partial-fix baseline and rollback |
 | `3778447e` | Prior recovery-ramp hotfix | Superseded ordinary baseline and rollback; residual limits retained in historical reports |
 | `273723b7` | Coarse source-quiet and constant-colour protection | Superseded; retained qualified baseline and rollback |
-| `ef5c61fe` | Finer independent source protection | Deployed after mixed-source, whole-frame periodic/source review, exact-image, HDR10 and installed-file qualification |
+| `ef5c61fe` | Finer independent source protection | Superseded ordinary baseline; structured-source amplitude defect documented |
+| `2fa6cfd0` | Mandatory ordinary-mode current-picture amplitude support | Qualified and deployed; runtime/full-file/HDR/source regression evidence pinned in September 16 ledger |
 | `a72f589e` | Isolated FEL scene schedule and fatal drain correction | Short controls passed; full canary running; not deployed |
 | `296993f9` | FEL tools/core changes integrated with broader work branch | CPU suite and compilation pass; not the isolated candidate and not deployed |
 | `2d72d779` | Later graph and native TrueHD timing qualification | Host-only additions; real staged mux and negative controls pass; full library qualification remains in progress |
@@ -298,7 +325,7 @@ measured baseline binaries are pinned in
 - Ordinary `497caa64`: SHA-256
   `bb7e75cbcb9097f1f1c7ac3347e7193c74caa6c7d57db1c3c77348cc27daf144`.
   Its retained artifact is `production-readiness-20260909/bin/nvencc-fidelity-497caa64`
-  under the repair log root. The host build input now contains `ef5c61fe`;
+  under the repair log root. The host build input now contains `2fa6cfd0`;
   do not use that mutable path as the old comparison baseline.
 - Optional `9c1664d4`: SHA-256
   `8dff824c8d7360adac294f05e7c6032770f8594cf1c3b63961f50a854e3b0fec`.
@@ -342,7 +369,7 @@ establish repair completion.
    from `3ac80ceb` to distinguish the covariance optimization from intentional
    temporal model changes. The existing comparison manifest still pins
    `497caa64` and `9c1664d4`; preserve those arms and add qualified current
-   ordinary `ef5c61fe` explicitly. It must not silently represent a newer build.
+   ordinary `2fa6cfd0` explicitly, retaining `ef5c61fe` as the prior arm. It must not silently represent a newer build.
 3. Start with the six targets in
    [pilot-selection.json](/opt/docker-apps/logs/fgs-ripple-repair-20260906/retention-prep-20260910/fallback-profiles-20260911/pilot-selection.json)
    plus the existing jacket regression, about 270 seconds of source per arm.
