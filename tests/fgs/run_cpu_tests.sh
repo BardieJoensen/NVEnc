@@ -25,6 +25,9 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore \
 $CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/source_guard_test.cpp -o "$OUT/fgs_source_guard_test"
 "$OUT/fgs_source_guard_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore \
+    tests/fgs/training_history_test.cpp -o "$OUT/fgs_training_history_test"
+"$OUT/fgs_training_history_test"
 "$OUT/fgs_solver_test"
 "$OUT/fgs_parser_test"
 "$OUT/fgs_stability_test"
