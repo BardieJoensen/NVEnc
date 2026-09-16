@@ -1,3 +1,14 @@
+# Source-supported grain correction: current handoff
+
+September 16: isolated core `cb903a17` is being qualified for the excess-grain
+correction. Installed ordinary `2fa6cfd0` remains paused and drained; no candidate
+has replaced library media. FEL remains disabled. V6 `af37b958` is rejected for
+source-detail loss. See [SOURCE-VARIANCE-20260916.md](SOURCE-VARIANCE-20260916.md)
+and the canonical current handoff in
+`/home/bardie/git-repos/NVEnc-fgs-fidelity/tests/fgs/WORK-TO-PRODUCTION.md`.
+
+The following September 12/9 entries are historical.
+
 # Encoder work through production
 
 September 12 isolated hotfix: ordinary core **273723b7 is deployed**. See

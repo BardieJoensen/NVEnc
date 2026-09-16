@@ -91,6 +91,17 @@ fail. The positive is a reviewed regression reference, not proof of perfect
 texture everywhere. Changing its grain scheduling or amplitude requires explicit
 review of a new baseline; do not regenerate it automatically from a candidate.
 
+The September 16 corroborated-training work adds a separately reviewed
+`gentlemen-corroborated-training-positive-33m-150s.mkv` for that deliberate
+schedule change. Its provenance links the complete 3,600-frame source
+comparison and actual worst-frame review. The earlier amplitude positive
+remains the independent reference for a new synthesis-off source-detail check
+at clip 66 and 75.5 seconds. `gentlemen-spatial-denoising-detail-negative-33m-150s.mkv`
+retains the rejected V6 output: it has valid grain texture but visibly softens
+the fine jacket pattern. The new check must reject it as well as passing the
+candidate. The original mesh negative and its 84.5-second zero-synthesis
+requirement remain. Whole-sequence numerical comparison limits are unchanged.
+
 The September 12 recovery baseline is separately retained as
 `gentlemen-recovery-positive-33m-150s.mkv`. It is the reviewed e2c3a99d output;
 the earlier positive and known mesh negative remain available. The transition

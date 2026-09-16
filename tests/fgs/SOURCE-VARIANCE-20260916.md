@@ -13,8 +13,11 @@ and temporal controls. Total variance includes detail; it is not a noise estimat
 The original scored top-decile fallback misclassified repeated roof texture as
 random grain. Temporal training now excludes repeating blocks using two adjacent
 source pairs. The finite matcher covers nine small integer translations, not
-arbitrary motion. Spatial denoising estimates stay independent of the training
-exclusions. Ordinary strength fits use the physical intensity-bin centres.
+arbitrary motion. Both denoising strength and model training use the corroborated
+observations. Keeping excluded texture in the denoising estimate blurred the
+jacket in a rejected intermediate candidate, even though its grain model passed
+the periodic-texture check. Ordinary strength fits use the physical intensity-bin
+centres.
 
 Initial candidates that preserved the first two source pictures passed the
 excess-grain tests, but failed the unchanged Taxi base-fidelity canary. A controlled
@@ -45,5 +48,21 @@ positive without complete source comparison and fresh repetition.
 Local evidence root:
 `/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/source-variance/`.
 Read `training-v3/failure-review.json`, `training-v5/`, `canary-model-trace/`,
-`canary-rate-diagnostic/` and the current `training-v6/` build/trial receipts.
+`canary-rate-diagnostic/`, `training-v6/failure-review.json` and the current
+`training-v7/` build/trial receipts. Core `cb903a17` corrects the V6 jacket blur;
+the independent base canary and native time-paired libaom comparison pass.
+All 3,600 periodic-source pictures were compared. The eight reviewed stills
+include the largest source-error changes and both original jacket witnesses.
+The deliberate schedule change has a separately pinned positive; it needs a
+fresh repeat. All earlier positives and failures remain recorded.
+
+The periodic regression now also tests the grain-free base against the original
+at the two detailed jacket witnesses. Its independent reference remains the
+older amplitude build, even when the grain-schedule positive changes. The bound
+is reference RMS * 1.10 + 0.10 in 8-bit-equivalent codes. The retained V6 encoded
+negative fails at both witnesses (luma RMS 1.572/1.741); V7 passes (0.669/0.666,
+versus reference 0.655/0.626). This checks detail that aggregate grain descriptors
+can miss. It is a fixture regression, not a universal perceptual threshold.
+The 84.5-second mesh witness still requires exactly zero synthesis; the 66-second
+witness permits the reviewed tiny grain while separately protecting base detail.
 Whole-source, HDR, performance and final runtime qualification remain pending.

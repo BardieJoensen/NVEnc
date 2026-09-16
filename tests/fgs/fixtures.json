@@ -108,27 +108,28 @@
       "sha256": "bcc46593c0957d0128048707ba84d691b0554ff903e5993cae5c2d6428354f63",
       "bytes": 50298665
     },
+    "gentlemen_fine_source_positive": {
+      "file": "gentlemen-fine-source-positive-33m-150s.mkv",
+      "sha256": "af87536485e4b30c69383f960ab4a682c9ef89b3d2d164a3659f61aa7b9c6c55",
+      "bytes": 50813666
+    },
     "gentlemen_amplitude_guard_positive": {
       "file": "gentlemen-amplitude-guard-positive-33m-150s.mkv",
       "sha256": "3886c36063ca5b0551a0dfa82e1e6d9bee902385e025e23d0fe063e3c8941cc8",
       "bytes": 51000788
+    },
+    "gentlemen_training_positive": {
+      "file": "gentlemen-corroborated-training-positive-33m-150s.mkv",
+      "sha256": "7f729a5577c94075bb59c845806532f5e19753edda5a7fc73c8c3ae9de58a705",
+      "bytes": 50583824
+    },
+    "gentlemen_detail_negative": {
+      "file": "gentlemen-spatial-denoising-detail-negative-33m-150s.mkv",
+      "sha256": "62670059833482ab7c325db1ac82ba30cc7182a72ddeec8bbfbca2b79a0024c7",
+      "bytes": 50539916
     }
   },
   "provenance": {
-    "gentlemen_amplitude_guard_positive": {
-      "encoder_sha256": "ef4799f6e7110e1057d8f728586d45e382b1ce3aa75c035403da35f05ca4b946",
-      "source_review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/amplitude-periodic-source-review/visual-review.json",
-      "receipt": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/amplitude-periodic-source-review/new-baseline-receipt.json",
-      "decoded_frames": 3600,
-      "source_frames_measured": 3600,
-      "grain_schedule_changed_frames": 263,
-      "new_grain_frames": 0,
-      "source_luma_mean_rms_before": 0.9938872571206755,
-      "source_luma_mean_rms_after": 0.9239015881551637,
-      "maximum_luma_rms_increase": 0.19407105445861816,
-      "decision": "Accept deliberate mandatory-amplitude change for this fixture; all original jacket checks pass and worst changed stills reviewed. Fresh same-binary repeat required.",
-      "limits": "Original change alert and prior positives/negatives retained; numeric limits unchanged. This fixture decision is not full encoder release approval."
-    },
     "invalid_chroma_negative": {
       "source": "Existing AV1 library output of The Girl Who Kicked the Hornets Nest (2009), Extended Cut, Hybrid FraMeSToR release",
       "extraction": "ffmpeg -ss 1495 -i SOURCE -t 35 -map 0:v:0 -c copy OUTPUT.mkv; original packets retained, no decode or re-encode",
@@ -299,6 +300,44 @@
       "decision": "accept separately retained source-guard baseline",
       "limits": "All old positives and labelled negatives retained; numeric detector and source limits unchanged. Source-aligned metrics and still review, not a universal perceptual certificate.",
       "reviewed_at": 1789231309.2778037
+    },
+    "gentlemen_fine_source_positive": {
+      "encoder_core": "ef5c61fe62232e6917d3d2a7adc248bac06d5ae4",
+      "encoder_sha256": "d8127dfa63011160dc222a41516452c269c2438269866b3da74f95e5ba4fd47b",
+      "source_review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/strict-periodic-source-review.json",
+      "critical_scenes": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/strict-periodic-critical-scenes.json",
+      "visual_review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/strict-periodic-visual-review.json",
+      "decoded_frames": 3600,
+      "source_frames_reviewed": 3600,
+      "grain_schedule_unchanged": true,
+      "source_review_changed_group_frames": 1695,
+      "decision": "accept separately retained fine-source baseline",
+      "limits": "All old positives and labelled negatives retained; numeric detector and source limits unchanged. Source-aligned metrics and still review, not a universal perceptual certificate.",
+      "reviewed_at": 1789245950.6375623
+    },
+    "gentlemen_amplitude_guard_positive": {
+      "encoder_sha256": "ef4799f6e7110e1057d8f728586d45e382b1ce3aa75c035403da35f05ca4b946",
+      "source_review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/amplitude-periodic-source-review/visual-review.json",
+      "receipt": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/amplitude-periodic-source-review/new-baseline-receipt.json",
+      "decoded_frames": 3600,
+      "source_frames_measured": 3600,
+      "grain_schedule_changed_frames": 263,
+      "new_grain_frames": 0,
+      "source_luma_mean_rms_before": 0.9938872571206755,
+      "source_luma_mean_rms_after": 0.9239015881551637,
+      "maximum_luma_rms_increase": 0.19407105445861816,
+      "decision": "Accept deliberate mandatory-amplitude change for this fixture; all original jacket checks pass and worst changed stills reviewed. Fresh same-binary repeat required.",
+      "limits": "Original change alert and prior positives/negatives retained; numeric limits unchanged. This fixture decision is not full encoder release approval."
+    },
+    "gentlemen_training_positive": {
+      "encoder_core": "cb903a17",
+      "review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/source-variance/training-v7/periodic-source-review/actual-visual-review.json",
+      "role": "Decoded texture positive; independent source-detail reference remains the older amplitude positive"
+    },
+    "gentlemen_detail_negative": {
+      "encoder_core": "af37b958",
+      "review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/source-variance/training-v6/failure-review.json",
+      "role": "Retained actual fine-jacket blur, synthesis disabled when assessed"
     }
   },
   "canary_revalidation": {
