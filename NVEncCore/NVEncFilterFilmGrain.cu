@@ -1930,8 +1930,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         trainingReady = m_trainingHistory->observe(adjacentTrainingSource, blockCount,
             [&](int i) { return metrics[i].mean / depthScale; }, rawSigma);
         for (int i = 0; i < blockCount; ++i) {
-            if (mask[i] && !FilmGrainTrainingHistory::supported(trainingReady,
-                    metrics[i].flat != 0, metrics[i].repeatability)) {
+            if (mask[i] && !FilmGrainTrainingHistory::supported(trainingReady, metrics[i].repeatability)) {
                 mask[i] = 0;
                 ++repeatedTraining;
             }
