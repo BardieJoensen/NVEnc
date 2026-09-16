@@ -399,6 +399,12 @@ if want_stage export; then
         record fail "export: table finalization (see $REPORT_DIR/export.log)"
         tail -30 "$REPORT_DIR/export.log"
     fi
+    if NVENCC="$CANDIDATE_NVENCC" python3 "$HERE/test_training_lookahead.py" > "$REPORT_DIR/lookahead.log" 2>&1; then
+        record pass "export: bounded lookahead picture order, timestamps and drain tails"
+    else
+        record fail "export: lookahead (see $REPORT_DIR/lookahead.log)"
+        tail -30 "$REPORT_DIR/lookahead.log"
+    fi
 fi
 
 # ---------------------------------------------------------------------------

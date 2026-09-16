@@ -38,6 +38,8 @@ public:
         return frames_ >= 3;
     }
 
+    int missingPairs() const { return std::max(0, 3 - frames_); }
+
     static bool supported(bool historyReady, double repeatability) {
         if (!historyReady) return false;
         return std::isfinite(repeatability) && repeatability < .5;

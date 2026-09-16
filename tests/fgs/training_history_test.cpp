@@ -27,6 +27,16 @@ int main() {
     require(!step(true,20) && !step(true,20) && step(true,20), "noise transition borrowed old history");
     require(!step(false,20), "nonadjacent source retained training history");
     h.reset();
+    require(!step(false), "fresh sequence unexpectedly qualified");
+    require(h.missingPairs() == 2, "startup must require two independent adjacent pairs");
+    auto ahead = h;
+    require(!ahead.observe(true, 100, [&](int i) { return means[i]; }, 6), "one future pair qualified startup");
+    require(ahead.observe(true, 100, [&](int i) { return means[i]; }, 6), "two future pairs did not qualify startup");
+    require(h.missingPairs() == 2, "lookahead mutated causal history");
+    ahead = h;
+    require(!ahead.observe(true, 100, [](int) { return 40.0; }, 6), "future cut borrowed present history");
+    require(!ahead.observe(true, 100, [](int) { return 40.0; }, 6), "future scene qualified earlier picture");
+    h.reset();
     require(!step(true), "explicit reset retained training history");
     means.resize(80);
     require(!step(true), "geometry change retained training history");
