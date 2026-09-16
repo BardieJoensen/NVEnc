@@ -53,6 +53,7 @@ Clips live outside the repo -- they are copyrighted source -- so paths are
 arguments. Nothing here ships film.
 """
 import argparse, json, os, subprocess, sys, tempfile
+from fractions import Fraction
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -84,7 +85,7 @@ def probe(path, entries, stream="v:0"):
     return sh(a + ["-show_entries", entries, "-of", "default=nw=1:nk=1", path]).stdout.strip().split("\n")
 
 
-def luma_occupancy(src, frames):
+def native_luma_histograms(src, frames):
     """256-bin normalised luma histogram of the source.
 
     The scaling curve is indexed 0-255, so 10-bit samples are folded down to
@@ -92,16 +93,45 @@ def luma_occupancy(src, frames):
     brightnesses the film actually uses.
     """
     import numpy as np
-    r = subprocess.run(
-        ["ffmpeg", "-v", "error", "-i", src, "-vframes", str(frames),
-         "-pix_fmt", "gray", "-f", "rawvideo", "-"],
-        capture_output=True, timeout=3600)
-    if r.returncode or not r.stdout:
-        return None
-    a = np.frombuffer(r.stdout, dtype=np.uint8)
-    hist = np.bincount(a, minlength=256).astype(np.float64)
-    total = hist.sum()
-    return (hist / total) if total else None
+    geometry = probe(src, "stream=width,height")
+    if frames <= 0 or len(geometry) != 2 or not all(x.isdigit() for x in geometry):
+        raise RuntimeError("invalid luma occupancy input or frame count")
+    width, height = map(int, geometry)
+    frame_bytes = width * height * 2
+    if frame_bytes <= 0:
+        raise RuntimeError("empty luma occupancy geometry")
+    # A YUV-to-gray conversion expands limited-range luma to display gray.
+    # Grain curves instead index native codes. Extract Y first, preserving its
+    # range, and use a depth conversion only. Stream to bound memory at 4K.
+    command = ["ffmpeg", "-v", "error", "-threads", "2", "-i", src,
+               "-map", "0:v:0", "-frames:v", str(frames),
+               "-vf", "extractplanes=y", "-filter_threads", "1",
+               "-pix_fmt", "gray10le", "-f", "rawvideo", "-"]
+    histograms = []
+    with tempfile.TemporaryFile() as errors:
+        child = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=errors)
+        try:
+            for _ in range(frames):
+                raw = child.stdout.read(frame_bytes)
+                if len(raw) != frame_bytes:
+                    raise RuntimeError("incomplete luma occupancy frame coverage")
+                values = np.frombuffer(raw, dtype="<u2")
+                if np.any(values > 1023):
+                    raise RuntimeError("luma occupancy depth mismatch")
+                histograms.append(np.bincount(values >> 2, minlength=256))
+            if child.stdout.read(1) or child.wait(timeout=60):
+                raise RuntimeError("luma occupancy decoder failed or returned extra frames")
+        finally:
+            child.stdout.close()
+            if child.poll() is None:
+                child.terminate()
+                child.wait(timeout=30)
+    return np.asarray(histograms, dtype=np.float64)
+
+
+def luma_occupancy(src, frames):
+    hist = native_luma_histograms(src, frames).sum(axis=0)
+    return hist / hist.sum()
 
 
 def weighted_rms(values, weights):
@@ -130,6 +160,77 @@ def curve_ratio(cand, ref, weights):
     rc = [v / (1 << rs) for v in rc]
     ref_w = weighted_rms(rc, weights)
     return (weighted_rms(cc, weights) / ref_w) if ref_w else None
+
+
+
+def source_preserved_frames(source_raw, clean_raw, width, height, bits, frames):
+    """Verify every omitted fit against the actual uncompressed analyzer base."""
+    size = width * height * 3 // 2 * (2 if bits > 8 else 1)
+    same = []
+    with open(source_raw, "rb") as source, open(clean_raw, "rb") as clean:
+        for _ in range(frames):
+            a, b = source.read(size), clean.read(size)
+            if len(a) != size or len(b) != size:
+                raise RuntimeError("incomplete source/clean oracle coverage")
+            same.append(a == b)
+        if source.read(1) or clean.read(1):
+            raise RuntimeError("extra source/clean oracle frames")
+    return same
+
+
+def compare_model_timelines(candidate, reference, histograms, fps, preserved):
+    """Pair the models covering each input picture, with each tool's clock.
+
+    NVEnc tables retain the input rate; the libaom runner uses 24 fps. Choosing
+    each table's longest entry can compare different shots: libaom's final entry
+    has an unbounded end. Preserve legacy representative statistics separately.
+    """
+    import numpy as np
+    fps = Fraction(fps)
+    if fps <= 0 or len(histograms) != len(preserved) or not len(histograms):
+        raise ValueError("invalid oracle timeline")
+    rows, skipped = [], []
+    candidate_power, reference_power = 0.0, 0.0
+    for n, histogram in enumerate(histograms):
+        ticks = [round(Fraction(n * 10000000, 1) / fps),
+                 round(Fraction(n * 10000000, 24))]
+        active = []
+        for entries, tick in zip((candidate, reference), ticks):
+            matches = [e for e in entries if e["start"] <= tick < e["end"]
+                       and e["apply_grain"]]
+            if len(matches) > 1:
+                raise ValueError("overlapping oracle model entries")
+            active.append(matches[0] if matches else None)
+        c, r = active
+        if c is None:
+            if not preserved[n]:
+                raise ValueError("missing candidate model without preserved source")
+            skipped.append(n)
+            continue
+        if r is None:
+            raise ValueError("missing reference model on synthesized frame")
+        histogram = np.asarray(histogram, dtype=np.float64)
+        if histogram.shape != (256,) or not np.isfinite(histogram).all() or (histogram < 0).any() or histogram.sum() <= 0:
+            raise ValueError("invalid native luma histogram")
+        power = []
+        for model in (c, r):
+            shift = model["params"]["scaling_shift"] + model["params"]["grain_scale_shift"]
+            curve = np.asarray(filmgrn._curve(model["scaling_points"]["y"])) / (1 << shift)
+            power.append(float(np.dot(histogram, curve * curve) / histogram.sum()))
+        if power[1] <= 0:
+            raise ValueError("empty reference grain curve")
+        ratio = float(np.sqrt(power[0] / power[1]))
+        rows.append(dict(frame=n, rms_ratio=ratio, candidate_ticks=ticks[0], reference_ticks=ticks[1]))
+        candidate_power += power[0]
+        reference_power += power[1]
+    # These short genuine-grain fixtures permit the two source-history warmup
+    # pictures, but cannot certify a binary which avoids fitting the clip.
+    if len(rows) < max(1, len(histograms) - 2):
+        raise ValueError("insufficient synthesized real-film oracle coverage")
+    ratio = float(np.sqrt(candidate_power / reference_power))
+    return dict(rms_ratio=ratio, frames=rows, preserved_frames=skipped,
+                minimum_frame_ratio=min(r["rms_ratio"] for r in rows),
+                maximum_frame_ratio=max(r["rms_ratio"] for r in rows))
 
 
 def to_y4m(src, dst, frames):
@@ -213,8 +314,13 @@ def check_clip(label, path, expect, nvencc, aom, frames, work, denoiser,
     y = cmp_.get("scaling", {}).get("y") or {}
     raw_ratio = y.get("rms_ratio")
     cosine = (cmp_.get("coefficients", {}).get("y") or {}).get("cosine")
-    weights = luma_occupancy(src_y4m, frames)
-    ratio = curve_ratio(nv_rep, aom_rep, weights) if (nv_rep and aom_rep) else None
+    histograms = native_luma_histograms(src_y4m, frames)
+    weights = histograms.sum(axis=0); weights /= weights.sum()
+    legacy_ratio = curve_ratio(nv_rep, aom_rep, weights) if (nv_rep and aom_rep) else None
+    preserved = source_preserved_frames(src_raw, cln_raw, w, h, bits, frames)
+    timeline = compare_model_timelines(nv_entries, aom_entries, histograms,
+                                      probe(src_y4m, "stream=avg_frame_rate")[0], preserved)
+    ratio = timeline["rms_ratio"]
     if ratio is None:
         return {"label": label, "status": "FAIL", "reason": "no luma curve to compare"}
     ok = MIN_RATIO <= ratio <= MAX_RATIO
@@ -223,6 +329,8 @@ def check_clip(label, path, expect, nvencc, aom, frames, work, denoiser,
         "expect": expect,
         "status": "PASS" if ok else "FAIL",
         "rms_ratio": round(ratio, 4),
+        "timeline": timeline,
+        "legacy_representative_ratio": legacy_ratio,
         "rms_ratio_unweighted": round(raw_ratio, 4) if raw_ratio else None,
         "ar_cosine": round(cosine, 5) if cosine else None,
         "relative_rmse": round(y.get("relative_rmse") or 0, 4),
