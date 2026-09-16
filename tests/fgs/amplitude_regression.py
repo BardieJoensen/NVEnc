@@ -114,28 +114,48 @@ def assess(source, on, off, reference):
     coarse_passed = bool(coarse_excess.max() <= SOURCE_RMS_EXCESS_LIMIT
                          and coarse_excess.mean() <= SOURCE_RMS_MEAN_EXCESS_LIMIT)
 
-    # Select low-structure tiles from source 4x4 means only. Measure native
-    # two-dimensional high-frequency energy with a normalized Haar diagonal;
-    # independent grain samples are compared by strength, not random phase.
+    # Select low-structure tiles from source 4x4 means only. An orthonormal
+    # Haar pyramid covers all three directions at 2-, 4- and 8-pixel scales.
+    # A diagonal-only check misses axial stripes; a single scale also misses
+    # stripes aligned inside its sample pairs. Together with the coarse 8x8
+    # picture check above, these bands leave no unmeasured spatial component.
+    # Compare independent grain by strength, not random phase. Each band keeps
+    # the same units/noise gain, and must pass separately: averaging directions
+    # or scales would let excess in one hide behind a deficit in another.
     low = reduce(source, 4).reshape(frames, height//16, 4, width//16, 4)
     flat = np.ptp(low, axis=(2, 4)) < 6
     flat_counts = flat.sum(axis=(1, 2))
-    energies = {}
+    energies = {size: {band: {} for band in ("horizontal", "vertical", "diagonal")}
+                for size in (2, 4, 8)}
     for name, values in (("source", source), ("candidate", on), ("reference", reference)):
-        high = (values[:, ::2, ::2] - values[:, ::2, 1::2]
-                - values[:, 1::2, ::2] + values[:, 1::2, 1::2]) * .5
-        energy = (high*high).reshape(frames, height//16, 8, width//16, 8).mean(axis=(2, 4))
-        energies[name] = np.sqrt(np.sum(np.where(flat, energy, 0), axis=(1, 2), dtype=np.float64)
-                                 / np.maximum(flat_counts, 1))
-    texture_excess = energies['candidate'] - np.maximum(energies['source'], energies['reference'])
+        for size in energies:
+            a, b = values[:, ::2, ::2], values[:, ::2, 1::2]
+            c, d = values[:, 1::2, ::2], values[:, 1::2, 1::2]
+            bands = {"horizontal": (a+b-c-d)*.5, "vertical": (a-b+c-d)*.5,
+                     "diagonal": (a-b-c+d)*.5}
+            for band, high in bands.items():
+                energy = (high*high).reshape(frames, height//16, 16//size,
+                                             width//16, 16//size).mean(axis=(2, 4))
+                energies[size][band][name] = np.sqrt(
+                    np.sum(np.where(flat, energy, 0), axis=(1, 2), dtype=np.float64)
+                    / np.maximum(flat_counts, 1))
+            values = (a+b+c+d)*.5
     # Never clear a synthesized frame from absent source coverage. A frame
     # without synthesis is already covered by the two picture checks.
     supported = (flat_counts >= 16) | (synthesis_rms == 0)
-    texture_passed = bool(supported.all() and texture_excess.max() <= SOURCE_RMS_EXCESS_LIMIT
-                          and texture_excess.mean() <= SOURCE_RMS_MEAN_EXCESS_LIMIT)
+    texture_bands = {}
+    for size, bands in energies.items():
+        for band, strength in bands.items():
+            excess_band = strength['candidate'] - np.maximum(strength['source'], strength['reference'])
+            texture_bands[f"{size}px_{band}"] = dict(
+                passed=bool(excess_band.max() <= SOURCE_RMS_EXCESS_LIMIT
+                            and excess_band.mean() <= SOURCE_RMS_MEAN_EXCESS_LIMIT),
+                flat_hf_rms={name: value.tolist() for name, value in strength.items()},
+                excess=excess_band.tolist())
+    texture_passed = bool(supported.all() and all(band['passed'] for band in texture_bands.values()))
     source_passed = base_passed and coarse_passed and texture_passed
     synthesis_passed = bool(synthesis_rms.max() <= SYNTHESIS_RMS_LIMIT)
-    return dict(passed=source_passed and synthesis_passed,
+    return dict(assessment_version=2, passed=source_passed and synthesis_passed,
                 source_comparison_passed=source_passed, synthesis_passed=synthesis_passed,
                 source_luma_rms=source_rms.tolist(), synthesis_luma_rms=synthesis_rms.tolist(),
                 reference_source_luma_rms=reference_rms.tolist(), source_rms_excess=excess.tolist(),
@@ -146,7 +166,7 @@ def assess(source, on, off, reference):
                 displayed_coarse_source_check=dict(passed=coarse_passed, block_size=8,
                     source_luma_rms=coarse_rms.tolist(), reference_source_luma_rms=reference_coarse.tolist(), excess=coarse_excess.tolist()),
                 source_texture_check=dict(passed=texture_passed, source_flat_tile_counts=flat_counts.tolist(),
-                    flat_hf_rms={name:value.tolist() for name,value in energies.items()}, excess=texture_excess.tolist()),
+                    coverage_passed=bool(supported.all()), bands=texture_bands),
                 legacy_pixelwise_on_check=dict(passed=legacy_source_passed,
                     scope="Original unchanged diagnostic; independent regenerated grain can raise pixelwise error while restoring source texture. Release requires base, displayed coarse picture and source-energy checks instead."),
                 provisional_absolute_source_check=dict(limit=PROVISIONAL_SOURCE_RMS_LIMIT,
@@ -200,7 +220,7 @@ def main():
     report = dict(complete=True, passed=all(r["passed"] for r in results), cases=results,
                   encoder_identity_checked=bool(encoder_sha), encoder_sha256=encoder_sha,
                   manifest=manifest, manifest_sha256=sha(args.manifest),
-                  scope="Two pinned SDR/QVBR30 witnesses, every matched frame. Unchanged synthesis-amplitude cap, base-picture and displayed coarse source error relative to an independent same-settings no-FGS reference, plus source-supported fine-texture energy. Original pixelwise grain-on diagnostic is retained. Tight scene-specific margins are not a universal perceptual threshold or whole-film certificate.")
+                  scope="Two pinned SDR/QVBR30 witnesses, every matched frame. Unchanged synthesis-amplitude cap, base-picture and displayed coarse source error relative to an independent same-settings no-FGS reference, plus source-supported texture energy in all three Haar directions at 2-, 4- and 8-pixel scales. Original pixelwise grain-on diagnostic is retained. Tight scene-specific margins are not a universal perceptual threshold or whole-film certificate.")
     args.output.mkdir(parents=True, exist_ok=True)
     (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(dict(passed=report["passed"], report=str(args.output / "report.json"))))

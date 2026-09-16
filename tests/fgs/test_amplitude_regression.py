@@ -86,6 +86,52 @@ class AmplitudeRegressionTest(unittest.TestCase):
         self.assertFalse(result['source_texture_check']['passed'])
         self.assertFalse(result['passed'])
 
+    def test_axial_stripes_cannot_hide_between_diagonal_and_coarse_checks(self):
+        clean = np.full((FRAMES, 64, 64), 80, dtype=np.float32)
+        y, x = np.indices(clean.shape[1:])
+        # Every width and phase has zero mean inside the coarse 8x8 check.
+        # Width 2/4 stripes can also be invisible to a native 2x2 Haar check.
+        for direction, axis in (("horizontal", y), ("vertical", x)):
+            for width in (1, 2, 4):
+                for phase in range(2*width):
+                    with self.subTest(direction=direction, width=width, phase=phase):
+                        overlay = np.where(((axis+phase)//width) % 2, .8, -.8).astype(np.float32)
+                        result = assess(clean, clean + overlay, clean, clean)
+                        self.assertTrue(result['base_source_check']['passed'])
+                        self.assertTrue(result['displayed_coarse_source_check']['passed'])
+                        self.assertTrue(result['synthesis_passed'])
+                        bands = result['source_texture_check']['bands']
+                        self.assertTrue(bands['2px_diagonal']['passed'])
+                        self.assertTrue(any(not band['passed'] for name, band in bands.items()
+                                            if name.endswith(direction)))
+                        self.assertFalse(result['passed'])
+
+    def test_checkerboards_exercise_each_diagonal_scale(self):
+        clean = np.full((FRAMES, 64, 64), 80, dtype=np.float32)
+        y, x = np.indices(clean.shape[1:])
+        for width in (1, 2, 4):
+            with self.subTest(width=width):
+                overlay = np.where((y//width + x//width) % 2, .8, -.8).astype(np.float32)
+                result = assess(clean, clean + overlay, clean, clean)
+                self.assertTrue(result['base_source_check']['passed'])
+                self.assertTrue(result['displayed_coarse_source_check']['passed'])
+                self.assertTrue(result['synthesis_passed'])
+                bands = result['source_texture_check']['bands']
+                self.assertEqual([name for name, band in bands.items() if not band['passed']],
+                                 [f'{2*width}px_diagonal'])
+                self.assertFalse(result['passed'])
+
+    def test_directional_excess_cannot_cancel_against_missing_other_texture(self):
+        clean = np.full((FRAMES, 64, 64), 80, dtype=np.float32)
+        y, x = np.indices(clean.shape[1:])
+        source = clean + np.where(y % 2, .8, -.8).astype(np.float32)
+        wrong = clean + np.where(x % 2, .8, -.8).astype(np.float32)
+        result = assess(source, wrong, clean, clean)
+        self.assertTrue(result['base_source_check']['passed'])
+        self.assertTrue(result['displayed_coarse_source_check']['passed'])
+        self.assertFalse(result['source_texture_check']['bands']['2px_vertical']['passed'])
+        self.assertFalse(result['passed'])
+
     def test_coarse_overlay_cannot_hide_in_a_correct_base(self):
         clean = np.full((FRAMES, 256, 256), 80, dtype=np.float32)
         y, x = np.indices((256, 256))
