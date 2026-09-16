@@ -102,6 +102,7 @@ struct FilmGrainBlockMetric {
     float chromaSigma[2];
     uint32_t flat;
     FilmGrainQuietSourceMetric sourceRegions[4];
+    FilmGrainQuietSourceMetric sourceVarianceRegions[16];
 };
 
 // Integer moments keep exactly constant 8/10-bit colour exactly constant.
@@ -334,6 +335,15 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     const auto sourceRegion = quiet_source_region<32>(tile, bw, regionX, regionY,
         min(FGS_QUIET_SIZE, bw - regionX), min(FGS_QUIET_SIZE, bh - regionY), tid % 32);
     if (tid % 32 == 0) sourceRegions[region] = sourceRegion;
+    // Reuse the staged source for 8x8 luma evidence. Each eight-lane group
+    // owns one region; no new global source read, kernel or synchronization.
+    __shared__ FilmGrainQuietSourceMetric sourceVarianceRegions[16];
+    const int varianceRegion = tid / 8;
+    const int varianceX = (varianceRegion % 4) * 8;
+    const int varianceY = (varianceRegion / 4) * 8;
+    const auto sourceVarianceRegion = quiet_source_region<8>(tile, bw, varianceX, varianceY,
+        min(8, bw - varianceX), min(8, bh - varianceY), tid % 8);
+    if (tid % 8 == 0) sourceVarianceRegions[varianceRegion] = sourceVarianceRegion;
     __syncthreads();
 
     // Consumer NVIDIA GPUs have very low FP64 throughput. None of these
@@ -508,6 +518,7 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
         reduce4[0] / fmaxf(reduce5[0], 1e-12f)));
     out.flat = isFlat ? 1u : 0u;
     for (int region = 0; region < 4; ++region) out.sourceRegions[region] = sourceRegions[region];
+    for (int region = 0; region < 16; ++region) out.sourceVarianceRegions[region] = sourceVarianceRegions[region];
     metrics[blockIndex] = out;
 }
 
@@ -2328,6 +2339,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         m_state->fidelityRecoveryFrames = 0;
     }
     FilmGrainQuietSourceGuard quietSource;
+    FilmGrainSourceVarianceGuard sourceVariance;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 unlimitedParams = params;
     m_state->sourceCaps.advance(modelValid && (freshFitValid || diagnostics.freshModel));
     if (modelValid && params.applyGrain) {
@@ -2336,6 +2348,29 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         const uint32_t counts[3] = { params.numYPoints, params.numCbPoints, params.numCrPoints };
         for (int plane = 0; plane < 3; ++plane) {
             build_strength_lut(params, bitDepth, predicted[plane], plane, diagnostics.templateGain[plane]);
+        }
+        // A brightness model fitted to textured areas must not extrapolate
+        // strong grain onto a thin smooth highlight or cleaner source detail.
+        // Bound only gross conflicts and retain the removed source residual
+        // through the existing curve/temporal/source-blend path below.
+        for (int i = 0; i < blockCount; ++i) {
+            const int blockWidth = std::min(FGS_BLOCK_SIZE, luma.width - (i % m_blocksX) * FGS_BLOCK_SIZE);
+            const int blockHeight = std::min(FGS_BLOCK_SIZE, luma.height - (i / m_blocksX) * FGS_BLOCK_SIZE);
+            for (int region = 0; region < 16; ++region) {
+                const auto& evidence = metrics[i].sourceVarianceRegions[region];
+                const double mean = evidence.mean / depthScale;
+                const double sigma = evidence.sigma / depthScale;
+                const int level = clamp(static_cast<int>(std::lround(mean)), 0, 255);
+                const double modeled = predicted[0][level] / depthScale;
+                const double gain = sourceVariance.observe(mean, sigma, modeled,
+                    std::min(8, blockWidth - (region % 4) * 8),
+                    std::min(8, blockHeight - (region / 4) * 8));
+                if (gain < 1.0) {
+                    const int first = clamp(static_cast<int>(std::floor(evidence.minCode / depthScale)) - 4, 0, 255);
+                    const int last = clamp(static_cast<int>(std::ceil(evidence.maxCode / depthScale)) + 4, 0, 255);
+                    m_state->sourceCaps.preserveRange(0, first, last, gain);
+                }
+            }
         }
         // Source-supported restart and mixed artwork are mandatory guards.
         // Persistent chroma-only retention is part of the opt-in fidelity
@@ -2419,7 +2454,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     for (uint32_t i = 0; i < params.numYPoints; ++i) nonzeroCurve |= params.pointYScaling[i] != 0;
     for (uint32_t i = 0; i < params.numCbPoints; ++i) nonzeroCurve |= params.pointCbScaling[i] != 0;
     for (uint32_t i = 0; i < params.numCrPoints; ++i) nonzeroCurve |= params.pointCrScaling[i] != 0;
-    const bool quietSourceFallback = quietSource.invalid || (sourceCurveLimited && !nonzeroCurve);
+    const bool quietSourceFallback = quietSource.invalid || sourceVariance.invalid || (sourceCurveLimited && !nonzeroCurve);
     if (quietSourceFallback) {
         diagnostics.sourceFidelityFallback = true;
         diagnostics.modelHeld = false;
@@ -2606,7 +2641,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             pointsCr += strsprintf(_T(" %d:%d"), params.pointCrValue[i], params.pointCrScaling[i]);
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
-            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d rejected=%d recoveryHeld=%d recoveryFrames=%d recoveryGain=%.4f quietSource=%d sourceLimited=%d quietConflicts=%llu/%llu/%llu quietExcess=%.3f/%.3f/%.3f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
+            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d rejected=%d recoveryHeld=%d recoveryFrames=%d recoveryGain=%.4f quietSource=%d sourceLimited=%d quietConflicts=%llu/%llu/%llu quietExcess=%.3f/%.3f/%.3f varianceConflicts=%llu varianceExcess=%.3f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             modelValid ? 1 : 0, diagnostics.sceneReset ? 1 : 0, diagnostics.modelHeld ? 1 : 0,
@@ -2621,6 +2656,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             static_cast<unsigned long long>(quietSource.conflictingBlocks[1]),
             static_cast<unsigned long long>(quietSource.conflictingBlocks[2]),
             quietSource.maxExcess[0], quietSource.maxExcess[1], quietSource.maxExcess[2],
+            static_cast<unsigned long long>(sourceVariance.conflictingBlocks), sourceVariance.maxExcess,
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,
