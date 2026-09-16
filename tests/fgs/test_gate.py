@@ -87,6 +87,22 @@ class GateTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn('variance_support', result.stdout.splitlines())
 
+    def test_training_support_requires_the_exact_negative(self):
+        self.env['FGS_GATE_TRAINING_SOURCE_NEGATIVE'] = str(self.root / 'negative')
+        for present in (False, True):
+            if present:
+                self.executable(self.root / 'negative', '#!/bin/sh\necho wrong-build\n')
+            result = self.run_command(['bash', str(HERE / 'local_gate.sh'),
+                                       '--stage', 'training_support',
+                                       '--candidate-nvencc', str(self.root / 'candidate')])
+            self.assertEqual(result.returncode, 2)
+            self.assertIn('source-training negative encoder hash mismatch' if present else
+                          'requires the retained f588b7b8 negative encoder', result.stderr)
+            self.assertNotIn('preflight', result.stdout)
+        result = self.run_command(['bash', str(HERE / 'local_gate.sh'), '--list'])
+        self.assertEqual(result.returncode, 0)
+        self.assertIn('training_support', result.stdout.splitlines())
+
     def test_kat_receives_candidate_and_explicit_production_denoiser(self):
         target = self.repo / 'tests/fgs'
         target.mkdir(parents=True)

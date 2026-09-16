@@ -346,6 +346,32 @@ def luma_band_sigmas(path, frames):
     return np.sqrt(var_sum / max(len(frames), 1))
 
 
+def startup_grain_ratios(source_y4m, on_path, spec, count=SKIP):
+    """Displayed/source noise ratio in every startup picture and intensity band.
+
+    Two source pairs distinguish repeating picture structure from random grain.
+    During that observation the encoder may preserve source grain in its base.
+    Checking only on-minus-off would mistake this for a grain-free picture.
+    Subtract the known clean fixture, including detail, and measure each picture
+    separately so an averaged pass cannot hide a flash or a denoised gap.
+    """
+    output = YUV(on_path)
+    clean = base_luma(detail=spec.get("detail", False))
+    ratios = []
+    with open(source_y4m, "rb") as source:
+        assert source.readline().startswith(b"YUV4MPEG2 ")
+        for n in range(count):
+            assert source.readline() == b"FRAME\n"
+            data = source.read(W * H * 3 // 2 * np.dtype(DTYPE).itemsize)
+            assert len(data) == W * H * 3 // 2 * np.dtype(DTYPE).itemsize
+            original = np.frombuffer(data, dtype=DTYPE, count=W * H).reshape(H, W)
+            actual = output.planes(n)[0].astype(np.float64) - clean
+            reference = original.astype(np.float64) - clean
+            ratios.append([float(actual[sl].std() / max(reference[sl].std(), 1e-9))
+                           for sl in band_slices(24, BAND_W, H)])
+    return np.asarray(ratios)
+
+
 def retained_grain_corr(src_path, off_path, frames):
     """Correlation between source grain and the grain retained in the base."""
     src, off = YUV(src_path), YUV(off_path)
@@ -626,12 +652,13 @@ def run_test(test, keep):
         n_reliable = len([f for f in reliable if f >= SKIP])
         ok &= check("model reliable after warm-up", n_reliable >= nframes - SKIP - 1,
                     f"{n_reliable}/{nframes - SKIP} frames")
-        first_sigma, _ = measure(on, off, [0, 1])
-        frame0 = models[0] if models else {"frame": -1, "reliable": 0}
-        ok &= check("grain present from first frame",
-                    frame0["frame"] == 0 and frame0["reliable"] == 1
-                    and first_sigma[0].mean() > 0.5 * expected[0].mean(),
-                    f"frame0 reliable={frame0['reliable']}, sigma {first_sigma[0].mean() / DS:.2f}")
+        startup_ratios = startup_grain_ratios(src, on, spec)
+        ok &= check("displayed grain preserved through startup",
+                    bool((startup_ratios > 0.60).all() and (startup_ratios < 1.35).all()),
+                    f"per-picture/per-band ratio {startup_ratios.min():.3f}..{startup_ratios.max():.3f}")
+        ok &= check("independent-grain fit starts within two source pairs",
+                    bool(reliable) and min(reliable) <= 2,
+                    f"first reliable frame {min(reliable) if reliable else 'none'}")
         refreshes = [m["frame"] for m in models if m["reliable"] and not m["held"] and m["frame"] > 0]
         ok &= check("model stable (no twinkle)", len(refreshes) <= 3,
                     f"model refreshed at frames {refreshes[:10]}")

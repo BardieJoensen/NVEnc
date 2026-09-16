@@ -87,7 +87,7 @@ CEILING_MODEL="$FIXTURE_ROOT/taxi-metric-gamer.json"
 TAXI_CLIP="$FIXTURE_ROOT/taxi-coarse-24f.mkv"
 SUBSTITUTION_ENCODE="$FIXTURE_ROOT/taxi-widened-r4047.mkv"
 
-ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression grain_syntax flicker_regression mixed_source amplitude_regression variance_support)
+ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression grain_syntax flicker_regression mixed_source amplitude_regression variance_support training_support)
 # The GPU fixtures and export tests plus the offline adversarial
 # specimen. Deliberately excludes the libaom oracles and the canary, which need
 # real-film encodes. A pre-push hook long enough to be bypassed with
@@ -202,6 +202,12 @@ verify_sha256() {
 # ---------------------------------------------------------------------------
 # preflight: fail loudly, never silently degrade
 # ---------------------------------------------------------------------------
+if want_stage training_support; then
+    training_negative="${FGS_GATE_TRAINING_SOURCE_NEGATIVE:-$DOCKER_APPS/logs/fgs-ripple-repair-20260906/bin/nvencc-f588b7b8}"
+    training_negative_sha="${FGS_GATE_TRAINING_SOURCE_NEGATIVE_SHA256:-cd724d38e48c47117262bfcfee2b4a07739c792224e641808c7739751d5a5e26}"
+    [ -x "$training_negative" ] || die "training_support requires the retained f588b7b8 negative encoder"
+    verify_sha256 "$training_negative" "$training_negative_sha" "source-training negative encoder"
+fi
 if want_stage variance_support; then
     variance_negative="${FGS_GATE_VARIANCE_SOURCE_NEGATIVE:-$DOCKER_APPS/logs/fgs-ripple-repair-20260906/bin/nvencc-2fa6cfd0}"
     variance_negative_sha="${FGS_GATE_VARIANCE_SOURCE_NEGATIVE_SHA256:-ef4799f6e7110e1057d8f728586d45e382b1ce3aa75c035403da35f05ca4b946}"
@@ -772,6 +778,26 @@ if want_stage variance_support; then
     else
         record fail "source-variance candidate (see $REPORT_DIR/variance-support-candidate.log)"
         tail -20 "$REPORT_DIR/variance-support-candidate.log"
+    fi
+fi
+
+if want_stage training_support; then
+    log "stage: repeated picture structure versus independent grain"
+    if python3 "$HERE/training_support_regression.py" --nvencc "$training_negative" \
+        --expect-rejected --output "$REPORT_DIR/training-support-negative" \
+        > "$REPORT_DIR/training-support-negative.log" 2>&1; then
+        record pass "source-training detector rejects retained f588b7b8 at both depths and rate settings"
+    else
+        record fail "source-training negative control (see $REPORT_DIR/training-support-negative.log)"
+        tail -20 "$REPORT_DIR/training-support-negative.log"
+    fi
+    if python3 "$HERE/training_support_regression.py" --nvencc "$CANDIDATE_NVENCC" \
+        --output "$REPORT_DIR/training-support-candidate" \
+        > "$REPORT_DIR/training-support-candidate.log" 2>&1; then
+        record pass "moving repeated texture preserved; independent grain still synthesized"
+    else
+        record fail "source-training candidate (see $REPORT_DIR/training-support-candidate.log)"
+        tail -20 "$REPORT_DIR/training-support-candidate.log"
     fi
 fi
 
