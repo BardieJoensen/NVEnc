@@ -33,7 +33,7 @@ class LookaheadTests(unittest.TestCase):
                         source.write_bytes(header + b''.join(b'FRAME\n' + data for data in payloads))
                         for trim in (False, True):
                             expected = payloads[:-1] if trim and count > 1 else payloads
-                            options = ['--trim', f'0:{len(expected)-1}'] if trim else []
+                            options = ['--trim', f'0:-{len(expected)}'] if trim else []
                             common = [self.binary, '--avsw', '-i', str(source), '--output-depth', str(bits),
                                       '--av1-film-grain', 'denoise=auto,chroma=auto,denoiser=bilateral', *options]
                             raw = root / 'raw.y4m'
