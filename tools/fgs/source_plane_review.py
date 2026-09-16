@@ -30,11 +30,18 @@ def first_picture(path, log_path, grain=False):
     return dict(seconds=times[0], command=command)
 
 
-def decode(path, start, width, height, frames, directory, name, grain=None):
+def decode(path, start, width, height, frames, directory, name, grain=None, *, preroll_seconds=0):
+    if not math.isfinite(preroll_seconds) or not 0 <= preroll_seconds <= 10:
+        raise ValueError('source decode preroll must be between zero and ten seconds')
+    filters = 'format=yuv420p16le,showinfo'
+    if preroll_seconds:
+        # Decode references before the window without returning extra pictures
+        # or changing the timestamps that strict source pairing will check.
+        filters = f"select='gte(t,{max(0,start)-1e-7:.9f})'," + filters
     command = ['ffmpeg','-hide_banner','-nostdin','-copyts','-threads','2']
     if grain is not None: command += ['-c:v','libdav1d','-filmgrain',str(grain)]
-    command += ['-ss',str(max(0,start)),'-i',str(path),'-map','0:v:0','-an','-sn',
-        '-frames:v',str(frames),'-fps_mode','passthrough','-vf','format=yuv420p16le,showinfo',
+    command += ['-ss',str(max(0,start-preroll_seconds)),'-i',str(path),'-map','0:v:0','-an','-sn',
+        '-frames:v',str(frames),'-fps_mode','passthrough','-vf',filters,
         '-filter_threads','1','-f','rawvideo','-']
     with (directory/(name+'.log')).open('wb') as log:
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=log, timeout=240)

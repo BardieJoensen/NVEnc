@@ -53,6 +53,24 @@ def native_noise(on, off, flags):
     return result
 
 
+def paired_source(helper, path, start, width, height, times, offset, directory):
+    src, st = helper.decode(path,start+offset,width,height,len(times)+8,directory,'source')
+    try:
+        pairs = helper.align_indices(st,times,offset)
+        return src, st, pairs, dict(preroll_seconds=0)
+    except ValueError as error:
+        if str(error) != 'source alignment does not cover every output picture':
+            raise
+        initial_error = str(error)
+    del src
+    src, st = helper.decode(path,start+offset,width,height,len(times)+8,directory,
+                            'source-preroll',preroll_seconds=10)
+    # A retry must restore every unique source picture under the same tolerance.
+    # Missing/ambiguous frames remain errors; none are dropped or interpolated.
+    pairs = helper.align_indices(st,times,offset)
+    return src, st, pairs, dict(preroll_seconds=10,initial_error=initial_error)
+
+
 def inspect(item, header_path, destination, method, pins):
     audit = method.audit; source_review = method.source_review
     directory = destination/item['key']/item['version'];directory.mkdir(parents=True,exist_ok=True)
@@ -104,8 +122,8 @@ def inspect(item, header_path, destination, method, pins):
                     off,bt=select_interval(off,bt,window['start'],window['stop'])
                     validate_window(on,ot,expected,width,height);validate_window(off,bt,expected,width,height)
                     if ot!=bt:raise ValueError('grain-on/off picture timing differs')
-                    src,st=source_review.decode(source['path'],window['start']+source['offset'],width,height,len(expected)+8,d,'source')
-                    pairs=source_review.align_indices(st,ot,source['offset'])
+                    src,st,pairs,source_decode=paired_source(source_review,source['path'],window['start'],width,height,ot,source['offset'],d)
+                    row['source_decode']=source_decode
                     si,oi=zip(*pairs)
                     if list(oi)!=list(range(len(expected))):raise ValueError('source pairing omits a displayed frame')
                     src=[p[list(si)] for p in src]

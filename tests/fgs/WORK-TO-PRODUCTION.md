@@ -4,18 +4,26 @@ Status: **qualified finer-source encoder deployed; ordinary Tdarr running.
 The complete Beasts FEL candidate passed automated library mux/decode checks;
 physical playback and the remaining FEL production gates are pending. All eleven
 ordinary Tdarr subtitle error retries succeeded. Two approved extended-cut
-originals were recovered and are encoding; current-version audit and candidate
+originals were recovered and are validating; current-version audit and candidate
 review are running. Automatic-retention trials remain deferred and manual-start
 only.** Updated 2026-09-16.
 
 September 16: the user approved recovery/retranscode of the two extended Girl
 films with confirmed multi-second story-scene gaps, completion of current-version
 coverage and review of remaining diagnostic candidates. Both exact originals
-(77.26 GB total) are downloaded and encoding with the ordinary qualified core.
+(77.26 GB total) are downloaded; both encodes finished and full validation runs
+with the ordinary qualified core.
 This is a narrow two-release exception; the general recovery hold remains intact.
 The immutable follow-up covers 611 current AV1 versions: 482 qualified display
 measurements and 129 native-source checks for SD files lacking colour tags.
-The 515 diagnostic candidates remain a review queue, not a damaged-file list.
+Source discovery adds 202 retained originals: 585 of 611 now have candidates
+for per-window source alignment, and 23 additional torrents are held against
+cleanup. The 515 diagnostic candidates remain a review queue, not a damaged-file
+list. Sixteen source/on/off witnesses have been reviewed. Deployed-image trials pass
+old/new source windows for three older cartoon repairs; recurrence justifies
+qualified repeat repairs of Owl House S02E08 and Adventure Time S07E25 from
+retained originals. Native source-seek retries resolve two measurement failures
+without relaxing frame coverage; the remaining audit/review work stays open.
 Read the [follow-up and qualification record](FINDINGS-2026-09-16-AUDIT-FOLLOWUP.md)
 and [live job health and coverage](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/status.json).
 

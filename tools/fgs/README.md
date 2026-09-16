@@ -84,6 +84,14 @@ Nine CPU controls and two actual untagged SD episodes qualify 24 windows,
 tolerates startup before the header producer creates its status file; missing
 or stalled producers checkpoint pending work rather than consume media as
 failures. Eleven scheduler tests cover startup, concurrency and resource limits.
+A source seek can omit a reference-dependent picture even when decoding from
+an earlier point succeeds. On a missing-pair failure only, the native route
+retries once with ten seconds of preroll and discards that preroll by timestamp.
+It does not return extra frames, loosen matching tolerance or interpolate a
+missing picture. Both attempt commands/logs are retained. Other timing errors
+remain errors. The shared decoder defaults to its original command unless the
+caller explicitly requests preroll; freeze and qualify the matching helper pins.
+
 See the [September 16 record](../../tests/fgs/FINDINGS-2026-09-16-AUDIT-FOLLOWUP.md).
 
 ## Header transition triage
