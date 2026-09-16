@@ -9,6 +9,23 @@
 
 namespace fgsmodel {
 
+// Grain strength indexes reconstructed pixel levels, not a region's mean.
+// A narrow peak inside the observed range can therefore be invisible at the
+// mean. The LUT is piecewise monotone between its model knots, so endpoints
+// and enclosed knots bound the complete interval without scanning every code.
+inline double film_grain_range_peak(const float (&strength)[256],
+    const uint8_t *values, uint32_t count, int first, int last) {
+    first = std::max(0, first);
+    last = std::min(255, last);
+    if (first > last) return std::numeric_limits<double>::quiet_NaN();
+    double peak = std::max(strength[first], strength[last]);
+    for (uint32_t i = 0; i < count; ++i) {
+        if (values[i] >= first && values[i] <= last)
+            peak = std::max(peak, static_cast<double>(strength[values[i]]));
+    }
+    return peak;
+}
+
 // Noisy blocks train the AR model, but cannot establish that synthesis belongs
 // on a different, nearly uniform region at the same brightness. Check that
 // missing evidence separately, using source measurements before denoising.

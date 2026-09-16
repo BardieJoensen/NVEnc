@@ -64,6 +64,24 @@ int main() {
     invalidVariance.observe(100, std::numeric_limits<double>::quiet_NaN(), 5, 8, 8);
     require(invalidVariance.invalid, "non-finite source variance was accepted");
 
+    // A textured region may straddle a steep grain-strength peak while its
+    // average lies on the low shoulder. Its actual pixels still receive the
+    // peak, including a small reconstruction margin outside source values.
+    float strengths[256] = {};
+    const uint8_t peakValues[] = {0, 100, 104, 108, 255};
+    for (int x = 100; x <= 108; ++x)
+        strengths[x] = static_cast<float>(12 - 3 * std::abs(x - 104));
+    const double hiddenPeak = fgsmodel::film_grain_range_peak(strengths, peakValues, 5, 98, 106);
+    require(hiddenPeak == 12 && strengths[102] == 6,
+        "enclosed strength peak was reduced to the region mean");
+    require(variance.observe(102, 3, hiddenPeak, 8, 8) < 0.5
+        && variance.observe(102, 3, strengths[102], 8, 8) == 1,
+        "range peak did not expose the mean-only source-support gap");
+    require(fgsmodel::film_grain_range_peak(strengths, peakValues, 5, 101, 102) == 6,
+        "range endpoint interpolation was omitted");
+    require(fgsmodel::film_grain_range_peak(strengths, peakValues, 5, 20, 30) == 0,
+        "unrelated grain strength escaped its interval");
+
     for (double bad : {-1.0, std::numeric_limits<double>::infinity(),
                        std::numeric_limits<double>::quiet_NaN()}) {
         FilmGrainQuietSourceGuard invalid;
