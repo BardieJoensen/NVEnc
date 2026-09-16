@@ -3,7 +3,7 @@
 # and libaom as an external oracle.
 #
 # THIS CANNOT RUN ON A HOSTED RUNNER, AND MUST NOT BE MADE TO.
-# Every defect this catches is invisible to conventional signals -- both
+# Earlier defects escaped conventional signals -- both
 # 2026-07-29/30 regressions made files SMALLER, VMAF and SSIMULACRA2 BETTER,
 # CAMBI clean, and all 18 GPU fixtures green. They were found only by comparing
 # against libaom on real film. A hosted runner has no GPU, no libaom, no media
@@ -41,6 +41,9 @@
 #             Explicitly test the historical reference (never a release gate).
 #   --denoiser bilateral|fft3d|motion
 #             Candidate denoiser; defaults to the production bilateral path.
+#   --amplitude-manifest PATH
+#             Source/negative/candidate/plain-reference witness manifest.
+#             Required by --full; candidate artifact must name the binary SHA.
 #   --list    Print the stages and exit.
 
 set -uo pipefail
@@ -84,7 +87,7 @@ CEILING_MODEL="$FIXTURE_ROOT/taxi-metric-gamer.json"
 TAXI_CLIP="$FIXTURE_ROOT/taxi-coarse-24f.mkv"
 SUBSTITUTION_ENCODE="$FIXTURE_ROOT/taxi-widened-r4047.mkv"
 
-ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression grain_syntax flicker_regression mixed_source)
+ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression grain_syntax flicker_regression mixed_source amplitude_regression)
 # The GPU fixtures and export tests plus the offline adversarial
 # specimen. Deliberately excludes the libaom oracles and the canary, which need
 # real-film encodes. A pre-push hook long enough to be bypassed with
@@ -95,6 +98,7 @@ CANDIDATE_NVENCC=""
 CANDIDATE_COMMIT=""
 REFERENCE_CONTROL=""
 DENOISER="bilateral"
+AMPLITUDE_MANIFEST="${FGS_GATE_AMPLITUDE_MANIFEST:-}"
 STAGES=()
 MODE="full"
 
@@ -107,6 +111,7 @@ while [ $# -gt 0 ]; do
         --candidate-commit) CANDIDATE_COMMIT="$2"; shift 2 ;;
         --reference-control) REFERENCE_CONTROL="$2"; shift 2 ;;
         --denoiser) DENOISER="$2"; shift 2 ;;
+        --amplitude-manifest) AMPLITUDE_MANIFEST="$2"; shift 2 ;;
         --list) printf '%s\n' "${ALL_STAGES[@]}"; exit 0 ;;
         -h|--help) sed -n '1,50p' "${BASH_SOURCE[0]}"; exit 0 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
@@ -197,6 +202,12 @@ verify_sha256() {
 # ---------------------------------------------------------------------------
 # preflight: fail loudly, never silently degrade
 # ---------------------------------------------------------------------------
+if want_stage amplitude_regression; then
+    [ -n "$AMPLITUDE_MANIFEST" ] || die "amplitude_regression requires --amplitude-manifest (or FGS_GATE_AMPLITUDE_MANIFEST).
+Prepare source-matched default-mode outputs for the selected binary, the retained
+bad encode and the same-settings no-FGS compression reference. See AMPLITUDE-GUARD-20260916.md."
+    require_file "$AMPLITUDE_MANIFEST"
+fi
 log "preflight"
 command -v docker  >/dev/null || die "docker is required"
 command -v ffmpeg  >/dev/null || die "ffmpeg is required"
@@ -231,7 +242,7 @@ if want_stage canary_negative; then
     required_fixtures+=(taxi_clip substitution_encode)
 fi
 if want_stage periodic_regression; then
-    required_fixtures+=(gentlemen_clip gentlemen_mesh_negative gentlemen_guard_positive)
+    required_fixtures+=(gentlemen_clip gentlemen_mesh_negative gentlemen_amplitude_guard_positive)
 fi
 if want_stage grain_syntax; then
     required_fixtures+=(invalid_chroma_negative gentlemen_guard_positive)
@@ -723,6 +734,18 @@ if want_stage mixed_source; then
     else
         record fail "mixed-source candidate (see $REPORT_DIR/mixed-source-candidate.log)"
         tail -20 "$REPORT_DIR/mixed-source-candidate.log"
+    fi
+fi
+
+if want_stage amplitude_regression; then
+    log "stage: source-backed structured-scene amplitude regression"
+    if python3 "$HERE/amplitude_regression.py" --manifest "$AMPLITUDE_MANIFEST" \
+        --candidate-nvencc "$CANDIDATE_NVENCC" --output "$REPORT_DIR/amplitude-regression" \
+        > "$REPORT_DIR/amplitude-regression.log" 2>&1; then
+        record pass "both excessive-grain negatives rejected; candidate preserves the matched plain-reference quality"
+    else
+        record fail "structured-scene amplitude regression (see $REPORT_DIR/amplitude-regression.log)"
+        tail -20 "$REPORT_DIR/amplitude-regression.log"
     fi
 fi
 

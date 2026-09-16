@@ -112,6 +112,11 @@
       "file": "gentlemen-fine-source-positive-33m-150s.mkv",
       "sha256": "af87536485e4b30c69383f960ab4a682c9ef89b3d2d164a3659f61aa7b9c6c55",
       "bytes": 50813666
+    },
+    "gentlemen_amplitude_guard_positive": {
+      "file": "gentlemen-amplitude-guard-positive-33m-150s.mkv",
+      "sha256": "3886c36063ca5b0551a0dfa82e1e6d9bee902385e025e23d0fe063e3c8941cc8",
+      "bytes": 51000788
     }
   },
   "provenance": {
@@ -299,6 +304,20 @@
       "decision": "accept separately retained fine-source baseline",
       "limits": "All old positives and labelled negatives retained; numeric detector and source limits unchanged. Source-aligned metrics and still review, not a universal perceptual certificate.",
       "reviewed_at": 1789245950.6375623
+    },
+    "gentlemen_amplitude_guard_positive": {
+      "encoder_sha256": "ef4799f6e7110e1057d8f728586d45e382b1ce3aa75c035403da35f05ca4b946",
+      "source_review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/amplitude-periodic-source-review/visual-review.json",
+      "receipt": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/amplitude-periodic-source-review/new-baseline-receipt.json",
+      "decoded_frames": 3600,
+      "source_frames_measured": 3600,
+      "grain_schedule_changed_frames": 263,
+      "new_grain_frames": 0,
+      "source_luma_mean_rms_before": 0.9938872571206755,
+      "source_luma_mean_rms_after": 0.9239015881551637,
+      "maximum_luma_rms_increase": 0.19407105445861816,
+      "decision": "Accept deliberate mandatory-amplitude change for this fixture; all original jacket checks pass and worst changed stills reviewed. Fresh same-binary repeat required.",
+      "limits": "Original change alert and prior positives/negatives retained; numeric limits unchanged. This fixture decision is not full encoder release approval."
     }
   },
   "canary_revalidation": {

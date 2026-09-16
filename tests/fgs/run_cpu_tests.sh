@@ -66,3 +66,5 @@ python3 tests/fgs/test_fel_layer_order.py
 python3 tests/fgs/test_fel_prepare.py
 python3 tests/fgs/test_fel_process.py
 python3 tests/fgs/test_fel_parameter_bounds.py
+
+python3 tests/fgs/test_amplitude_regression.py
