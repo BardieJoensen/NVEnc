@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from flicker_regression import assess
+from flicker_regression import assess, assess_with_codec_control
 
 
 class DecodedFlashTests(unittest.TestCase):
@@ -36,6 +36,19 @@ class DecodedFlashTests(unittest.TestCase):
         picture = self.source.copy(); picture[0, 0, 0] = np.nan
         with self.assertRaises(ValueError):
             assess(self.source, picture, self.patch)
+
+    def test_codec_control_explains_small_quantization_without_grain(self):
+        pattern = np.indices((16, 16)).sum(axis=0) % 2 * 2 - 1
+        base, plain = self.source.copy(), self.source.copy()
+        base[:, 8:24, 8:24] += pattern * .31
+        plain[:, 8:24, 8:24] += pattern * .29
+        self.assertFalse(assess(self.source, base, self.patch)['passed'])
+        self.assertTrue(assess_with_codec_control(self.source, base, base, plain, self.patch)['passed'])
+        overlay = base.copy(); overlay[3, 8:24, 8:24] += pattern * .3
+        self.assertFalse(assess_with_codec_control(self.source, overlay, base, plain, self.patch)['passed'])
+        worse = base.copy(); worse[3, 8:24, 8:24] += pattern * .2
+        self.assertFalse(assess_with_codec_control(self.source, worse, worse, plain, self.patch)['passed'])
+        self.assertFalse(assess_with_codec_control(self.source, base+8, base+8, plain, self.patch)['passed'])
 
 
 if __name__ == '__main__':
