@@ -16,6 +16,11 @@ compact regressions, current full qualified trials and unfinished review evidenc
 remain. Historical raw/timing outputs and retired backups are no longer present;
 consult the linked cleanup receipts before attempting a replay.
 
+The later release-harness review adds directional texture checks at three scales
+and fixes the status of a failed single-stage run. Both retained movie witnesses
+from the deployed encoder pass the stronger check; no runtime change was needed.
+See the canonical [review and evidence](/home/bardie/git-repos/NVEnc-fgs-fidelity/tests/fgs/ENCODER-REVIEW-20260916.md).
+
 ## Earlier branch handoff, retained for history
 
 The runtime names, paused states and pending work below describe the earlier
