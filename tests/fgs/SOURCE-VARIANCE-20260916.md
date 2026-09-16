@@ -65,4 +65,36 @@ versus reference 0.655/0.626). This checks detail that aggregate grain descripto
 can miss. It is a fixture regression, not a universal perceptual threshold.
 The 84.5-second mesh witness still requires exactly zero synthesis; the 66-second
 witness permits the reviewed tiny grain while separately protecting base detail.
-Whole-source, HDR, performance and final runtime qualification remain pending.
+All five full-source outputs (509,315 pictures total) now strictly decode and
+pass header inspection. The four selected episode repairs also have complete
+source/library/candidate timestamp agreement and actual source-matched witness
+review. Both HDR10 trials preserve metadata on all 720 pictures each. Exact
+runtime reproduction and paired performance qualification remain pending.
+
+The full Play Dirty dialogue witness exposed a limitation in the original
+amplitude check: random regenerated grain is penalized for having different
+pixels even when its strength is supported by the source. The original failed
+result is retained. Candidate grain-on RMS exceeds the plain control by 0.165
+codes on average, but grain-off base error exceeds it by only 0.0168 (maximum
+0.0771), within the unchanged 0.05 mean / 0.15 peak margins. Source-flat fine
+texture RMS is 0.786 in the original, 0.133 in the deployed encode and 0.628 in
+V7. The twelve exact pictures have no strong-grain flags in the measured quiet
+patches. Source/old/V7-on/V7-off stills show restored fine grain without the
+harsh overlay; shirt, curtain, hair and cable structure remain present.
+
+`amplitude_regression.py` retains its original grain-on error diagnostic and
+3-code synthesis cap. It now applies the same picture-error margins to the
+grain-free base and coarse displayed picture, and compares native fine-texture
+energy with source-only selected tiles. Synthesized frames without adequate
+source coverage cannot pass. Independent random-noise positive controls prove
+the phase problem; clean-source noise, excess grain, coarse overlays, new blur,
+missing coverage and prior severe encoded negatives still fail. This is a
+scene-specific check, not a general noise estimator or perceptual certificate.
+
+The dialogue tradeoff is recorded rather than hidden: SSIMULACRA2 changes from
+75.161 to 73.573 and Butteraugli from 1.042 to 1.115 as fine grain is restored.
+Base-only scores are 75.071 / 1.049. The retained severe negative scores
+55.176 / 2.230. These are finite displayed-picture comparisons; V7 is not a
+claim of a perceptual-score win on every scene. See `training-v7/dialogue-diagnosis/`,
+`dialogue-review/` and `amplitude-review.json` alongside the retained original
+`final-gpu/gate-1/` failure and fresh frozen-harness repeat.
