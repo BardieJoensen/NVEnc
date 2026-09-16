@@ -42,6 +42,36 @@ struct FilmGrainQuietSourceGuard {
     }
 };
 
+// A current source region's total spatial variance includes both detail and
+// grain. It is deliberately a loose ceiling, not an estimate of removable
+// noise. This independent luma check also covers small, bright regions that
+// are ineligible for the near-flat active-range test above. Never infer chroma
+// noise from clipped luma; the existing chroma eligibility remains unchanged.
+struct FilmGrainSourceVarianceGuard {
+    uint64_t conflictingBlocks = 0;
+    double maxExcess = 0.0;
+    bool invalid = false;
+
+    double observe(double mean8, double sourceSigma8, double modeledSigma8,
+        int width, int height) {
+        if (width < 8 || height < 8) return 1.0;
+        if (!std::isfinite(mean8) || !std::isfinite(sourceSigma8)
+            || !std::isfinite(modeledSigma8) || sourceSigma8 < 0.0
+            || modeledSigma8 < 0.0) {
+            invalid = true;
+            return 1.0;
+        }
+        // Small blocks and correlated genuine grain have uncertain sample
+        // variance. Only a gross overestimate enters protection; the existing
+        // finer near-flat guard still handles smaller exact-source conflicts.
+        const double attack = std::max(3.0, 2.0 * sourceSigma8 + 1.0);
+        if (modeledSigma8 <= attack) return 1.0;
+        ++conflictingBlocks;
+        maxExcess = std::max(maxExcess, modeledSigma8 - sourceSigma8);
+        return (1.5 * sourceSigma8 + 0.5) / modeledSigma8;
+    }
+};
+
 // Brightness-local protection attacks immediately but releases only after
 // fresh fits and a gradual restart. Keep this independent of the AR cache:
 // changing a model's knot positions must not clear recent source evidence.
