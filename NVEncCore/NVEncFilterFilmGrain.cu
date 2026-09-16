@@ -1914,6 +1914,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if (!mask[index]) { mask[index] = 1; ++selected; }
         ++examined;
     }
+    const int trainingCandidates = selected;
     int repeatedTraining = 0;
     bool trainingReady = true;
     if (m_detailReference) {
@@ -1945,7 +1946,12 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // later frames.  The next reliable region must build a fresh window.
         diagnostics.sceneReset = !m_state->history.empty();
         m_state->clear();
-        m_state->synthesisRecovery.preserveSource();
+        // Two missing source pairs are not a rejected grain estimate. Keep
+        // the source during warmup, then let corroborated independent grain
+        // start normally. Actual low-confidence/repeated-source rejection
+        // still owns the existing hold and gradual synthesis recovery.
+        const bool trainingWarmup = !trainingReady && trainingCandidates >= requiredBlocks;
+        if (!trainingWarmup) m_state->synthesisRecovery.preserveSource();
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=0 reset=%d flat=%d/%d window=0 trainingReady=%d excludedTraining=%d\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             diagnostics.sceneReset ? 1 : 0, diagnostics.flatBlocks, diagnostics.totalBlocks,
