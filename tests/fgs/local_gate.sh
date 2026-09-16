@@ -87,7 +87,7 @@ CEILING_MODEL="$FIXTURE_ROOT/taxi-metric-gamer.json"
 TAXI_CLIP="$FIXTURE_ROOT/taxi-coarse-24f.mkv"
 SUBSTITUTION_ENCODE="$FIXTURE_ROOT/taxi-widened-r4047.mkv"
 
-ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression grain_syntax flicker_regression mixed_source amplitude_regression)
+ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression grain_syntax flicker_regression mixed_source amplitude_regression variance_support)
 # The GPU fixtures and export tests plus the offline adversarial
 # specimen. Deliberately excludes the libaom oracles and the canary, which need
 # real-film encodes. A pre-push hook long enough to be bypassed with
@@ -202,6 +202,12 @@ verify_sha256() {
 # ---------------------------------------------------------------------------
 # preflight: fail loudly, never silently degrade
 # ---------------------------------------------------------------------------
+if want_stage variance_support; then
+    variance_negative="${FGS_GATE_VARIANCE_SOURCE_NEGATIVE:-$DOCKER_APPS/logs/fgs-ripple-repair-20260906/bin/nvencc-2fa6cfd0}"
+    variance_negative_sha="${FGS_GATE_VARIANCE_SOURCE_NEGATIVE_SHA256:-ef4799f6e7110e1057d8f728586d45e382b1ce3aa75c035403da35f05ca4b946}"
+    [ -x "$variance_negative" ] || die "variance_support requires the retained 2fa6cfd0 negative encoder"
+    verify_sha256 "$variance_negative" "$variance_negative_sha" "source-variance negative encoder"
+fi
 if want_stage amplitude_regression; then
     [ -n "$AMPLITUDE_MANIFEST" ] || die "amplitude_regression requires --amplitude-manifest (or FGS_GATE_AMPLITUDE_MANIFEST).
 Prepare source-matched default-mode outputs for the selected binary, the retained
@@ -746,6 +752,26 @@ if want_stage amplitude_regression; then
     else
         record fail "structured-scene amplitude regression (see $REPORT_DIR/amplitude-regression.log)"
         tail -20 "$REPORT_DIR/amplitude-regression.log"
+    fi
+fi
+
+if want_stage variance_support; then
+    log "stage: thin-highlight and weak-texture source support"
+    if python3 "$HERE/variance_support_regression.py" --nvencc "$variance_negative" \
+        --expect-rejected --output "$REPORT_DIR/variance-support-negative" \
+        > "$REPORT_DIR/variance-support-negative.log" 2>&1; then
+        record pass "source-variance detector rejects retained 2fa6cfd0 at both depths and rate settings"
+    else
+        record fail "source-variance negative control (see $REPORT_DIR/variance-support-negative.log)"
+        tail -20 "$REPORT_DIR/variance-support-negative.log"
+    fi
+    if python3 "$HERE/variance_support_regression.py" --nvencc "$CANDIDATE_NVENCC" \
+        --output "$REPORT_DIR/variance-support-candidate" \
+        > "$REPORT_DIR/variance-support-candidate.log" 2>&1; then
+        record pass "thin highlights and weak texture protected; genuine grain preserved"
+    else
+        record fail "source-variance candidate (see $REPORT_DIR/variance-support-candidate.log)"
+        tail -20 "$REPORT_DIR/variance-support-candidate.log"
     fi
 fi
 

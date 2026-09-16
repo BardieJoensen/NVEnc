@@ -63,6 +63,30 @@ class GateTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertNotIn('preflight', result.stdout)
 
+    def test_variance_support_cannot_skip_a_missing_negative(self):
+        self.env['FGS_GATE_VARIANCE_SOURCE_NEGATIVE'] = str(self.root / 'missing')
+        result = self.run_command(['bash', str(HERE / 'local_gate.sh'),
+                                   '--stage', 'variance_support',
+                                   '--candidate-nvencc', str(self.root / 'candidate')])
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('requires the retained 2fa6cfd0 negative encoder', result.stderr)
+        self.assertNotIn('preflight', result.stdout)
+
+    def test_variance_support_rejects_changed_negative_before_gpu(self):
+        negative = self.executable(self.root / 'negative', '#!/bin/sh\necho wrong-build\n')
+        self.env['FGS_GATE_VARIANCE_SOURCE_NEGATIVE'] = str(negative)
+        result = self.run_command(['bash', str(HERE / 'local_gate.sh'),
+                                   '--stage', 'variance_support',
+                                   '--candidate-nvencc', str(self.root / 'candidate')])
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('source-variance negative encoder hash mismatch', result.stderr)
+        self.assertNotIn('preflight', result.stdout)
+
+    def test_variance_support_is_available_in_full_gate(self):
+        result = self.run_command(['bash', str(HERE / 'local_gate.sh'), '--list'])
+        self.assertEqual(result.returncode, 0)
+        self.assertIn('variance_support', result.stdout.splitlines())
+
     def test_kat_receives_candidate_and_explicit_production_denoiser(self):
         target = self.repo / 'tests/fgs'
         target.mkdir(parents=True)
