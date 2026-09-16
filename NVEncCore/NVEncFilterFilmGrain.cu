@@ -1915,6 +1915,12 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         ++examined;
     }
     const int trainingCandidates = selected;
+    // Temporal repeatability qualifies residuals for the statistical model.
+    // It must not change the spatial denoiser's already measured local noise:
+    // substituting the median in excluded blocks changes the clean base and
+    // can redistribute encoder bits even on otherwise genuine film grain.
+    const std::vector<uint8_t> spatialMask(mask, mask + blockCount);
+    float spatialNoise = 0.0f;
     int repeatedTraining = 0;
     bool trainingReady = true;
     if (m_detailReference) {
@@ -1925,7 +1931,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if (!rawNoise.empty()) {
             const auto mid = rawNoise.begin() + rawNoise.size() / 2;
             std::nth_element(rawNoise.begin(), mid, rawNoise.end());
-            rawSigma = *mid / depthScale;
+            spatialNoise = *mid;
+            rawSigma = spatialNoise / depthScale;
         }
         trainingReady = m_trainingHistory->observe(adjacentTrainingSource, blockCount,
             [&](int i) { return metrics[i].mean / depthScale; }, rawSigma);
@@ -1974,15 +1981,16 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     std::nth_element(grainCorrelationSamples.begin(), correlationMiddle, grainCorrelationSamples.end());
     const float measuredGrainCorrelation = *correlationMiddle;
     const bool adaptiveSigma = prm->filmGrain.denoiseLevel <= 0.0f;
+    const float spatialMedian = spatialNoise > 0.0f ? spatialNoise : measuredNoise;
     const float denoiseSigma = adaptiveSigma
-        ? measuredNoise : prm->filmGrain.denoiseLevel * depthScale;
+        ? spatialMedian : prm->filmGrain.denoiseLevel * depthScale;
     if (adaptiveSigma) {
         // Selected blocks denoise with their own measured noise level;
         // unselected (textured) blocks fall back to the median so their own
         // texture variance does not turn the denoiser into a blur.
         auto sigmaMap = static_cast<float *>(m_sigmaMap->ptrHost);
         for (int i = 0; i < blockCount; ++i) {
-            sigmaMap[i] = mask[i] ? clamp(metrics[i].sigma, minSigma, maxSigma) : measuredNoise;
+            sigmaMap[i] = spatialMask[i] ? clamp(metrics[i].sigma, minSigma, maxSigma) : spatialMedian;
         }
         if ((sts = m_sigmaMap->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
     }
