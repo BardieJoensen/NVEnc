@@ -117,6 +117,16 @@
       "file": "gentlemen-amplitude-guard-positive-33m-150s.mkv",
       "sha256": "3886c36063ca5b0551a0dfa82e1e6d9bee902385e025e23d0fe063e3c8941cc8",
       "bytes": 51000788
+    },
+    "gentlemen_training_positive": {
+      "file": "gentlemen-corroborated-training-positive-33m-150s.mkv",
+      "sha256": "7f729a5577c94075bb59c845806532f5e19753edda5a7fc73c8c3ae9de58a705",
+      "bytes": 50583824
+    },
+    "gentlemen_detail_negative": {
+      "file": "gentlemen-spatial-denoising-detail-negative-33m-150s.mkv",
+      "sha256": "62670059833482ab7c325db1ac82ba30cc7182a72ddeec8bbfbca2b79a0024c7",
+      "bytes": 50539916
     }
   },
   "provenance": {
@@ -318,6 +328,16 @@
       "maximum_luma_rms_increase": 0.19407105445861816,
       "decision": "Accept deliberate mandatory-amplitude change for this fixture; all original jacket checks pass and worst changed stills reviewed. Fresh same-binary repeat required.",
       "limits": "Original change alert and prior positives/negatives retained; numeric limits unchanged. This fixture decision is not full encoder release approval."
+    },
+    "gentlemen_training_positive": {
+      "encoder_core": "cb903a17",
+      "review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/source-variance/training-v7/periodic-source-review/actual-visual-review.json",
+      "role": "Decoded texture positive; independent source-detail reference remains the older amplitude positive"
+    },
+    "gentlemen_detail_negative": {
+      "encoder_core": "af37b958",
+      "review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/source-variance/training-v6/failure-review.json",
+      "role": "Retained actual fine-jacket blur, synthesis disabled when assessed"
     }
   },
   "canary_revalidation": {

@@ -1,12 +1,15 @@
 """Native-code controls for the real-film model comparison's luma weights."""
 from pathlib import Path
+from fractions import Fraction
+import copy
 import subprocess
 import tempfile
 import unittest
 
 import numpy as np
 
-from reference_compare_real import luma_occupancy
+from reference_compare_real import (luma_occupancy, compare_model_timelines,
+                                    source_preserved_frames)
 
 
 def fixture(path, bits, range_name):
@@ -62,6 +65,49 @@ class ReferenceOccupancyTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as name:
             with self.assertRaises(RuntimeError):
                 luma_occupancy(str(Path(name)/'missing.mkv'), 1)
+
+
+class ModelTimelineTest(unittest.TestCase):
+    @staticmethod
+    def model(start, end, strength):
+        return dict(start=start, end=end, apply_grain=True,
+                    params=dict(scaling_shift=8, grain_scale_shift=0),
+                    scaling_points=dict(y=[[0, strength], [255, strength]]))
+
+    def test_different_clocks_and_unbounded_last_entry(self):
+        fps = Fraction(24000, 1001)
+        tick = lambda n: round(Fraction(n * 10000000, 1) / fps)
+        candidate = [self.model(0, tick(3), 20), self.model(tick(3), tick(4), 40)]
+        reference = [self.model(0, 1250000, 20), self.model(1250000, 2**63-1, 40)]
+        result = compare_model_timelines(candidate, reference, np.ones((4, 256)), fps, [False]*4)
+        self.assertEqual(result['rms_ratio'], 1.0)
+        self.assertEqual([r['rms_ratio'] for r in result['frames']], [1.0]*4)
+        bad = copy.deepcopy(candidate)
+        for entry in bad:
+            entry['scaling_points']['y'] = [[0, entry['scaling_points']['y'][0][1]//2],
+                                          [255, entry['scaling_points']['y'][0][1]//2]]
+        self.assertEqual(compare_model_timelines(bad, reference, np.ones((4, 256)), fps,
+                                               [False]*4)['rms_ratio'], .5)
+
+    def test_only_verified_source_can_replace_startup_models(self):
+        model = [self.model(833333, 2**63-1, 20)]
+        reference = [self.model(0, 2**63-1, 20)]
+        result = compare_model_timelines(model, reference, np.ones((4, 256)), 24,
+                                         [True, True, False, False])
+        self.assertEqual(result['preserved_frames'], [0, 1])
+        with self.assertRaisesRegex(ValueError, 'without preserved source'):
+            compare_model_timelines(model, reference, np.ones((4, 256)), 24, [False]*4)
+        with self.assertRaisesRegex(ValueError, 'insufficient'):
+            compare_model_timelines([], reference, np.ones((4, 256)), 24, [True]*4)
+
+    def test_actual_raw_pairs_and_short_decode(self):
+        with tempfile.TemporaryDirectory() as name:
+            source, clean = Path(name)/'source.raw', Path(name)/'clean.raw'
+            source.write_bytes(bytes(range(24)))
+            clean.write_bytes(bytes(range(12)) + bytes(12))
+            self.assertEqual(source_preserved_frames(source, clean, 2, 2, 10, 2), [True, False])
+            with self.assertRaisesRegex(RuntimeError, 'incomplete'):
+                source_preserved_frames(source, clean, 2, 2, 10, 3)
 
 
 if __name__ == '__main__':

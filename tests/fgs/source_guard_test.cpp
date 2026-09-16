@@ -39,6 +39,49 @@ int main() {
     require(!clipped.needsSource() && clipped.quietBlocks[0] == 0,
         "clipped endpoints treated as source noise evidence");
 
+    // Total source variance is separate evidence. A thin near-white light
+    // with roughly one code of source noise must not inherit fourteen codes
+    // of synthesis from a neighboring textured wall. Clipped luma never
+    // supplies a chroma-noise estimate to the quiet guard above.
+    fgsmodel::FilmGrainSourceVarianceGuard variance;
+    require(variance.observe(234.0, 0.977, 13.865, 8, 8) < 0.15,
+        "thin bright source region received excessive synthesis");
+    require(variance.observe(128.0, 2.0, 12.0, 8, 8) < 0.3,
+        "non-flat source variance did not bound gross synthesis");
+    const auto conflicts = variance.conflictingBlocks;
+    for (double sigma : {0.0, 0.3, 1.0, 3.0, 8.0, 20.0}) {
+        require(variance.observe(128.0, sigma, sigma, 8, 8) == 1.0,
+            "matching genuine grain was capped");
+        require(variance.observe(128.0, sigma, 1.5*sigma + 0.5, 8, 8) == 1.0,
+            "small-region sampling uncertainty was capped");
+    }
+    require(variance.observe(234.0, 0, 20, 7, 8) == 1.0
+        && variance.observe(234.0, 0, 20, 8, 7) == 1.0,
+        "undersized edge region constrained the model");
+    require(variance.conflictingBlocks == conflicts,
+        "non-conflicting source observations changed diagnostics");
+    fgsmodel::FilmGrainSourceVarianceGuard invalidVariance;
+    invalidVariance.observe(100, std::numeric_limits<double>::quiet_NaN(), 5, 8, 8);
+    require(invalidVariance.invalid, "non-finite source variance was accepted");
+
+    // A textured region may straddle a steep grain-strength peak while its
+    // average lies on the low shoulder. Its actual pixels still receive the
+    // peak, including a small reconstruction margin outside source values.
+    float strengths[256] = {};
+    const uint8_t peakValues[] = {0, 100, 104, 108, 255};
+    for (int x = 100; x <= 108; ++x)
+        strengths[x] = static_cast<float>(12 - 3 * std::abs(x - 104));
+    const double hiddenPeak = fgsmodel::film_grain_range_peak(strengths, peakValues, 5, 98, 106);
+    require(hiddenPeak == 12 && strengths[102] == 6,
+        "enclosed strength peak was reduced to the region mean");
+    require(variance.observe(102, 3, hiddenPeak, 8, 8) < 0.5
+        && variance.observe(102, 3, strengths[102], 8, 8) == 1,
+        "range peak did not expose the mean-only source-support gap");
+    require(fgsmodel::film_grain_range_peak(strengths, peakValues, 5, 101, 102) == 6,
+        "range endpoint interpolation was omitted");
+    require(fgsmodel::film_grain_range_peak(strengths, peakValues, 5, 20, 30) == 0,
+        "unrelated grain strength escaped its interval");
+
     for (double bad : {-1.0, std::numeric_limits<double>::infinity(),
                        std::numeric_limits<double>::quiet_NaN()}) {
         FilmGrainQuietSourceGuard invalid;

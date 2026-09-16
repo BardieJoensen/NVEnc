@@ -52,7 +52,33 @@ def assess(source, candidate, patch=PATCH):
                 source_rms=rms.tolist(), texture_limit=0.3, source_rms_limit=4.0)
 
 
-def decode(path, prefix, start=START, frames=FRAMES, plane=None):
+def assess_with_codec_control(source, candidate, grain_off, plain, patch=PATCH):
+    """Distinguish grain flashes from same-settings lossy colour quantization.
+
+    The absolute source bounds remain recorded. A marginal texture violation
+    can only be explained by the codec when synthesis changes no patch pixel
+    and an independently encoded no-FGS control has the same variation (within
+    .05 of an eight-bit code). This never excuses an added grain overlay.
+    """
+    result = assess(source, candidate, patch)
+    off_result = assess(source, grain_off, patch)
+    plain_result = assess(source, plain, patch)
+    x, y, width, height = patch
+    difference = candidate[:, y:y+height, x:x+width] - grain_off[:, y:y+height, x:x+width]
+    peak = np.max(np.abs(difference), axis=(1, 2))
+    ordinary = np.asarray(result['output_patch_sd']) <= result['texture_limit']
+    explained = ((peak == 0) &
+                 (np.asarray(off_result['output_patch_sd']) <=
+                  np.asarray(plain_result['output_patch_sd']) + .05))
+    passed = bool(np.all(ordinary | explained) and
+                  max(result['source_rms']) <= result['source_rms_limit'])
+    return dict(passed=passed, absolute_source_check=result,
+                grain_off_source_check=off_result, plain_source_check=plain_result,
+                synthesis_peak=peak.tolist(), codec_explained_frames=np.flatnonzero(~ordinary & explained).tolist(),
+                codec_sigma_margin=.05)
+
+
+def decode(path, prefix, start=START, frames=FRAMES, plane=None, grain=1):
     if plane not in (None, 'u', 'v'):
         raise ValueError('unsupported native colour plane')
     probe = json.loads(subprocess.check_output(
@@ -61,7 +87,7 @@ def decode(path, prefix, start=START, frames=FRAMES, plane=None):
     stream = probe['streams'][0]
     command = ['ffmpeg', '-hide_banner', '-nostdin', '-copyts', '-threads', '2']
     if stream['codec_name'] == 'av1':
-        command += ['-c:v', 'libdav1d', '-filmgrain', '1']
+        command += ['-c:v', 'libdav1d', '-filmgrain', str(grain)]
     # Avoid ambiguous accurate-seek handling of nonzero-start Matroska excerpts.
     # Those excerpts are short; trim their original displayed PTS.
     if abs(float(stream.get('start_time', 0))) < 0.1:
@@ -98,14 +124,18 @@ def main():
                              [case['source'], case['negative']])
     source_path = Path(pinned[case['source']]['path'])
     candidate = args.candidate_video or args.output / 'candidate.mkv'
-    if args.candidate_video is None:
+    def encode_command(output, grain=True):
         command = [str(args.nvencc), '--avhw', '--timestamp-passthrough', '--allow-other-negative-pts',
                    '--video-track', '1', '-i', str(source_path), '--codec', 'av1', '--output-depth', '10',
                    '--qvbr', '34', '--max-bitrate', '50000', '--preset', 'quality', '--tune', 'hq',
                    '--lookahead', '32', '--lookahead-level', '3', '--aq', '--aq-temporal',
-                   '--av1-film-grain', 'denoise=auto,chroma=auto,denoiser=bilateral',
                    '--colormatrix', 'auto', '--colorprim', 'auto', '--transfer', 'auto', '--colorrange', 'auto',
-                   '--seek', case['seek'], '--frames', str(case['encode_frames']), '-o', str(candidate)]
+                   '--seek', case['seek'], '--frames', str(case['encode_frames']), '-o', str(output)]
+        if grain:
+            command += ['--av1-film-grain', 'denoise=auto,chroma=auto,denoiser=bilateral']
+        return command
+    if args.candidate_video is None:
+        command = encode_command(candidate)
         (args.output / 'encode-command.json').write_text(json.dumps(command, indent=2) + '\n')
         with (args.output / 'encode.log').open('w') as log:
             subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=240)
@@ -117,16 +147,38 @@ def main():
     positive_control = assess(source, source, case['patch'])
     negative_result = assess(source, negative, case['patch'])
     candidate_result = assess(source, picture, case['patch'])
-    report = dict(candidate_sha256=hashlib.sha256(args.nvencc.read_bytes()).hexdigest(),
+    codec_control = None
+    if not candidate_result['passed']:
+        # Preserve the original failure and require actual decoded evidence;
+        # a near-threshold number alone never changes the verdict.
+        plain_path = args.output / 'plain.mkv'
+        command = encode_command(plain_path, grain=False)
+        (args.output / 'plain-command.json').write_text(json.dumps(command, indent=2) + '\n')
+        with (args.output / 'plain-encode.log').open('w') as log:
+            subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=240)
+        plain_pts, plain = decode(plain_path, args.output / 'plain', case['start'], case['frames'], case.get('plane'))
+        off_pts, grain_off = decode(candidate, args.output / 'candidate-off', case['start'], case['frames'], case.get('plane'), grain=0)
+        negative_off_pts, negative_off = decode(Path(pinned[case['negative']]['path']), args.output / 'negative-off', case['start'], case['frames'], case.get('plane'), grain=0)
+        if any(times != source_pts for times in [plain_pts, off_pts, negative_off_pts]):
+            raise RuntimeError('codec control frames are not aligned')
+        codec_control = dict(candidate=assess_with_codec_control(source, picture, grain_off, plain, case['patch']),
+                             negative=assess_with_codec_control(source, negative, negative_off, plain, case['patch']),
+                             plain_sha256=hashlib.sha256(plain_path.read_bytes()).hexdigest())
+        if codec_control['negative']['passed']:
+            raise RuntimeError('codec control incorrectly excused the known grain flash')
+    accepted = candidate_result['passed'] or bool(codec_control and codec_control['candidate']['passed'])
+    report = dict(passed=bool(positive_control['passed'] and not negative_result['passed'] and accepted),
+                  candidate_sha256=hashlib.sha256(args.nvencc.read_bytes()).hexdigest(),
                   candidate_video=str(candidate), candidate_video_sha256=hashlib.sha256(candidate.read_bytes()).hexdigest(),
                   case=args.case, fixtures=pinned, seconds=source_pts, patch=case['patch'],
                   units='8-bit-equivalent native ' + case['plane'] if case.get('plane') else '8-bit-equivalent full-range grayscale',
                   positive_control=positive_control, negative=negative_result, candidate=candidate_result,
+                  codec_control=codec_control,
                   scope='Pinned flash and source fidelity only; not a universal flicker or quality certificate')
     (args.output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
     if not positive_control['passed'] or negative_result['passed']:
         raise RuntimeError('decoded texture regression did not separate its controls')
-    if not candidate_result['passed']:
+    if not accepted:
         raise RuntimeError('candidate failed the source-referenced grain flash regression')
     print('PASS: known grain flash rejected, source texture retained by candidate')
 

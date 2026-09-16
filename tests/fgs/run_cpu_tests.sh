@@ -34,6 +34,9 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore \
 $CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/scene_schedule_test.cpp -o "$OUT/fgs_scene_schedule_test"
 "$OUT/fgs_scene_schedule_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore \
+    tests/fgs/training_history_test.cpp -o "$OUT/fgs_training_history_test"
+"$OUT/fgs_training_history_test"
 "$OUT/fgs_solver_test"
 "$OUT/fgs_local_strength_test"
 "$OUT/fgs_chroma_restore_test"
@@ -66,5 +69,6 @@ python3 tests/fgs/test_fel_layer_order.py
 python3 tests/fgs/test_fel_prepare.py
 python3 tests/fgs/test_fel_process.py
 python3 tests/fgs/test_fel_parameter_bounds.py
+python3 tests/fgs/test_kat_startup.py
 
 python3 tests/fgs/test_amplitude_regression.py

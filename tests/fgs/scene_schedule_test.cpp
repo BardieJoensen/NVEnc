@@ -12,6 +12,9 @@ int main() {
     std::istringstream input("FGS_SCENE_CUTS_V1 5\r\n0\r\n\n3\r\n");
     require(schedule.load(input, error) && schedule.frames() == 5 && schedule.cuts() == 2);
     require(!schedule.complete());
+    require(schedule.isCut(0) && schedule.isCut(3) && !schedule.isCut(1));
+    require(!schedule.isCut(-1) && !schedule.isCut(5));
+    require(schedule.seen() == 0 && !schedule.complete()); // read-ahead cannot consume
     require(schedule.consume(0, cut) && cut);
     require(schedule.consume(1, cut) && !cut);
     require(schedule.consume(2, cut) && !cut);

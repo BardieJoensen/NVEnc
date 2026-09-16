@@ -1,18 +1,62 @@
 # FGS encoder and library repair: current work and handoff
 
-Status: **ordinary core `2fa6cfd0` is deployed and its nine selected follow-up
-repairs are installed and postchecked. Broader source review found remaining
-excess synthesis in this build. Ordinary Tdarr is unpaused following the user's
-clarification that they deliberately resumed it; the repair coordinator stays
-stopped and further repair/deployment qualification remains required. The
-isolated `95736a03` source-variance prototype has built
-and completed ten short trials; review and broader qualification remain pending.
-It is not deployed. Finite current-version scans and retries are
-complete: 5,354 display measurements, 127 native-only measurements and two
-source-pairing gaps among 5,483 current AV1 files. Visual review remains open.
-FEL encoding is held at the user's request; all four untouched HEVC originals
-are restored in Movies. Automatic-retention studies remain manual-start only.**
-Updated 2026-09-16.
+**September 16 current state:** ordinary `2fa6cfd0` remains deployed, with
+ordinary Tdarr admissions paused and drained for the user-authorized excessive-
+grain correction. The repair coordinator is stopped. Current isolated candidate
+`cb903a17` is being qualified; no candidate has replaced library media. FEL
+encoding stays disabled and all four original HEVC films are restored in Movies.
+Optional automatic-retention studies remain manual-start only.
+
+The current correction bounds synthesis against native source variance and
+excludes repeated picture texture from both model training and denoising-strength
+estimates. Bounded two-frame lookahead corroborates startup without importing
+future model statistics or advancing causal history. Physical intensity-bin
+centres replace the incorrect ordinary-fit positions. See
+[SOURCE-VARIANCE-20260916.md](SOURCE-VARIANCE-20260916.md) and the live
+`source-variance/training-v7/` receipts under the September 16 ledger.
+
+V7 passes the unchanged Taxi base-fidelity canary, native frame-paired libaom
+comparison, four source-variance fixtures, synthetic KATs, export/drain tests,
+prior texture negatives, header-syntax controls and source-referenced flicker
+controls. Ten real 32-second pilots are encoded and their selected witnesses
+actually reviewed. All-frame sequence measurements and the remaining broad
+stages are finishing. Full-source, HDR, exact-runtime and paired performance
+checks remain pending. The combined fidelity build also compiles and passes its
+complete CPU suite; its final GPU integration checks remain pending.
+
+The original periodic change alert remains recorded. All 3,600 source pictures
+were compared and eight selected worst/anchor stills actually reviewed. The
+reviewed V7 grain-schedule positive is separately pinned; a fresh repeated encode
+must pass unchanged decoded-sequence limits. A new independent, synthesis-off
+source-detail check keeps the older amplitude positive as its reference and
+rejects the retained V6 jacket-blur negative. At 66/75.5 seconds, V7 base luma RMS
+is 0.669/0.666 versus reference 0.655/0.626; V6 was 1.572/1.741. The original
+84.5-second mesh witness remains completely synthesis-free. This finite fixture
+review is not production qualification or a guarantee of lossless quality.
+
+**Do not deploy V6 `af37b958`.** It passed the base canary but softened the fine
+jacket texture. Its failure is retained in `training-v6/failure-review.json`.
+Earlier V5 failed the base canary because preserving just the first two source
+bases changed later NVENC bit allocation; controlled raw/table replay isolated
+that cause. Lookahead fixes startup, and V7 also removes excluded picture texture
+from denoising estimates. See `canary-model-trace/` and `canary-rate-diagnostic/`.
+Original thresholds and failed candidates remain evidence.
+
+Latest authorization: "alright I thought all fixes were done. go ahead and fix
+the excessive grain issue". `source-variance/qualification-pause-20260916.json`
+and the repair hold receipts record owner `fgs-source-variance-qualification-20260916`.
+Resume ordinary Tdarr after qualified rollout, respecting the independent Emby
+watchdog. The earlier operational resume described below is historical.
+
+The user also authorized cleanup after dependencies finish. Already removed:
+55,505,068,032 allocated bytes of obsolete FEL AV1 restoration backups,
+4,485,079,040 bytes of completed synthetic/old build artifacts and
+20,367,446,016 bytes of completed raw trial intermediates: 80,357,593,088 bytes
+total. Restored original HEVC hardlinks were verified unchanged. See
+`source-variance/fel-backup-cleanup-result.json`,
+`completed-scratch-cleanup-result.json` and `completed-raw-cleanup-result.json`.
+Further cleanup follows qualification. Retain originals still needed for repair,
+compact regression controls and operational rollback material.
 
 September 16 source/repair reconciliation: 1,882 installed repair receipts resolve
 to 1,874 unchanged outputs, five later changes at the same path and three newer
@@ -27,14 +71,15 @@ already have non-cleanup NordicBits policy. Seeding was never paused by these ta
 The user confirmed deliberately resuming ordinary Tdarr before the restoration
 preflight. The assistant's subsequent re-pause incorrectly overrode that choice
 and has been reversed. The two running jobs (Neagley S01E01 and Reacher S04E08)
-finished successfully and need current-version audit. Do not reapply the old
-ordinary-worker pause from this handoff. This operational correction is not
+finished successfully and need current-version audit. At that stage the old
+ordinary-worker pause did not apply. This operational correction was not
 encoder quality clearance or evidence that the user accepted the remaining
 quality defect; they subsequently asked whether any issues remained and were
 told that excess synthesis is still confirmed in the deployed build.
 After excluding the four restored HEVC films, the current Tdarr AV1 index has
 5,481 paths, including those two new versions beyond the finite audit snapshot.
-The node is unpaused; the existing Emby playback watchdog remains independent.
+The later user-authorized qualification pause above now applies; the existing
+Emby playback watchdog remains independent.
 Read
 [repair lineage, source releases and original restoration](SOURCE-RELEASE-20260916.md)
 and its live receipts before releasing further sources or resuming FEL work.
@@ -77,7 +122,8 @@ Do not reinterpret sampled passes as whole-library perceptual clearance.
 
 The separately owned `fgs-current-city-fidelity-20260916` hold remains scoped to
 further repair-worker admission and experimental deployment qualification for
-the new source-support failure. It does not authorize pausing ordinary Tdarr.
+the new source-support failure. The later user-authorized qualification work
+also temporarily owns the ordinary Tdarr pause, with a separate receipt above.
 Do not release the repair/deployment gate on nine-repair or scan completion.
 `amplitude-scope-pilot-review.json` records ten new source/pilot comparisons:
 five improved witnesses, four conspicuous remaining mismatches (Severance
@@ -419,7 +465,8 @@ The faster four-thread HDR validator is already deployed. Its 90 checks and
 measured sample timing are recorded in the September 10 ledger; this does not
 add the expensive development studies to routine Tdarr validation. FEL encoding
 is disabled and the four original-film folders are excluded. Ordinary Tdarr is
-unpaused following the user's clarification; playback yielding remains active.
+temporarily paused for the newly authorized qualification; playback yielding
+remains active.
 
 The September 12 application upgrade preceded this encoder rollout; its initial
 encoder image is historical. The current runtime is pinned above.
@@ -430,8 +477,8 @@ The immediate ordinary-core work is the remaining source-support failure above.
 Finish the `source-variance/` experiments and preserve all failing controls.
 The finite audit scan is complete; source-window gap review and watchability
 classification remain open. Further repairs and experimental deployment still
-require qualification; ordinary Tdarr is unpaused following the user's
-clarification above. Keep the repair coordinator stopped while this separate
+require qualification; ordinary Tdarr is temporarily paused for the user's
+newly authorized correction. Keep the repair coordinator stopped while this separate
 work remains held. The retention plan below is still deferred.
 
 **Retention GPU trials are prepared, not running or scheduled to start automatically.**

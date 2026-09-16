@@ -9,6 +9,23 @@
 
 namespace fgsmodel {
 
+// Grain strength indexes reconstructed pixel levels, not a region's mean.
+// A narrow peak inside the observed range can therefore be invisible at the
+// mean. The LUT is piecewise monotone between its model knots, so endpoints
+// and enclosed knots bound the complete interval without scanning every code.
+inline double film_grain_range_peak(const float (&strength)[256],
+    const uint8_t *values, uint32_t count, int first, int last) {
+    first = std::max(0, first);
+    last = std::min(255, last);
+    if (first > last) return std::numeric_limits<double>::quiet_NaN();
+    double peak = std::max(strength[first], strength[last]);
+    for (uint32_t i = 0; i < count; ++i) {
+        if (values[i] >= first && values[i] <= last)
+            peak = std::max(peak, static_cast<double>(strength[values[i]]));
+    }
+    return peak;
+}
+
 // Noisy blocks train the AR model, but cannot establish that synthesis belongs
 // on a different, nearly uniform region at the same brightness. Check that
 // missing evidence separately, using source measurements before denoising.
@@ -39,6 +56,36 @@ struct FilmGrainQuietSourceGuard {
 
     bool needsSource() const {
         return invalid || conflictingBlocks[0] || conflictingBlocks[1] || conflictingBlocks[2];
+    }
+};
+
+// A current source region's total spatial variance includes both detail and
+// grain. It is deliberately a loose ceiling, not an estimate of removable
+// noise. This independent luma check also covers small, bright regions that
+// are ineligible for the near-flat active-range test above. Never infer chroma
+// noise from clipped luma; the existing chroma eligibility remains unchanged.
+struct FilmGrainSourceVarianceGuard {
+    uint64_t conflictingBlocks = 0;
+    double maxExcess = 0.0;
+    bool invalid = false;
+
+    double observe(double mean8, double sourceSigma8, double modeledSigma8,
+        int width, int height) {
+        if (width < 8 || height < 8) return 1.0;
+        if (!std::isfinite(mean8) || !std::isfinite(sourceSigma8)
+            || !std::isfinite(modeledSigma8) || sourceSigma8 < 0.0
+            || modeledSigma8 < 0.0) {
+            invalid = true;
+            return 1.0;
+        }
+        // Small blocks and correlated genuine grain have uncertain sample
+        // variance. Only a gross overestimate enters protection; the existing
+        // finer near-flat guard still handles smaller exact-source conflicts.
+        const double attack = std::max(3.0, 2.0 * sourceSigma8 + 1.0);
+        if (modeledSigma8 <= attack) return 1.0;
+        ++conflictingBlocks;
+        maxExcess = std::max(maxExcess, modeledSigma8 - sourceSigma8);
+        return (1.5 * sourceSigma8 + 0.5) / modeledSigma8;
     }
 };
 
