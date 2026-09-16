@@ -142,7 +142,14 @@ perceptual approval. The earlier frozen canary's TrueHD timing failure remains
 recorded; the corrected qualification reused the same completed video. Complete
 Bumblebee preparation passed (163,840 frames), without another GPU encode.
 No FEL replacement or new encoder was installed, and all four originals remain
-held. The user plans to check Apple TV/Infuse later.
+held. On September 16 the user reported that the Apple TV/Infuse test clips
+looked good, with no mistakes noticed, but only UHD was indicated. Actual HDR
+output remains unconfirmed; the TV does not support Dolby Vision and Match
+Dynamic Range was not reported. The eight temporary Movies copies and their
+Tdarr exclusion were removed as requested, and Emby's index was verified clear.
+Original test clips and qualification evidence remain available. The
+[feedback and cleanup receipt](/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/emby-playback-pack-20260916/cleanup-20260916.json)
+records the exact observation; it does not release the remaining FEL gates.
 
 Read [the FEL production report](FEL-PRODUCTION-20260914.md) and
 [live work ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/work-plan.json)

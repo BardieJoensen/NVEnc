@@ -1,9 +1,10 @@
 # FEL reconstruction: production qualification in progress
 
-Updated September 15, 2026. **The complete Beasts candidate passed automated
-qualification with current-library tracks. No FEL replacement is installed;
-actual playback approval and other production gates remain open. All four
-originals remain held.** The authoritative result is the corrected
+Updated September 16, 2026. **The complete Beasts candidate passed automated
+qualification with current-library tracks. The user reports no visible mistakes
+in the playback clips, but saw only a UHD label; actual HDR output remains
+unconfirmed. No FEL replacement is installed, and other production gates remain
+open. All four originals remain held.** The authoritative automated result is the corrected
 [full-library receipt](/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/full-library-qualification.json).
 The earlier frozen canary's TrueHD timing failure remains separate historical
 evidence; the corrected validation reused its completed video.
@@ -20,8 +21,9 @@ The two precisely aligned reference windows finished at average PQ-code PSNR
 48.423216 and 51.125299 dB (164 and 100 pictures). These measurements do not
 establish whole-film visual equivalence or correct physical Dolby playback.
 Complete Bumblebee preparation also passed, with 163,840 frames; its full
-reconstruction/encode is not yet qualified. The user will review Apple TV/Infuse
-later. All finite September 14 units have finished, and their Tdarr pause was
+reconstruction/encode is not yet qualified. The September 16 Apple TV/Infuse
+review covers the short clips, with actual HDR output still unconfirmed.
+All finite September 14 units have finished, and their Tdarr pause was
 restored. September 15 ordinary Tdarr retries are a separate task.
 
 The canonical project entry point remains
@@ -274,14 +276,18 @@ reference Y4Ms can be archived with their receipts after dependent jobs finish.
 1. Review completed Beasts speed, size and measured texture results. Its full
    encode, independent source decodes and corrected final mux checks passed.
    The two reference windows do not cover every scene in the film.
-2. Verify actual HDR10/player behavior on the user's Apple TV/Infuse path.
-   On September 16 the user confirmed the TV has no Dolby Vision support.
-   Eight hash-identical clips are copied into the Emby Movies folder with
-   titles beginning `FEL Test 20260914`; the original review pack remains in
-   `/media/merged-storage/media/test-encodes/FEL-production-20260914`. They are
-   lossy candidates, repeated three times, with no audio. Ignore loop joins.
-   The test directories are excluded from Tdarr. Placement and playback scope:
-   `/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/emby-playback-pack-20260916/report.json`.
+2. Verify actual HDR output on the user's Apple TV/Infuse path. On September 16
+   the user reported that the FEL clips looked good, with no mistakes noticed,
+   but only UHD was indicated, without HDR or Dolby Vision. This is a positive
+   visual observation; it establishes neither HDR10 output nor an SDR failure.
+   Match Dynamic Range was not reported, and the TV has no Dolby Vision support.
+   At the user's request, all eight temporary `FEL Test 20260914` Movies folders
+   and their owned Tdarr exclusion were removed; Emby's index was verified clear.
+   The hash-verified original review clips remain in
+   `/media/merged-storage/media/test-encodes/FEL-production-20260914`.
+   They are silent, lossy candidates repeated three times, using the verified
+   contiguous source prefixes. Exact feedback and cleanup evidence:
+   [cleanup receipt](/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/emby-playback-pack-20260916/cleanup-20260916.json).
 3. Actual Dolby Vision playback remains unqualified on other hardware. It
    cannot be checked on this TV and is separate from the intended HDR10
    fallback-path approval; do not ask the user to verify a Dolby output badge.
@@ -330,6 +336,7 @@ All paths below are relative to that ledger unless marked `scratch`.
 | Broader branch integration | `branch-integration.json`, `main-cpu.log`, `main-build.json`; compiled `296993f9` remains undeployed |
 | Every-frame grain and sparse texture | `decoded-grain-observation.json`, `beasts-texture-comparison.json` |
 | Validated playback copies | `playback-pack.json`; earlier receipts keep their superseded names |
+| User playback review and Movies cleanup | `emby-playback-pack-20260916/cleanup-20260916.json`: visually clean clips; UHD label only, HDR output unconfirmed; original clips retained |
 
 Keep full-source components, indexes and the pinned canary tools while the units
 are active. Never move an active FIFO or backing directory. Archive completed
