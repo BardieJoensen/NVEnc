@@ -51,6 +51,11 @@ public:
         ++m_seen;
         return true;
     }
+    // Inspect a future marker without consuming a picture or changing the
+    // strict frame-correspondence/completion contract.
+    bool isCut(const int inputFrameId) const {
+        return enabled() && std::binary_search(m_cuts.begin(), m_cuts.end(), inputFrameId);
+    }
     bool complete() const { return !m_failed && (!enabled() || m_seen == m_frames); }
     bool enabled() const { return m_frames > 0; }
     int frames() const { return m_frames; }

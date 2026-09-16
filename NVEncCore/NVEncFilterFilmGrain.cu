@@ -45,6 +45,7 @@
 #include <fstream>
 #include "NVEncFilmGrainRecovery.h"
 #include "NVEncFilmGrainSourceGuard.h"
+#include "NVEncFilmGrainTraining.h"
 #include "NVEncFilmGrainModel.h"
 #include "NVEncFilterDegrain.h"
 #include "NVEncFilterDenoiseFFT3D.h"
@@ -103,6 +104,7 @@ struct FilmGrainBlockMetric {
     float chromaSigma[2];
     uint32_t flat;
     FilmGrainQuietSourceMetric sourceRegions[4];
+    FilmGrainQuietSourceMetric sourceVarianceRegions[16];
 };
 
 // Integer moments keep exactly constant 8/10-bit colour exactly constant.
@@ -335,6 +337,15 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     const auto sourceRegion = quiet_source_region<32>(tile, bw, regionX, regionY,
         min(FGS_QUIET_SIZE, bw - regionX), min(FGS_QUIET_SIZE, bh - regionY), tid % 32);
     if (tid % 32 == 0) sourceRegions[region] = sourceRegion;
+    // Reuse the staged source for 8x8 luma evidence. Each eight-lane group
+    // owns one region; no new global source read, kernel or synchronization.
+    __shared__ FilmGrainQuietSourceMetric sourceVarianceRegions[16];
+    const int varianceRegion = tid / 8;
+    const int varianceX = (varianceRegion % 4) * 8;
+    const int varianceY = (varianceRegion / 4) * 8;
+    const auto sourceVarianceRegion = quiet_source_region<8>(tile, bw, varianceX, varianceY,
+        min(8, bw - varianceX), min(8, bh - varianceY), tid % 8);
+    if (tid % 8 == 0) sourceVarianceRegions[varianceRegion] = sourceVarianceRegion;
     __syncthreads();
 
     // Consumer NVIDIA GPUs have very low FP64 throughput. None of these
@@ -509,6 +520,7 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
         reduce4[0] / fmaxf(reduce5[0], 1e-12f)));
     out.flat = isFlat ? 1u : 0u;
     for (int region = 0; region < 4; ++region) out.sourceRegions[region] = sourceRegions[region];
+    for (int region = 0; region < 16; ++region) out.sourceVarianceRegions[region] = sourceVarianceRegions[region];
     metrics[blockIndex] = out;
 }
 
@@ -1656,7 +1668,7 @@ tstring NVEncFilterParamFilmGrain::print() const {
 }
 
 NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
-    m_denoiseWork(), m_detailReference(), m_detailConfidence(), m_detailReferenceValid(false), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
+    m_denoiseWork(), m_detailReference(), m_detailConfidence(), m_detailReferenceValid(false), m_trainingHistory(std::make_unique<FilmGrainTrainingHistory>()), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(),
     m_blockMetrics(), m_chromaMetrics(), m_localMetrics(), m_localStrength(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sourceBlendLut(), m_sceneCounts(), m_modelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWriter(),
@@ -1671,6 +1683,8 @@ NVEncFilterFilmGrain::~NVEncFilterFilmGrain() {
 
 void NVEncFilterFilmGrain::resetTemporalState() {
     m_detailReferenceValid = false;
+    m_trainingHead = m_trainingCount = 0;
+    m_trainingHistory->reset();
     if (m_state) m_state->clear(true);
     if (m_fft3d) m_fft3d->resetTemporalState();
     if (m_motionDegrain) m_motionDegrain->resetTemporalState();
@@ -1857,6 +1871,45 @@ static RGY_ERR collect_model_stats(const RGYFrameInfo *src, const RGYFrameInfo *
     }
 }
 
+static int select_spatial_training(const FilmGrainBlockMetric *metrics, const int blockCount,
+    const float minSigma, const float maxSigma, const int requiredBlocks, uint8_t *mask) {
+    std::memset(mask, 0, blockCount);
+    std::vector<int> candidates;
+    candidates.reserve(blockCount);
+    for (int i = 0; i < blockCount; ++i) {
+        if (metrics[i].sigma >= minSigma && metrics[i].sigma <= maxSigma && metrics[i].score > 0.0f) {
+            if (metrics[i].flat) mask[i] = 1;
+            if (metrics[i].score >= 0.5f) candidates.push_back(i);
+        }
+    }
+    std::sort(candidates.begin(), candidates.end(), [metrics](const int a, const int b) {
+        return metrics[a].score > metrics[b].score;
+    });
+    int selected = static_cast<int>(std::count(mask, mask + blockCount, static_cast<uint8_t>(1)));
+    // Always take the top decile of scored blocks in addition to the blocks
+    // passing the strict gradient thresholds (libaom flat_block_finder_run
+    // marks the 90th score percentile as flat).  Strong grain inflates the
+    // gradient metrics, so strict-threshold selection alone samples only the
+    // weakest-grain regions and biases the strength curve.
+    const int topDecile = blockCount / 10;
+    int examined = 0;
+    for (const auto index : candidates) {
+        if (examined >= topDecile && selected >= requiredBlocks) break;
+        if (!mask[index]) { mask[index] = 1; ++selected; }
+        ++examined;
+    }
+    return selected;
+}
+
+static float selected_noise(const FilmGrainBlockMetric *metrics, const int blockCount, const uint8_t *mask) {
+    std::vector<float> noise;
+    for (int i = 0; i < blockCount; ++i) if (mask[i]) noise.push_back(metrics[i].sigma);
+    if (noise.empty()) return 0.0f;
+    const auto middle = noise.begin() + noise.size() / 2;
+    std::nth_element(noise.begin(), middle, noise.end());
+    return *middle;
+}
+
 } // namespace
 
 RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std::shared_ptr<RGYLog> pPrintMes) {
@@ -1927,21 +1980,38 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     m_localMetrics.reset();
     m_localStrength.reset();
     m_detailReferenceValid = false;
-    if (config.denoiser == FGS_DENOISE_BILATERAL && config.residualRetain < 0.0f) {
+    m_trainingHistory->reset();
+    m_trainingHead = m_trainingCount = 0;
+    for (auto& frame : m_trainingSources) frame.reset();
+    m_futureMetrics.reset();
+    m_futureConfidence.reset();
+    if (config.denoiser == FGS_DENOISE_BILATERAL) {
+        for (auto& frame : m_trainingSources) {
+            frame = std::make_unique<CUFrameBuf>(prm->frameIn);
+            frame->releasePtr();
+            if ((sts = frame->alloc()) != RGY_ERR_NONE) return sts;
+        }
+        m_futureMetrics = std::make_unique<CUMemBufPair>(
+            static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(FilmGrainBlockMetric));
+        m_futureConfidence = std::make_unique<CUMemBuf>(static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(float));
+        if ((sts = m_futureMetrics->alloc()) != RGY_ERR_NONE
+            || (sts = m_futureConfidence->alloc()) != RGY_ERR_NONE) return sts;
         m_detailReference = std::make_unique<CUFrameBuf>(prm->frameIn);
         m_detailReference->releasePtr();
         m_detailConfidence = std::make_unique<CUMemBuf>(static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(float));
         if ((sts = m_detailReference->alloc()) != RGY_ERR_NONE
             || (sts = m_detailConfidence->alloc()) != RGY_ERR_NONE) return sts;
-        const size_t localBlocks = static_cast<size_t>(divCeil(prm->frameIn.width, 16)) * divCeil(prm->frameIn.height, 16);
-        m_localMetrics = std::make_unique<CUMemBuf>(localBlocks * sizeof(FilmGrainBlockMetric));
-        m_localStrength = std::make_unique<CUMemBufPair>((config.analyzeChroma ? 3 : 1) * sizeof(FilmGrainLocalStrengthStats));
-        if ((sts = m_localMetrics->alloc()) != RGY_ERR_NONE
-            || (sts = m_localStrength->alloc()) != RGY_ERR_NONE) return sts;
-        if (config.analyzeChroma) {
-            m_chromaMetrics = std::make_unique<CUMemBuf>(
-                2 * static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(FilmGrainBlockMetric));
-            if ((sts = m_chromaMetrics->alloc()) != RGY_ERR_NONE) return sts;
+        if (config.residualRetain < 0.0f) {
+            const size_t localBlocks = static_cast<size_t>(divCeil(prm->frameIn.width, 16)) * divCeil(prm->frameIn.height, 16);
+            m_localMetrics = std::make_unique<CUMemBuf>(localBlocks * sizeof(FilmGrainBlockMetric));
+            m_localStrength = std::make_unique<CUMemBufPair>((config.analyzeChroma ? 3 : 1) * sizeof(FilmGrainLocalStrengthStats));
+            if ((sts = m_localMetrics->alloc()) != RGY_ERR_NONE
+                || (sts = m_localStrength->alloc()) != RGY_ERR_NONE) return sts;
+            if (config.analyzeChroma) {
+                m_chromaMetrics = std::make_unique<CUMemBuf>(
+                    2 * static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(FilmGrainBlockMetric));
+                if ((sts = m_chromaMetrics->alloc()) != RGY_ERR_NONE) return sts;
+            }
         }
     }
     m_blockMetrics = std::make_unique<CUMemBufPair>(
@@ -2110,9 +2180,9 @@ RGY_ERR NVEncFilterFilmGrain::finishTable() {
 }
 
 bool NVEncFilterFilmGrain::mayEmitOnDrain() const {
-    // Bilateral and FFT3D are frame-local at this layer. Motion degrain keeps
-    // temporal frames internally and can release them only after a null input.
-    return m_motionDegrain != nullptr;
+    // Bilateral retains two future sources for startup training. Motion
+    // degrain owns its own delayed sources. Both must receive drain calls.
+    return m_trainingSources[0] != nullptr || m_motionDegrain != nullptr;
 }
 
 RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames,
@@ -2129,6 +2199,29 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     RGYFrameInfo *motionOutput[1] = { nullptr };
     int motionOutputCount = 0;
     auto sts = RGY_ERR_NONE;
+    const RGYFrameInfo *futureSource[2] = { nullptr, nullptr };
+    if (m_trainingSources[0]) {
+        const bool haveInput = pInputFrame && pInputFrame->ptr[0];
+        if (haveInput) {
+            if (m_trainingCount >= static_cast<int>(m_trainingSources.size())) return RGY_ERR_INVALID_CALL;
+            auto& queued = m_trainingSources[(m_trainingHead + m_trainingCount) % m_trainingSources.size()]->frame;
+            if ((sts = copyFrameAsync(&queued, pInputFrame, stream)) != RGY_ERR_NONE) return sts;
+            copyFramePropWithoutRes(&queued, pInputFrame);
+            ++m_trainingCount;
+            if (m_trainingCount < 3) {
+                // No output means there is no downstream completion event yet.
+                // Do not let an upstream pool reuse a source before its copy.
+                return err_to_rgy(cudaStreamSynchronize(stream));
+            }
+        }
+        if (m_trainingCount == 0) return RGY_ERR_NONE;
+        source = cleanBase = &m_trainingSources[m_trainingHead]->frame;
+        for (int i = 1; i < m_trainingCount; ++i) {
+            futureSource[i - 1] = &m_trainingSources[(m_trainingHead + i) % m_trainingSources.size()]->frame;
+        }
+        m_trainingHead = (m_trainingHead + 1) % m_trainingSources.size();
+        --m_trainingCount;
+    }
     if (prm->filmGrain.denoiser == FGS_DENOISE_MOTION) {
         if (!m_motionDegrain) return RGY_ERR_INVALID_CALL;
         // A drain call can have no source picture. Keep the threshold from
@@ -2158,7 +2251,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 cleanBase->inputFrameId, static_cast<long long>(cleanBase->timestamp));
             return RGY_ERR_INVALID_CALL;
         }
-    } else if (!pInputFrame || !pInputFrame->ptr[0]) {
+    } else if (!source || !source->ptr[0]) {
         return RGY_ERR_NONE;
     }
 
@@ -2188,8 +2281,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     copyFramePropWithoutRes(output, source);
     nvenc_film_grain_erase_frame_data(output->dataList);
 
-    bool retainDetailReference = false;
-    bool adjacentDetailReference = false;
+    bool adjacentTrainingSource = false;
     uint32_t sourceReasonMask = 0;
     NVEncFilmGrainDiagnostics diagnostics;
     diagnostics.totalBlocks = m_blocksX * m_blocksY;
@@ -2201,6 +2293,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     if (!prm->filmGrain.enable || interlaced(*source)
         || getCudaMemcpyKind(source->mem_type, output->mem_type) != cudaMemcpyDeviceToDevice) {
         m_detailReferenceValid = false;
+        m_trainingHistory->reset();
         m_state->synthesisRecovery.preserveSource();
         if (cleanBase != source && (sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
         attachResult();
@@ -2227,55 +2320,159 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     default:
         return RGY_ERR_UNSUPPORTED;
     }
-    if (sts != RGY_ERR_NONE || (sts = m_blockMetrics->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
+    if (sts != RGY_ERR_NONE) return sts;
+    auto saveTrainingSource = [&]() -> RGY_ERR {
+        auto referenceLuma = getPlane(&m_detailReference->frame, RGY_PLANE_Y);
+        const auto error = copyPlaneAsync(&referenceLuma, &luma, stream);
+        if (error != RGY_ERR_NONE) return error;
+        m_detailReference->frame.inputFrameId = source->inputFrameId;
+        m_detailReference->frame.timestamp = source->timestamp;
+        m_detailReferenceValid = true;
+        return RGY_ERR_NONE;
+    };
+    if (m_detailReference) {
+        const auto& reference = m_detailReference->frame;
+        adjacentTrainingSource = m_detailReferenceValid && reference.inputFrameId >= 0
+            && static_cast<int64_t>(source->inputFrameId) == static_cast<int64_t>(reference.inputFrameId) + 1
+            && source->timestamp > reference.timestamp;
+        if (adjacentTrainingSource) {
+            sts = detail_repeatability(source, &reference,
+                static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
+                static_cast<float *>(m_detailConfidence->ptr), m_blocksX, m_blocksY, depthScale, stream);
+            if (sts != RGY_ERR_NONE) return sts;
+        } else {
+            const auto error = cudaMemsetAsync(m_detailConfidence->ptr, 0, m_detailConfidence->nSize, stream);
+            if (error != cudaSuccess) return err_to_rgy(error);
+        }
+        // Optional local-strength analysis still needs the previous source.
+        // Ordinary mode completes its reference copy at this first barrier.
+        if (!m_localStrength && (sts = saveTrainingSource()) != RGY_ERR_NONE) return sts;
+    }
+    if ((sts = m_blockMetrics->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     auto cudaerr = cudaStreamSynchronize(stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
 
     const int blockCount = m_blocksX * m_blocksY;
     const auto metrics = static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrHost);
     auto mask = static_cast<uint8_t *>(m_blockMask->ptrHost);
-    std::memset(mask, 0, blockCount);
-    std::vector<int> candidates;
-    candidates.reserve(blockCount);
     const float minSigma = prm->filmGrain.minNoiseLevel * depthScale;
     const float maxSigma = prm->filmGrain.maxNoiseLevel * depthScale;
     const int requiredBlocks = std::max(prm->filmGrain.minFlatBlocks,
         static_cast<int>(std::ceil(blockCount * prm->filmGrain.minFlatFraction)));
-    for (int i = 0; i < blockCount; ++i) {
-        if (metrics[i].sigma >= minSigma && metrics[i].sigma <= maxSigma && metrics[i].score > 0.0f) {
-            if (metrics[i].flat) mask[i] = 1;
-            if (metrics[i].score >= 0.5f) candidates.push_back(i);
+    int selected = select_spatial_training(metrics, blockCount, minSigma, maxSigma, requiredBlocks, mask);
+    const int trainingCandidates = selected;
+    int repeatedTraining = 0;
+    bool trainingReady = true;
+    if (m_detailReference) {
+        std::vector<float> rawNoise;
+        rawNoise.reserve(selected);
+        for (int i = 0; i < blockCount; ++i) if (mask[i]) rawNoise.push_back(metrics[i].sigma);
+        double rawSigma = 0;
+        if (!rawNoise.empty()) {
+            const auto mid = rawNoise.begin() + rawNoise.size() / 2;
+            std::nth_element(rawNoise.begin(), mid, rawNoise.end());
+            rawSigma = *mid / depthScale;
         }
+        trainingReady = m_trainingHistory->observe(adjacentTrainingSource, blockCount,
+            [&](int i) { return metrics[i].mean / depthScale; }, rawSigma);
+        const int missingPairs = m_trainingHistory->missingPairs();
+        if (!trainingReady && missingPairs >= 1 && missingPairs <= 2 && futureSource[missingPairs - 1]) {
+            // Inspect future source evidence without advancing causal history
+            // or publishing future model statistics. Cuts, timestamp gaps and
+            // changes in noise level cannot qualify the current picture.
+            auto futureHistory = *m_trainingHistory;
+            const auto *previous = source;
+            bool futureReady = false;
+            std::vector<uint8_t> futureMask(blockCount);
+            for (int n = 0; n < missingPairs; ++n) {
+                const auto *future = futureSource[n];
+                if (m_sceneSchedule.isCut(future->inputFrameId)
+                    || interlaced(*future) || future->inputFrameId < 0
+                    || static_cast<int64_t>(future->inputFrameId) != static_cast<int64_t>(previous->inputFrameId) + 1
+                    || future->timestamp <= previous->timestamp) break;
+                switch (future->csp) {
+                case RGY_CSP_NV12:
+                case RGY_CSP_YV12:
+                    sts = launch_flat_metrics<uint8_t, 0>(future, false,
+                        static_cast<FilmGrainBlockMetric *>(m_futureMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream);
+                    break;
+                case RGY_CSP_YV12_10:
+                    sts = launch_flat_metrics<uint16_t, 0>(future, false,
+                        static_cast<FilmGrainBlockMetric *>(m_futureMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream);
+                    break;
+                case RGY_CSP_P010:
+                    sts = launch_flat_metrics<uint16_t, 6>(future, false,
+                        static_cast<FilmGrainBlockMetric *>(m_futureMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream);
+                    break;
+                default: return RGY_ERR_UNSUPPORTED;
+                }
+                if (sts != RGY_ERR_NONE || (sts = m_futureMetrics->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
+                const auto error = cudaStreamSynchronize(stream);
+                if (error != cudaSuccess) return err_to_rgy(error);
+                const auto futureMetrics = static_cast<const FilmGrainBlockMetric *>(m_futureMetrics->ptrHost);
+                select_spatial_training(futureMetrics, blockCount, minSigma, maxSigma, requiredBlocks, futureMask.data());
+                const double futureSigma = selected_noise(futureMetrics, blockCount, futureMask.data()) / depthScale;
+                futureReady = futureHistory.observe(true, blockCount,
+                    [&](int i) { return futureMetrics[i].mean / depthScale; }, futureSigma);
+                previous = future;
+            }
+            if (futureReady) {
+                auto confidence = static_cast<float *>(m_futureConfidence->ptr);
+                // One future pair joins the existing past pair. At the very
+                // first frame, use both independent adjacent future pairs.
+                auto error = missingPairs == 1
+                    ? cudaMemcpyAsync(confidence, m_detailConfidence->ptr, m_futureConfidence->nSize, cudaMemcpyDeviceToDevice, stream)
+                    : cudaMemsetAsync(confidence, 0, m_futureConfidence->nSize, stream);
+                if (error != cudaSuccess) return err_to_rgy(error);
+                if (missingPairs == 2) {
+                    sts = detail_repeatability(futureSource[0], futureSource[1],
+                        static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), confidence,
+                        m_blocksX, m_blocksY, depthScale, stream);
+                    if (sts != RGY_ERR_NONE) return sts;
+                }
+                sts = detail_repeatability(source, futureSource[0],
+                    static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), confidence,
+                    m_blocksX, m_blocksY, depthScale, stream);
+                if (sts != RGY_ERR_NONE || (sts = m_blockMetrics->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
+                error = cudaStreamSynchronize(stream);
+                if (error != cudaSuccess) return err_to_rgy(error);
+                trainingReady = true;
+            }
+        }
+        for (int i = 0; i < blockCount; ++i) {
+            if (mask[i] && !FilmGrainTrainingHistory::supported(trainingReady, metrics[i].repeatability)) {
+                mask[i] = 0;
+                ++repeatedTraining;
+            }
+        }
+        selected -= repeatedTraining;
     }
-    std::sort(candidates.begin(), candidates.end(), [metrics](const int a, const int b) {
-        return metrics[a].score > metrics[b].score;
-    });
-    int selected = static_cast<int>(std::count(mask, mask + blockCount, static_cast<uint8_t>(1)));
-    // Always take the top decile of scored blocks in addition to the blocks
-    // passing the strict gradient thresholds (libaom flat_block_finder_run
-    // marks the 90th score percentile as flat).  Strong grain inflates the
-    // gradient metrics, so strict-threshold selection alone samples only the
-    // weakest-grain regions and biases the strength curve.
-    const int topDecile = blockCount / 10;
-    int examined = 0;
-    for (const auto index : candidates) {
-        if (examined >= topDecile && selected >= requiredBlocks) break;
-        if (!mask[index]) { mask[index] = 1; ++selected; }
-        ++examined;
-    }
+    AddMessage(RGY_LOG_DEBUG, _T("fgs-training frame=%d ready=%d excluded=%d selected=%d\n"),
+        source->inputFrameId, trainingReady ? 1 : 0, repeatedTraining, selected);
     diagnostics.flatBlocks = selected;
     if (selected < requiredBlocks) {
-        m_detailReferenceValid = false;
+        if (m_detailReference && m_localStrength) {
+            // This return has no later barrier. Keep source history without
+            // replacing the previous reference before its last reader.
+            if ((sts = saveTrainingSource()) != RGY_ERR_NONE) return sts;
+            cudaerr = cudaStreamSynchronize(stream);
+            if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+        }
         // Do not allow a model from before a low-confidence gap to reappear on
         // later frames.  The next reliable region must build a fresh window.
         diagnostics.sceneReset = explicitSceneCut || !m_state->history.empty();
         m_state->clear();
-        m_state->synthesisRecovery.preserveSource();
+        // Two missing source pairs are not a rejected grain estimate. Keep
+        // the source during warmup, then let corroborated independent grain
+        // start normally. Actual low-confidence/repeated-source rejection
+        // still owns the existing hold and gradual synthesis recovery.
+        const bool trainingWarmup = !trainingReady && trainingCandidates >= requiredBlocks;
+        if (!trainingWarmup) m_state->synthesisRecovery.preserveSource();
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=0 reset=%d flat=%d/%d window=0 ")
-            _T("sourceFallback=0 trace=1 sourceReasons=%u requiredFlat=%d\n"),
+            _T("sourceFallback=0 trace=1 sourceReasons=%u requiredFlat=%d trainingReady=%d excludedTraining=%d\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             diagnostics.sceneReset ? 1 : 0, diagnostics.flatBlocks, diagnostics.totalBlocks,
-            static_cast<uint32_t>(FGS_SOURCE_INSUFFICIENT_FLAT), requiredBlocks);
+            static_cast<uint32_t>(FGS_SOURCE_INSUFFICIENT_FLAT), requiredBlocks, trainingReady ? 1 : 0, repeatedTraining);
         if (cleanBase != source && (sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
         attachResult();
         return RGY_ERR_NONE;
@@ -2298,9 +2495,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     const float denoiseSigma = adaptiveSigma
         ? measuredNoise : prm->filmGrain.denoiseLevel * depthScale;
     if (adaptiveSigma) {
-        // Selected blocks denoise with their own measured noise level;
-        // unselected (textured) blocks fall back to the median so their own
-        // texture variance does not turn the denoiser into a blur.
+        // Only corroborated grain is a denoising-strength observation. A
+        // repeated pattern excluded from model training must also lose its
+        // local noise estimate, otherwise its picture variance still drives
+        // the bilateral filter and erases detail without modelling it.
+        // Unselected blocks use the median of the corroborated observations.
         auto sigmaMap = static_cast<float *>(m_sigmaMap->ptrHost);
         for (int i = 0; i < blockCount; ++i) {
             sigmaMap[i] = mask[i] ? clamp(metrics[i].sigma, minSigma, maxSigma) : measuredNoise;
@@ -2408,23 +2607,6 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // The bilateral kernel ramps block-texture protection with local
         // noise, while independently protecting confident pixel-centred edges.
         const float autoDetailProtection = prm->filmGrain.residualRetain < 0.0f ? 1.0f : 0.0f;
-        retainDetailReference = m_detailReference && autoDetailProtection > 0.0f;
-        if (retainDetailReference) {
-            const auto& reference = m_detailReference->frame;
-            const bool adjacent = m_detailReferenceValid && reference.inputFrameId >= 0
-                && static_cast<int64_t>(source->inputFrameId) == static_cast<int64_t>(reference.inputFrameId) + 1
-                && source->timestamp > reference.timestamp;
-            adjacentDetailReference = adjacent;
-            if (adjacent) {
-                sts = detail_repeatability(source, &reference,
-                    static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
-                    static_cast<float *>(m_detailConfidence->ptr), m_blocksX, m_blocksY, depthScale, stream);
-                if (sts != RGY_ERR_NONE) return sts;
-            } else {
-                cudaerr = cudaMemsetAsync(m_detailConfidence->ptr, 0, m_detailConfidence->nSize, stream);
-                if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
-            }
-        }
         sts = denoise_frame(output, &m_denoiseWork->frame, source, prm->filmGrain.analyzeChroma, true,
             prm->filmGrain.denoisePasses, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
@@ -2456,7 +2638,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         const bool quietOnly = std::abs(measuredGrainCorrelation) > 0.2f;
         const auto chromaMetrics = m_chromaMetrics ? static_cast<const FilmGrainBlockMetric *>(m_chromaMetrics->ptr) : nullptr;
         const auto lumaMetrics = static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice);
-        const auto reference = adjacentDetailReference ? &m_detailReference->frame : nullptr;
+        const auto reference = adjacentTrainingSource ? &m_detailReference->frame : nullptr;
         switch (source->csp) {
         case RGY_CSP_NV12:
         case RGY_CSP_YV12:
@@ -2474,22 +2656,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         }
         if (sts != RGY_ERR_NONE || (sts = m_localStrength->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     }
-    m_detailReferenceValid = false;
-    if (retainDetailReference) {
-        // Only luma is read by the repeatability kernel. Include its copy in
-        // the existing analysis barrier so a later call on another stream
-        // cannot read an unfinished reference. No additional host wait needed.
-        auto referenceLuma = getPlane(&m_detailReference->frame, RGY_PLANE_Y);
-        if ((sts = copyPlaneAsync(&referenceLuma, &luma, stream)) != RGY_ERR_NONE) return sts;
-    }
+    if (m_detailReference && m_localStrength
+        && (sts = saveTrainingSource()) != RGY_ERR_NONE) return sts;
     if ((sts = m_modelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     cudaerr = cudaStreamSynchronize(stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
-    if (retainDetailReference) {
-        m_detailReference->frame.inputFrameId = source->inputFrameId;
-        m_detailReference->frame.timestamp = source->timestamp;
-        m_detailReferenceValid = true;
-    }
 
     bool sceneReset = explicitSceneCut;
     bool motionSceneCut = false;
@@ -2570,9 +2741,12 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     for (const auto& frame : m_state->history) {
         for (int plane = 0; plane < 3; ++plane) add_plane_stats(combined.plane[plane], frame.gpu.plane[plane]);
     }
+    // Strength observations describe intensity intervals in every mode.
+    // Endpoint placement shifts dark/bright estimates and must not depend on
+    // optional source retention. Recovery fits already use interval centres.
     bool modelValid = diagnostics.modelFrames >= prm->filmGrain.minModelFrames
         && build_film_grain_params(combined, bitDepth, prm->filmGrain.analyzeChroma,
-            prm->filmGrain.clipToRestrictedRange, params, diagnostics, prm->filmGrain.residualRetain < 0.0f);
+            prm->filmGrain.clipToRestrictedRange, params, diagnostics, true);
     const bool freshFitValid = modelValid;
     if (diagnostics.rejectedModel) {
         // A rejected feedback model must not borrow an unrelated previous
@@ -2681,7 +2855,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if (sts != RGY_ERR_NONE) return sts;
     }
     if (modelValid && prm->filmGrain.residualRetain < 0.0f && m_localStrength
-        && std::abs(measuredGrainCorrelation) > 0.2f && !adjacentDetailReference) {
+        && std::abs(measuredGrainCorrelation) > 0.2f && !adjacentTrainingSource) {
         // Correlated-noise evidence needs an adjacent source picture. Keep
         // the startup/seek picture intact while that witness is unavailable.
         sourceReasonMask |= FGS_SOURCE_NO_ADJACENT;
@@ -2935,6 +3109,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         m_state->fidelityRecoveryFrames = 0;
     }
     FilmGrainQuietSourceGuard quietSource;
+    FilmGrainSourceVarianceGuard sourceVariance;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 unlimitedParams = params;
     m_state->sourceCaps.advance(modelValid && (freshFitValid || diagnostics.freshModel));
     if (modelValid && params.applyGrain) {
@@ -2943,6 +3118,28 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         const uint32_t counts[3] = { params.numYPoints, params.numCbPoints, params.numCrPoints };
         for (int plane = 0; plane < 3; ++plane) {
             build_strength_lut(params, bitDepth, predicted[plane], plane, diagnostics.templateGain[plane]);
+        }
+        // A brightness model fitted to textured areas must not extrapolate
+        // strong grain onto a thin smooth highlight or cleaner source detail.
+        // Bound only gross conflicts and retain the removed source residual
+        // through the existing curve/temporal/source-blend path below.
+        for (int i = 0; i < blockCount; ++i) {
+            const int blockWidth = std::min(FGS_BLOCK_SIZE, luma.width - (i % m_blocksX) * FGS_BLOCK_SIZE);
+            const int blockHeight = std::min(FGS_BLOCK_SIZE, luma.height - (i / m_blocksX) * FGS_BLOCK_SIZE);
+            for (int region = 0; region < 16; ++region) {
+                const auto& evidence = metrics[i].sourceVarianceRegions[region];
+                const double mean = evidence.mean / depthScale;
+                const double sigma = evidence.sigma / depthScale;
+                const int first = clamp(static_cast<int>(std::floor(evidence.minCode / depthScale)) - 4, 0, 255);
+                const int last = clamp(static_cast<int>(std::ceil(evidence.maxCode / depthScale)) + 4, 0, 255);
+                const double modeled = film_grain_range_peak(predicted[0], values[0], counts[0], first, last) / depthScale;
+                const double gain = sourceVariance.observe(mean, sigma, modeled,
+                    std::min(8, blockWidth - (region % 4) * 8),
+                    std::min(8, blockHeight - (region / 4) * 8));
+                if (gain < 1.0) {
+                    m_state->sourceCaps.preserveRange(0, first, last, gain);
+                }
+            }
         }
         // Source-supported restart and mixed artwork are mandatory guards.
         // Persistent chroma-only retention is part of the opt-in fidelity
@@ -3026,7 +3223,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     for (uint32_t i = 0; i < params.numYPoints; ++i) nonzeroCurve |= params.pointYScaling[i] != 0;
     for (uint32_t i = 0; i < params.numCbPoints; ++i) nonzeroCurve |= params.pointCbScaling[i] != 0;
     for (uint32_t i = 0; i < params.numCrPoints; ++i) nonzeroCurve |= params.pointCrScaling[i] != 0;
-    const bool quietSourceFallback = quietSource.invalid || (sourceCurveLimited && !nonzeroCurve);
+    const bool quietSourceFallback = quietSource.invalid || sourceVariance.invalid || (sourceCurveLimited && !nonzeroCurve);
     if (quietSourceFallback) {
         diagnostics.sourceFidelityFallback = true;
         diagnostics.modelHeld = false;
@@ -3216,7 +3413,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             pointsCr += strsprintf(_T(" %d:%d"), params.pointCrValue[i], params.pointCrScaling[i]);
         }
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
-            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d rejected=%d recoveryHeld=%d recoveryFrames=%d recoveryGain=%.4f strengthRefit=%d quietSource=%d sourceLimited=%d quietConflicts=%llu/%llu/%llu quietExcess=%.3f/%.3f/%.3f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
+            _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f fitError=%.3f/%.3f/%.3f sourceFallback=%d freshModel=%d rejected=%d recoveryHeld=%d recoveryFrames=%d recoveryGain=%.4f strengthRefit=%d quietSource=%d sourceLimited=%d quietConflicts=%llu/%llu/%llu quietExcess=%.3f/%.3f/%.3f varianceConflicts=%llu varianceExcess=%.3f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s] trace=1 sourceReasons=%u\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
             modelValid ? 1 : 0, diagnostics.sceneReset ? 1 : 0, diagnostics.modelHeld ? 1 : 0,
@@ -3231,6 +3428,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             static_cast<unsigned long long>(quietSource.conflictingBlocks[1]),
             static_cast<unsigned long long>(quietSource.conflictingBlocks[2]),
             quietSource.maxExcess[0], quietSource.maxExcess[1], quietSource.maxExcess[2],
+            static_cast<unsigned long long>(sourceVariance.conflictingBlocks), sourceVariance.maxExcess,
             params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6,
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,
@@ -3252,6 +3450,11 @@ void NVEncFilterFilmGrain::close() {
     m_detailReference.reset();
     m_detailConfidence.reset();
     m_detailReferenceValid = false;
+    m_trainingHistory->reset();
+    m_trainingHead = m_trainingCount = 0;
+    for (auto& frame : m_trainingSources) frame.reset();
+    m_futureMetrics.reset();
+    m_futureConfidence.reset();
     m_blockMetrics.reset();
     m_chromaMetrics.reset();
     m_localMetrics.reset();

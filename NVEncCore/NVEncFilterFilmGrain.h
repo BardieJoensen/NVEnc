@@ -125,6 +125,8 @@ public:
     virtual tstring print() const override;
 };
 
+namespace fgsmodel { class FilmGrainTrainingHistory; }
+
 class NVEncFilterDenoiseFFT3D;
 class NVEncFilterParamDenoiseFFT3D;
 class NVEncFilterDegrain;
@@ -156,6 +158,14 @@ private:
     std::unique_ptr<CUFrameBuf> m_detailReference;
     std::unique_ptr<CUMemBuf> m_detailConfidence;
     bool m_detailReferenceValid;
+    std::unique_ptr<fgsmodel::FilmGrainTrainingHistory> m_trainingHistory;
+    // Two future pictures let startup training be corroborated before NVENC
+    // sees the opening base. Three bounded slots preserve one-output ordering.
+    std::array<std::unique_ptr<CUFrameBuf>, 3> m_trainingSources;
+    int m_trainingHead = 0;
+    int m_trainingCount = 0;
+    std::unique_ptr<CUMemBufPair> m_futureMetrics;
+    std::unique_ptr<CUMemBuf> m_futureConfidence;
     std::unique_ptr<NVEncFilterDenoiseFFT3D> m_fft3d;
     std::shared_ptr<NVEncFilterParamDenoiseFFT3D> m_fft3dParam;
     float m_fft3dSigma;
