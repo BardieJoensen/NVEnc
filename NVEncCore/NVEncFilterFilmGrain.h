@@ -123,6 +123,8 @@ public:
     virtual tstring print() const override;
 };
 
+namespace fgsmodel { class FilmGrainTrainingHistory; }
+
 class NVEncFilterDenoiseFFT3D;
 class NVEncFilterParamDenoiseFFT3D;
 class NVEncFilterDegrain;
@@ -154,6 +156,7 @@ private:
     std::unique_ptr<CUFrameBuf> m_detailReference;
     std::unique_ptr<CUMemBuf> m_detailConfidence;
     bool m_detailReferenceValid;
+    std::unique_ptr<fgsmodel::FilmGrainTrainingHistory> m_trainingHistory;
     std::unique_ptr<NVEncFilterDenoiseFFT3D> m_fft3d;
     std::shared_ptr<NVEncFilterParamDenoiseFFT3D> m_fft3dParam;
     float m_fft3dSigma;
