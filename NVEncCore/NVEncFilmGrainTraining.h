@@ -8,8 +8,9 @@ namespace fgsmodel {
 
 // The scored top-decile fallback can include deterministic roof/foliage
 // texture. It needs two adjacent, same-scene source pairs before repeatability
-// can distinguish that structure from independent grain. Strict spatial flats
-// remain usable during warmup. Keep this history independent of rejected fits.
+// can distinguish that structure from independent grain. During warmup retain
+// the source: using only strict flats biases a brightness-dependent fit towards
+// cleaner regions. Keep this history independent of rejected fits.
 class FilmGrainTrainingHistory {
 public:
     void reset() { means_.clear(); frames_ = 0; sigma_ = 0; }
@@ -37,8 +38,8 @@ public:
         return frames_ >= 3;
     }
 
-    static bool supported(bool historyReady, bool strictFlat, double repeatability) {
-        if (!historyReady) return strictFlat;
+    static bool supported(bool historyReady, double repeatability) {
+        if (!historyReady) return false;
         return std::isfinite(repeatability) && repeatability < .5;
     }
 
