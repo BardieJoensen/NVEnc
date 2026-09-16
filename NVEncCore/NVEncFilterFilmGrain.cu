@@ -2189,9 +2189,12 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     for (const auto& frame : m_state->history) {
         for (int plane = 0; plane < 3; ++plane) add_plane_stats(combined.plane[plane], frame.gpu.plane[plane]);
     }
+    // Strength observations describe intensity intervals in every mode.
+    // Endpoint placement shifts dark/bright estimates and must not depend on
+    // optional source retention. Recovery fits already use interval centres.
     bool modelValid = diagnostics.modelFrames >= prm->filmGrain.minModelFrames
         && build_film_grain_params(combined, bitDepth, prm->filmGrain.analyzeChroma,
-            prm->filmGrain.clipToRestrictedRange, params, diagnostics, prm->filmGrain.residualRetain < 0.0f);
+            prm->filmGrain.clipToRestrictedRange, params, diagnostics, true);
     const bool freshFitValid = modelValid;
     if (diagnostics.rejectedModel) {
         // A rejected feedback model must not borrow an unrelated previous
