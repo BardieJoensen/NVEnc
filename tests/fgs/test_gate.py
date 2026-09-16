@@ -124,6 +124,23 @@ class GateTests(unittest.TestCase):
         self.assertEqual(identity['candidate_sha256'], hashlib.sha256(candidate.read_bytes()).hexdigest())
         self.assertIsNone(identity['reference_control'])
 
+    def test_single_failed_stage_is_reported_as_a_failed_run(self):
+        target = self.repo / 'tests/fgs'
+        target.mkdir(parents=True)
+        shutil.copy2(HERE / 'local_gate.sh', target / 'local_gate.sh')
+        # Run the real shell selection, candidate preflight and summary. Only
+        # replace GPU computation, retaining an observable executed witness.
+        (target / 'fgs_kat.py').write_text(
+            'print("deliberate GPU witness failure")\nraise SystemExit(1)\n')
+        candidate = self.executable(self.root / 'candidate', '#!/bin/sh\necho candidate-version\n')
+        result = self.run_command(['bash', str(target / 'local_gate.sh'), '--stage', 'kat',
+                                   '--candidate-nvencc', str(candidate)])
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn('0 passed, 1 failed', result.stdout)
+        self.assertIn('deliberate GPU witness failure', result.stdout)
+        self.assertNotIn('nothing ran', result.stderr)
+        self.assertTrue((self.root / 'reports/candidate.json').is_file())
+
     def prepare_history(self):
         self.git('init', '-q')
         self.git('config', 'user.name', 'FGS gate test')

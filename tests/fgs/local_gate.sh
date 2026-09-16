@@ -814,7 +814,7 @@ for name in "${FAILURES[@]}"; do printf '   \033[31mFAIL\033[0m %s\n' "$name"; d
 printf '\n   %d passed, %d failed\n   reports: %s\n' \
     "${#PASSES[@]}" "${#FAILURES[@]}" "$REPORT_DIR"
 
-if [ "${#PASSES[@]}" -eq 0 ]; then
+if [ "${#PASSES[@]}" -eq 0 ] && [ "${#FAILURES[@]}" -eq 0 ]; then
     echo "
 local_gate: nothing ran. That is a failure, not a pass." >&2
     exit 2
