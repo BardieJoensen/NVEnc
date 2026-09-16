@@ -3,8 +3,9 @@
 Status: **ordinary core `2fa6cfd0` is deployed and its nine selected follow-up
 repairs are installed and postchecked. Broader source review found remaining
 excess synthesis in this build; normal workers stay paused under the existing
-owned fidelity hold. The isolated `95736a03` source-variance prototype is building
-and is not qualified or deployed. Finite current-version scans and retries are
+owned fidelity hold. The isolated `95736a03` source-variance prototype has built
+and completed ten short trials; review and broader qualification remain pending.
+It is not deployed. Finite current-version scans and retries are
 complete: 5,354 display measurements, 127 native-only measurements and two
 source-pairing gaps among 5,483 current AV1 files. Visual review remains open.
 FEL playback and manual-only automatic-retention studies remain separate.**
@@ -63,8 +64,11 @@ source/on/off images are in its `amplitude-scope-pilots/` evidence. The new
 `fix/fgs-source-variance-20260916`, tests an 8x8 luma total-variance ceiling,
 including thin near-white regions excluded by the quiet-source guard. Read its
 `tests/fgs/SOURCE-VARIANCE-20260916.md` and live `source-variance/` receipts.
-CPU checks pass; GPU, negative controls, genuine grain, whole-source behavior
-and performance remain unqualified. Two local build setup failures (missing
+CPU checks and all four targeted synthetic GPU cases pass; the same cases reject
+the deployed encoder as expected, while retaining synthesis in the constructed
+genuine-grain region. All ten real 32-second trial encodes and diagnostic
+extractions completed. Their visual review, broader grain/regression/HDR checks,
+whole-source behavior and performance remain unqualified. Two local build setup failures (missing
 untracked cargo-c cache and uninitialized pinned submodules) remain recorded.
 The retry uses the existing cache read-only and local exact submodule revisions;
 networking remains disabled. Sources/backups remain protected.
@@ -127,8 +131,8 @@ Horns was rejected because the validator treated German `deu`/`ger` aliases as
 different languages. Both are corrected in two local plugins; the ordinary
 encoder binary, flow, quality settings and validation decode workload remain
 unchanged. The 105-test suite, deployed-node checks and actual-file remux
-controls pass. Full retries started with S01E07 and Horns; the other nine
-MobLand episodes are admitted only after S01E07 succeeds. Read
+controls pass. All eleven full retries completed successfully, with no failed
+retries. Read
 [the diagnosis and patch record](TDARR-SUBTITLE-ERRORS-20260915.md) and
 [live retry status](/opt/docker-apps/logs/tdarr-errors-20260915/retry-status.json)
 for completion. All eleven originals were preserved by the rejecting validator.
