@@ -1,29 +1,65 @@
 # FGS encoder and library repair: current work and handoff
 
-Status: **qualified finer-source encoder deployed; ordinary Tdarr running.
-The complete Beasts FEL candidate passed automated library mux/decode checks;
-physical playback and the remaining FEL production gates are pending. All eleven
-ordinary Tdarr subtitle error retries succeeded. Two approved extended-cut
-originals were recovered and are validating; current-version audit and candidate
-review are running. Automatic-retention trials remain deferred and manual-start
-only.** Updated 2026-09-16.
+Status: **seven selected follow-up repairs are installed and postchecked, but
+new encoding is paused after the deployed `ef5c61fe` image failed a broader
+Play Dirty source comparison. The exact trial retains excessive grain in the
+city shot and a later dialogue scene. The idle repair coordinator is stopped
+and a separately owned admission hold prevents new repairs. Read-only audit
+queues continue. Cause isolation and a qualified correction are pending.
+FEL playback/production gates and manual-only automatic-retention studies
+remain separate and deferred.** Updated 2026-09-16.
+
+Current blocker: read `city-fidelity-hold.json`,
+`next-trial-visuals/31f295cbb640d53811d6/visual-qualification.json` and
+`city-reproducer/` in the live September 16 ledger. A bounded 30-second default-
+mode trial reproduces the held-model behavior: measured source noise falls while
+a much stronger prior model remains signalled. The flat-source-only numerical
+trial gate passes, but the actual whole-image comparison fails; **never use that
+narrow pass as installation approval**. The isolated diagnostic worktree is
+`/home/bardie/git-repos/NVEnc-fgs-amplitude`, branch
+`fix/fgs-held-amplitude-20260916`, starting at deployed `ef5c61fe`. Its initial
+ablation makes the existing amplitude-fit/recovery path mandatory without
+enabling residual retention; it is not qualified or deployed.
+Native decoded measurements confirm
+large excess over local source variance in thousands of city blocks. The exact
+cause and fix are not yet established. Do not resume Tdarr/coordinator or remove
+the `fgs-current-city-fidelity-20260916` hold merely because the seven earlier
+selected replacements finished. Their separate passed evidence remains valid.
+
 
 September 16: the user approved recovery/retranscode of the two extended Girl
 films with confirmed multi-second story-scene gaps, completion of current-version
 coverage and review of remaining diagnostic candidates. Both exact originals
-(77.26 GB total) are downloaded; both encodes finished and full validation runs
-with the ordinary qualified core.
+(77.26 GB total) were recovered; both films passed full worker checks, installed
+and passed fresh installed-version measurements with the ordinary qualified core.
 This is a narrow two-release exception; the general recovery hold remains intact.
 The immutable follow-up covers 611 current AV1 versions: 482 qualified display
 measurements and 129 native-source checks for SD files lacking colour tags.
 Source discovery adds 202 retained originals: 585 of 611 now have candidates
 for per-window source alignment, and 23 additional torrents are held against
 cleanup. The 515 diagnostic candidates remain a review queue, not a damaged-file
-list. Sixteen source/on/off witnesses have been reviewed. Deployed-image trials pass
-old/new source windows for three older cartoon repairs; recurrence justifies
-qualified repeat repairs of Owl House S02E08 and Adventure Time S07E25 from
-retained originals. Native source-seek retries resolve two measurement failures
-without relaxing frame coverage; the remaining audit/review work stays open.
+list. Twenty-seven distinct files have actual visual observations. Owl House
+S02E08 and Adventure Time S07E25 are repaired from retained originals, with zero
+strong source-flat frames in the previously affected measured regions and fresh
+installed-version checks. All 611 header scans pass. Native measurements cover
+127 of 129 versions; two early-picture source-pairing gaps remain explicit.
+Operational pause timeouts have qualified retries; display measurements continue.
+
+Whole-image amplitude now complements quiet-source area in review ordering.
+The older Gentlemen S01E01 repair has a severe pattern around 38:45 despite a
+tiny quiet-source flag. An unchanged deployed-image trial passes 25 source
+windows and improves five visual witnesses; the repeat repair is installed and
+passes full worker gates plus 15 fresh windows. Weaker grain-estimation differences
+remain documented. Steven Universe S02E27 and Regular Show S02E06 pass 24
+source windows each; full-duration selected-region stronger events fall from
+670/1,055 to zero, with improved source/old/current visual witnesses. Their
+retained-source replacements are installed and pass fresh 12/13-window checks.
+All seven completions, sizes and rollback paths are recorded in the live ledger
+`seven-repairs-completed.json`. Play Dirty
+is a separate deployed-image trial of the severe full-image city witness.
+The additional full-image-ranked witnesses include genuine added grain and
+intentional source effects; neither priority list is a damaged-file list.
+The remaining recurrence and contextual review work stays open.
 Read the [follow-up and qualification record](FINDINGS-2026-09-16-AUDIT-FOLLOWUP.md)
 and [live job health and coverage](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/status.json).
 
