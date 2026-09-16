@@ -80,11 +80,20 @@ library-track qualification against these restored originals.
 
 ## Ordinary Tdarr and audit follow-up
 
-At restoration preflight, ordinary Tdarr had resumed despite the existing
-fidelity hold. Its cause is not established; the Emby watchdog reported no owned
-pause and its log showed no corresponding resume. Admission was paused again.
-The two unrelated running jobs, Neagley S01E01 and Reacher S04E08, completed
-successfully. The node now has no active workers and remains paused.
+The user subsequently confirmed deliberately resuming ordinary Tdarr before
+restoration preflight. The assistant incorrectly reasserted the old fidelity
+pause and has now reversed that action. The node readback confirms unpaused,
+with the existing two GPU transcode workers configured. Two active workers were
+observed in the subsequent readback. The earlier jobs, Neagley S01E01 and Reacher S04E08, completed
+successfully. Do not re-pause ordinary Tdarr from the superseded hold wording.
+
+The separate repair coordinator remains stopped. Its admission hold now
+explicitly applies to further repairs and experimental deployment qualification;
+the known excess-grain issue in deployed `2fa6cfd0` remains unresolved. The user
+asked whether the current encoder had any remaining issues and was told about
+this defect. Restoring their operational choice does not establish informed
+acceptance of that defect or quality clearance. FEL exclusions, source protection
+and the independent Emby playback watchdog remain unchanged.
 
 After removing the four excluded FEL entries, the current Tdarr index has 5,481
 AV1 paths. The two just-completed versions are outside the earlier audit snapshot
@@ -101,7 +110,8 @@ Source/repair receipts live under
 - `torrent-dependencies.json`: original 345 held torrents and dependent library keys.
 - `release-plan.json`, `release-result.json`: exact two releases, original/current settings and relocated source paths.
 - `current-version-catchup.json`: the two new AV1 versions needing measurement.
-- `tdarr-pause-reasserted.json`: observed active jobs and pause action.
+- `tdarr-pause-reasserted.json`: historical mistaken re-pause and observed jobs.
+- `tdarr-user-resume-20260916.json`: user clarification, restored node state and narrowed hold scope.
 
 FEL restoration receipts live under
 `/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/original-restore-20260916/`:

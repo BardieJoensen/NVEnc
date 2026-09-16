@@ -2,10 +2,18 @@
 
 Status: **nine selected replacements installed and postchecked; finite scans
 and retries complete. Ordinary `2fa6cfd0` is deployed, but broader source review
-found remaining excessive synthesis. Tdarr stays paused and the coordinator
-stopped under the existing owned fidelity hold. The isolated `95736a03`
-source-variance prototype is building; it is not qualified or deployed. Routine
-Tdarr validation is unchanged.**
+found remaining excessive synthesis. Ordinary Tdarr is unpaused after the user
+confirmed deliberately resuming it; the assistant's re-pause was reversed.
+The coordinator stays stopped, with further repairs and experimental deployment
+still requiring qualification. The isolated `95736a03` source-variance prototype
+has built and completed ten short trials; review and broader qualification remain
+pending. It is not deployed. Routine Tdarr validation is unchanged.**
+
+The operational resume does not clear the remaining defect or establish the
+user's acceptance of it. The user subsequently asked whether issues remained
+and was told about the confirmed excess synthesis. Follow the current
+[handoff](WORK-TO-PRODUCTION.md) and
+[resume record](SOURCE-RELEASE-20260916.md) rather than historical pause wording.
 
 Current reconciliation: 5,354 reference-display measurements, 127 native-only
 measurements and two source-pairing gaps across 5,483 AV1 files. Forty distinct
@@ -274,8 +282,9 @@ review backlog. Its completion never means whole-library perceptual clearance.
 
 ## Required finish
 
-1. All nine selected repairs are installed and postchecked. Keep ordinary
-   encoding paused for the remaining source-support failure. Qualify the
+1. All nine selected repairs are installed and postchecked. Ordinary Tdarr is
+   unpaused following the user's clarification. Keep further repair/deployment
+   qualification open for the remaining source-support failure. Qualify the
    isolated source-variance prototype against bad and genuine-grain controls,
    real witnesses, full sources, HDR, prior regressions and performance before
    considering deployment and release of the separately owned admission hold.
@@ -391,8 +400,10 @@ retained originals. Their preencoded full-run candidates still pass the normal
 worker's full decoding, grain, timing, audio/subtitle/attachment/chapters and
 atomic installation gates. `amplitude-repairs/` retains previous receipts and
 normal worker logs; `amplitude-repair-verification/` measures exact installed
-versions with prior witnesses included. Tdarr stays paused and the owned city
-hold remains for the later source-support failure. These two repairs are now
+versions with prior witnesses included. At that point Tdarr was paused under
+the city hold; ordinary Tdarr has since been resumed following the user's
+clarification. Further repair/deployment qualification remains required for the
+later source-support failure. These two repairs are now
 complete and postchecked; no further download is selected.
 
 The broader fidelity branch commit `5f197758` incorporates the same mandatory entry condition

@@ -2,8 +2,10 @@
 
 Status: **ordinary core `2fa6cfd0` is deployed and its nine selected follow-up
 repairs are installed and postchecked. Broader source review found remaining
-excess synthesis in this build; normal workers stay paused under the existing
-owned fidelity hold. The isolated `95736a03` source-variance prototype has built
+excess synthesis in this build. Ordinary Tdarr is unpaused following the user's
+clarification that they deliberately resumed it; the repair coordinator stays
+stopped and further repair/deployment qualification remains required. The
+isolated `95736a03` source-variance prototype has built
 and completed ten short trials; review and broader qualification remain pending.
 It is not deployed. Finite current-version scans and retries are
 complete: 5,354 display measurements, 127 native-only measurements and two
@@ -22,13 +24,18 @@ tags remain: 340 have outstanding dependency review, one retains the Play Dirty
 regression source, and two protect FEL originals. The other two FEL originals
 already have non-cleanup NordicBits policy. Seeding was never paused by these tags.
 
-Ordinary Tdarr had resumed by the restoration preflight. New admission was paused
-again; the two running jobs (Neagley S01E01 and Reacher S04E08) finished successfully
-and need current-version audit. The cause of the intervening resume is not
-established; the Emby watchdog did not report owning or releasing this pause.
+The user confirmed deliberately resuming ordinary Tdarr before the restoration
+preflight. The assistant's subsequent re-pause incorrectly overrode that choice
+and has been reversed. The two running jobs (Neagley S01E01 and Reacher S04E08)
+finished successfully and need current-version audit. Do not reapply the old
+ordinary-worker pause from this handoff. This operational correction is not
+encoder quality clearance or evidence that the user accepted the remaining
+quality defect; they subsequently asked whether any issues remained and were
+told that excess synthesis is still confirmed in the deployed build.
 After excluding the four restored HEVC films, the current Tdarr AV1 index has
 5,481 paths, including those two new versions beyond the finite audit snapshot.
-The node is paused with no active workers. Read
+The node is unpaused; the existing Emby playback watchdog remains independent.
+Read
 [repair lineage, source releases and original restoration](SOURCE-RELEASE-20260916.md)
 and its live receipts before releasing further sources or resuming FEL work.
 
@@ -68,8 +75,10 @@ and rejects both retained bad witnesses. See
 [the amplitude regression and limits](AMPLITUDE-GUARD-20260916.md).
 Do not reinterpret sampled passes as whole-library perceptual clearance.
 
-The separately owned `fgs-current-city-fidelity-20260916` hold remains for the
-new source-support failure. Do not release it on nine-repair or scan completion.
+The separately owned `fgs-current-city-fidelity-20260916` hold remains scoped to
+further repair-worker admission and experimental deployment qualification for
+the new source-support failure. It does not authorize pausing ordinary Tdarr.
+Do not release the repair/deployment gate on nine-repair or scan completion.
 `amplitude-scope-pilot-review.json` records ten new source/pilot comparisons:
 five improved witnesses, four conspicuous remaining mismatches (Severance
 S02E02, Taskmaster DK S10E01/S10E05, Chestnut Man S01E02) and a further Sugar
@@ -408,9 +417,9 @@ measured baseline binaries are pinned in
 
 The faster four-thread HDR validator is already deployed. Its 90 checks and
 measured sample timing are recorded in the September 10 ledger; this does not
-add the expensive development studies to routine Tdarr validation. The current
-FEL canary owns its temporary Tdarr admission pause. Existing work may
-finish with the recorded GPU headroom; playback yielding remains active.
+add the expensive development studies to routine Tdarr validation. FEL encoding
+is disabled and the four original-film folders are excluded. Ordinary Tdarr is
+unpaused following the user's clarification; playback yielding remains active.
 
 The September 12 application upgrade preceded this encoder rollout; its initial
 encoder image is historical. The current runtime is pinned above.
@@ -420,9 +429,10 @@ encoder image is historical. The current runtime is pinned above.
 The immediate ordinary-core work is the remaining source-support failure above.
 Finish the `source-variance/` experiments and preserve all failing controls.
 The finite audit scan is complete; source-window gap review and watchability
-classification remain open. Do not release the runtime admission hold because
-nine repairs or the scan have finished. The separate retention plan below is
-still deferred.
+classification remain open. Further repairs and experimental deployment still
+require qualification; ordinary Tdarr is unpaused following the user's
+clarification above. Keep the repair coordinator stopped while this separate
+work remains held. The retention plan below is still deferred.
 
 **Retention GPU trials are prepared, not running or scheduled to start automatically.**
 The user explicitly confirmed manual start only: wait for the repair to finish
