@@ -1,62 +1,78 @@
 # FGS encoder and library repair: current work and handoff
 
-**September 16 current state:** ordinary `2fa6cfd0` remains deployed, with
-ordinary Tdarr admissions paused and drained for the user-authorized excessive-
-grain correction. The repair coordinator is stopped. Current isolated candidate
-`cb903a17` is being qualified; no candidate has replaced library media. FEL
-encoding stays disabled and all four original HEVC films are restored in Movies.
-Optional automatic-retention studies remain manual-start only.
+**September 16 current state:** ordinary core `cb903a17` is qualified and
+**deployed**. Its four selected full-source repairs are installed and fully
+validated. Ordinary Tdarr is resumed, with two workers active in the final
+snapshot. The retired repair coordinator is stopped and disabled at startup. FEL remains
+disabled; all four original HEVC films remain restored in Movies and excluded.
+Optional automatic-retention studies remain off/manual-start only.
 
-The current correction bounds synthesis against native source variance and
-excludes repeated picture texture from both model training and denoising-strength
-estimates. Bounded two-frame lookahead corroborates startup without importing
-future model statistics or advancing causal history. Physical intensity-bin
-centres replace the incorrect ordinary-fit positions. See
-[SOURCE-VARIANCE-20260916.md](SOURCE-VARIANCE-20260916.md) and the live
-`source-variance/training-v7/` receipts under the September 16 ledger.
+Runtime: `nvenc-fidelity/tdarr-node:2.87.01-cb903a17-20260916`, encoder SHA-256
+`06dd65fc00773536f76d09eaf49b1d18032808742e8e13d8037262475c73af7c`.
+The combined fidelity implementation is committed as `c1d3c356`; the independent
+source-supported grain regression is integrated in `ae852b1c`. The isolated
+ordinary core is `cb903a179f8bdb7631410c6fb5674f4ab17fee81`.
 
-V7 passes the unchanged Taxi base-fidelity canary, native frame-paired libaom
-comparison, four source-variance fixtures, synthetic KATs, export/drain tests,
-prior texture negatives, header-syntax controls and source-referenced flicker
-controls. Ten real 32-second pilots are encoded and their selected witnesses
-actually reviewed. All-frame sequence measurements and the remaining broad
-stages are finishing. Full-source, HDR, exact-runtime and paired performance
-checks remain pending. The combined fidelity build also compiles and passes its
-complete CPU suite; its final GPU integration checks remain pending.
+The correction bounds gross synthesis against native source variance and excludes
+repeating picture texture from both grain training and denoising estimates.
+Bounded startup lookahead preserves picture order and source history. Read
+[SOURCE-VARIANCE-20260916.md](SOURCE-VARIANCE-20260916.md) and the
+[live September 16 ledger](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/README.md).
+Current receipts are under `source-variance/training-v7/`:
+`qualification.json`, `rollout/report.json`, `repairs/status.json`,
+`tdarr-resume.json` and `final-health.json`. The qualification pins 449 evidence files.
 
-The original periodic change alert remains recorded. All 3,600 source pictures
-were compared and eight selected worst/anchor stills actually reviewed. The
-reviewed V7 grain-schedule positive is separately pinned; a fresh repeated encode
-must pass unchanged decoded-sequence limits. A new independent, synthesis-off
-source-detail check keeps the older amplitude positive as its reference and
-rejects the retained V6 jacket-blur negative. At 66/75.5 seconds, V7 base luma RMS
-is 0.669/0.666 versus reference 0.655/0.626; V6 was 1.572/1.741. The original
-84.5-second mesh witness remains completely synthesis-free. This finite fixture
-review is not production qualification or a guarantee of lossless quality.
+Completed qualification includes the unchanged Taxi base-detail canary, native
+frame-paired libaom comparison, 19 broad regression checks, a fresh 3,600-frame
+jacket/mesh repeat, ten complete short-sequence comparisons, actual source-matched
+witness review, two real HDR10 metadata/source-window trials, full strict decode
+of five outputs (509,315 pictures), exact runtime reproduction of 768 displayed
+frames, and combined-branch CPU/GPU checks. The four episode clocks match source,
+prior library and candidate on every presentation timestamp.
 
-**Do not deploy V6 `af37b958`.** It passed the base canary but softened the fine
-jacket texture. Its failure is retained in `training-v6/failure-review.json`.
-Earlier V5 failed the base canary because preserving just the first two source
-bases changed later NVENC bit allocation; controlled raw/table replay isolated
-that cause. Lookahead fixes startup, and V7 also removes excluded picture texture
-from denoising estimates. See `canary-model-trace/` and `canary-rate-diagnostic/`.
-Original thresholds and failed candidates remain evidence.
+Two initial alerts remain evidence. The periodic schedule changed; all source
+pictures were compared and worst/anchor stills reviewed before a separately
+pinned positive passed a fresh encode. A synthesis-off source-detail check rejects
+the V6 jacket-blur negative. The movie dialogue's original pixelwise grain-on
+error also rose while source-supported fine grain was restored. Independent
+random-noise controls establish why phase must be separated from picture loss;
+unchanged base/coarse-error and synthesis caps plus source texture energy pass.
+The original failed results and modest displayed-metric tradeoff remain recorded
+in `amplitude-review.json`; no claim of losslessness or whole-library clearance.
 
-Latest authorization: "alright I thought all fixes were done. go ahead and fix
-the excessive grain issue". `source-variance/qualification-pause-20260916.json`
-and the repair hold receipts record owner `fgs-source-variance-qualification-20260916`.
-Resume ordinary Tdarr after qualified rollout, respecting the independent Emby
-watchdog. The earlier operational resume described below is historical.
+Three paired timing runs per arm: SDR median 216.18 -> 203.68 fps (-5.78%),
+HDR 44.95 -> 46.58 fps (+3.63%). Their sizes change -3.56% / -5.49%; full
+Play Dirty video changes +0.2595%. These finite results do not predict all media.
+Routine Tdarr validation settings, flow, all 25 plugins and worker limits are
+unchanged. The owned qualification pause is released; the independent Emby
+watchdog remains responsible for playback pauses. The retired repair coordinator's
+automatic startup is disabled so it cannot pause the ordinary queue at reboot.
 
-The user also authorized cleanup after dependencies finish. Already removed:
-55,505,068,032 allocated bytes of obsolete FEL AV1 restoration backups,
-4,485,079,040 bytes of completed synthetic/old build artifacts and
-20,367,446,016 bytes of completed raw trial intermediates: 80,357,593,088 bytes
-total. Restored original HEVC hardlinks were verified unchanged. See
-`source-variance/fel-backup-cleanup-result.json`,
-`completed-scratch-cleanup-result.json` and `completed-raw-cleanup-result.json`.
-Further cleanup follows qualification. Retain originals still needed for repair,
-compact regression controls and operational rollback material.
+The four confirmed repairs are Severance S02E02, The Chestnut Man S01E02 and
+Taskmaster DK S10E01/S10E05. Final installed files passed complete video-payload
+and presentation-timestamp identity with the qualified trials, plus normal worker
+decode, metadata, nonvideo-payload and chapter preservation. File-size changes
+are +0.24%, +0.73%, -0.05% and +0.16%, respectively.
+Other audit flags remain review candidates. Existing
+343 source protections remain: season packs still have unresolved dependencies,
+the regression movie retains its source, and restored FEL originals stay protected.
+Do not infer damage, schedule downloads or discard originals from build age alone.
+
+The user authorized cleanup once dependencies finish. **325,922,254,848 allocated
+bytes** have been removed, including obsolete FEL AV1 backups, completed
+FEL layers/muxes/raw references, the two completed no-FGS Girl-film backups and
+reproducible trial buffers, twelve completed timing encodes and eight obsolete
+AV1 predecessors of the four new repairs. Exact plans/results are indexed in
+`source-variance/cleanup-authorization.json`. Current sources, compact regressions,
+unfinished review evidence and operational rollback remain. Historical raw/timing
+outputs need regeneration for new analysis. Per-file `retired-backups-20260916.json`
+receipts explain removed historical backup paths. The final snapshot reports
+about 50 GiB free on `/`; no source hold or FEL-original protection was released.
+
+## Historical record before the V7 rollout
+
+The following snapshots retain earlier findings, counts and decisions. Their
+runtime names and pause states are historical; the current state is above.
 
 September 16 source/repair reconciliation: 1,882 installed repair receipts resolve
 to 1,874 unchanged outputs, five later changes at the same path and three newer

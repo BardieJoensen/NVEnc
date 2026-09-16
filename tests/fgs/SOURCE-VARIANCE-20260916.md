@@ -1,9 +1,12 @@
 # Source variance and temporal training, September 16
 
-Status: experimental; **not qualified or deployed**. Ordinary `2fa6cfd0`
-remains installed and paused under the user-authorized excessive-grain fix.
-No trial output replaces library media. The current handoff is in the fidelity
-worktree's `tests/fgs/WORK-TO-PRODUCTION.md`.
+Status: **qualified and deployed**, ordinary core `cb903a17`. The immutable
+runtime is `nvenc-fidelity/tdarr-node:2.87.01-cb903a17-20260916`, encoder SHA-256
+`06dd65fc00773536f76d09eaf49b1d18032808742e8e13d8037262475c73af7c`.
+All four selected source-backed repairs are installed and fully validated;
+ordinary Tdarr is resumed. The current handoff is in the
+fidelity worktree's `tests/fgs/WORK-TO-PRODUCTION.md`. FEL remains disabled and
+optional automatic retention remains off/manual.
 
 The source ceiling bounds gross grain excess using 8x8 native luma variance and
 the strongest model value over each observed intensity range. It limits conflicts
@@ -28,13 +31,13 @@ startup base complexity changes later NVENC bit allocation. The first two
 pictures cannot simply be omitted from the quality measurement. A separate
 uncorroborated early-model experiment did not fix this and must not be deployed.
 
-The current trial holds a bounded two-frame lookahead in bilateral mode. At
+The qualified implementation holds a bounded two-frame lookahead in bilateral mode. At
 startup, future source pairs can qualify current-frame training without advancing
 causal history or importing future model statistics. Scene, noise and timestamp
 continuity are required. Repeated texture remains excluded. Unqualified one/two-
 picture inputs retain their source; normal drain emits every queued picture in
 order. The change adds three source surfaces and bounded startup observations;
-throughput, memory and short-input behaviour require measured qualification.
+short-input/order/drain checks pass, and measured throughput is recorded below.
 It does not enable optional automatic retention.
 
 Failed predecessors and thresholds remain recorded. The frame-paired independent
@@ -53,7 +56,7 @@ Read `training-v3/failure-review.json`, `training-v5/`, `canary-model-trace/`,
 the independent base canary and native time-paired libaom comparison pass.
 All 3,600 periodic-source pictures were compared. The eight reviewed stills
 include the largest source-error changes and both original jacket witnesses.
-The deliberate schedule change has a separately pinned positive; it needs a
+The deliberate schedule change has a separately pinned positive and passes a
 fresh repeat. All earlier positives and failures remain recorded.
 
 The periodic regression now also tests the grain-free base against the original
@@ -69,7 +72,29 @@ All five full-source outputs (509,315 pictures total) now strictly decode and
 pass header inspection. The four selected episode repairs also have complete
 source/library/candidate timestamp agreement and actual source-matched witness
 review. Both HDR10 trials preserve metadata on all 720 pictures each. Exact
-runtime reproduction and paired performance qualification remain pending.
+runtime reproduction matches all 768 displayed frames. Three alternating runs
+per arm measure SDR median 216.18 -> 203.68 fps (-5.78%) and HDR 44.95 -> 46.58
+fps (+3.63%); sample output sizes change -3.56% and -5.49% respectively. The
+full Play Dirty video changes +0.2595% in size. These are finite measurements,
+not library-wide performance or size promises. `qualification.json` pins 449
+evidence files; `rollout/report.json` verifies the deployed runtime, all four
+tool hashes, 25 plugins, flow, limits and FEL exclusions.
+
+Severance S02E02, The Chestnut Man S01E02 and Taskmaster DK S10E01/S10E05
+passed normal worker validation, exact nonvideo/chapter preservation and a
+post-install comparison of the complete video packet payload and all presentation
+timestamps with the qualified trials. Their final file sizes change by +0.24%,
++0.73%, -0.05% and +0.16%. The qualification pause is released; the retired repair
+coordinator is disabled at startup so it cannot re-pause ordinary Tdarr. The
+separate Emby playback watchdog and ordinary worker limits remain unchanged.
+
+Authorized cleanup totals 325,922,254,848 allocated bytes. This includes completed
+FEL intermediates, obsolete completed-repair AV1 backups, regenerable raw buffers
+and completed timing outputs. Original sources, compact regression controls,
+current full qualified trials and unfinished-review dependencies remain. Exact
+receipts are indexed by `source-variance/cleanup-authorization.json`; the final
+operational snapshot is `training-v7/final-health.json`. Removed raw/timing
+artifacts require regeneration for a fresh study. Optional studies stay manual.
 
 The full Play Dirty dialogue witness exposed a limitation in the original
 amplitude check: random regenerated grain is penalized for having different
