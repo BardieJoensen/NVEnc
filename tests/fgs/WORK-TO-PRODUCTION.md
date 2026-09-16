@@ -69,6 +69,18 @@ outputs need regeneration for new analysis. Per-file `retired-backups-20260916.j
 receipts explain removed historical backup paths. The final snapshot reports
 about 50 GiB free on `/`; no source hold or FEL-original protection was released.
 
+The later [encoder review](ENCODER-REVIEW-20260916.md) closes two release-harness
+gaps: diagonal-only texture measurement missed axial stripes, and a single
+failed stage was misreported as “nothing ran”. Nine directional/scale bands now
+retain the existing quality limits; the deployed output passes both pinned movie
+witnesses and the retained bad encodes fail. The full CPU suite passes. This
+changes offline release testing only; ordinary Tdarr continues on the same
+qualified binary. Supplemental evidence is in `encoder-review-20260916/` beside
+the live September 16 ledger; original qualification remains unchanged.
+No additional ordinary-mode encoder defect was found in that review. Optional
+retention's matched-size quality/fallback trials remain manual work, with the
+current ordinary baseline required before interpreting historical cost results.
+
 ## Historical record before the V7 rollout
 
 The following snapshots retain earlier findings, counts and decisions. Their

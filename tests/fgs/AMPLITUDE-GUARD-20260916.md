@@ -1,6 +1,6 @@
 # Mandatory amplitude support in ordinary mode
 
-The deployed `ef5c61fe` build could hold a strong model after source noise fell.
+The older deployed `ef5c61fe` build could hold a strong model after source noise fell.
 Its existing current-picture strength fit, recovery and source fallback were
 enabled only by optional automatic retention. The correction applies that same
 guard in ordinary mode too. It reuses collected statistics; no extra GPU pass
@@ -8,10 +8,13 @@ or automatic retention is enabled.
 
 The initial default-mode reproducer and complete movie trials are recorded at
 `/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/`.
-The candidate SHA is
+The initial correction's candidate SHA is
 `ef4799f6e7110e1057d8f728586d45e382b1ce3aa75c035403da35f05ca4b946`.
 Read the canonical ongoing handoff in the fidelity checkout before deployment;
-this test document is not production approval.
+this test document is not production approval. The later ordinary `cb903a17`
+source-variance/training correction is deployed; see
+[SOURCE-VARIANCE-20260916.md](SOURCE-VARIANCE-20260916.md). The witness method
+below includes the subsequent [directional release-check review](ENCODER-REVIEW-20260916.md).
 
 ## Structured-scene regression
 
@@ -33,12 +36,26 @@ these settings, not a remaining excessive-grain result. Scores from these short
 witnesses are not whole-movie scores.
 
 The release regression limits synthesis RMS to three normalized 8-bit luma
-levels and compares source error with that independent reference: maximum
-per-frame RMS excess 0.15, mean excess 0.05. These tight, scene-specific margins
-bound new damage; they are not a universal quality threshold. The original
-absolute diagnostic remains in every report. The retained bad encode must
-fail synthesis in both witnesses. Genuine-grain retention is separately tested
-by the full gate's oracle and mixed-source positive controls.
+levels. It bounds source-error increases against that independent reference in
+both the grain-free base and displayed 8x8 block means: maximum per-frame RMS
+excess 0.15, mean excess 0.05. Grain-on pixel error remains a diagnostic because
+independent, correctly supported grain can increase that error through phase
+alone. The original absolute diagnostic also remains in every report.
+
+Source-selected low-structure 16x16 tiles additionally bound displayed texture
+energy. A normalized Haar pyramid checks horizontal, vertical and diagonal
+bands separately at 2-, 4- and 8-pixel scales, using the same 0.15/0.05 excess
+margins over the larger source/reference energy. This closes the diagonal-only
+check's blind spot for axial stripes and the native-scale check's blind spot
+for wider aligned patterns. Synthesized frames require at least 16 source tiles.
+Assessment version 2 reports these nine checks under `source_texture_check.bands`;
+the former diagonal measurement is now `2px_diagonal` in that object.
+
+These tight, scene-specific margins are not universal quality thresholds.
+The retained bad encode must fail synthesis in both witnesses. Genuine-grain
+retention is separately tested by the full gate's oracle and mixed-source
+positive controls. This check measures luma in selected windows and does not
+replace temporal, chroma, HDR, base-detail or full-file validation.
 
 Prepare a manifest with `source`, `negative`, `candidate`, and `reference`
 objects. Each needs `path` and `sha256`; `candidate.encoder_sha256` must identify
@@ -46,7 +63,8 @@ the exact tested encoder. All outputs must derive from the identical source,
 frame timing and ordinary production settings. The reference removes only
 `--av1-film-grain`; it retains QVBR, preset, lookahead and colour settings.
 The full-movie history is part of this qualification. The live validated example
-is `city-amplitude-qualification/amplitude-manifest-v2.json` in the ledger.
+for the deployed `cb903a17` is
+`source-variance/training-v7/extended/amplitude-manifest.json` in the ledger.
 
 Run the check or include it in the full local gate:
 
