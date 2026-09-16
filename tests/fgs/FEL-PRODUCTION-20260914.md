@@ -274,10 +274,17 @@ reference Y4Ms can be archived with their receipts after dependent jobs finish.
 1. Review completed Beasts speed, size and measured texture results. Its full
    encode, independent source decodes and corrected final mux checks passed.
    The two reference windows do not cover every scene in the film.
-2. Verify actual HDR/player behavior. The review clips are in
+2. Verify actual HDR10/player behavior on the user's Apple TV/Infuse path.
+   On September 16 the user confirmed the TV has no Dolby Vision support.
+   Eight hash-identical clips are copied into the Emby Movies folder with
+   titles beginning `FEL Test 20260914`; the original review pack remains in
    `/media/merged-storage/media/test-encodes/FEL-production-20260914`. They are
    lossy candidates, repeated three times, with no audio. Ignore loop joins.
-3. Qualify the intended Dolby playback path rather than relying on profile tags.
+   The test directories are excluded from Tdarr. Placement and playback scope:
+   `/opt/docker-apps/logs/fgs-ripple-repair-20260906/fel-production-20260914/emby-playback-pack-20260916/report.json`.
+3. Actual Dolby Vision playback remains unqualified on other hardware. It
+   cannot be checked on this TV and is separate from the intended HDR10
+   fallback-path approval; do not ask the user to verify a Dolby output badge.
    Dolby's [April 16, 2026 Profile 10 article](https://professionalsupport.dolby.com/s/article/Introduction-to-Dolby-Vision-Profile-10)
    states that tvOS did not support Profile 10 at publication. Firecore's
    [settings documentation](https://support.firecore.com/hc/en-us/articles/360015608854-Settings-Overview)
