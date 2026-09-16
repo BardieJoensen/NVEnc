@@ -107,9 +107,28 @@
       "file": "gentlemen-source-guard-positive-33m-150s.mkv",
       "sha256": "bcc46593c0957d0128048707ba84d691b0554ff903e5993cae5c2d6428354f63",
       "bytes": 50298665
+    },
+    "gentlemen_amplitude_guard_positive": {
+      "file": "gentlemen-amplitude-guard-positive-33m-150s.mkv",
+      "sha256": "3886c36063ca5b0551a0dfa82e1e6d9bee902385e025e23d0fe063e3c8941cc8",
+      "bytes": 51000788
     }
   },
   "provenance": {
+    "gentlemen_amplitude_guard_positive": {
+      "encoder_sha256": "ef4799f6e7110e1057d8f728586d45e382b1ce3aa75c035403da35f05ca4b946",
+      "source_review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/amplitude-periodic-source-review/visual-review.json",
+      "receipt": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/amplitude-periodic-source-review/new-baseline-receipt.json",
+      "decoded_frames": 3600,
+      "source_frames_measured": 3600,
+      "grain_schedule_changed_frames": 263,
+      "new_grain_frames": 0,
+      "source_luma_mean_rms_before": 0.9938872571206755,
+      "source_luma_mean_rms_after": 0.9239015881551637,
+      "maximum_luma_rms_increase": 0.19407105445861816,
+      "decision": "Accept deliberate mandatory-amplitude change for this fixture; all original jacket checks pass and worst changed stills reviewed. Fresh same-binary repeat required.",
+      "limits": "Original change alert and prior positives/negatives retained; numeric limits unchanged. This fixture decision is not full encoder release approval."
+    },
     "invalid_chroma_negative": {
       "source": "Existing AV1 library output of The Girl Who Kicked the Hornets Nest (2009), Extended Cut, Hybrid FraMeSToR release",
       "extraction": "ffmpeg -ss 1495 -i SOURCE -t 35 -map 0:v:0 -c copy OUTPUT.mkv; original packets retained, no decode or re-encode",

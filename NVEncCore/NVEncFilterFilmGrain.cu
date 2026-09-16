@@ -2258,7 +2258,9 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         sts = copyFrameAsync(output, source, stream);
         if (sts != RGY_ERR_NONE) return sts;
     }
-    if (modelValid && prm->filmGrain.residualRetain < 0.0f) {
+    if (modelValid) {
+        // Amplitude support is mandatory even when residual retention is off.
+        // This uses existing statistics and does not add a GPU analysis pass.
         // Evaluate the model actually selected by temporal hysteresis against
         // this frame's removed residual. A safe but badly fitting held model
         // must not turn a source-amplitude change into synthetic replacement.
@@ -2322,7 +2324,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             std::memset(&params, 0, sizeof(params));
             if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
         }
-    } else if (prm->filmGrain.residualRetain < 0.0f) {
+    } else {
         m_state->fidelityRecoveryFrames = 0;
     }
     FilmGrainQuietSourceGuard quietSource;

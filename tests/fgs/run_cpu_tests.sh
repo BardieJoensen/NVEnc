@@ -44,3 +44,5 @@ python3 tests/fgs/test_production_compare.py
 python3 tests/fgs/test_trial_admission.py
 python3 tests/fgs/test_hdr_metadata_trace.py
 python3 tests/fgs/test_flicker_regression.py
+
+python3 tests/fgs/test_amplitude_regression.py
