@@ -1,3 +1,26 @@
+# Source-grain branch: qualified and deployed
+
+The ordinary `cb903a17` correction is qualified and deployed. Four selected
+source-backed episode repairs are installed and fully validated; ordinary Tdarr
+is resumed. FEL remains disabled, its original HEVC films remain restored and
+excluded, and optional automatic-retention studies remain off/manual.
+
+Use the canonical [current operational handoff](/home/bardie/git-repos/NVEnc-fgs-fidelity/tests/fgs/WORK-TO-PRODUCTION.md)
+for runtime identity, qualification, repairs, pause ownership, source dependencies
+and cleanup. [SOURCE-VARIANCE-20260916.md](SOURCE-VARIANCE-20260916.md) explains
+this branch's correction, rejected candidates, measured tradeoffs and test changes.
+The live receipt index is [closeout.json](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/source-variance/training-v7/closeout.json).
+
+Completed cleanup freed 325,922,254,848 allocated bytes. Required originals,
+compact regressions, current full qualified trials and unfinished review evidence
+remain. Historical raw/timing outputs and retired backups are no longer present;
+consult the linked cleanup receipts before attempting a replay.
+
+## Earlier branch handoff, retained for history
+
+The runtime names, paused states and pending work below describe the earlier
+snapshot. They do not override the current operational handoff above.
+
 # Source-supported grain correction: current handoff
 
 September 16: isolated core `cb903a17` is being qualified for the excess-grain
