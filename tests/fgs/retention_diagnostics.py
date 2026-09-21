@@ -25,6 +25,7 @@ SOURCE_REASONS = {
     8: 'strength_mismatch', 16: 'local_mismatch', 32: 'colour_restore_rejected',
     64: 'covariance_recovery_rejected', 128: 'dc_limit', 256: 'recovery_hold',
     512: 'insufficient_flat_blocks',
+    1024: 'source_support_rejected', 2048: 'synthesis_recovery_hold',
 }
 EVENT = re.compile(r'\b(fgs-model|fgs-local-covariance|fgs-local-chroma|fgs-local-strength) frame=(\d+)\b')
 FIELD = re.compile(r'\b([A-Za-z][A-Za-z0-9]*)=(-?\d+(?:\.\d+)?)\b')

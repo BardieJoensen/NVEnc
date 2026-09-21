@@ -51,6 +51,20 @@ class DiagnosticsTests(unittest.TestCase):
         self.assertEqual(result['counters']['legacy_early_flat_rejection'], 1)
         self.assertEqual(result['counters']['fidelity_source_fallback'], 0)
 
+    def test_late_source_protection_and_synthesis_recovery_have_distinct_reasons(self):
+        result = self.analyze([
+            'fgs-model frame=0 reliable=0 sourceFallback=1 quietSource=1 recoveryHeld=0 trace=1 sourceReasons=1024',
+            'fgs-model frame=1 reliable=0 sourceFallback=0 quietSource=0 recoveryHeld=1 trace=1 sourceReasons=2048',
+            'fgs-model frame=2 reliable=1 sourceFallback=0 quietSource=0 recoveryHeld=0 trace=1 sourceReasons=0',
+        ], 3)
+        self.assertTrue(result['complete'])
+        self.assertEqual(result['counters']['source_preserved'], 2)
+        self.assertEqual(result['counters']['fidelity_source_fallback'], 1)
+        self.assertEqual(result['source_reasons']['source_support_rejected'], 1)
+        self.assertEqual(result['source_reasons']['synthesis_recovery_hold'], 1)
+        self.assertEqual(result['source_reasons']['recovery_hold'], 0)
+        self.assertEqual(result['source_reason_overlap']['unknown_source_frames'], 0)
+
     def test_fresh_coupling_is_distinct_from_failed_fit(self):
         fields = dict(recovered='0', covariance='1', colourIndependent='1', trace='1',
                       covarianceAttempted='1', minFramesEligible='1', fitAttempted='1',
@@ -183,7 +197,8 @@ class DiagnosticsTests(unittest.TestCase):
         for line in [
             'fgs-model frame=0 reliable=1 sourceFallback=1',
             'fgs-model frame=0 reliable=1 sourceFallback=0 trace=1 sourceReasons=64',
-            'fgs-model frame=0 reliable=0 sourceFallback=1 trace=1 sourceReasons=1024',
+            'fgs-model frame=0 reliable=0 sourceFallback=1 trace=1 sourceReasons=4096',
+            'fgs-model frame=0 reliable=0 sourceFallback=0 recoveryHeld=1 trace=1 sourceReasons=0',
             'fgs-model frame=0 reliable=0 sourceFallback=1 trace=2 sourceReasons=1',
         ]:
             with self.subTest(line=line), self.assertRaises(ValueError):
