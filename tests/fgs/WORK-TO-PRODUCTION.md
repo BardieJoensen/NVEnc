@@ -1,6 +1,23 @@
 # FGS encoder and library repair: current work and handoff
 
-**September 16 current state:** ordinary core `cb903a17` is qualified and
+**September 21 current state:** Tdarr is now 2.89.01, image
+`nvenc-fidelity/tdarr-node:2.89.01-cb903a17-20260919`; the deployed encoder hash
+and production flow still match the qualified ordinary core below. A fresh
+check finds ordinary Tdarr unpaused and idle; the playback watchdog retains
+ownership of playback pauses. This work did not change its pause state.
+The [bounded retention pilot](FINDINGS-2026-09-21-RETENTION-PILOT.md) completed
+15 encodes with full frame/clock/metadata checks, source-paired quality samples
+and inspected stills. Diagnostic-only correction `c84dbb1f` passes the CPU suite
+and exact before/after pixel comparisons across 2,160 pictures in both grain
+modes. Retention changes video bytes by -0.86% / +2.65% / +19.04% across these
+animation / SDR / HDR windows; this is neither matched-size nor full-title
+qualification. Correlated colour-grain recovery remains a specific model
+limitation. Production retention remains off, FEL remains disabled, and future
+studies remain manual. Completed controls are archived on storage; raw scratch
+and the duplicate build cache are retired. The evidence entry is
+`retention-prep-20260910/manual-pilot-20260921/closeout.json` in the repair ledger.
+
+**September 16 rollout snapshot:** ordinary core `cb903a17` is qualified and
 **deployed**. Its four selected full-source repairs are installed and fully
 validated. Ordinary Tdarr is resumed, with two workers active in the final
 snapshot. The retired repair coordinator is stopped and disabled at startup. FEL remains
