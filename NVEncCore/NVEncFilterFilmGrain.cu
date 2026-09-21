@@ -3225,6 +3225,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     for (uint32_t i = 0; i < params.numCrPoints; ++i) nonzeroCurve |= params.pointCrScaling[i] != 0;
     const bool quietSourceFallback = quietSource.invalid || sourceVariance.invalid || (sourceCurveLimited && !nonzeroCurve);
     if (quietSourceFallback) {
+        sourceReasonMask |= FGS_SOURCE_SUPPORT;
         diagnostics.sourceFidelityFallback = true;
         diagnostics.modelHeld = false;
         modelValid = false;
@@ -3237,6 +3238,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         freshFitValid || diagnostics.freshModel, diagnostics.modelFrames >= prm->filmGrain.modelWindow);
     const bool recoveryHeld = modelValid && !recoveryAllowed;
     if (recoveryHeld) {
+        sourceReasonMask |= FGS_SOURCE_SYNTHESIS_RECOVERY;
         // A history reset must not turn a one/two-frame acceptable fit into
         // an isolated synthetic overlay. All planes keep the original source;
         // no unsafe fit or stale model is emitted to bridge the gap.
