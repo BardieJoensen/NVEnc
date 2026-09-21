@@ -1,5 +1,12 @@
 # Source-grain branch: qualified and deployed
 
+September 21: Tdarr 2.89.01 retains this qualified ordinary encoder. The broader
+branch's [manual retention pilot](/home/bardie/git-repos/NVEnc-fgs-fidelity/tests/fgs/FINDINGS-2026-09-21-RETENTION-PILOT.md)
+is complete, including a diagnostic-only correction and source-paired quality
+measurements. Production retention and FEL remain off; ordinary Tdarr was not
+paused by that work. Use the canonical handoff for its exact evidence and the
+remaining correlated-colour recovery and matched-size work.
+
 The ordinary `cb903a17` correction is qualified and deployed. Four selected
 source-backed episode repairs are installed and fully validated; ordinary Tdarr
 is resumed. FEL remains disabled, its original HEVC films remain restored and
