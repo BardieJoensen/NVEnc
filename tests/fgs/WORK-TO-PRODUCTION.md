@@ -27,8 +27,10 @@ native samples exactly and rejects all 434 invalid calls. Commit `5826421d`
 corrects nonzero-scale strength/refit/DC units and makes finite luma gains
 explicit; independent AOM comparisons cover 576 templates and 144 strength
 calculations. The separate integer lookup matches 2,580,480 native values across
-1,440 curves. The bounded host selector/coverage and common-colour guards remain
-CPU-qualified, with no encoder output selection call sites. Read the local
+1,440 curves. Separate common-colour cohort accumulation also passes 20 native
+CPU/GPU controls; the three real frames still have no adequately populated
+joint-grain group. The bounded host selector/coverage and common-colour guards
+remain CPU-qualified, with no encoder output selection call sites. Read the local
 `roadmap-r3-scale-20260922/report.json` and `roadmap-r3-native-scaling-20260922/`.
 The completed blend's commands in `roadmap-r3-selector-20260922/` are historical;
 do not rerun its create-new output paths.

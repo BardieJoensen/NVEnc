@@ -133,8 +133,10 @@ comparison (141,191,039 valid samples and 434 rejected invalid calls). The
 nonzero-scale units, converts finite luma gains explicitly and adds the exact
 integer strength lookup. Independent AOM comparisons pass; four SDR/HDR encodes
 preserve ordinary decoded pictures, clocks, metadata and grain decisions.
-No job will start automatically. The selection/blend/lookup helpers still have
-no encoder output call sites. Remaining complete model/population evidence,
+A separate common-colour intersection reducer passes 20 native CPU/GPU controls;
+all three real frames still lack a >=16-block brightness/fold/component group.
+No job will start automatically. The selection/blend/lookup/common-cohort helpers
+still have no encoder output call sites. Remaining complete model/population evidence,
 colour gains and actual selection determine whether partial retention is useful.
 
 - Implement the R1 selector behind an explicit experimental option. Cover Y,

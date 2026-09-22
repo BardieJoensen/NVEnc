@@ -249,6 +249,7 @@ __device__ double moment(const FilmGrainCollectResult& r,unsigned i) {
     if(i<49)return r.colourLagSourceBase[i];i-=49;
     return r.colourLagBaseSource[i];
 }
+template<bool commonColourOnly>
 __global__ void reduce(const FilmGrainCollectTile *tiles,const FilmGrainCollectResult *results,
     unsigned count,FilmGrainCollectGroup *groups) {
     __shared__ unsigned selected[FGS_COLLECT_MAX_TILES],size;
@@ -258,6 +259,7 @@ __global__ void reduce(const FilmGrainCollectTile *tiles,const FilmGrainCollectR
         for(unsigned i=0;i<count;++i) {
             const auto& r=results[i];const unsigned c=tiles[i].component;
             if(c<1||c>2||r.reasons||r.observations!=676||r.checkFold>1||r.brightnessGroup>=20)continue;
+            if constexpr(commonColourOnly) { if(r.otherColourReasons)continue; }
             if((c-1)*40+r.checkFold*20+r.brightnessGroup!=group)continue;
             selected[size++]=i;other+=r.otherColourReasons==0;
         }
@@ -371,7 +373,8 @@ inline cudaError_t film_grain_collect_lookup_async(const FilmGrainCollectFrame& 
 // (~1.38 MiB). Clear for the first batch. Accumulated batches must belong to
 // one source/base/retention decision, use unique coordinates and the same stream.
 // This does not promote an unsupported brightness group or qualify image coverage.
-inline cudaError_t film_grain_collect_reduce_async(const FilmGrainCollectTile *tiles,
+template<bool commonColourOnly>
+inline cudaError_t film_grain_collect_reduce_impl(const FilmGrainCollectTile *tiles,
     const FilmGrainCollectResult *results,unsigned count,FilmGrainCollectGroup *groups,
     size_t groupCapacity,bool clear,cudaStream_t stream) {
     if(!tiles||!results||!groups||!count||count>FGS_COLLECT_MAX_TILES||groupCapacity<FGS_COLLECT_GROUPS)
@@ -380,7 +383,23 @@ inline cudaError_t film_grain_collect_reduce_async(const FilmGrainCollectTile *t
         const auto error=cudaMemsetAsync(groups,0,sizeof(*groups)*FGS_COLLECT_GROUPS,stream);
         if(error!=cudaSuccess)return error;
     }
-    joint_collect_detail::reduce<<<FGS_COLLECT_GROUPS,256,0,stream>>>(tiles,results,count,groups);
+    joint_collect_detail::reduce<commonColourOnly><<<FGS_COLLECT_GROUPS,256,0,stream>>>(tiles,results,count,groups);
     return cudaGetLastError();
+}
+inline cudaError_t film_grain_collect_reduce_async(const FilmGrainCollectTile *tiles,
+    const FilmGrainCollectResult *results,unsigned count,FilmGrainCollectGroup *groups,
+    size_t groupCapacity,bool clear,cudaStream_t stream) {
+    return film_grain_collect_reduce_impl<false>(tiles,results,count,groups,groupCapacity,clear,stream);
+}
+// A separate intersection cohort for joint Y/Cb/Cr checks. Accumulate ONLY
+// tiles whose source Y and BOTH colours pass their independent source gates.
+// Dividing mixed-cohort moments by otherColourSupportedBlocks is invalid.
+// Use separate storage from ordinary per-component groups; the same clear,
+// identity, unique-coordinate and single-stream contracts apply. Empty/sparse
+// common groups remain unqualified; this does not extend image coverage.
+inline cudaError_t film_grain_collect_reduce_common_async(const FilmGrainCollectTile *tiles,
+    const FilmGrainCollectResult *results,unsigned count,FilmGrainCollectGroup *groups,
+    size_t groupCapacity,bool clear,cudaStream_t stream) {
+    return film_grain_collect_reduce_impl<true>(tiles,results,count,groups,groupCapacity,clear,stream);
 }
 } // namespace fgsmodel

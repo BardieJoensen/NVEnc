@@ -61,6 +61,15 @@ preservation and invalid-call rejection. Compilation alone is not qualification.
 Neither harness selects or installs encoded output. Use off-root scratch and
 the documented playback/pause ownership for manual GPU work.
 
+For a separate source-supported Y/Cb/Cr intersection, set `common_groups: true`
+in each `joint_collect_gpu.cu` manifest case. `include_tiles: false` omits the
+large per-tile JSON while retaining both group populations. Compare with
+`python3 tests/fgs/joint_common_reference.py MANIFEST.json MEASURED.json REPORT.json`.
+This independently selects source gates before summing each cohort; it checks
+ordinary and common groups separately and retains a mixed-cohort normalization
+negative. A small intersection remains unqualified. The optional API is not
+called by the encoder probe or production path.
+
 The [grain-scale and native-lookup controls](FINDINGS-2026-09-22-GRAIN-SCALE.md)
 also run in the CPU suite. `grain_scale_test.cpp` checks scale-dependent native
 strength, retained-base refitting and finite gain units. `native_scaling_test.cpp`

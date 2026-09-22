@@ -59,6 +59,16 @@ int main(int argc,char** argv) {
             auto output=storage.allocate<FilmGrainCollectResult>(tiles.size());
             auto histogram=storage.allocate<FilmGrainCollectLookup>(1);
             auto groups=storage.allocate<FilmGrainCollectGroup>(FGS_COLLECT_GROUPS);
+            const bool collectCommon=c.value("common_groups",false);
+            auto common=collectCommon ? storage.allocate<FilmGrainCollectGroup>(FGS_COLLECT_GROUPS) : nullptr;
+            if(collectCommon) {
+                for(const auto count:{0u,FGS_COLLECT_MAX_TILES+1})
+                    if(film_grain_collect_reduce_common_async(input,output,count,common,FGS_COLLECT_GROUPS,true,nullptr)!=cudaErrorInvalidValue)
+                        throw std::runtime_error("common cohort count rejection failed");
+                if(film_grain_collect_reduce_common_async(input,output,1,common,FGS_COLLECT_GROUPS-1,true,nullptr)!=cudaErrorInvalidValue
+                    || film_grain_collect_reduce_common_async(input,output,1,nullptr,FGS_COLLECT_GROUPS,true,nullptr)!=cudaErrorInvalidValue)
+                    throw std::runtime_error("common cohort capacity rejection failed");
+            }
             // A missing output slot and changed base identity must fail before launch.
             if(film_grain_collect_joint_async(source,base,previous,retain,input,1,output,0,nullptr)!=cudaErrorInvalidValue)
                 throw std::runtime_error("capacity rejection failed");
@@ -84,6 +94,7 @@ int main(int argc,char** argv) {
                     const unsigned n=unsigned(std::min(size_t(FGS_COLLECT_MAX_TILES),tiles.size()-i));
                     checked(film_grain_collect_joint_async(source,base,copiedPrevious,retain,input+i,n,output+i,n,stream));
                     checked(film_grain_collect_reduce_async(input+i,output+i,n,groups,FGS_COLLECT_GROUPS,i==0,stream));
+                    if(collectCommon)checked(film_grain_collect_reduce_common_async(input+i,output+i,n,common,FGS_COLLECT_GROUPS,i==0,stream));
                 }
                 checked(film_grain_collect_lookup_async(source,base,retain.y,histogram,stream));
             }
@@ -96,16 +107,23 @@ int main(int argc,char** argv) {
             checked(cudaMemcpy(grouped.data(),groups,grouped.size()*sizeof(grouped[0]),cudaMemcpyDeviceToHost));
             json result={{"id",c.at("id")},{"milliseconds",milliseconds/repeats},
                 {"timing_scope","all-plane history copy, joint collection/reduction and full-picture histograms; excludes allocation, upload, result download and JSON"},
+                {"common_groups_collected",collectCommon},
                 {"repeat_count",repeats},{"output_bytes",rows.size()*sizeof(rows[0])},
                 {"tiles",json::array()},{"lookup_y",lookup.luma},{"lookup_c",lookup.chroma},
                 {"invalid_lookup_samples",lookup.invalidSamples}};
             result["groups"]=json::array();
             for(const auto& g:grouped)result["groups"].push_back({{"blocks",g.blocks},{"observations",g.observations},
                 {"other_colour_supported_blocks",g.otherColourSupportedBlocks},{"moments",g.moments}});
+            if(collectCommon) {
+                checked(cudaMemcpy(grouped.data(),common,grouped.size()*sizeof(grouped[0]),cudaMemcpyDeviceToHost));
+                result["common_groups"]=json::array();
+                for(const auto& g:grouped)result["common_groups"].push_back({{"blocks",g.blocks},{"observations",g.observations},
+                    {"other_colour_supported_blocks",g.otherColourSupportedBlocks},{"moments",g.moments}});
+            }
             unsigned accepted=0;
             for(size_t i=0;i<rows.size();++i) {
                 const auto& r=rows[i];if(!r.reasons)++accepted;
-                result["tiles"].push_back({{"reasons",r.reasons},{"brightness_group",r.brightnessGroup},
+                if(c.value("include_tiles",true))result["tiles"].push_back({{"reasons",r.reasons},{"brightness_group",r.brightnessGroup},
                     {"check_fold",r.checkFold},{"observations",r.observations},{"mean",r.mean},
                     {"variance",r.variance},{"temporal_correlation",r.temporalCorrelation},{"coherence",r.coherence},
                     {"source",r.source},{"base",r.base},{"sourceBase",r.sourceBase},

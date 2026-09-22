@@ -98,3 +98,33 @@ Evidence: `roadmap-r3-native-scaling-20260922/comparison.json`, `build.json` and
 The reserved qualification corpus has not been opened. Full-picture model
 support, actual selection/output, temporal behaviour and quality/size/speed
 qualification remain open. No new library defect or repair scope is inferred.
+
+## Separate common-colour source cohorts
+
+`film_grain_collect_reduce_common_async` accumulates only the intersection where
+source Y and both source colour components pass their gates. It uses separate
+fixed 80-group storage, the same bounded batches and stream/identity contract,
+and preserves the existing per-component reduction. It does not modify the
+diagnostic's file format or add an encoder call site.
+
+Twenty synthetic/real cases compare both populations independently against
+native CPU measurements. Maximum source-energy-normalized moment error is
+`1.20e-8`, below the unchanged `5e-6` arithmetic bound. Capacity/count negatives,
+history rejection, multiple batches and repeated clear/accumulate passes also
+succeed. A deliberately mixed positive has 224 per-component accepted blocks
+and 192 common blocks; both folds of both colours have 48 common blocks, so
+the test includes adequately populated groups. Mixed-population sums divided
+by the smaller count fail the independent comparison.
+
+The three real frames have 14, 18 and 20 common blocks in total, counting both
+component groups. No individual brightness/fold/component group reaches 16.
+This confirms insufficient joint-grain evidence for these candidates. It does
+not establish that their pictures are damaged, and the support rule was not
+relaxed. Quiet/rejected populations and useful whole-picture recovery remain
+separate work.
+
+Evidence: `roadmap-r3-common-cohort-20260922/comparison-v1.json`,
+`comparison-positive-v1.json`, `positive-control-plan.json` and the released
+`r3-common*-pause.json` receipts. The native CPU reference is
+`joint_common_reference.py`; this is a manual development check, not routine
+Tdarr validation.
