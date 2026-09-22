@@ -4,6 +4,7 @@
 #pragma once
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include "NVEncFilmGrainGaussian.h"
@@ -17,10 +18,20 @@ struct FilmGrainLumaTemplate {
 };
 struct FilmGrainLumaTemplatePower {
     bool valid = false;
+    unsigned bitDepth = 0, grainShift = 0;
+    double innovationSecondMoment = 0.0; // Actual integer Gaussian table after rounding.
     double lumaPower = 0.0;
     double averagedLumaPower = 0.0;
     double roundedAverageLumaPower = 0.0;
     double lumaMean = 0.0; // Native template units, before display scaling.
+    // Convert the actual-innovation-normalized powers above to the nominal
+    // gain convention consumed by build_strength_lut/refit_local_strength:
+    // native template RMS / (32 * 2^(bitDepth - 8 - grainShift)). These include
+    // template mean energy, not just variance. Never reuse at a different
+    // model/depth/shift. The rounded average is the chroma AR driver, not the
+    // complete chroma template or a chroma strength-lookup prediction.
+    double nominalLumaGain = 0.0;
+    double nominalRoundedAverageLumaGain = 0.0;
     double clippedFraction = 0.0;
     size_t seeds = 0;
 };
@@ -122,6 +133,12 @@ inline FilmGrainLumaTemplatePower film_grain_luma_template_power(
     result.roundedAverageLumaPower /= count * innovation;
     result.lumaMean /= count;
     result.clippedFraction = clips / filtered;
+    result.bitDepth = bitDepth;
+    result.grainShift = grainShift;
+    result.innovationSecondMoment = innovation;
+    const double nominalSigma = std::ldexp(32.0, int(bitDepth) - 8 - int(grainShift));
+    result.nominalLumaGain = std::sqrt(result.lumaPower * innovation) / nominalSigma;
+    result.nominalRoundedAverageLumaGain = std::sqrt(result.roundedAverageLumaPower * innovation) / nominalSigma;
     result.seeds = seedCount;
     result.valid = true;
     return result;

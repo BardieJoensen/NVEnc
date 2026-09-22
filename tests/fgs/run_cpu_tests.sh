@@ -35,6 +35,9 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/joint_model_test.cpp -o "$OUT/fgs_joint_model_test"
 "$OUT/fgs_joint_model_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
+    tests/fgs/grain_scale_test.cpp NVEncCore/NVEncFilmGrainModel.cpp -o "$OUT/fgs_grain_scale_test"
+"$OUT/fgs_grain_scale_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
     tests/fgs/solver_test.cpp NVEncCore/NVEncFilmGrainModel.cpp -o "$OUT/fgs_solver_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc \
     tests/fgs/local_strength_test.cpp NVEncCore/NVEncFilmGrainModel.cpp -o "$OUT/fgs_local_strength_test"

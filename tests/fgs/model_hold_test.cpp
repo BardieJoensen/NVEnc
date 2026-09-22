@@ -50,14 +50,15 @@ static NV_ENC_FILM_GRAIN_PARAMS_AV1 constant_model() {
 // bounds fractional brightness between them. All tested AR coefficients match.
 static bool grid_oracle(NV_ENC_FILM_GRAIN_PARAMS_AV1 a, NV_ENC_FILM_GRAIN_PARAMS_AV1 b,
                         double tolerance) {
+    if (a.grainScaleShift != b.grainScaleShift) return false;
     double peak = 0.0, difference = 0.0;
     for (int plane = 0; plane < 3; ++plane) {
         const auto ca = curve(a, plane), cb = curve(b, plane);
         for (int x = 0; x < 256; ++x) {
             const double sa = eval_scaling_curve(ca.values, ca.scalings, ca.count, x)
-                / (1 << (a.grainScalingMinus8 + 3));
+                / (1 << (a.grainScalingMinus8 + 3 + a.grainScaleShift));
             const double sb = eval_scaling_curve(cb.values, cb.scalings, cb.count, x)
-                / (1 << (b.grainScalingMinus8 + 3));
+                / (1 << (b.grainScalingMinus8 + 3 + b.grainScaleShift));
             peak = std::max({peak, sa, sb});
             difference = std::max(difference, std::abs(sa - sb));
         }
@@ -67,6 +68,7 @@ static bool grid_oracle(NV_ENC_FILM_GRAIN_PARAMS_AV1 a, NV_ENC_FILM_GRAIN_PARAMS
 
 static void random_curves(NV_ENC_FILM_GRAIN_PARAMS_AV1& p, std::mt19937& rng) {
     p.grainScalingMinus8 = rng() % 4;
+    p.grainScaleShift = rng() % 4;
     for (int plane = 0; plane < 3; ++plane) {
         const size_t count = 1 + rng() % (plane == 0 ? 14 : 10);
         std::set<int> xs;
