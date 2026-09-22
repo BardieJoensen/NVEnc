@@ -8,10 +8,10 @@ Transformers (2007) retain exactly the original compressed packet sequences.
 They occupy 1,487,984,476 bytes. No grain measurements or candidate results from
 those excerpts were used for development.
 
-R2 now has a tested GPU measurement module. Encoder lifecycle integration and
-its disabled/enabled output-equivalence trial remain open; the new headers
-currently have no production encoder call sites. Automatic retention and FEL
-remain disabled in production.
+R2 is also complete: the GPU measurement module, encoder lifecycle and
+disabled/enabled equivalence pass the comparisons below. Only an explicit
+diagnostic uses the new collector; ordinary encoding performs no new collection.
+Automatic retention and FEL remain disabled in production.
 
 ## Implementation
 
