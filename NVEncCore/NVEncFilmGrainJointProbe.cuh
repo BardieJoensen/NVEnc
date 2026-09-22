@@ -2,7 +2,8 @@
 // MIT license, as NVEncFilmGrainModel.h. Not a production retention policy.
 #pragma once
 #include "NVEncFilmGrainJointCollect.cuh"
-#include "json.hpp"
+#include "../json/json.hpp"
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <set>
