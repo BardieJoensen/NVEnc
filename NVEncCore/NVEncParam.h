@@ -855,6 +855,7 @@ struct NVEncVideoParamAV1 {
     tstring filmGrainSceneCuts;                    // explicit source scene boundaries with frame-count guard
     tstring filmGrainTable;                        // AOM filmgrn1 parameter table
     tstring filmGrainTableOut;                     // write measured grain as an AOM filmgrn1 table
+    tstring filmGrainJointProbe;                   // explicit bounded source/base/history diagnostic
 
     NVEncVideoParamAV1();
 };

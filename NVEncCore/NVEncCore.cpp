@@ -1864,6 +1864,11 @@ RGY_ERR NVEncCore::SetInputParam(InEncodeVideoParam *inputParam) {
         PrintMes(RGY_LOG_ERROR, _T("--film-grain-scene-cuts requires --av1-film-grain denoiser=bilateral.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
+    if (!inputParam->av1.filmGrainJointProbe.empty()
+        && (!inputParam->av1.filmGrainAuto || inputParam->av1.filmGrainDenoiser != FGS_DENOISE_BILATERAL)) {
+        PrintMes(RGY_LOG_ERROR, _T("--film-grain-joint-probe requires --av1-film-grain denoiser=bilateral.\n"));
+        return RGY_ERR_INVALID_PARAM;
+    }
     if (!inputParam->av1.filmGrainTableOut.empty() && !inputParam->av1.filmGrainAuto) {
         PrintMes(RGY_LOG_ERROR, _T("--film-grain-table-out requires --av1-film-grain.\n"));
         return RGY_ERR_INVALID_PARAM;
@@ -3514,6 +3519,7 @@ RGY_ERR NVEncCore::InitFilters(const InEncodeVideoParam *inputParam) {
         param->filmGrain.analyzeChroma = inputParam->av1.filmGrainChroma;
         param->filmGrain.denoiser = inputParam->av1.filmGrainDenoiser;
         param->tableOutPath = inputParam->av1.filmGrainTableOut;
+        param->jointProbePath = inputParam->av1.filmGrainJointProbe;
         param->sceneCutPath = inputParam->av1.filmGrainSceneCuts;
         param->timebase = m_outputTimebase;
         param->filmGrain.motionRefs = inputParam->av1.filmGrainMotionRefs;
