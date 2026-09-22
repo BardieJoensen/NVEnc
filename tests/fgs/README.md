@@ -26,6 +26,19 @@ Build the CUDA harness with C++17 and include paths `NVEncCore` and `json`.
 Use an explicit off-root scratch directory and the matching CUDA architecture.
 This is an experimental measurement check, not a transcode qualification.
 
+The encoder's explicit `--film-grain-joint-probe manifest.json` option records
+the same measurements inside its frame pipeline. Its
+[manifest and limits](../../NVEncC_Options.en.md#--film-grain-joint-probe-manifest)
+require a new directory, finite frame IDs and an output budget. After a successful
+drain, run `python3 tests/fgs/joint_probe_reference.py PROBE_DIRECTORY REPORT.json`
+to compare every grouped count, moment and lookup histogram against the CPU
+reference. This tool also checks that startup/cut history is invalid and that
+early source fallback records source-identical base planes. It does **not**
+independently decode the original or certify output quality. Qualification must
+separately match the captured source and preceding Y/Cb/Cr against original
+decoding, and compare complete diagnostic-on/off outputs in both grain modes.
+Do not add these experiments to the routine Tdarr validator.
+
 | | command | where it runs |
 |---|---|---|
 | tier 1 | `bash tests/fgs/run_cpu_tests.sh` | GitHub Actions, every push |
