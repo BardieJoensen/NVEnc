@@ -107,6 +107,15 @@ equal-size source-fidelity comparisons must decide whether the control helps.
 
 ## Reproduction and integration gate
 
+The [finite-template follow-up](FINDINGS-2026-09-22-FINITE-TEMPLATE.md) isolates
+internal clipping as the main remaining luma-power discrepancy and adds an
+offline finite-template reference. It matches 768 complete independent AOM
+templates and reproduces real calibration/holdout driver powers within 0.32%.
+Per-intensity checks reject five of fourteen supported groups. Equal-bin
+normalized fitting improves the worst shared-shape error but still fails the
+existing limit; it is not integrated. These later results supersede the open
+cause investigation above, not the recorded failed measurements.
+
 Run `sh tests/fgs/run_cpu_tests.sh` for the public GPU-free controls.
 The private evidence root is
 `/opt/docker-apps/logs/fgs-ripple-repair-20260906/retention-prep-20260910/colour-recovery-20260922/`.

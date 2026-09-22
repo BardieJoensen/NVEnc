@@ -176,6 +176,12 @@ were necessary to expose the second mistake.
 
 ## Decision and remaining work
 
+The later [finite-template and intensity work](FINDINGS-2026-09-22-FINITE-TEMPLATE.md)
+identifies internal template clipping as the principal power-model discrepancy,
+adds an independently verified offline reference and establishes explicit
+brightness-specific failures. Those findings refine the model's next steps;
+the matched-size quality results here are unchanged.
+
 Keep production automatic retention off. The completed comparisons support a
 modest source-fidelity benefit in selected live-action fallback scenes, but
 current automatic behaves almost like plain NVENC there and has not solved

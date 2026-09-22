@@ -1,5 +1,18 @@
 # FGS encoder and library repair: current work and handoff
 
+**September 22 latest follow-up:** [finite-template and intensity work](FINDINGS-2026-09-22-FINITE-TEMPLATE.md)
+adds an offline luma-template reference with exact independent AOM verification
+across 768 templates. Internal template clipping explains most of the previous
+stationary-power discrepancy; separate real calibration/holdout seed sets agree
+within 0.32%. Brightness-specific checks still reject five of fourteen supported
+groups. A balanced fit improves the worst dark-region error from about 20% to
+9.27%, which still fails the 8% bound. Keep that alternative rejected. No encoder
+call site, production policy, amplitude limit or source protection changed.
+Read `finite-template-20260922/` in the evidence root below. Ordinary Tdarr
+continues; this follow-up needed no new pause. Per-intensity eligibility, stronger
+coupling and integrated transitions remain the next model work, before full-title
+cost/optimization. The finite GPU comparison is complete.
+
 **September 22 current state:** [colour recovery and native HDR work](FINDINGS-2026-09-22-COLOUR-RECOVERY.md)
 has completed the finite matched-size comparison, including VBR/CRF SVT
 references, native PQ measurements, tighter ordinary size points and inspected
