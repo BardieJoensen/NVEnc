@@ -113,6 +113,13 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [first R3 study and hold guard](FINDINGS-2026-09-22-RETENTION-SELECTION.md)
+are complete. Eighteen candidate measurements expose insufficient whole-picture
+colour coverage; the successful patch fit cannot simply become a frame policy.
+Commit `2000f767` prevents model reuse across grain-scale changes and passes the
+CPU suite, including an independently measured failing old-model example.
+The selector, coverage/fallback implementation and actual new output remain open.
+
 - Implement the R1 selector behind an explicit experimental option. Cover Y,
   Cb and Cr independently within the permitted shared AV1 model. Define useful
   behaviour for unsupported Cr; do not generalize Cb-only results silently.

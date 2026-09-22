@@ -13,6 +13,14 @@ complete model integration. R3–R8 remain open. The stage report is
 `roadmap-r1-r2-20260922/report.json` in the local evidence root. Ordinary Tdarr
 is unpaused; retention and FEL remain off. No experiment is scheduled.
 
+**R3 first stage:** [coverage feasibility and safe model reuse](FINDINGS-2026-09-22-RETENTION-SELECTION.md)
+records 18 candidate measurements and commit `2000f767`. Whole-picture colour
+coverage is still insufficient; the bounded selector is not integrated. The new
+hold guard rejects a changed grain scale, with an independently measured negative
+and full CPU pass. This is preparation for the future prototype; it changes no
+deployed runtime or library-repair scope. Read `roadmap-r3-20260922/report.json`.
+The next work is population-aware coverage/fallback and consistent model gains.
+
 **September 22 latest development:** [brightness-aware fitting and partial colour retention](FINDINGS-2026-09-22-BRIGHTNESS-FIT.md)
 adds bounded minimax fitting and an independent synthesis-covariance check.
 Actual decoder pixels reject the first shared-shape candidate despite its good
