@@ -29,6 +29,7 @@ class FilmGrainJointProbe {
     uint64_t m_epoch=1,m_maxBytes=0;
     int64_t m_visited=-1;
     unsigned m_width=0,m_height=0,m_depth=0,m_shift=0;
+    int m_timebaseNum=0,m_timebaseDen=0;
 
     static void check(cudaError_t e) {if(e!=cudaSuccess)throw std::runtime_error(cudaGetErrorString(e));}
     static void binary(const Path& path,const void *data,size_t bytes) {
@@ -86,7 +87,9 @@ class FilmGrainJointProbe {
         return description;
     }
 public:
-    explicit FilmGrainJointProbe(const Path& manifestPath) {
+    FilmGrainJointProbe(const Path& manifestPath,int timebaseNum,int timebaseDen)
+        :m_timebaseNum(timebaseNum),m_timebaseDen(timebaseDen) {
+        if(timebaseNum<=0||timebaseDen<=0)throw std::runtime_error("joint probe needs a valid source timebase");
         Json manifest;std::ifstream input(manifestPath);if(!input)throw std::runtime_error("cannot read joint probe manifest");
         input>>manifest;
         if(manifest.at("schema")!=1||!manifest.at("frames").is_array()
@@ -158,7 +161,7 @@ public:
         Json record={{"schema",1},{"frame_id",source.frameId},{"stage",stage},{"scene_reset",sceneReset},
             {"source",dump_frame(source,prefix+"-source")},{"base",dump_frame(base,prefix+"-base")},
             {"previous",dump_frame(previous,prefix+"-previous")},{"retain",{m_retention.y,m_retention.cb,m_retention.cr}},
-            {"tiles",tiles.size()},{"group_count",FGS_COLLECT_GROUPS},{"group_bytes",sizeof(FilmGrainCollectGroup)},
+            {"timebase",{m_timebaseNum,m_timebaseDen}},{"tiles",tiles.size()},{"group_count",FGS_COLLECT_GROUPS},{"group_bytes",sizeof(FilmGrainCollectGroup)},
             {"moment_count",FGS_COLLECT_MOMENTS},{"lookup_y",lookup.luma},{"lookup_c",lookup.chroma},
             {"groups_file",(m_directory/(prefix+"-groups.bin")).u8string()}};
         binary(m_directory/(prefix+"-groups.bin"),groups.data(),groups.size()*sizeof(groups[0]));

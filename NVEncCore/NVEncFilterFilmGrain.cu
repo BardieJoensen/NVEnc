@@ -2141,7 +2141,10 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     m_jointProbe.reset();
     if (!prm->jointProbePath.empty()) {
         try {
-            m_jointProbe = std::make_unique<FilmGrainJointProbe>(std::filesystem::path(prm->jointProbePath));
+            const auto timebase = prm->timebase.is_valid() ? prm->timebase
+                : rgy_rational<int>(prm->baseFps.d(), prm->baseFps.n());
+            m_jointProbe = std::make_unique<FilmGrainJointProbe>(std::filesystem::path(prm->jointProbePath),
+                timebase.n(), timebase.d());
         } catch (const std::exception& error) {
             AddMessage(RGY_LOG_ERROR, _T("FGS joint probe: %s\n"), char_to_tstring(error.what()).c_str());
             return RGY_ERR_INVALID_PARAM;
