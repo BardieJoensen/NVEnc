@@ -54,17 +54,21 @@ operations and nearest-even rounding. It preserves the original source and
 denoised base so a retry cannot blend an already retained candidate. It rejects
 layout, identity, fraction and alias errors; invalid input codes produce a
 mandatory error count and cannot mark the output complete. CUDA compilation
-passes. **The 31-case GPU/native comparison is prepared but still unrun** because
-Emby playback owns the current GPU pause. It must be started explicitly; no
-background job waits to launch it.
+passes. **The 31-case GPU/native comparison now passes**: 141,191,039 valid
+samples exactly match the independent CPU result, one invalid sample is reported
+and all 434 invalid-call controls reject. Read the
+[completed trial and scale follow-up](FINDINGS-2026-09-22-GRAIN-SCALE.md).
+The owned pause is released; no background job waits to launch.
 
 These are R3 prerequisites. They do not implement the complete fitted model,
-native population evidence, scale/gain/DC consistency, actual moving output or
-the explicit encoder selection option. R3 remains open, as do R4–R8.
+native population evidence, finite colour gains, actual moving retention output
+or the explicit encoder selection option. The follow-up fixes nominal scale
+units and adds exact native strength lookup. R3 remains open, as do R4–R8.
 
 The current ledger is `roadmap-r3-selector-20260922/` under the existing private
-evidence root. Read its `report.json` and explicit `run-blend.py --run-manually`
-resume command. The earlier `roadmap-r3-20260922/` study remains evidence below.
+evidence root. Read its `report.json`; the blend command is now a historical
+completed command, not a pending resume action. The current scale/lookup stage
+is linked above. The earlier `roadmap-r3-20260922/` study remains evidence below.
 
 ## Whole-picture coverage remains a real implementation requirement
 
@@ -123,9 +127,9 @@ The private `colour-recovery-20260922/roadmap-r3-20260922/` ledger contains:
 - `r3-frame*-pause.json`: released GPU pauses with unchanged worker limits.
 
 The bounded host selector and conservative coverage/fallback path now exist.
-The immediate pending check is the standalone native GPU blend, followed by
-model/population evidence, consistent gains and runtime integration. Runtime
-selection, temporal behaviour, compressed-output quality and quality/size/time
-comparisons remain open. Ordinary Tdarr configuration is unchanged; its playback
-watchdog owns the current pause. Automatic retention and FEL stay disabled.
-No experiment is scheduled or left running.
+The standalone native GPU blend and nominal scale/lookup follow-up now pass.
+Next are complete model/population evidence, finite colour gains and runtime
+integration. Runtime selection, temporal behaviour, compressed-output quality
+and quality/size/time comparisons remain open. Ordinary Tdarr configuration is
+unchanged. Owned study pauses are released; automatic retention and FEL stay
+disabled. No experiment is scheduled or left running.

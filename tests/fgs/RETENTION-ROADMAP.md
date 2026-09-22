@@ -2,8 +2,9 @@
 
 Updated September 22, 2026: R1/R2 complete; encoder integration `da9ce557`,
 independent comparison tool `128796ea`. R3 host selection/coverage and colour
-checks are implemented and CPU-qualified; its native GPU blend is compiled but
-awaits the explicit playback-free trial. Full R3 integration remains open.
+checks and native GPU blending are qualified. Grain-scale units and exact
+native brightness lookup now pass independent decoder comparisons; ordinary
+output remains identical on SDR/HDR controls. Full R3 integration remains open.
 This is the current task list for optional automatic retention. Start at the
 [project handoff](WORK-TO-PRODUCTION.md) for deployed builds and operational
 constraints; older experiment plans describe their recorded stages.
@@ -126,11 +127,15 @@ The [second R3 stage](FINDINGS-2026-09-22-RETENTION-SELECTION.md#current-impleme
 now implements the bounded host selector, conservative complete-picture
 coverage/fallback gate and common-coordinate colour reconstruction checks.
 Seventy-two policy controls, 36 real native coverage replays and the complete
-CPU suite pass. The native per-component GPU blend compiles; its 31-case exact
-comparison is prepared but unrun while Emby playback owns the pause. No job
-will start automatically. These helpers have no encoder output call sites.
-The remaining model/population evidence, consistent gains and actual encoder
-selection still determine whether partial retention can be useful.
+CPU suite pass. The native per-component GPU blend passes its 31-case exact
+comparison (141,191,039 valid samples and 434 rejected invalid calls). The
+[scale and native-lookup follow-up](FINDINGS-2026-09-22-GRAIN-SCALE.md) corrects
+nonzero-scale units, converts finite luma gains explicitly and adds the exact
+integer strength lookup. Independent AOM comparisons pass; four SDR/HDR encodes
+preserve ordinary decoded pictures, clocks, metadata and grain decisions.
+No job will start automatically. The selection/blend/lookup helpers still have
+no encoder output call sites. Remaining complete model/population evidence,
+colour gains and actual selection determine whether partial retention is useful.
 
 - Implement the R1 selector behind an explicit experimental option. Cover Y,
   Cb and Cr independently within the permitted shared AV1 model. Define useful
@@ -138,9 +143,11 @@ selection still determine whether partial retention can be useful.
 - Fit only the missing grain after source retention. Carry integer parameter
   quantization through strength curves, causal/spectral checks and independent
   reconstructed-source checks. Preserve the existing source-support protections.
-- Make grain scale shift consistent in all gains, amplitude/DC limits, curves
-  and residual blending. The prototype uses shift one while some current runtime
-  helpers assume zero; changing the signalled field alone is insufficient.
+- Complete grain-scale integration: nominal strength/refit/DC units, native
+  blending and exact integer lookup now have independent checks. The prototype
+  uses shift one, which requires finite gains for the exact luma/colour model,
+  depth and scale plus actual decoded amplitude/mean checks. The linear DC proxy
+  and a shift-only rescaling do not supply those checks.
 - Match the decoder's chroma strength indexing, native rounding, clipping,
   overlap, quiet-component behaviour and paired chroma syntax. Do not confuse
   the luma samples used for strength lookup with the averaged luma AR driver.

@@ -61,6 +61,13 @@ preservation and invalid-call rejection. Compilation alone is not qualification.
 Neither harness selects or installs encoded output. Use off-root scratch and
 the documented playback/pause ownership for manual GPU work.
 
+The [grain-scale and native-lookup controls](FINDINGS-2026-09-22-GRAIN-SCALE.md)
+also run in the CPU suite. `grain_scale_test.cpp` checks scale-dependent native
+strength, retained-base refitting and finite gain units. `native_scaling_test.cpp`
+checks both AV1 integer interpolation stages against stored independent AOM
+curve hashes. Smooth strength estimates remain useful for their existing
+qualified ordinary callers; they are not exact decoded-synthesis evidence.
+
 | | command | where it runs |
 |---|---|---|
 | tier 1 | `bash tests/fgs/run_cpu_tests.sh` | GitHub Actions, every push |

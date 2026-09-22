@@ -21,19 +21,30 @@ and full CPU pass. This is preparation for the future prototype; it changes no
 deployed runtime or library-repair scope. Read `roadmap-r3-20260922/report.json`.
 The next work is population-aware coverage/fallback and consistent model gains.
 
-**R3 current stage:** the [bounded selector and coverage implementation](FINDINGS-2026-09-22-RETENTION-SELECTION.md#current-implementation-selector-and-native-base-contract)
-passes 72 policy controls, 36 real native coverage replays and the full CPU
-suite (185 Python tests / 26 suites, 21 C++ checks). Common-coordinate Y/Cb/Cr
-and spatial Cb/Cr reconstruction checks now reject mixed/unsupported cohorts.
-The native per-component GPU blend is implemented and compiled; its exact
-31-case comparison is prepared but unrun while Emby's playback watchdog owns
-the pause. No automatic launch is scheduled. Read
-`roadmap-r3-selector-20260922/report.json`; the explicit resume command is
-`python3 roadmap-r3-selector-20260922/run-blend.py --run-manually` from the local
-evidence root. The selector/model helpers have no encoder output call sites.
-Remaining R3 work includes qualified population/model evidence, gain/DC/scale
-consistency and actual encoder selection. R3–R8 remain open. Tdarr's deployed
-binary, configuration and source/FEL protections are unchanged.
+**R3 current stage:** [native GPU blending, grain-scale units and exact brightness lookup](FINDINGS-2026-09-22-GRAIN-SCALE.md)
+are qualified prerequisites. The 31-case GPU blend matches 141,191,039 valid
+native samples exactly and rejects all 434 invalid calls. Commit `5826421d`
+corrects nonzero-scale strength/refit/DC units and makes finite luma gains
+explicit; independent AOM comparisons cover 576 templates and 144 strength
+calculations. The separate integer lookup matches 2,580,480 native values across
+1,440 curves. The bounded host selector/coverage and common-colour guards remain
+CPU-qualified, with no encoder output selection call sites. Read the local
+`roadmap-r3-scale-20260922/report.json` and `roadmap-r3-native-scaling-20260922/`.
+The completed blend's commands in `roadmap-r3-selector-20260922/` are historical;
+do not rerun its create-new output paths.
+
+The last fully built and ordinary-output-compared diagnostic encoder is now
+`5826421d`, SHA `0ddbb547ac0f81192c8808ae4694ab8d73fa52eaed8a53eba9fbf0182890e281`.
+Four fresh SDR/HDR encodes preserve all 1,920 decoded observations in both grain
+modes, clocks, metadata and 960 grain/training records versus `da9ce557`.
+The owned pauses are released; the node is unpaused with its preexisting
+all-zero worker limits preserved. No experiment is scheduled. Production stays
+ordinary `cb903a17`, retention and FEL off, source protections unchanged.
+
+Next: complete whole-picture population/model evidence, finite colour gains
+and actual bounded encoder selection, then temporal and quality/bytes/speed
+qualification. Smooth sigma and linear DC estimates cannot replace exact
+native synthesis evidence. R3–R8 remain open; the reserved corpus is unopened.
 
 **September 22 latest development:** [brightness-aware fitting and partial colour retention](FINDINGS-2026-09-22-BRIGHTNESS-FIT.md)
 adds bounded minimax fitting and an independent synthesis-covariance check.
