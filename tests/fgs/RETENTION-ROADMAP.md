@@ -1,6 +1,7 @@
 # Automatic retention: remaining work and completion criteria
 
-Updated September 22, 2026 against development commit `c08bf2dc`.
+Updated September 22, 2026: R1/R2 complete; encoder integration `da9ce557`,
+independent comparison tool `128796ea`.
 This is the current task list for optional automatic retention. Start at the
 [project handoff](WORK-TO-PRODUCTION.md) for deployed builds and operational
 constraints; older experiment plans describe their recorded stages.
@@ -42,14 +43,16 @@ from three additional titles are packet-identical to their original sources
 (1,487,984,476 bytes); their grain results have not been inspected. The local
 `roadmap-r1-r2-20260922/r1-completion.json` and `corpus-report.json` contain the
 completion and source proofs. R2's [GPU measurement module](FINDINGS-2026-09-22-JOINT-COLLECTION.md)
-passes independent synthetic and real-frame comparisons; its encoder lifecycle
-integration remains active. R3–R8 remain open. A package closes
+passes independent synthetic, real-frame and actual encoder lifecycle comparisons.
+Sixteen encodes preserve the controls across all 2,432 output frames in both
+grain modes; 393 source/history plane comparisons are exact. The explicit
+diagnostic remains off by default. R3–R8 remain open. A package closes
 only when its deliverable and completion evidence are linked here.
 
 | ID | Work package | Depends on | Completion evidence |
 | --- | --- | --- | --- |
 | R1 — complete | Define whole-picture eligibility, fallback and a separate qualification corpus | Existing prototype | [Contract](RETENTION-CONTRACT.md), source manifest and reserved packet-copy proofs |
-| R2 | Implement trustworthy, bounded GPU source/base measurements | R1 | Independent CPU/source comparison, valid colour history and ordinary-mode equivalence |
+| R2 — complete | Implement trustworthy, bounded GPU source/base measurements | R1 | [Collector and pipeline evidence](FINDINGS-2026-09-22-JOINT-COLLECTION.md), `roadmap-r1-r2-20260922/report.json` |
 | R3 | Integrate automatic partial retention and the grain model | R2 | Actual rounded-base model, legal AV1 parameters and explainable bounded decisions |
 | R4 | Make frame-to-frame changes stable | R3 | Moving-sequence transition and reference-state regressions pass |
 | R5 | Qualify actual NVENC picture quality and file correctness | R3, R4 | Independent unseen-source evaluation, known-bad controls and existing release checks pass |
@@ -245,9 +248,10 @@ outcome, not a claim that unfinished implementation passed qualification.
    unresolved deployment decision actually needs their preference. Continue
    independent work while awaiting that choice.
 
-The immediate deliverable is **R2's encoder lifecycle integration and ordinary /
-diagnostic output equivalence**. GPU measurements, all-plane history and bounded
-aggregation have passed their standalone comparisons. Full-title
+The immediate deliverable is **R3's bounded automatic selector and complete
+model integration**. R2 now passes standalone and actual encoder comparisons,
+including ordinary/diagnostic equivalence, complete colour history, startup,
+cuts, early fallback, drain and expected failures. Full-title
 sweeps, broader encoder research and speculative speed work can wait. This
 roadmap creates no scheduled job and changes no Tdarr settings.
 

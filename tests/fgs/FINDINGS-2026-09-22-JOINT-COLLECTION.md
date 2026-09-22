@@ -88,16 +88,55 @@ reduction and full-picture histograms. It excludes allocation, upload, result
 download, CPU fitting and encoding. These are collector costs, not encoder
 throughput or the cost of searching all retention candidates.
 
-## Next integration work
+## Encoder lifecycle qualification
 
-Connect the module behind an explicit experimental control, including every
-early exit, reset, scene change and drain in the actual encoder. Verify that
-source/base identities survive real pipeline ordering, that ordinary mode adds
-no collection work, and that diagnostics alone leave decoded pictures unchanged.
-Then R3 can consume the grouped evidence for candidate selection, representable
-whole-picture curves and actual model integration. Cr recovery, compatible
-coupled colour, temporal output, compressed detail and full-title cost remain
-unqualified.
+Commit `da9ce557` adds `--film-grain-joint-probe` as an explicit, bounded
+integration diagnostic. It reads a finite manifest, owns complete previous Y/Cb/Cr
+on a dedicated CUDA stream, and uses events to preserve the upstream frame
+lifetime. Source/base IDs and timestamps must match. Startup, scene resets,
+early source fallback and delayed final frames are included; successful drain
+must deliver every requested ID. Requested fractions affect measurements only.
+There are no new retention decisions or ordinary-mode allocations/copies.
+
+The full CUDA encoder build succeeds. Its SHA-256 is
+`d5e3e9dd934e43af66b049fefa7ed85a7d3eb55ef79e087a15337284b11d571f`.
+An initial incomplete build was superseded to correct the JSON include path and
+include explicit source timebase in the probe records; no media used that build.
+The CPU suite passes at `1551ea9c`; the subsequent source changes only affect
+CUDA diagnostic inclusion and timestamp recording. The final CUDA build and
+pipeline checks below cover those changes. Comparison tool `128796ea` uses
+the independent NumPy oracle and the original numerical tolerances.
+
+| Pipeline evidence | Result |
+| --- | --- |
+| Encodes | 16, totaling 2,432 frames |
+| Ordinary controls | Synthetic 8/10 bit, original Bridge SDR and Shining PQ; candidate off/probe match deployed ordinary `cb903a17` |
+| Additional candidate pairs | Explicit scene schedule and existing automatic-retention mode; diagnostic off/on match |
+| Complete dav1d grain-on/off comparisons | 4,864 decoded frame observations, all matching their controls |
+| Presentation clocks and decoded frame/stream metadata | Exact control agreement |
+| Training/model/fallback/scene diagnostic records | Exact off/on agreement |
+| Probe captures | 72, including startup, cuts, quiet fallback and both final buffered frames |
+| Native source/previous Y/Cb/Cr comparisons | 393 plane comparisons exactly match independent FFmpeg decoding, with matching source clocks |
+| Supported pipeline tiles | 6,207; counts and full-picture lookup histograms exact |
+| Worst source-energy-normalized grouped moment error | 1.065e-8 against the unchanged 5e-6 bound |
+| Expected failures | Missing requested frame, inadequate output budget, duplicate ID and existing output directory all fail without successful probe publication |
+
+Missing/reset history is rejected, and captures of early source fallback have
+source-identical base pixels. The existing-directory negative preserves its
+sentinel file. These checks qualify the measurement path, not the existing auto
+policy or new partial-colour retention quality. The R1 reserved corpus is still
+untouched. The owned GPU batch pause lasted about 76 seconds; the separate short
+negative batch also released its pause. Ordinary Tdarr is unpaused with unchanged
+worker limits and runtime. Superseded build files retired with a receipt total
+672,849,920 allocated bytes. The current build and dependent media remain useful.
+
+## Next work
+
+R1 and R2 are complete. R3 can now consume the grouped evidence for bounded
+candidate selection, representable whole-picture curves and complete model
+integration. Cr recovery, compatible coupled colour, temporal output, compressed
+detail and full-title cost remain unqualified. Keep optional retention and FEL
+off in production while this work proceeds.
 
 The evidence root is the existing local `colour-recovery-20260922/` ledger.
 Read `roadmap-r1-r2-20260922/`:
@@ -107,7 +146,14 @@ Read `roadmap-r1-r2-20260922/`:
 - `synthetic-v5-comparison.json`, `real-v5-comparison.json`: CPU/GPU comparisons.
 - `precision-negative.json`, `real-v3-comparison-failure.json`: precision fix and negative.
 - `real-preparation.json`: independent source/previous-picture decoding.
-- `cpu.json` and `*-pause.json`: regressions and released study pauses.
+- `cpu.json` and `*-pause.json`: standalone regressions and released study pauses.
+- `report.json`: R1/R2 completion, numerical results and exact evidence hashes.
+- `integration-build.json`, `integration-cpu.json`: pinned build and CPU result.
+- `integration-v1/comparison.json`, `decision-equivalence.json` in that directory:
+  complete decoded-output, source-history, moment and decision comparisons.
+- `probe-failures/report.json`: expected-failure controls.
+- `integration-v1/pause.json`, `probe-failures/pause.json`: released pauses.
+- `superseded-build-cleanup.json`: retired incomplete build artifacts.
 
 All GPU studies were finite and manually started. Tdarr's owned study pauses
 were released after each run, preserving the separate playback watchdog.

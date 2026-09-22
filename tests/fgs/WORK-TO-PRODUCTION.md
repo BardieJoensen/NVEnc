@@ -3,12 +3,15 @@
 **Current retention task list:** [ordered implementation and qualification roadmap](RETENTION-ROADMAP.md).
 It tracks R1–R8 with dependencies, completion criteria and the working method.
 R1's [decision contract](RETENTION-CONTRACT.md) and separate qualification corpus
-are complete. R2's [GPU collector and all-plane history](FINDINGS-2026-09-22-JOINT-COLLECTION.md)
-pass independent comparisons on synthetic and actual source frames. Actual
-encoder lifecycle integration and output equivalence remain open. Use the roadmap
-for future priorities; dated
-findings below retain their original scope. The new collection code has no
-production encoder call sites.
+are complete. R2's [GPU collector, complete colour history and encoder integration](FINDINGS-2026-09-22-JOINT-COLLECTION.md)
+are qualified against independent CPU/source references. Sixteen encodes (2,432
+frames) preserve control pixels in both grain modes, clocks, metadata and grain
+decisions; 393 native source/history plane comparisons are exact. The explicit
+bounded diagnostic is disabled by default and does not select retention or
+change output. R3 is next: automatic selection, whole-picture coverage and
+complete model integration. R3–R8 remain open. The stage report is
+`roadmap-r1-r2-20260922/report.json` in the local evidence root. Ordinary Tdarr
+is unpaused; retention and FEL remain off. No experiment is scheduled.
 
 **September 22 latest development:** [brightness-aware fitting and partial colour retention](FINDINGS-2026-09-22-BRIGHTNESS-FIT.md)
 adds bounded minimax fitting and an independent synthesis-covariance check.
