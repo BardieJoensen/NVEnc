@@ -1,5 +1,13 @@
 # FGS encoder and library repair: current work and handoff
 
+**Current retention task list:** [ordered implementation and qualification roadmap](RETENTION-ROADMAP.md).
+It tracks R1–R8 with dependencies, completion criteria and the working method.
+R1's [decision contract](RETENTION-CONTRACT.md) and separate qualification corpus
+are complete. R2 is developing native rounded-base GPU measurements, valid colour
+history and bounded aggregation. Use the roadmap for future priorities; dated
+findings below retain their original scope. The new collection code has no
+production encoder call sites.
+
 **September 22 latest development:** [brightness-aware fitting and partial colour retention](FINDINGS-2026-09-22-BRIGHTNESS-FIT.md)
 adds bounded minimax fitting and an independent synthesis-covariance check.
 Actual decoder pixels reject the first shared-shape candidate despite its good
@@ -581,7 +589,7 @@ remains active.
 The September 12 application upgrade preceded this encoder rollout; its initial
 encoder image is historical. The current runtime is pinned above.
 
-## What happens next
+## Historical next-step plan (superseded by the current roadmap)
 
 The immediate ordinary-core work is the remaining source-support failure above.
 Finish the `source-variance/` experiments and preserve all failing controls.

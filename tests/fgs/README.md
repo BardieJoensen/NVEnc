@@ -3,6 +3,8 @@
 For current project state, builds, repair constraints and the next development
 steps, start with [the work and handoff](WORK-TO-PRODUCTION.md). This README
 describes test/tool usage; a documented command is not a scheduled job.
+The [retention roadmap](RETENTION-ROADMAP.md) tracks the remaining implementation,
+quality, cost and rollout work with explicit completion criteria.
 
 The synthetic tests exercise the CUDA AV1 film-grain analyzer without private
 media. The full local gate also requires the pinned real-film fixtures documented
