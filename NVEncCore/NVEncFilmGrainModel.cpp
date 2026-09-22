@@ -398,6 +398,10 @@ static double strength_observation_x(const FilmGrainGpuPlaneStats& stats,
 // The AR model has already passed the normal solver and synthesis guards.
 static bool refit_occupied_strength(const FilmGrainGpuStats& stats, const int bitDepth,
     NV_ENC_FILM_GRAIN_PARAMS_AV1& params, NVEncFilmGrainDiagnostics& diagnostics) {
+    // Ordinary recovery constructs a fresh shift-zero model. A nonzero shift
+    // needs finite-template gain evidence at that exact shift; this coarse
+    // stationary-gain refit cannot supply it.
+    if (params.grainScaleShift != 0) return false;
     std::array<std::vector<StrengthPoint>, 3> points;
     std::array<std::vector<uint64_t>, 3> weights;
     const int limits[3] = { 14, 10, 10 };
@@ -524,9 +528,13 @@ bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC
     // finite clipping/rounding. Similar curves and AR coefficients cannot
     // certify reuse across that change, even after nominal curve rescaling.
     // Ordinary models use shift zero; experimental shifts need a fresh fit.
-    if (a.applyGrain != b.applyGrain || a.grainScaleShift != b.grainScaleShift) return false;
-    const double sigmaScaleA = 1.0 / (1 << (a.grainScalingMinus8 + 8 - 5));
-    const double sigmaScaleB = 1.0 / (1 << (b.grainScalingMinus8 + 8 - 5));
+    if (a.applyGrain != b.applyGrain || a.grainScaleShift != b.grainScaleShift
+        || a.numYPoints > 14 || b.numYPoints > 14 || a.numCbPoints > 10 || b.numCbPoints > 10
+        || a.numCrPoints > 10 || b.numCrPoints > 10) return false;
+    // Include the innovation shift so the absolute 0.10 tolerance below is
+    // still in nominal 8-bit sigma units for two models at the same shift.
+    const double sigmaScaleA = 1.0 / (1 << (a.grainScalingMinus8 + 8 - 5 + a.grainScaleShift));
+    const double sigmaScaleB = 1.0 / (1 << (b.grainScalingMinus8 + 8 - 5 + b.grainScaleShift));
     double maxSigma = 0.0;
     double maxSigmaDiff = 0.0;
     const struct { const uint8_t *va, *sa, *vb, *sb; uint32_t na, nb; } curves[3] = {
@@ -579,6 +587,11 @@ bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC
 
 void build_strength_lut(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bitDepth,
     float lut[FGS_STRENGTH_LUT_SIZE], const int plane, const double templateGain) {
+    if (plane < 0 || plane > 2 || (bitDepth != 8 && bitDepth != 10 && bitDepth != 12)
+        || params.numYPoints > 14 || params.numCbPoints > 10 || params.numCrPoints > 10) {
+        std::fill(lut, lut + FGS_STRENGTH_LUT_SIZE, std::numeric_limits<float>::infinity());
+        return;
+    }
     const bool fromLuma = plane == 0 || params.chromaScalingFromLuma;
     const auto count = fromLuma ? params.numYPoints : (plane == 1 ? params.numCbPoints : params.numCrPoints);
     const auto values = fromLuma ? params.pointYValue : (plane == 1 ? params.pointCbValue : params.pointCrValue);
@@ -587,10 +600,16 @@ void build_strength_lut(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bi
         std::fill(lut, lut + FGS_STRENGTH_LUT_SIZE, 0.0f);
         return;
     }
-    // The scaling curve stores sigma * 2^(scalingShift - 5) in 8-bit units
-    // (see fit_strength_points / the scalingShift derivation); convert back to
-    // a real std in the frame's native code values.
-    const double sigmaScale = 1.0 / (1 << (params.grainScalingMinus8 + 8 - 5));
+    if (!std::isfinite(templateGain) || templateGain <= 0.0) {
+        std::fill(lut, lut + FGS_STRENGTH_LUT_SIZE, std::numeric_limits<float>::infinity());
+        return;
+    }
+    // Nominal innovation sigma is 32 * 2^(bitDepth - 8 - grainScaleShift).
+    // templateGain is relative to that nominal sigma, at this exact model,
+    // depth and shift. Finite rounding/clipping can change the gain too:
+    // changing only grainScaleShift while reusing a prior gain is not valid.
+    // This smooth estimate excludes decoder LUT/output rounding and overlap.
+    const double sigmaScale = 1.0 / (1 << (params.grainScalingMinus8 + 8 - 5 + params.grainScaleShift));
     const double depthScale = static_cast<double>(1 << (bitDepth - 8));
     for (int x = 0; x < FGS_STRENGTH_LUT_SIZE; ++x) {
         lut[x] = static_cast<float>(
@@ -667,7 +686,8 @@ FilmGrainLocalStrengthFidelity film_grain_local_strength_fidelity(const FilmGrai
     const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bitDepth, const double templateGain, const double residualRetain, const int plane) {
     FilmGrainLocalStrengthFidelity result;
     if (plane < 0 || plane > 2 || (bitDepth != 8 && bitDepth != 10) || !std::isfinite(templateGain) || templateGain <= 0.0
-        || !std::isfinite(residualRetain) || residualRetain < 0.0 || residualRetain > 1.0) {
+        || !std::isfinite(residualRetain) || residualRetain < 0.0 || residualRetain > 1.0
+        || params.numYPoints > 14 || params.numCbPoints > 10 || params.numCrPoints > 10) {
         result.valid = false;
         return result;
     }
@@ -722,7 +742,7 @@ bool refit_local_strength(const FilmGrainLocalStrengthStats& stats, const int bi
     const double depthScale = static_cast<double>(1 << (bitDepth - 8));
     const double cleanWeight = 1.0 - residualRetain;
     const double synthesisWeight = 1.0 - residualRetain * residualRetain;
-    const double scalingFactor = static_cast<double>(1 << (params.grainScalingMinus8 + 3));
+    const double scalingFactor = static_cast<double>(1 << (params.grainScalingMinus8 + 3 + params.grainScaleShift));
     struct Observation { double x, scaling, weight, measuredX; };
     std::vector<Observation> observed;
     for (int bin = 0; bin < FGS_LOCAL_STRENGTH_BINS; ++bin) {
@@ -972,7 +992,7 @@ bool apply_local_covariance(FilmGrainGpuStats& stats,
 double film_grain_luma_dc_amplitude(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const double residualRetain) {
     if (!std::isfinite(residualRetain) || residualRetain < 0.0 || residualRetain >= 1.0
         || params.arCoeffLag > 3 || params.arCoeffShiftMinus6 > 3 || params.numYPoints > 14
-        || params.grainScalingMinus8 > 3 || params.grainScaleShift != 0) return std::numeric_limits<double>::infinity();
+        || params.grainScalingMinus8 > 3) return std::numeric_limits<double>::infinity();
     if (!params.applyGrain || !params.numYPoints) return 0.0;
     const int coefficients = 2 * params.arCoeffLag * (params.arCoeffLag + 1);
     double sum = 0.0;
@@ -981,7 +1001,7 @@ double film_grain_luma_dc_amplitude(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, 
     if (sum >= 1.0) return std::numeric_limits<double>::infinity();
     const double scaling = *std::max_element(params.pointYScaling, params.pointYScaling + params.numYPoints);
     return scaling * std::sqrt(1.0 - residualRetain * residualRetain)
-        / ((1 << (params.grainScalingMinus8 + 3)) * (1.0 - sum));
+        / ((1 << (params.grainScalingMinus8 + 3 + params.grainScaleShift)) * (1.0 - sum));
 }
 
 bool build_covariance_recovery_model(const FilmGrainGpuStats& stats, const int bitDepth,

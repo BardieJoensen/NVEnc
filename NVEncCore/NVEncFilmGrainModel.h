@@ -54,7 +54,10 @@ struct NVEncFilmGrainDiagnostics {
     int totalBlocks;
     int modelFrames;
     std::array<float, 3> noiseStdDev;
-    std::array<float, 3> templateGain; // AR/correlation gain associated with this model
+    // Template RMS / nominal innovation sigma (32 * 2^(depth-8-grainScaleShift)).
+    // Ordinary shift-zero fitting uses its qualified AR/correlation estimate.
+    // Nonzero shifts require fresh finite gain evidence for the exact model.
+    std::array<float, 3> templateGain;
     std::array<uint64_t, 3> observations;
     float detailRisk;
     float residualRetain;
@@ -204,7 +207,10 @@ FilmGrainLocalStrengthFidelity film_grain_local_strength_fidelity(const FilmGrai
     const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int bitDepth, double templateGain, double residualRetain = 0.0, int plane = 0);
 // Retry only luma strength with independent local source/base evidence,
 // including quiet patches. AR coefficients, chroma curves and the global
-// scaling shift are preserved. Failure leaves the caller's model unchanged.
+// scaling shift are preserved. templateGain has the nominal convention below.
+// If stats describe an already rounded retained base, pass residualRetain=0:
+// applying its retention fraction again would double-count retained energy.
+// Failure leaves the caller's model unchanged.
 bool refit_local_strength(const FilmGrainLocalStrengthStats& stats, int bitDepth,
     double templateGain, double residualRetain, NV_ENC_FILM_GRAIN_PARAMS_AV1& params);
 
@@ -219,8 +225,10 @@ FilmGrainGpuStats local_strength_targets(const FilmGrainGpuStats& coarse,
 bool apply_local_covariance(FilmGrainGpuStats& stats,
     const FilmGrainLocalStrengthStats& local, double residualRetain, double *highpassFraction = nullptr);
 
-// Bound low-frequency amplification in newly recovered grain; finite decoder
-// templates can otherwise shift the whole picture mean for some seeds.
+// Linear DC amplification proxy in nominal 8-bit sigma units, including the
+// grain innovation shift and later residual scaling. This is not a finite
+// worst-seed/maximum-pixel bound: template rounding/clipping and mean still
+// need independent checks. Instability/invalid inputs return infinity.
 double film_grain_luma_dc_amplitude(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, double residualRetain);
 bool build_covariance_recovery_model(const FilmGrainGpuStats& stats, int bitDepth,
     bool analyzeChroma, bool limitedRange, double residualRetain, double highpassFraction,
@@ -278,10 +286,14 @@ double eval_scaling_curve(const uint8_t *values, const uint8_t *scalings, uint32
 bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC_FILM_GRAIN_PARAMS_AV1& b,
     double relativeSigmaTolerance = 0.05, double coefficientTolerance = 0.05);
 
-// Luma grain std in native code values, indexed by 8-bit intensity, decoded
-// from the quantized scaling curve.  Used to pre-compensate the mean lift the
-// decoder's grain-plus-clip synthesis introduces near the legal range floor
-// and ceiling.
+// Smooth grain sigma estimate in native code values, indexed by 8-bit intensity.
+// templateGain is template RMS / (32 * 2^(bitDepth-8-grainScaleShift)), measured
+// for this model, bit depth and shift. A finite-template power normalized by the
+// *actual rounded* Gaussian moment needs conversion to that nominal convention.
+// This is not the decoder's integer LUT or complete displayed-pixel synthesis:
+// output rounding, overlap, picture clipping and means require separate checks.
+// Used by ordinary mean-lift compensation and source-strength guards. Invalid
+// arguments produce an infinite LUT, never an apparently quiet component.
 constexpr int FGS_STRENGTH_LUT_SIZE = 256;
 void build_strength_lut(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int bitDepth,
     float lut[FGS_STRENGTH_LUT_SIZE], int plane = 0, double templateGain = 1.0);
