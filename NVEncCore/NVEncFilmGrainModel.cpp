@@ -520,7 +520,11 @@ double eval_scaling_curve(const uint8_t *values, const uint8_t *scalings, const 
 // robust against the point fitter picking different knot positions.
 bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC_FILM_GRAIN_PARAMS_AV1& b,
     const double relativeSigmaTolerance, const double coefficientTolerance) {
-    if (a.applyGrain != b.applyGrain) return false;
+    // A change in the innovation's integer shift changes template power and
+    // finite clipping/rounding. Similar curves and AR coefficients cannot
+    // certify reuse across that change, even after nominal curve rescaling.
+    // Ordinary models use shift zero; experimental shifts need a fresh fit.
+    if (a.applyGrain != b.applyGrain || a.grainScaleShift != b.grainScaleShift) return false;
     const double sigmaScaleA = 1.0 / (1 << (a.grainScalingMinus8 + 8 - 5));
     const double sigmaScaleB = 1.0 / (1 << (b.grainScalingMinus8 + 8 - 5));
     double maxSigma = 0.0;

@@ -7,6 +7,7 @@
 #include <set>
 #include <vector>
 #include "NVEncFilmGrainModel.h"
+#include "NVEncFilmGrainTemplate.h"
 
 using namespace fgsmodel;
 
@@ -94,6 +95,36 @@ int main() {
         b.grainScalingMinus8 = 1;
         for (int c = 0; c < 3; ++c) points(b, c, {5, 128, 250}, {64, 64, 64});
         if (!film_grain_params_close(a, b)) return 4; // Same amplitude, different scaling shift.
+    }
+    // Grain-scale shift changes the integer innovation before AR filtering.
+    // Identical strength curves therefore do not establish equivalent grain.
+    // Measure that change with the separately AOM-verified template generator.
+    {
+        auto a = constant_model(), b = a;
+        b.grainScaleShift = 1;
+        FilmGrainLumaTemplate zero, one;
+        if (!film_grain_luma_template(a.arCoeffsYPlus128, 3, 6, 10, 0, 745, zero)
+            || !film_grain_luma_template(b.arCoeffsYPlus128, 3, 6, 10, 1, 745, one)) return 7;
+        double e0 = 0.0, e1 = 0.0;
+        for (size_t i = 0; i < zero.samples.size(); ++i) {
+            e0 += double(zero.samples[i]) * zero.samples[i];
+            e1 += double(one.samples[i]) * one.samples[i];
+        }
+        const double ratio = e1 / e0;
+        if (ratio < .24 || ratio > .26) return 8;
+        if (film_grain_params_close(a, b) || film_grain_params_close(b, a)) {
+            std::cerr << "FAIL: model reuse ignored grain-scale shift; measured power ratio " << ratio << '\n';
+            return 9;
+        }
+        // Finite-template rounding/clipping can also change shape after curve
+        // compensation. Require a fresh model instead of assuming equivalence.
+        for (int c = 0; c < 3; ++c) points(b, c, {0, 255}, {64, 64});
+        if (film_grain_params_close(a, b) || film_grain_params_close(b, a)) return 10;
+        for (unsigned shift = 0; shift <= 3; ++shift) {
+            a.grainScaleShift = b.grainScaleShift = shift;
+            for (int c = 0; c < 3; ++c) points(b, c, {0, 255}, {32, 32});
+            if (!film_grain_params_close(a, b)) return 11;
+        }
     }
     std::mt19937 rng(20260911);
     int close = 0, changed = 0;
