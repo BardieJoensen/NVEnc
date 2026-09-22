@@ -78,3 +78,4 @@ python3 tests/fgs/test_fel_parameter_bounds.py
 python3 tests/fgs/test_kat_startup.py
 
 python3 tests/fgs/test_amplitude_regression.py
+python3 tests/fgs/test_native_pq_compare.py

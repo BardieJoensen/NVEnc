@@ -298,3 +298,33 @@ Controls cover PQ reference points, HLG colour coupling, LUT precision, ranges,
 odd dimensions and borders, localized alternating-line patterns, metadata
 rejection, stream selection, sampled completion, artifact corruption, concurrent
 writers and changed source fixtures.
+
+## Paired native PQ errors
+
+`native_pq_compare.cpp` compares already paired, native 10-bit 4:2:0 Y4M
+samples without an SDR tone-map proxy. It reuses the reference-display mapper
+above and reports per-frame PU21 errors for luminance, red, green and blue:
+pixel RMS, signed mean bias and RMS of 8x8 block-mean errors. The last descriptor
+helps separate coarse picture differences from fine grain phase; it is not a
+standalone grain, banding or visual-quality test.
+
+```sh
+g++ -std=c++17 -O2 tools/fgs/native_pq_compare.cpp -o /tmp/native-pq-compare
+/tmp/native-pq-compare source.y4m candidate.y4m 1000 > errors.jsonl
+```
+
+The caller must first verify source/output identity, timestamps and colour
+metadata. Y4M does not retain the original presentation clocks. This narrow
+tool requires PQ transfer, BT.2020 NCL/primaries, limited range, left-sited
+chroma, little-endian `C420p10` pictures and dimensions divisible by eight.
+It applies the same explicit bilinear chroma reconstruction to both inputs.
+It rejects mismatched dimensions, bit depths, frame counts, truncated pictures
+and invalid display peaks; **a nonzero exit invalidates any partial JSON**.
+
+Run separate 400/1000/4000-nit reference displays to examine peak sensitivity.
+Real TV tone mapping, viewing conditions and dynamic HDR metadata are outside
+this measurement. Independent synthesized grain affects pixel RMS even when
+its statistics are appropriate. Keep grain-on playback and grain-off base
+descriptors separate; these values are neither VMAF nor percentages of quality.
+The CPU suite checks exact identity, analytic PQ level shifts, chroma-only
+errors and malformed/incomplete inputs. This tool is not invoked by Tdarr.
