@@ -1,5 +1,30 @@
 # FGS encoder and library repair: current work and handoff
 
+**September 22 current state:** [colour recovery and native HDR work](FINDINGS-2026-09-22-COLOUR-RECOVERY.md)
+adds offline joint-grain modelling and a reusable native PQ comparison tool.
+The final CPU suite passes 185 Python tests in 26 suites plus the C++ checks.
+Twelve remaining HDR/jacket controls and six luma-only/plain controls pass
+complete decoding, source clocks and metadata checks. The proposed colour
+model remains unqualified and has no encoder call sites. Completed SDR and
+native HDR comparisons find automatic retention close to plain NVENC in these
+source-preserved windows; this is not a library-wide quality result.
+
+The equal-size study is **partially complete and stopped for ordinary Tdarr
+queue priority**. HDR production/SVT calibration, remaining SVT CRF references
+and corresponding quality review still need manual execution. All private
+experiments are stopped, with no automatic restart. Longer-title cost and
+optimization still depend on a demonstrated fidelity-per-byte benefit.
+Production remains ordinary `cb903a17` in Tdarr 2.89.01; retention and FEL stay
+off, and routine validation/worker limits are unchanged. Ordinary workers
+continue unpaused. Current source protections and restored FEL originals remain.
+
+The evidence root is
+`/opt/docker-apps/logs/fgs-ripple-repair-20260906/retention-prep-20260910/colour-recovery-20260922/`.
+Read `README.md`, `handoff.json`, `work-plan.json` and `evidence-index.json`.
+Completed controls, dependent source/base captures and private capture binaries
+are verified on storage; duplicate build caches, copied source trees, incomplete
+encodes and reproducible raw buffers have cleanup receipts.
+
 **September 21 current state:** Tdarr is now 2.89.01, image
 `nvenc-fidelity/tdarr-node:2.89.01-cb903a17-20260919`; the deployed encoder hash
 and production flow still match the qualified ordinary core below. A fresh
