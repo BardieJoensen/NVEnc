@@ -11,7 +11,7 @@ bounded diagnostic is disabled by default and does not select retention or
 change output. R3 is next: automatic selection, whole-picture coverage and
 complete model integration. R3–R8 remain open. The stage report is
 `roadmap-r1-r2-20260922/report.json` in the local evidence root. Ordinary Tdarr
-is unpaused; retention and FEL remain off. No experiment is scheduled.
+configuration is unchanged; retention and FEL remain off. No experiment is scheduled.
 
 **R3 first stage:** [coverage feasibility and safe model reuse](FINDINGS-2026-09-22-RETENTION-SELECTION.md)
 records 18 candidate measurements and commit `2000f767`. Whole-picture colour
@@ -20,6 +20,20 @@ hold guard rejects a changed grain scale, with an independently measured negativ
 and full CPU pass. This is preparation for the future prototype; it changes no
 deployed runtime or library-repair scope. Read `roadmap-r3-20260922/report.json`.
 The next work is population-aware coverage/fallback and consistent model gains.
+
+**R3 current stage:** the [bounded selector and coverage implementation](FINDINGS-2026-09-22-RETENTION-SELECTION.md#current-implementation-selector-and-native-base-contract)
+passes 72 policy controls, 36 real native coverage replays and the full CPU
+suite (185 Python tests / 26 suites, 21 C++ checks). Common-coordinate Y/Cb/Cr
+and spatial Cb/Cr reconstruction checks now reject mixed/unsupported cohorts.
+The native per-component GPU blend is implemented and compiled; its exact
+31-case comparison is prepared but unrun while Emby's playback watchdog owns
+the pause. No automatic launch is scheduled. Read
+`roadmap-r3-selector-20260922/report.json`; the explicit resume command is
+`python3 roadmap-r3-selector-20260922/run-blend.py --run-manually` from the local
+evidence root. The selector/model helpers have no encoder output call sites.
+Remaining R3 work includes qualified population/model evidence, gain/DC/scale
+consistency and actual encoder selection. R3–R8 remain open. Tdarr's deployed
+binary, configuration and source/FEL protections are unchanged.
 
 **September 22 latest development:** [brightness-aware fitting and partial colour retention](FINDINGS-2026-09-22-BRIGHTNESS-FIT.md)
 adds bounded minimax fitting and an independent synthesis-covariance check.

@@ -39,6 +39,28 @@ separately match the captured source and preceding Y/Cb/Cr against original
 decoding, and compare complete diagnostic-on/off outputs in both grain modes.
 Do not add these experiments to the routine Tdarr validator.
 
+The experimental R3 host selector and common-coordinate colour checks are in
+the CPU suite. Read [their scope and remaining work](FINDINGS-2026-09-22-RETENTION-SELECTION.md).
+`retention_coverage_reference.py prepare CENSUS.json PROBE_FRAME.json ...`
+creates a complete source-population/native-lookup census using actual rounded
+bases. Build `retention_coverage_replay.cpp` with C++17 and include paths
+`NVEncCore` and `json`, then run
+`retention_coverage_reference.py compare CENSUS.json BINARY MEASURED.json REPORT.json`.
+This zero-synthesis control supplies no invented model qualification: unchanged
+source endpoints pass coverage, while unproven base changes fail.
+
+`retention_blend_gpu.cu` is a separate manual CUDA harness for physical native
+component blending. Its manifest contains `output_directory` (must be new) and
+finite `cases`, each with `id`, source/base descriptors in the collector format,
+`retain: [Y, Cb, Cr]` and `output_semiplanar`. Build with C++17, the appropriate
+CUDA architecture and include paths `NVEncCore` and `json`. Run the binary with
+`MANIFEST.json MEASURED.json`, then
+`python3 tests/fgs/retention_blend_reference.py MANIFEST.json MEASURED.json REPORT.json`.
+It checks exact native pixels, component source/base endpoints, input/padding
+preservation and invalid-call rejection. Compilation alone is not qualification.
+Neither harness selects or installs encoded output. Use off-root scratch and
+the documented playback/pause ownership for manual GPU work.
+
 | | command | where it runs |
 |---|---|---|
 | tier 1 | `bash tests/fgs/run_cpu_tests.sh` | GitHub Actions, every push |

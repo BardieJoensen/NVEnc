@@ -40,7 +40,7 @@ def read_frame(frame):
     return result
 
 
-def block_reference(case, source, base, previous, tile, native_base=None):
+def block_reference(case, source, base, previous, tile, native_base=None, *, collect_moments=True):
     x, y, component = tile
     cur, prev = case['source'], case['previous']
     history = previous is not None and cur['epoch'] == prev['epoch'] and cur['frame_id'] > 0 \
@@ -97,7 +97,7 @@ def block_reference(case, source, base, previous, tile, native_base=None):
                   other_colour_reasons=other_reasons,
                   brightness_group=min(19, int(means[0]*20/256)), check_fold=(x//32+y//32) % 2,
                   mean=means, variance=variances, temporal_correlation=correlations, coherence=coherences)
-    if not reasons:
+    if not reasons and collect_moments:
         def vector(c, luma):
             return np.stack([c[3+dy:29+dy, 3+dx:29+dx].ravel() for dy, dx in OFFSETS]
                             + [luma[3:29, 3:29].ravel(), c[3:29, 3:29].ravel()], axis=1)

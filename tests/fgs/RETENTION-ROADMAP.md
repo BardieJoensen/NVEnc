@@ -1,7 +1,9 @@
 # Automatic retention: remaining work and completion criteria
 
 Updated September 22, 2026: R1/R2 complete; encoder integration `da9ce557`,
-independent comparison tool `128796ea`.
+independent comparison tool `128796ea`. R3 host selection/coverage and colour
+checks are implemented and CPU-qualified; its native GPU blend is compiled but
+awaits the explicit playback-free trial. Full R3 integration remains open.
 This is the current task list for optional automatic retention. Start at the
 [project handoff](WORK-TO-PRODUCTION.md) for deployed builds and operational
 constraints; older experiment plans describe their recorded stages.
@@ -118,7 +120,17 @@ are complete. Eighteen candidate measurements expose insufficient whole-picture
 colour coverage; the successful patch fit cannot simply become a frame policy.
 Commit `2000f767` prevents model reuse across grain-scale changes and passes the
 CPU suite, including an independently measured failing old-model example.
-The selector, coverage/fallback implementation and actual new output remain open.
+At that first-stage checkpoint, selection and actual new output were still open.
+
+The [second R3 stage](FINDINGS-2026-09-22-RETENTION-SELECTION.md#current-implementation-selector-and-native-base-contract)
+now implements the bounded host selector, conservative complete-picture
+coverage/fallback gate and common-coordinate colour reconstruction checks.
+Seventy-two policy controls, 36 real native coverage replays and the complete
+CPU suite pass. The native per-component GPU blend compiles; its 31-case exact
+comparison is prepared but unrun while Emby playback owns the pause. No job
+will start automatically. These helpers have no encoder output call sites.
+The remaining model/population evidence, consistent gains and actual encoder
+selection still determine whether partial retention can be useful.
 
 - Implement the R1 selector behind an explicit experimental option. Cover Y,
   Cb and Cr independently within the permitted shared AV1 model. Define useful
