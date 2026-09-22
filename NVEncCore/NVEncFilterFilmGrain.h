@@ -118,6 +118,7 @@ public:
     std::pair<int, int> compute_capability;
     tstring sceneCutPath;          // optional frame-preserving source schedule
     tstring tableOutPath;          // write measured grain as an AOM filmgrn1 table (empty = off)
+    tstring jointProbePath;        // bounded integration diagnostic manifest (empty = off)
     rgy_rational<int> timebase;    // timebase of the frame timestamps (for the table's 10 MHz intervals)
 
     NVEncFilterParamFilmGrain();
@@ -125,7 +126,7 @@ public:
     virtual tstring print() const override;
 };
 
-namespace fgsmodel { class FilmGrainTrainingHistory; }
+namespace fgsmodel { class FilmGrainTrainingHistory; class FilmGrainJointProbe; }
 
 class NVEncFilterDenoiseFFT3D;
 class NVEncFilterParamDenoiseFFT3D;
@@ -159,6 +160,7 @@ private:
     std::unique_ptr<CUMemBuf> m_detailConfidence;
     bool m_detailReferenceValid;
     std::unique_ptr<fgsmodel::FilmGrainTrainingHistory> m_trainingHistory;
+    std::unique_ptr<fgsmodel::FilmGrainJointProbe> m_jointProbe;
     // Two future pictures let startup training be corroborated before NVENC
     // sees the opening base. Three bounded slots preserve one-output ordering.
     std::array<std::unique_ptr<CUFrameBuf>, 3> m_trainingSources;

@@ -110,6 +110,7 @@
   - [--av1-film-grain [\<params\>] \[AV1\]](#--av1-film-grain-params-av1)
   - [--film-grain-table \<path\> \[AV1\]](#--film-grain-table-path-av1)
   - [--film-grain-table-out \<path\>](#--film-grain-table-out-path)
+  - [--film-grain-joint-probe \<manifest\>](#--film-grain-joint-probe-manifest)
   - [--bitstream-padding \[AV1\]](#--bitstream-padding-av1)
   - [--level \<string\>](#--level-string)
   - [--profile \<string\>](#--profile-string)
@@ -980,6 +981,38 @@ editing the source. Without this option, scene detection is unchanged.
 `--av1-film-grain`で測定したフィルムグレインを標準AOM `filmgrn1` テーブルとして書き出す。同じモデルを保持する連続フレームは、10 MHzタイムベースの1つの`[start,end)`区間にまとめられ、グレインが検出されない期間はギャップとして表現される。
 
 `--codec raw`と組み合わせると、同じ実行でノイズ除去済みのベース映像を出力しながらテーブルを書き出せるため、外部のAV1エンコーダで両方を利用できる。
+
+### --film-grain-joint-probe &lt;manifest&gt;
+Development diagnostic for `--av1-film-grain denoiser=bilateral`; disabled by default.
+It captures native source, denoised base and complete previous-source planes,
+plus bounded GPU joint moments and full-picture lookup counts. It does not
+change the encoded base or grain decisions. Additional GPU copies, analysis,
+host synchronization and raw files occur only when this option is requested.
+
+The JSON manifest declares explicit input frame IDs (1–16 unique IDs), three
+residual-amplitude fractions to measure (Y/Cb/Cr, each 0–1), an output byte
+budget (at most 2 GiB) and a new absolute output directory with an existing
+parent. Existing directories are rejected. Example:
+
+```json
+{
+  "schema": 1,
+  "frames": [0, 1, 30, 60],
+  "retain": [0.1, 0.25, 0.5],
+  "max_output_bytes": 1073741824,
+  "output_directory": "/path/to/new-probe"
+}
+```
+
+Fractions describe independently measured rounded bases; they do not set
+encoder retention. Input IDs refer to frames reaching the film-grain filter.
+Missing history after startup/cuts rejects temporal training. A fallback frame
+records its source-preserved base. Completion requires all requested IDs to
+arrive and the pipeline to drain successfully; check `status.json`. A failed
+probe fails the run and leaves its partial evidence. The binary moment format
+is for the matching source/build, not a stable external API. See the
+[collection contract](tests/fgs/RETENTION-CONTRACT.md) and
+[manual reference tool](tests/fgs/joint_collect_reference.py).
 
 ### --bitstream-padding [AV1]
 AV1 CBRエンコード用のビットストリームパディングを有効にする。 (デフォルト: off)

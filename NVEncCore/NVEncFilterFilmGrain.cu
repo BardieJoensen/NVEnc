@@ -46,6 +46,7 @@
 #include "NVEncFilmGrainRecovery.h"
 #include "NVEncFilmGrainSourceGuard.h"
 #include "NVEncFilmGrainTraining.h"
+#include "NVEncFilmGrainJointProbe.cuh"
 #include "NVEncFilmGrainModel.h"
 #include "NVEncFilterDegrain.h"
 #include "NVEncFilterDenoiseFFT3D.h"
@@ -60,6 +61,30 @@
 using namespace fgsmodel;
 
 namespace {
+
+// Views preserve actual source/base identity and component offsets. The probe
+// owns a separate, complete previous-source copy; the older detail cache is Y-only.
+static FilmGrainCollectFrame joint_probe_view(const RGYFrameInfo *frame) {
+    FilmGrainCollectFrame result;
+    if (!frame) return result;
+    const bool semi = frame->csp == RGY_CSP_NV12 || frame->csp == RGY_CSP_P010;
+    const bool supported = semi || frame->csp == RGY_CSP_YV12 || frame->csp == RGY_CSP_YV12_10;
+    result.width = frame->width;
+    result.height = frame->height;
+    result.bitDepth = frame->csp == RGY_CSP_NV12 || frame->csp == RGY_CSP_YV12 ? 8 : 10;
+    result.storageShift = frame->csp == RGY_CSP_P010 ? 6 : 0;
+    result.frameId = frame->inputFrameId;
+    result.timestamp = frame->timestamp;
+    result.complete = supported && getCudaMemcpyKind(frame->mem_type, frame->mem_type) == cudaMemcpyDeviceToDevice;
+    if (!result.complete) return result;
+    for (unsigned p = 0; p < 3; ++p) {
+        const auto plane = getPlane(frame, static_cast<RGY_PLANE>(semi && p ? RGY_PLANE_U : p));
+        const unsigned offset = semi && p == 2 ? result.bitDepth == 8 ? 1 : 2 : 0;
+        result.plane[p] = { plane.ptr[0] ? plane.ptr[0] + offset : nullptr,
+            static_cast<size_t>(plane.pitch[0]), semi && p ? 2u : 1u };
+    }
+    return result;
+}
 
 constexpr float FGS_DETAIL_COHERENCE_LOW = 0.12f;
 constexpr float FGS_DETAIL_COHERENCE_HIGH = 0.18f;
@@ -1682,6 +1707,7 @@ NVEncFilterFilmGrain::~NVEncFilterFilmGrain() {
 }
 
 void NVEncFilterFilmGrain::resetTemporalState() {
+    if (m_jointProbe) m_jointProbe->reset();
     m_detailReferenceValid = false;
     m_trainingHead = m_trainingCount = 0;
     m_trainingHistory->reset();
@@ -2112,6 +2138,15 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         m_motionDegrain.reset();
         m_motionDegrainParam.reset();
     }
+    m_jointProbe.reset();
+    if (!prm->jointProbePath.empty()) {
+        try {
+            m_jointProbe = std::make_unique<FilmGrainJointProbe>(std::filesystem::path(prm->jointProbePath));
+        } catch (const std::exception& error) {
+            AddMessage(RGY_LOG_ERROR, _T("FGS joint probe: %s\n"), char_to_tstring(error.what()).c_str());
+            return RGY_ERR_INVALID_PARAM;
+        }
+    }
     m_tableOutPath = prm->tableOutPath;
     m_tableTimebase = prm->timebase.is_valid() ? prm->timebase
         : rgy_rational<int>(prm->baseFps.d(), prm->baseFps.n());
@@ -2165,6 +2200,14 @@ RGY_ERR NVEncFilterFilmGrain::finishTable() {
         AddMessage(RGY_LOG_ERROR, _T("Incomplete FGS scene schedule: received %d of %d frames.\n"),
             m_sceneSchedule.seen(), m_sceneSchedule.frames());
         return RGY_ERR_INVALID_PARAM;
+    }
+    if (m_jointProbe) {
+        try {
+            m_jointProbe->finish();
+        } catch (const std::exception& error) {
+            AddMessage(RGY_LOG_ERROR, _T("FGS joint probe: %s\n"), char_to_tstring(error.what()).c_str());
+            return RGY_ERR_INVALID_PARAM;
+        }
     }
     if (!m_tableWriter) return RGY_ERR_NONE;
     tstring error;
@@ -2286,9 +2329,22 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     NVEncFilmGrainDiagnostics diagnostics;
     diagnostics.totalBlocks = m_blocksX * m_blocksY;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
-    auto attachResult = [&]() {
+    auto attachResult = [&]() -> RGY_ERR {
+        if (m_jointProbe) {
+            try {
+                if (!m_jointProbe->visited(source->inputFrameId)) {
+                    m_jointProbe->collect(joint_probe_view(source), joint_probe_view(output), stream,
+                        diagnostics.sceneReset || explicitSceneCut, "source_fallback");
+                }
+                m_jointProbe->save(joint_probe_view(source), stream);
+            } catch (const std::exception& error) {
+                AddMessage(RGY_LOG_ERROR, _T("FGS joint probe: %s\n"), char_to_tstring(error.what()).c_str());
+                return RGY_ERR_INVALID_PARAM;
+            }
+        }
         output->dataList.push_back(std::make_shared<RGYFrameDataFilmGrain>(
             params, diagnostics, source->timestamp, source->inputFrameId));
+        return RGY_ERR_NONE;
     };
     if (!prm->filmGrain.enable || interlaced(*source)
         || getCudaMemcpyKind(source->mem_type, output->mem_type) != cudaMemcpyDeviceToDevice) {
@@ -2296,8 +2352,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         m_trainingHistory->reset();
         m_state->synthesisRecovery.preserveSource();
         if (cleanBase != source && (sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
-        attachResult();
-        return RGY_ERR_NONE;
+        return attachResult();
     }
 
     const int bitDepth = (source->csp == RGY_CSP_NV12 || source->csp == RGY_CSP_YV12) ? 8 : 10;
@@ -2474,8 +2529,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             diagnostics.sceneReset ? 1 : 0, diagnostics.flatBlocks, diagnostics.totalBlocks,
             static_cast<uint32_t>(FGS_SOURCE_INSUFFICIENT_FLAT), requiredBlocks, trainingReady ? 1 : 0, repeatedTraining);
         if (cleanBase != source && (sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
-        attachResult();
-        return RGY_ERR_NONE;
+        return attachResult();
     }
     std::vector<float> noiseSamples;
     noiseSamples.reserve(selected);
@@ -2736,6 +2790,17 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     m_state->lastTimestamp = source->timestamp;
     diagnostics.modelFrames = static_cast<int>(m_state->history.size());
     diagnostics.sceneReset = sceneReset;
+    if (m_jointProbe) {
+        try {
+            // Capture the actual denoised base before retention/source restoration.
+            // Scene detection has completed, so a cut cannot borrow old-scene colour.
+            m_jointProbe->collect(joint_probe_view(source), joint_probe_view(output), stream,
+                sceneReset, "denoised_base");
+        } catch (const std::exception& error) {
+            AddMessage(RGY_LOG_ERROR, _T("FGS joint probe: %s\n"), char_to_tstring(error.what()).c_str());
+            return RGY_ERR_INVALID_PARAM;
+        }
+    }
 
     FilmGrainGpuStats combined = {};
     for (const auto& frame : m_state->history) {
@@ -3436,11 +3501,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,
             pointsY.c_str(), pointsCb.c_str(), pointsCr.c_str(), sourceReasonMask);
     }
-    attachResult();
-    return RGY_ERR_NONE;
+    return attachResult();
 }
 
 void NVEncFilterFilmGrain::close() {
+    m_jointProbe.reset();
     m_tableWriter.reset();
     m_motionDegrain.reset();
     m_motionDegrainParam.reset();
