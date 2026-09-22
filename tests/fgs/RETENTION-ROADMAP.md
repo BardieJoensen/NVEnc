@@ -41,7 +41,9 @@ defines the finite candidate policy and coverage rules. Six reserved excerpts
 from three additional titles are packet-identical to their original sources
 (1,487,984,476 bytes); their grain results have not been inspected. The local
 `roadmap-r1-r2-20260922/r1-completion.json` and `corpus-report.json` contain the
-completion and source proofs. R2 is active; R3–R8 remain open. A package closes
+completion and source proofs. R2's [GPU measurement module](FINDINGS-2026-09-22-JOINT-COLLECTION.md)
+passes independent synthetic and real-frame comparisons; its encoder lifecycle
+integration remains active. R3–R8 remain open. A package closes
 only when its deliverable and completion evidence are linked here.
 
 | ID | Work package | Depends on | Completion evidence |
@@ -243,8 +245,9 @@ outcome, not a claim that unfinished implementation passed qualification.
    unresolved deployment decision actually needs their preference. Continue
    independent work while awaiting that choice.
 
-The immediate deliverable is **R2's actual GPU measurements, valid all-plane
-history and bounded aggregation**, followed by encoder integration. Full-title
+The immediate deliverable is **R2's encoder lifecycle integration and ordinary /
+diagnostic output equivalence**. GPU measurements, all-plane history and bounded
+aggregation have passed their standalone comparisons. Full-title
 sweeps, broader encoder research and speculative speed work can wait. This
 roadmap creates no scheduled job and changes no Tdarr settings.
 

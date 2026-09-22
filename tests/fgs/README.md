@@ -16,6 +16,16 @@ and why the GPU tier is not and cannot be hosted in CI.
 
 ## Automated entry points
 
+Experimental retention collection has a separate, manually invoked CUDA/NumPy
+comparison. Read [its findings and scope](FINDINGS-2026-09-22-JOINT-COLLECTION.md)
+before using it. `joint_collect_reference.py prepare DIRECTORY` writes a finite
+synthetic manifest; `joint_collect_gpu.cu` consumes that manifest and writes raw
+measurements; `joint_collect_reference.py compare MANIFEST GPU_REPORT REPORT`
+checks native rounding, source gates, history, covariance and grouped sums.
+Build the CUDA harness with C++17 and include paths `NVEncCore` and `json`.
+Use an explicit off-root scratch directory and the matching CUDA architecture.
+This is an experimental measurement check, not a transcode qualification.
+
 | | command | where it runs |
 |---|---|---|
 | tier 1 | `bash tests/fgs/run_cpu_tests.sh` | GitHub Actions, every push |
