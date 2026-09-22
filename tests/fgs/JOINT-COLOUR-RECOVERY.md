@@ -47,7 +47,7 @@ not stability or visual correctness.
 The normal CPU suite includes analytic/asymmetric-retention controls,
 inconsistent and unrepresentable covariance negatives, bit-depth scaling,
 coupled fits, alias/pole controls and an independent spatial-noise simulation.
-All 180 Python tests in 25 suites and the C++ tests pass.
+The latest complete suite passes 185 Python tests in 26 suites and the C++ tests.
 
 The September 22 private study additionally uses pinned AOM revision
 `18c52422b835ba6cdde1b2342d760c6037a7fd86` and its actual
@@ -73,12 +73,30 @@ rejecting persistent texture and axial stripes. Independent training/holdout
 fits agree within the predeclared 8% bound and recover the constructed spatial
 and luma coupling. This calibrates the diagnostic, not an encoder classifier.
 
-**None of the 24 captured real frame/component groups supplies enough eligible
-independent colour-noise tiles.** In the HDR example, the temporally supported
-luma regions largely have very quiet chroma. Elsewhere temporal picture
-structure is the main rejection. Thus the captured residual's spatial
-correlation is not sufficient evidence for replacing that residual with new
-colour noise. These clips do not qualify integration of the joint model.
+The first real-footage zero-support result was **invalidated**. The private
+capture read previous chroma from `m_detailReference`, but `saveTrainingSource`
+deliberately copies only luma into that cache. The diagnostic treated the
+unused chroma allocation as source evidence. This was not an encoder behaviour
+change. The reader now rejects that reference by default; the correction uses
+independently decoded previous colour and retains the failed records.
+
+The corrected study verifies every plane of 20 captured current pictures and
+all 20 cached previous luma pictures against independent software decoding.
+It covers the original three windows plus retained Bridge and Shining clips.
+Eight frame/component groups have at least 16 training and 16 holdout tiles
+and valid source/base missing-noise targets. Four also meet the exploratory
+8% target-variance and predictor-generalization bounds. A separate source-only
+search finds useful Taxi footage too; its 24-picture fixture does not provide
+the warmed-up source/base captures used by the recovery experiment.
+
+Four stable real targets can be quantized without clamping. Actual pinned AOM
+synthesis, with 48 seeds for each overlap setting, reproduces their predicted
+chroma powers within 0.24%. However, the independently recovered luma models'
+averaged-luma powers differ from the stationary prediction by up to 8.64%.
+That is a remaining finite-template calibration limitation, not permission to
+relax the bounds. Per-intensity coverage, causal stability, actual integrated
+encodes and temporal transitions remain unqualified. Raw fitted luma coupling
+in these examples is small; the synthetic coupled controls remain necessary.
 
 The existing `chroma=off` option supplies a separate luma-only control with
 source chroma retained. It recovers synthesis on 394/720 SDR and 131/720 HDR
@@ -99,10 +117,14 @@ Read `work-plan.json`, `trace/counterfactual*` case records,
 Exact commands, source/patch/build hashes and failed attempts remain there.
 `build-archive.json` resolves the retired private build paths to archived
 binaries; original fixtures and dependent pixel evidence remain protected.
+The corrected source evidence is under `resume-authorized/corrected-colour/`.
+Also read `reference-cache-fix.json`, `target-holdout.json` and
+`quantized-joint/report.json` under `resume-authorized/`. The historical
+`pixels/moment-report.json` zero-support conclusion must not be reused.
 
-Before integration, obtain source-supported real colour-noise positives as
-well as coupled-noise and persistent-texture negatives, then qualify the
+Before integration, extend the real positives across intensity and stronger
+coupling, calibrate the finite luma/chroma interaction, and qualify the
 quantized model and its transitions in actual encodes. Keep the source when
 support is missing. Demonstrate better fidelity per byte before spending
-full-title trials on this candidate or optimizing its fit cost. Do not treat
-the completed mathematics as permission to relax existing eligibility.
+full-title trials on this recovery candidate or optimizing its fit cost.
+Do not treat the completed mathematics as permission to relax eligibility.

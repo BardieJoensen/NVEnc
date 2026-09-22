@@ -1,29 +1,42 @@
 # FGS encoder and library repair: current work and handoff
 
 **September 22 current state:** [colour recovery and native HDR work](FINDINGS-2026-09-22-COLOUR-RECOVERY.md)
-adds offline joint-grain modelling and a reusable native PQ comparison tool.
-The final CPU suite passes 185 Python tests in 26 suites plus the C++ checks.
-Twelve remaining HDR/jacket controls and six luma-only/plain controls pass
-complete decoding, source clocks and metadata checks. The proposed colour
-model remains unqualified and has no encoder call sites. Completed SDR and
-native HDR comparisons find automatic retention close to plain NVENC in these
-source-preserved windows; this is not a library-wide quality result.
+has completed the finite matched-size comparison, including VBR/CRF SVT
+references, native PQ measurements, tighter ordinary size points and inspected
+source-paired stills. Ordinary/automatic SDR and HDR sizes now differ by only
+0.211% and 0.085% in the tighter controls. Automatic improves the sampled
+source-fidelity scores modestly and resembles plain NVENC in these selected
+fallback windows. This does not establish a whole-title/library benefit.
 
-The equal-size study is **partially complete and stopped for ordinary Tdarr
-queue priority**. HDR production/SVT calibration, remaining SVT CRF references
-and corresponding quality review still need manual execution. All private
-experiments are stopped, with no automatic restart. Longer-title cost and
-optimization still depend on a demonstrated fidelity-per-byte benefit.
+The user **authorizes pausing and unpausing Tdarr as needed** for this work.
+The owned study pause drained existing jobs and has been released; two ordinary
+workers resumed. Emby's playback watchdog retains its independent ownership.
 Production remains ordinary `cb903a17` in Tdarr 2.89.01; retention and FEL stay
-off, and routine validation/worker limits are unchanged. Ordinary workers
-continue unpaused. Current source protections and restored FEL originals remain.
+off. The flow, routine validation, worker limits, source protections and
+restored FEL originals are unchanged. No private experiment is left running
+or scheduled to restart automatically.
 
-The evidence root is
+The proposed colour model remains offline, with no encoder call sites. Its
+initial zero-real-support result was invalidated: the private diagnostic read
+unused chroma from a luma-only reference cache. Corrected analysis uses
+independently decoded previous colour and verifies all planes of 20 current
+pictures plus 20 cached previous luma pictures. Eight real frame/component
+groups support joint source/base fits; four meet the exploratory holdout
+bounds. Actual AOM confirms their chroma transfer closely, while finite luma
+transfer still needs calibration. Intensity coverage, causal stability and
+integrated transitions remain unfinished. Longer-title cost and optimization
+follow a useful qualified recovery candidate; they have not been run or waived.
+
+The latest full CPU suite passes 185 Python tests in 26 suites plus C++ checks.
+No new production defect or additional library repair was established by this
+study. The evidence root is
 `/opt/docker-apps/logs/fgs-ripple-repair-20260906/retention-prep-20260910/colour-recovery-20260922/`.
-Read `README.md`, `handoff.json`, `work-plan.json` and `evidence-index.json`.
-Completed controls, dependent source/base captures and private capture binaries
-are verified on storage; duplicate build caches, copied source trees, incomplete
-encodes and reproducible raw buffers have cleanup receipts.
+Read `README.md`, `handoff.json`, `work-plan.json`, `evidence-index.json` and
+`resume-authorized/`. The completed `matched/` reports cover size, quality,
+source clocks and explicit software-reference metadata limitations. Do not
+reuse the historical `pixels/moment-report.json` zero-support conclusion.
+Completed media and dependent source/base captures are hash-verified on storage;
+disposable calibration and raw witness buffers have cleanup receipts.
 
 **September 21 current state:** Tdarr is now 2.89.01, image
 `nvenc-fidelity/tdarr-node:2.89.01-cb903a17-20260919`; the deployed encoder hash
