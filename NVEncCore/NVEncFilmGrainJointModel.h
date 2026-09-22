@@ -63,6 +63,10 @@ template<size_t N> inline bool semidefinite(const std::array<double, N*N>& input
 // observations. Retention can differ by component: current chroma and its
 // neighbours use zero, while the averaged luma can retain a source fraction.
 // The two mixed terms need their own orientation when these fractions differ.
+// This identity describes a LINEAR blend before native-depth rounding. For
+// a rounded retained base, measure that actual base and pass zero retention;
+// applying the linear identity again would double-retain and miss quantization
+// effects, which are material for weak colour grain.
 inline FilmGrainJointTarget film_grain_joint_target(const FilmGrainJointMoments& moments,
     const std::array<double,FGS_JOINT_VARIABLES>& retain) {
     constexpr size_t N=FGS_JOINT_VARIABLES;

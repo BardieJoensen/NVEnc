@@ -55,6 +55,15 @@ bash tests/fgs/run_cpu_tests.sh
 This builds and runs the model-solver and `filmgrn1` parser behavior tests,
 plus the Python descriptor and model-gate tests.
 
+The experimental joint-colour CPU checks also cover a bounded minimax fit over
+brightness groups, analytic optimization controls, and a separate comparison
+of actual synthesis covariance. A low regression error can still produce the
+wrong grain structure. The covariance check tests every neighbour's energy and
+the sign of luma/colour coupling; native-depth rounding has its own counterexample.
+These helpers have no encoder call sites and do not add routine Tdarr validation.
+See the [brightness and partial-retention findings](FINDINGS-2026-09-22-BRIGHTNESS-FIT.md)
+for the independent decoder and real-source development evidence and its limits.
+
 The feedback-stability regression uses AV1 coefficient vectors from the
 September 2026 ripple report, a neighbouring stable model, and unit-pole
 boundaries. The solver test also constructs finite-gain training equations

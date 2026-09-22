@@ -1,6 +1,20 @@
 # FGS encoder and library repair: current work and handoff
 
-**September 22 latest follow-up:** [finite-template and intensity work](FINDINGS-2026-09-22-FINITE-TEMPLATE.md)
+**September 22 latest development:** [brightness-aware fitting and partial colour retention](FINDINGS-2026-09-22-BRIGHTNESS-FIT.md)
+adds bounded minimax fitting and an independent synthesis-covariance check.
+Actual decoder pixels reject the first shared-shape candidate despite its good
+regression scores. A later prototype retains 25% of the removed Cb residual,
+measures the native rounded base, and passes eight tested source-patch groups
+(513 held-out blocks; worst variance error 4.99%, normalized covariance 0.07344).
+This reuses development holdouts and is not production qualification. Twenty
+parameter sets round-trip exactly between AOM and dav1d across 140 pictures,
+including deliberate grain transitions and quiet Cr. The new helpers remain
+offline, with no encoder call sites. Whole-picture support, both colour planes,
+native rounded-base integration, moving NVENC output and size/speed remain open.
+Read `brightness-fit-20260922/report.json` in the evidence root below. Its capture
+pause is released; ordinary Tdarr continues. Automatic retention and FEL stay off.
+
+**September 22 earlier finite-template follow-up:** [finite-template and intensity work](FINDINGS-2026-09-22-FINITE-TEMPLATE.md)
 adds an offline luma-template reference with exact independent AOM verification
 across 768 templates. Internal template clipping explains most of the previous
 stationary-power discrepancy; separate real calibration/holdout seed sets agree

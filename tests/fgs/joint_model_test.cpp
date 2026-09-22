@@ -30,6 +30,23 @@ int main() {
         target=film_grain_joint_target(m,retain);assert(target.valid);
         for(size_t i=0;i<N;++i)near(target.covariance[i*N+i],1.-(.5+.5*r)*(.5+.5*r));
     }
+    // Native 10-bit example: source is 512 +/- 2, base is 512 +/- 1.
+    // A quarter of the residual gives 512 +/- 1.25 before rounding, but the
+    // actual retained pixels round back to 512 +/- 1. The missing variance
+    // is 3, not 2.4375. Measure the rounded base and request ZERO further
+    // retention; a pre-rounding covariance identity cannot certify it.
+    m=identity_moments();retain.fill(.25);
+    for(size_t i=0;i<N;++i) {
+        m.source[i*N+i]=4*m.observations;
+        m.base[i*N+i]=m.observations;
+        m.sourceBase[i*N+i]=2*m.observations;
+    }
+    auto beforeRounding=film_grain_joint_target(m,retain);assert(beforeRounding.valid);
+    near(beforeRounding.covariance[0],2.4375);
+    retain.fill(0.);
+    auto measuredRounded=film_grain_joint_target(m,retain);assert(measuredRounded.valid);
+    near(measuredRounded.covariance[0],3.0);
+    assert(measuredRounded.covariance[0]/beforeRounding.covariance[0]-1.0>.23);
     // base = B*source, B[0,1]=.1: Cov(source_i,base_j) is asymmetric.
     m=identity_moments();retain.fill(0.);retain[1]=.5;
     for(size_t i=0;i<N;++i) {
