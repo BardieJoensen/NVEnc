@@ -16,6 +16,7 @@ extern "C" {
 #include "NVEncFilmGrainStability.h"
 #include "av1_scan_packet.h"
 #include "av1_grain_syntax.h"
+#include "av1_sequence_levels.h"
 
 namespace {
 struct Model : Av1GrainSyntax {
@@ -34,6 +35,9 @@ AVRational timeBase{1, 1000};
 char firstError[300]{};
 bool stabilityOnly = false;
 bool syntaxOnly = false;
+bool requireDefinedLevels = false;
+Av1SequenceLevels sequenceLevels;
+int64_t undefinedLevelPts = AV_NOPTS_VALUE;
 const char *invalidGrain = nullptr;
 int64_t invalidPts = AV_NOPTS_VALUE;
 
@@ -97,7 +101,11 @@ void logCallback(void *, int level, const char *fmt, va_list ap) {
     else {
         int index = -1;
         const int spatial = 2 * current.lag * (current.lag + 1);
-        if (sscanf(field, "point_y_value[%d]", &index) == 1) current.point(0, value);
+        if (sscanf(field, "seq_level_idx[%d]", &index) == 1) {
+            if (!sequenceLevels.undefined && !Av1SequenceLevels::defined(value)) undefinedLevelPts = packetPts;
+            sequenceLevels.observe(index,value);
+        }
+        else if (sscanf(field, "point_y_value[%d]", &index) == 1) current.point(0, value);
         else if (sscanf(field, "point_cb_value[%d]", &index) == 1) current.point(1, value);
         else if (sscanf(field, "point_cr_value[%d]", &index) == 1) current.point(2, value);
         else if (sscanf(field, "point_y_scaling[%d]", &index) == 1) current.maxScaling[0] = std::max(current.maxScaling[0], value);
@@ -122,6 +130,8 @@ int main(int argc, char **argv) {
             stabilityOnly = true; --argc; ++argv;
         } else if (!strcmp(argv[1], "--syntax-only")) {
             syntaxOnly = true; --argc; ++argv;
+        } else if (!strcmp(argv[1], "--defined-levels")) {
+            requireDefinedLevels = true; --argc; ++argv;
         } else if (argc > 3 && !strcmp(argv[1], "--stream-index")) {
             char *end = nullptr;
             const long index = strtol(argv[2], &end, 10);
@@ -130,7 +140,7 @@ int main(int argc, char **argv) {
         } else break;
     }
     if (argc != 2 || (stabilityOnly && syntaxOnly)) {
-        fprintf(stderr, "usage: scan_bitstream [--stability-only|--syntax-only] [--stream-index N] FILE\n");
+        fprintf(stderr, "usage: scan_bitstream [--stability-only|--syntax-only] [--defined-levels] [--stream-index N] FILE\n");
         return 2;
     }
     auto start = std::chrono::steady_clock::now();
@@ -184,15 +194,30 @@ int main(int argc, char **argv) {
             if (status < 0) break;
             while ((status = av_bsf_receive_packet(filter, out)) >= 0) av_packet_unref(out);
             if (status != AVERROR(EAGAIN) && status != AVERROR_EOF) break;
-            if (unsafePlane >= 0 || errors) break;
+            if (unsafePlane >= 0 || errors || (requireDefinedLevels
+                && (sequenceLevels.invalid || sequenceLevels.undefined))) break;
         }
         eof = status == AVERROR_EOF;
     }
     const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
-    const char *verdict = invalidGrain ? "invalid_grain" : errors ? "error" : unsafePlane >= 0 ? "unsafe_model" : eof ? (syntaxOnly ? "valid_syntax" : "stable") : "error";
+    const bool levelFailure = requireDefinedLevels && (sequenceLevels.invalid
+        || sequenceLevels.undefined || (eof && !sequenceLevels.fields));
+    const char *verdict = levelFailure ? "unsupported_sequence_level" : invalidGrain ? "invalid_grain" : errors ? "error" : unsafePlane >= 0 ? "unsafe_model" : eof ? (syntaxOnly ? "valid_syntax" : "stable") : "error";
     printf("{\"verdict\":\"%s\",\"packets\":%lld,\"unique_plane_models\":%lld,\"grain_present\":%d,\"complete\":%s,\"errors\":%d,\"metadata_obus_skipped\":%u,\"elapsed_seconds\":%.3f", verdict,
         static_cast<long long>(packets), static_cast<long long>(models), grainPresent, eof ? "true" : "false", errors, metadataSkipped, seconds);
     printf(",\"criterion\":\"%s\"", syntaxOnly ? "av1_grain_syntax_v1" : stabilityOnly ? "stability" : "synthesis_texture_v1");
+    printf(",\"sequence_level_policy\":\"%s\",\"sequence_level_fields\":%llu,\"sequence_levels\":[",
+        requireDefinedLevels ? "av1_v1_errata1_defined" : "report_only",
+        static_cast<unsigned long long>(sequenceLevels.fields));
+    bool firstLevel = true;
+    for (unsigned value=0; value<32; ++value) if (sequenceLevels.seen & (uint32_t(1)<<value)) {
+        printf("%s%u", firstLevel ? "" : ",", value); firstLevel = false;
+    }
+    printf("]");
+    if (levelFailure) {
+        printf(",\"sequence_level_error\":\"undefined, invalid or missing sequence level\",\"first_undefined_level_seconds\":");
+        if (undefinedLevelPts == AV_NOPTS_VALUE) printf("null"); else printf("%.6f", undefinedLevelPts * av_q2d(timeBase));
+    }
     if (!syntaxOnly) printf(",\"max_pole_radius\":%.2f", stabilityOnly ? 1.0 : fgsmodel::film_grain_max_synthesis_pole_radius);
     if (invalidGrain) {
         printf(",\"rejection_reason\":\"%s\",\"first_invalid_seconds\":", invalidGrain);
@@ -212,5 +237,5 @@ int main(int argc, char **argv) {
     printf("}\n");
     if (errors || (!eof && unsafePlane < 0)) fprintf(stderr, "scan error %d: %s\n", status, invalidGrain ? invalidGrain : firstError);
     av_packet_free(&packet); av_packet_free(&out); av_bsf_free(&filter); avformat_close_input(&format);
-    return errors ? 2 : unsafePlane >= 0 ? 1 : eof ? 0 : 2;
+    return errors || levelFailure ? 2 : unsafePlane >= 0 ? 1 : eof ? 0 : 2;
 }

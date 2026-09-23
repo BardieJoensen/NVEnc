@@ -10,12 +10,16 @@ SDR/HDR, neutral and full-range outputs remain unchanged. Full CPU: 185 Python
 in 26 suites plus 29 C++ programs. Read
 `roadmap-r3-runtime-range-20260923/report.json` in the evidence root.
 
-A separate small-clip compatibility issue remains: QVBR20 signals level index
-23, rejected by older AOM, including on `b2a6daeb` and plain NVENC. QVBR30 signals
-31 and decodes. Bitrate caps did not solve it; explicit 4.0/5.1 initialization
-failed. Diagnose this without changing production quality settings. The earlier
-claim that capping alone would resolve the reference-decoder issue was a test
-hypothesis, not an established fix. See the retained bounded controls.
+The [bounded AV1 compatibility investigation](FINDINGS-2026-09-23-AV1-LEVELS.md)
+now reproduces QVBR 16/20 level 23 with the deployed binary and independent
+FFmpeg NVENC, including ordinary dimensions and real development sources.
+Both AOM 3.8.2 and 3.14.1 reject that undefined level. All 39 emitted controls decode
+with dav1d; 17 also pass AOM with exact pictures/clocks, 20 fail on level 23 and
+two isolate FFmpeg timecode forwarding. A new optional header-policy check
+catches every level 23 control and a later sequence change. Production's current
+QVBR 29/30/34/37 map is unchanged. The underlying NVIDIA-path/configuration
+compatibility defect remains unresolved; no equivalent-quality workaround or
+broad library scope is claimed. Read `roadmap-r3-level-signalling-20260923/report.json`.
 
 The [complete-file seed parser pass](FINDINGS-2026-09-23-SEED-INTEGRATION.md#complete-existing-stream-compatibility-and-parser-cost)
 is also complete: 521,260 AV1 video packets across four existing files, all

@@ -73,7 +73,9 @@ levels 4.0 and 5.1 fail NVIDIA initialization. It reproduces with the previous
 signals index 31 on both noisy and constant input and passes both decoders.
 The source/fallback qualification above uses the declared QVBR30 controls.
 
-The root cause of this setting-dependent compatibility issue remains open.
+The [following bounded investigation](FINDINGS-2026-09-23-AV1-LEVELS.md)
+extends this to real sources, normal sizes, the deployed binary and independent
+FFmpeg NVENC. The root cause remains open.
 Do not describe QVBR20 as independently decoder-qualified, or silently change
 production quality settings to hide it. No library damage scope follows from
 these small generated fixtures. The original failures and each bounded control

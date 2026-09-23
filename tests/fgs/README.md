@@ -186,6 +186,16 @@ g++ -std=c++17 -O2 -I NVEncCore tests/fgs/scan_bitstream.cpp \
 /tmp/fgs-scan /path/to/episode.mkv
 ```
 
+Add `--defined-levels` to require sequence levels defined by AV1 v1.0.0
+Errata 1 Annex A.3 (including index 31, maximum parameters). Every encountered
+operating point and sequence header is checked, even in grain-free streams.
+An undefined, invalid or missing level produces exit 2 and
+`unsupported_sequence_level`; otherwise the existing grain verdict applies.
+Without this flag, level indices are reported but do not change the verdict.
+This policy catches the [NVENC QVBR compatibility case](FINDINGS-2026-09-23-AV1-LEVELS.md).
+It neither verifies level bitrate/tile constraints nor replaces decoding.
+It does not rewrite headers or change production Tdarr validation.
+
 ## Read-only decoded grain inspector
 
 `tools/fgs/grain_inspect.cpp` measures decoder grain applied to the same decoded
