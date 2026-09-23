@@ -4,7 +4,7 @@
 // MIT license, as NVEncFilmGrainModel.h.
 #pragma once
 #include "NVEncFilmGrainJointTemplate.h"
-#include "../NVEncSDK/Common/inc/nvEncodeAPI.h"
+#include "NVEncFilmGrainSyntax.h"
 #include "../json/json.hpp"
 #include <set>
 #include <stdexcept>
@@ -34,20 +34,10 @@ inline std::vector<uint16_t> film_grain_probe_template_seeds(const nlohmann::jso
 inline bool film_grain_model_template_parameters(const NV_ENC_FILM_GRAIN_PARAMS_AV1& p,
     unsigned depth, FilmGrainJointTemplateParameters& out) {
     out = {};
-    if (depth != 8 && depth != 10 && depth != 12) return false;
+    if (!film_grain_params_420_valid(p, depth)) return false;
     FilmGrainJointTemplateParameters candidate{depth, 0, 6, 0};
     candidate.y.fill(128); candidate.cb.fill(128); candidate.cr.fill(128);
     if (!p.applyGrain) { out = candidate; return true; }
-    if (p.numYPoints > 14 || p.numCbPoints > 10 || p.numCrPoints > 10
-        || (p.chromaScalingFromLuma && (p.numCbPoints || p.numCrPoints))
-        || (!p.numYPoints && (p.numCbPoints || p.numCrPoints))
-        || ((p.numCbPoints == 0) != (p.numCrPoints == 0))
-        || (p.numCbPoints && p.cbOffset > 511) || (p.numCrPoints && p.crOffset > 511)) return false;
-    const unsigned count[3] = {p.numYPoints, p.numCbPoints, p.numCrPoints};
-    const uint8_t* values[3] = {p.pointYValue, p.pointCbValue, p.pointCrValue};
-    for (unsigned plane = 0; plane < 3; ++plane)
-        for (unsigned i = 1; i < count[plane]; ++i)
-            if (values[plane][i] <= values[plane][i - 1]) return false;
     candidate.lag = p.arCoeffLag; candidate.arShift = p.arCoeffShiftMinus6 + 6;
     candidate.grainShift = p.grainScaleShift;
     candidate.lumaActive = p.numYPoints > 0;

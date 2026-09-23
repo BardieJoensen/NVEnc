@@ -3,6 +3,7 @@
 #pragma once
 #include "NVEncFilmGrainJointCollect.cuh"
 #include "NVEncFilmGrainModelEvidence.h"
+#include "NVEncFilmGrainSourcePreservation.cuh"
 #include "../json/json.hpp"
 #include <algorithm>
 #include <filesystem>
@@ -29,6 +30,7 @@ class FilmGrainJointProbe {
     FilmGrainCollectGroup *m_groups=nullptr;
     FilmGrainCollectGroup *m_commonGroups=nullptr;
     FilmGrainCollectLookup *m_lookup=nullptr;
+    FilmGrainNativeComponentCounts *m_sourceCounts=nullptr;
     cudaStream_t m_stream=nullptr;
     cudaEvent_t m_ready=nullptr,m_consumed=nullptr;
     bool m_configured=false;
@@ -71,6 +73,7 @@ class FilmGrainJointProbe {
         check(cudaMalloc(&m_results,sizeof(*m_results)*FGS_COLLECT_MAX_TILES));
         check(cudaMalloc(&m_groups,sizeof(*m_groups)*FGS_COLLECT_GROUPS));
         if(finalModel)check(cudaMalloc(&m_commonGroups,sizeof(*m_commonGroups)*FGS_COLLECT_GROUPS));
+        if(finalModel)check(cudaMalloc(&m_sourceCounts,3*sizeof(*m_sourceCounts)));
         check(cudaMalloc(&m_lookup,sizeof(*m_lookup)));
         m_width=source.width;m_height=source.height;m_depth=source.bitDepth;m_shift=source.storageShift;m_configured=true;
     }
@@ -141,6 +144,7 @@ public:
         if(m_tiles)cudaFree(m_tiles);if(m_results)cudaFree(m_results);
         if(m_groups)cudaFree(m_groups);if(m_lookup)cudaFree(m_lookup);
         if(m_commonGroups)cudaFree(m_commonGroups);
+        if(m_sourceCounts)cudaFree(m_sourceCounts);
         if(m_consumed)cudaEventDestroy(m_consumed);if(m_ready)cudaEventDestroy(m_ready);
         if(m_stream)cudaStreamDestroy(m_stream);
     }
@@ -198,10 +202,23 @@ public:
         const auto model=film_grain_final_model_evidence(params,source.bitDepth,m_templateSeeds);
         const std::string prefix="frame-"+std::to_string(source.frameId);
         begin(stream);
+        check(film_grain_source_preservation_async(source,base,m_sourceCounts,3,m_stream));
         Json record={{"schema",1},{"frame_id",source.frameId},{"pts",source.timestamp},{"epoch",source.epoch},
             {"timebase",{m_timebaseNum,m_timebaseDen}},{"model",model},
             {"base",dump_frame(base,prefix+"-encoder-base")},
             {"base_stage","final native input to NVENC; after source retention/recovery, before lossy compression"}};
+        std::array<FilmGrainNativeComponentCounts,3> counts{};
+        check(cudaMemcpyAsync(counts.data(),m_sourceCounts,sizeof(counts),cudaMemcpyDeviceToHost,m_stream));
+        check(cudaStreamSynchronize(m_stream));
+        record["source_component_counts"]=Json::array();
+        for(unsigned p=0;p<3;++p) {
+            const auto& c=counts[p];
+            if(c.samples!=uint64_t(source.width)*source.height/(p ? 4 : 1)||c.invalidSamples)
+                throw std::runtime_error("joint probe final source/base has invalid native samples");
+            record["source_component_counts"].push_back({{"samples",c.samples},{"changed_samples",c.changedSamples},
+                {"invalid_samples",c.invalidSamples},{"minimum",c.minimum},{"maximum",c.maximum}});
+        }
+        record["source_component_counts_scope"]="whole native component including borders; curve/range and colour compatibility checks remain separate";
         end(stream);
         json_file(m_directory/(prefix+"-final.json"),record);m_finalCaptured.insert(source.frameId);
     }
