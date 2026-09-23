@@ -110,6 +110,7 @@
     - [--av1-film-grain [\<params\>] \[AV1\]](#--av1-film-grain-params-av1)
     - [--film-grain-table \<path\> \[AV1\]](#--film-grain-table-path-av1)
     - [--film-grain-table-out \<path\>](#--film-grain-table-out-path)
+    - [--film-grain-seed-guard \<library\>](#--film-grain-seed-guard-library)
     - [--film-grain-joint-probe \<manifest\>](#--film-grain-joint-probe-manifest)
     - [--level \<string\>](#--level-string)
     - [--profile \<string\>](#--profile-string)
@@ -877,6 +878,17 @@ editing the source. Without this option, scene detection is unchanged.
 将`--av1-film-grain`测量的胶片颗粒写出为标准AOM `filmgrn1` 表。保持相同模型的连续帧会合并为10 MHz时间基下的一个`[start,end)`区间；未检测到颗粒的时段表示为间隙。
 
 与`--codec raw`组合时，同一次运行可在写出表的同时输出去噪后的基础视频，供外部AV1编码器使用。
+
+### --film-grain-seed-guard &lt;library&gt;
+实验性 AV1 数据包胶片颗粒种子修正，默认禁用。请明确指定通过
+[`tests/fgs/seed_filter`](tests/fgs/seed_filter/README.md) 构建的 ABI 1
+解析器库路径。
+
+仅将特殊种子值 0、46372、18904 改为下一个值。保留编码图像、模型参数、
+数据包长度和时间戳，不启用自动细节保留。要求带序列头的 AV1 low-overhead OBU，
+不支持并行编码。库缺失、ABI 不兼容、无效数据包或超过 32 MiB 的数据包会使
+编码失败。Linux 库隔离及独立数据包和解码器测试已通过；完整编码器和容器部署
+仍处于实验阶段。未指定此选项时不加载额外库。
 
 ### --film-grain-joint-probe &lt;manifest&gt;
 Development diagnostic for `--av1-film-grain denoiser=bilateral`; disabled by default.

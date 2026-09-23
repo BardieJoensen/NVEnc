@@ -116,7 +116,8 @@ NVEncVideoParamAV1::NVEncVideoParamAV1() :
     filmGrainSceneCuts(),
     filmGrainTable(),
     filmGrainTableOut(),
-    filmGrainJointProbe() {
+    filmGrainJointProbe(),
+    filmGrainSeedGuard() {
 }
 tstring NVEncRCParam::print() const {
     TStringStream t;

@@ -331,6 +331,7 @@ tstring encoder_help() {
         _T("   --film-grain-joint-probe <manifest> bounded source/base/history/model diagnostic (bilateral only)\n")
         _T("                                  (with --av1-film-grain; also usable with --codec raw to\n")
         _T("                                   produce a denoised base + grain table for another encoder).\n")
+        _T("   --film-grain-seed-guard <library> experimental AV1 seed correction (off by default)\n")
         _T("   --bitstream-padding          [AV1] enable bitstream padding.\n"));
 
     str += strsprintf(_T("")
@@ -1326,6 +1327,15 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (IS_OPTION("film-grain-seed-guard")) {
+        if (i + 1 < nArgNum && strInput[i + 1][0] != 0 && strInput[i + 1][0] != _T('-')) {
+            pParams->av1.filmGrainSeedGuard = strInput[++i];
+        } else {
+            print_cmd_error_invalid_value(option_name, _T("an explicit seed parser library path is required"));
+            return 1;
+        }
+        return 0;
+    }
     if (IS_OPTION("film-grain-joint-probe")) {
         if (i + 1 < nArgNum && strInput[i + 1][0] != 0 && strInput[i + 1][0] != _T('-')) {
             pParams->av1.filmGrainJointProbe = strInput[++i];
@@ -1995,6 +2005,7 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
         OPT_STR_PATH(_T("--film-grain-table"), av1.filmGrainTable);
         OPT_STR_PATH(_T("--film-grain-table-out"), av1.filmGrainTableOut);
         OPT_STR_PATH(_T("--film-grain-joint-probe"), av1.filmGrainJointProbe);
+        OPT_STR_PATH(_T("--film-grain-seed-guard"), av1.filmGrainSeedGuard);
         OPT_STR_PATH(_T("--film-grain-scene-cuts"), av1.filmGrainSceneCuts);
         OPT_LST_CX(_T("--tile-columns"),  av1, tilesCols,      list_av1_tiles);
         OPT_LST_CX(_T("--tile-rows"),     av1, tilesRows,      list_av1_tiles);
