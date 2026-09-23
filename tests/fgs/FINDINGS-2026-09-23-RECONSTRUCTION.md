@@ -75,3 +75,40 @@ Continue with finite-template colour-shape correction and representability,
 then actual automatic call sites. Unsupported real populations, temporal
 transitions, unseen quality, storage cost, speed and the Tdarr canary remain
 open in R3–R8. The reserved qualification corpus remains unopened.
+
+## Complete model output and bounded seed proposals
+
+D35 applies at most two training-only covariance counterterms to the proposal
+shape. Original source evidence remains separate: the adjusted covariance is
+an artificial fitting target, never new source evidence. One of 16 10-bit seeds
+passes both spatial halves and the mean check; none of the 16 8-bit seeds passes.
+Most remaining failures concern spatial Cb/Cr covariance. This is a constructive
+feasibility result, with no general model admission.
+
+D36's [manual model writer](MODEL-OVERRIDE.md) carries that passing model into
+the existing NVENC video. Independent AOM/dav1d outputs match all 786,432 oracle
+samples; the 16 compressed base pictures and other 15 displayed pictures stay
+unchanged. Reordered SDR/HDR and reference-reuse controls add 1,472 fresh decoded
+observations, ten expected failures and a detected omitted-reference-guard
+mutation. A later source-hash binding and grain-free-reference no-op correction
+preserve every previously qualified output byte. This is manual IVF research,
+not a new automatic encoder path or a Dolby Vision container qualification.
+
+D37's arbitrary finite seed search passes only one of eight fixed banks, after
+118 tested seeds. D38 adds a template mean/cross-colour screening proposal.
+Six independent AOM/NumPy comparisons and 12 invalid controls verify its math;
+actual final source checks remain mandatory. Screening 4,096 seeds takes about
+1.9 seconds per control. Of two subsequent 16-candidate banks, the 10-bit one
+passes and the 8-bit one falls back. This is not reliable or fast enough for
+per-frame deployment. The helper grants no quality bits and has no runtime calls.
+
+Current Tdarr already specifies `--output-depth 10` for SDR as well as HDR.
+D39 therefore compares promoted 8-bit originals, promoted 8-bit rounded retention,
+and retention rounded directly at native 10-bit precision. It uses declared
+constructive controls and actual NVENC reconstruction before any new fitting.
+Continue that active work and the roadmap; keep the original failed models.
+
+Read `roadmap-r3-template-correction-20260923/report.json`,
+`roadmap-r3-model-output-20260923/report.json` and `hardening-v2/report.json`,
+`roadmap-r3-seed-selection-20260923/report.json`, and
+`roadmap-r3-template-seed-proposal-20260923/summary.json` in the local evidence root.
