@@ -1,5 +1,13 @@
 # FGS encoder and library repair: current work and handoff
 
+**September 23 current:** the [temporal source-population study](FINDINGS-2026-09-23-TEMPORAL-POPULATIONS.md)
+adds a conditional measurement for structured regions, with eight independent
+controls and 3,960 real development tiles. All twelve source/previous planes and
+clocks match. Motion or temporal correlation still prevents inferring safe grain
+from these measurements alone; the zero-grain moving-pattern negative is retained.
+No acceptance rule changed. Full CPU: 193 Python tests in 27 suites plus 29 C++.
+R3 remains open; full-title seed-guard cost is a separate available next step.
+
 **September 23 latest:** the [optional retention colour-range and recovery guard](FINDINGS-2026-09-23-RUNTIME-RANGE.md)
 is qualified as `53d3ff3f`, binary SHA
 `a0d760f57bbb2ff7b423ed3c117e6a09535b1e04941e80430182045df89bcaf2`.

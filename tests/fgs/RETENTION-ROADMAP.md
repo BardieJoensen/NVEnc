@@ -136,6 +136,13 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [source-only temporal population study](FINDINGS-2026-09-23-TEMPORAL-POPULATIONS.md)
+adds independently checked measurements on structured regions. All 3,960 real
+tiles preserve the original source classifications; lag-dependent energy and a
+zero-grain moving-pattern negative show that stationary temporal estimates alone
+cannot approve these regions. Motion/stationarity and temporal correlation need
+separate qualification. No new source-population acceptance rule is enabled.
+
 The [runtime copied-colour guard](FINDINGS-2026-09-23-RUNTIME-RANGE.md) now
 protects nominal out-of-range chroma from the active-zero-curve decoder clamp
 and excludes unsafe frames from synthesis recovery. The finite NV12/P010
