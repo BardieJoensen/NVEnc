@@ -144,3 +144,11 @@ any late partial-candidate failure requires a fresh source encode or keeping the
 original file. A failed partial output is never relabeled as a source fallback.
 Successful fitting still does not establish source population eligibility,
 perceptual quality or automatic fraction selection.
+
+Native engine `spatial_policy: "full_picture"` additionally requires every
+picture's complete colour-spatial and Cb/Cr checks. The existing `frame_window`
+diagnostic remains the default for reproducing earlier experiments. Both keep
+the same frozen bounds and sliding windows. Strict policy selection uses only
+training-fold spatial evidence; independent-fold and global-mean failures veto
+that first training-pass seed without retry. The consumer rejects libraries
+that do not explicitly confirm the requested full-picture policy.

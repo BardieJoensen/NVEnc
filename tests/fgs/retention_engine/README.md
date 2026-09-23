@@ -38,3 +38,13 @@ memory-source experiments require ABI 2.
 The encoder-side `native_model_output` diagnostic uses this ABI only when
 explicitly requested. CPU replay qualifies conversion/identity/readiness before
 the live encoder trials; it does not prove live GPU behaviour by itself.
+
+`spatial_policy` explicitly selects `frame_window` (the existing diagnostic
+default) or `full_picture`. Full-picture mode keeps the same numerical bounds
+but requires colour spatial/cross checks on every picture, as well as the existing
+sliding windows. At most four seeds are tried using only training-fold spatial
+evidence. The first training pass is final: independent-fold or global-mean
+failure rejects instead of trying another seed. Neither policy grants source
+eligibility. The engine report names the active policy; the encoder requires
+explicit confirmation for `full_picture`, since older ABI-compatible libraries
+can otherwise ignore an unknown JSON key.

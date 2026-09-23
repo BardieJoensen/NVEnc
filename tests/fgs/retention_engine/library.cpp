@@ -41,6 +41,9 @@ struct Context {
         integer(j,"schema",1,1);config.width=integer(j,"width",64,4096);config.height=integer(j,"height",64,2160);
         config.depth=integer(j,"depth",8,10);config.matrix=integer(j,"matrix",1,9);config.frames=integer(j,"frame_count",8,16);
         config.shift=integer(j,"shift",6,9);config.grainShift=integer(j,"grain_shift",0,3);
+        const auto spatial=j.value("spatial_policy",std::string("frame_window"));
+        require(spatial=="frame_window" || spatial=="full_picture","native spatial policy must be frame_window or full_picture");
+        config.spatialPolicy=spatial=="full_picture"?FilmGrainMomentSpatialPolicy::FullPicture:FilmGrainMomentSpatialPolicy::FrameWindow;
         if(j.contains("max_native_bytes"))config.maxNativeBytes=integer(j,"max_native_bytes",1,512ull*1024*1024);
         const auto& seeds=j.at("training_seeds");require(seeds.is_array() && !seeds.empty() && seeds.size()<=32,"native engine training seed count");
         for(const auto& seed:seeds) {require(seed.is_number_integer() && seed>0 && seed<=65535,"native engine seed range");config.trainingSeeds.push_back(seed.get<uint16_t>());}

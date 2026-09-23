@@ -8,6 +8,12 @@ int main() {
     std::set<uint32_t> captured;
     for(unsigned i=0;i<8;++i) {captured.insert(i);j["packets"].push_back({{"pts",i},{"sha256",{std::string(64,'a')}}});j["engine"]["sources"].push_back({{"ordinal",i},{"pts",i}});}
     auto c=NVEncFilmGrainNativeConfig::parse(j,captured);c.requireLayout(1024,512,10);
+    assert(c.spatialPolicy()=="frame_window");auto strict=j;strict["engine"]["spatial_policy"]="full_picture";
+    assert(NVEncFilmGrainNativeConfig::parse(strict,captured).spatialPolicy()=="full_picture");
+    for(const auto& policy:{Json("unknown"),Json(true),Json(nullptr)}) {
+        strict["engine"]["spatial_policy"]=policy;bool rejected=false;
+        try{NVEncFilmGrainNativeConfig::parse(strict,captured);}catch(...){rejected=true;}assert(rejected);
+    }
     assert(!c.memorySource());auto memory=j;memory["engine"]["source_mode"]="memory";
     assert(NVEncFilmGrainNativeConfig::parse(memory,captured).memorySource());
     for(const auto& mode:{Json("unknown"),Json(1),Json(nullptr)}) {

@@ -68,6 +68,35 @@ int main() {
     assert(calls==1 && heldout.selected==0 && !heldout.passesDiagnostic
         && heldout.reason==FilmGrainMomentSelectionReason::CheckFold);
     calls=0;
+    const auto strict=film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
+        FilmGrainMomentCandidate c;c.calibrated=true;c.moments=source;
+        if(calls++==0)c.moments.folds[0].colour[0][1]=.12;
+        return c;
+    },FilmGrainMomentSpatialPolicy::FullPicture);
+    assert(calls==2 && strict.selected==1 && strict.passesDiagnostic);
+    for(unsigned kind=0;kind<3;++kind) {
+        calls=0;
+        const auto veto=film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
+            FilmGrainMomentCandidate c;c.calibrated=true;c.moments=source;
+            if(calls++==0) {
+                if(kind==0)c.moments.folds[1].colour[0][1]=.12;
+                if(kind==1)c.moments.folds[1].cross[7]=.12;
+                if(kind==2)c.moments.mean[0]+=.2;
+            }
+            return c;
+        },FilmGrainMomentSpatialPolicy::FullPicture);
+        assert(calls==1 && veto.selected==0 && !veto.passesDiagnostic
+            && veto.reason==FilmGrainMomentSelectionReason::CheckFold);
+    }
+    calls=0;
+    const auto noSpatial=film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
+        ++calls;FilmGrainMomentCandidate c;c.calibrated=true;c.moments=colourShape;return c;
+    },FilmGrainMomentSpatialPolicy::FullPicture);
+    assert(calls==4 && noSpatial.complete && noSpatial.selected==-1);
+    assert(!film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
+        assert(false);return FilmGrainMomentCandidate{};
+    },static_cast<FilmGrainMomentSpatialPolicy>(9)).complete);
+    calls=0;
     const auto none=film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
         ++calls; return FilmGrainMomentCandidate{};
     });

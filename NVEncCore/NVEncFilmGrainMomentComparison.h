@@ -149,6 +149,7 @@ struct FilmGrainMomentAttempt {
     FilmGrainMomentComparison comparison{};
 };
 enum class FilmGrainMomentSelectionReason { Invalid, NoTrainingCandidate, CheckFold, Pass };
+enum class FilmGrainMomentSpatialPolicy { FrameWindow, FullPicture };
 struct FilmGrainMomentSelection {
     FilmGrainMomentSelectionReason reason = FilmGrainMomentSelectionReason::Invalid;
     std::vector<FilmGrainMomentAttempt> attempts;
@@ -161,9 +162,11 @@ struct FilmGrainMomentSelection {
 // Supplied shape/base/eligible populations must remain fixed across attempts.
 template<class Measure>
 inline FilmGrainMomentSelection film_grain_select_moment_seed(
-    const FilmGrainNativeMoments& source, const unsigned* seeds, size_t count, Measure measure) {
+    const FilmGrainNativeMoments& source, const unsigned* seeds, size_t count, Measure measure,
+    FilmGrainMomentSpatialPolicy policy=FilmGrainMomentSpatialPolicy::FrameWindow) {
     FilmGrainMomentSelection result;
     if (!film_grain_moment_layout(source) || !seeds || !count || count > 4) return result;
+    if (policy!=FilmGrainMomentSpatialPolicy::FrameWindow && policy!=FilmGrainMomentSpatialPolicy::FullPicture) return result;
     for (size_t i = 0; i < count; ++i) {
         if (seeds[i] > 65535 || seeds[i] == 0 || seeds[i] == 18904 || seeds[i] == 46372) return result;
         for (size_t j = 0; j < i; ++j) if (seeds[i] == seeds[j]) return result;
@@ -177,9 +180,13 @@ inline FilmGrainMomentSelection film_grain_select_moment_seed(
         for (auto strength : attempt.strengths) if (strength > 255) attempt.calibrated = false;
         if (attempt.calibrated) attempt.comparison = film_grain_compare_moments(source, candidate.moments);
         result.attempts.push_back(attempt);
-        if (!attempt.comparison.folds[0].framePass) continue;
+        const bool full=policy==FilmGrainMomentSpatialPolicy::FullPicture;
+        // Full-picture mode selects using ONLY the training fold's spatial
+        // statistics. The global mean includes independent pixels, so its
+        // failure vetoes the selected seed instead of selecting another one.
+        if (!(full ? attempt.comparison.folds[0].fullPass : attempt.comparison.folds[0].framePass)) continue;
         result.selected = int(i);
-        result.passesDiagnostic = attempt.comparison.folds[1].framePass;
+        result.passesDiagnostic = full ? attempt.comparison.fullPass : attempt.comparison.folds[1].framePass;
         result.reason = result.passesDiagnostic ? FilmGrainMomentSelectionReason::Pass
             : FilmGrainMomentSelectionReason::CheckFold;
         break;
