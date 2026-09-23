@@ -119,3 +119,4 @@ python3 tests/fgs/test_kat_startup.py
 python3 tests/fgs/test_amplitude_regression.py
 python3 tests/fgs/test_native_pq_compare.py
 python3 tests/fgs/test_temporal_population.py
+python3 tests/fgs/test_temporal_stationarity.py

@@ -1,12 +1,20 @@
 # FGS encoder and library repair: current work and handoff
 
-**September 23 current:** the [temporal source-population study](FINDINGS-2026-09-23-TEMPORAL-POPULATIONS.md)
-adds a conditional measurement for structured regions, with eight independent
-controls and 3,960 real development tiles. All twelve source/previous planes and
-clocks match. Motion or temporal correlation still prevents inferring safe grain
-from these measurements alone; the zero-grain moving-pattern negative is retained.
-No acceptance rule changed. Full CPU: 193 Python tests in 27 suites plus 29 C++.
-R3 remains open; full-title seed-guard cost is a separate available next step.
+**September 23 current:** the [full-episode seed-guard comparison](FINDINGS-2026-09-23-SEED-INTEGRATION.md#complete-episode-encoder-cost)
+is complete: four SDR encodes, identical packet payloads/clocks and size,
+34,626 independent decoded observations. Mean time changes by +0.25%, within
+the observed repeat variation. This qualifies one cost control, not retention
+quality or broad throughput. Tdarr is unpaused with current limits preserved;
+completed trial scratch has cleanup receipts. No experiment is scheduled.
+
+The [frozen motion/correlation study](FINDINGS-2026-09-23-STATIONARITY-CONTROLS.md)
+measures 1,024 known-source controls and replays 3,960 real HDR development tiles.
+Fast zero-grain motion and persistent grain evade its necessary checks, so it
+does not establish a new safe population classifier. No source classification
+or output policy changed. Full CPU: 201 Python tests in 28 suites plus 29 C++.
+R3–R8 remain open; production stays ordinary `cb903a17`, retention/FEL off.
+Next model work needs independent motion evidence and explicit preservation of
+temporally persistent residual before a new population can be admitted.
 
 **September 23 latest:** the [optional retention colour-range and recovery guard](FINDINGS-2026-09-23-RUNTIME-RANGE.md)
 is qualified as `53d3ff3f`, binary SHA

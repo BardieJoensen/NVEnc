@@ -88,3 +88,8 @@ study with known-source controls before any new acceptance rule. Model fitting
 on these conditional variances alone is not sufficient. The independent seed
 correction's full-title runtime cost can be qualified separately while R3 remains
 open; it does not depend on enabling retention.
+
+That [frozen follow-up is now complete](FINDINGS-2026-09-23-STATIONARITY-CONTROLS.md):
+the necessary diagnostics catch several controls but still miss fast zero-grain
+motion and persistent-noise ambiguity. No population was promoted. Read the
+follow-up decision before attempting model integration from these measurements.

@@ -113,3 +113,45 @@ header-only tool does not measure active component strength or playback severity
 and does not justify redownloading or retranscoding these files. It adds parser
 compatibility and bounded-cost evidence without changing repair scope.
 Read `roadmap-r3-seed-full-stream-20260923/report.json` for the exact pins.
+
+## Complete-episode encoder cost
+
+A manual ABBA comparison (off, on, on, off) now covers a complete Amphibia S1E1
+library derivative: 17,313 pictures per encode, SDR 1080p, QVBR34 and ordinary
+FGS. Automatic retention is disabled. Build `53d3ff3f` uses the same qualified
+private parser library above. Its later range/recovery changes are inactive
+in ordinary mode. The immutable runtime image and full arguments are pinned.
+
+| Guard | Startup-inclusive seconds, two runs | Mean seconds | Output bytes, each run |
+| --- | --- | ---: | ---: |
+| Off | 194.93, 196.36 | 195.64 | 178,826,440 |
+| On | 193.70, 198.57 | 196.14 | 178,826,440 |
+
+The observed mean difference is **+0.25%**, smaller than the run-to-run spread.
+This is two measurements per arm on one SDR animation derivative, not a
+universal overhead bound, HDR throughput result or original-source quality
+study. The host continued running its other services; GPU telemetry and host
+load samples are retained. There is no measured size penalty in this control.
+
+Every video packet and timestamp is identical across the four outputs. The
+independent seed transformation agrees packet by packet; this episode emits no
+degenerate seed, so correction correctness still comes from the complete-cycle
+fixture. All nonvideo payloads, clocks and inspected container metadata match
+across arms. Each output has defined AV1 level signalling and no skipped
+metadata OBU. Full AOM and dav1d decoding of the single distinct video stream
+agrees on all 17,313 pictures and clocks: 34,626 decoded observations. Exact
+packet identity transfers that proof to the three repeated encodes.
+
+All source presentation timestamps and 36,106 audio packets are preserved.
+The ordinary muxer reports the last audio packet as 20 ms instead of the source's
+19 ms; its payload, presentation time and 72-sample discard padding are unchanged
+and identical with the guard off/on. This is a recorded baseline muxing difference,
+not a seed-guard regression. The source file's hash, inode, size and mtime match.
+
+Read `roadmap-r4-seed-title-cost-20260923/report.json`, `comparison.json`,
+`source-comparison.json`, `execution.json` and `pause.json`. Tdarr's pause was
+released with its current two GPU transcodes/two CPU healthchecks preserved.
+The completed duplicate outputs and extracted streams were removed with a
+1,373,743,740-byte cleanup receipt; originals and required seed-cycle fixtures
+remain. Production and routine validation are unchanged. Broader seed-guard
+release/canary work and R3–R8 retention work are still open.

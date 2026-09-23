@@ -136,6 +136,13 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [frozen stationarity controls](FINDINGS-2026-09-23-STATIONARITY-CONTROLS.md)
+reject short-history consistency plus small-translation matching as a sufficient
+population classifier. Fast zero-grain detail and persistent grain evade the
+necessary checks; flat independent grain also exposes false motion conflicts.
+All 3,960 real tiles retain their R1 classifications. The CPU reference and
+counterexamples are reusable, but no new population acceptance is enabled.
+
 The [source-only temporal population study](FINDINGS-2026-09-23-TEMPORAL-POPULATIONS.md)
 adds independently checked measurements on structured regions. All 3,960 real
 tiles preserve the original source classifications; lag-dependent energy and a
@@ -202,8 +209,10 @@ unsupported and excessive-grain cases are rejected. This is trial readiness.
 - Qualify handling of the three degenerate emitted seeds (0, 46372, 18904).
   The manual IVF proof preserves coded pictures across a complete seed cycle;
   private parser/threading, hidden/show-existing cases and finite actual
-  encoder/container preservation now pass. Full-title cost and deployment
-  remain open. This requirement is separate
+  encoder/container preservation now pass. A complete SDR animation episode
+  adds an ABBA cost comparison: +0.25% mean time within observed run variation,
+  identical bytes and 34,626 exact independent decoded observations. HDR/broader
+  throughput and release/canary qualification remain open. This requirement is separate
   from the previously repaired apply-grain/reference-state toggles.
 
 - Integrate model reuse, entry to fallback and return to synthesis with the new
