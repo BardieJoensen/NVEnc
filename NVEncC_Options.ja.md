@@ -1027,6 +1027,14 @@ Missing decisions, mismatched packets or incomplete output fail the encode.
 The ordinary option-off path and capture manifests without this extension do
 not load that library or buffer model output.
 
+An alternative `native_model_output` object runs the finite source/base fitting
+experiment on 8–16 tile-aligned pictures. It uses a private reference engine and
+explicit original-source plane hashes/encoder timestamps, then fits and checks
+models from live NVENC reconstructions. It cannot be combined with
+`model_output`; expensive CPU synthesis is diagnostic only. See
+[the native fitting contract](tests/fgs/MODEL-OUTPUT-TRIAL.md#native-fitting-extension).
+It does not choose pre-encode retention fractions or approve source populations.
+
 ### --film-grain-joint-probe &lt;manifest&gt;
 Development diagnostic for `--av1-film-grain denoiser=bilateral`; disabled by default.
 It captures native source, denoised base and complete previous-source planes,

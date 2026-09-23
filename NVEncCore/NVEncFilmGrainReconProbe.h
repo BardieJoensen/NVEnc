@@ -1,5 +1,5 @@
 // Explicit NVENC reconstruction capture for compressed-base grain research.
-// Disabled by default. Capture-only unless model_output is explicitly supplied.
+// Disabled by default. Capture-only unless an explicit model output mode is supplied.
 // MIT license, as NVEncFilmGrainModel.h.
 #pragma once
 #include <fstream>
@@ -11,6 +11,7 @@
 #include "CuvidDecode.h"
 #include "NVEncFilmGrainReconConfig.h"
 #include "NVEncFilmGrainModelProbe.h"
+#include "NVEncFilmGrainNativeProbe.h"
 #include "NVEncUtil.h"
 
 class NVEncFilmGrainReconProbe {
@@ -34,6 +35,7 @@ class NVEncFilmGrainReconProbe {
     bool m_failed = false, m_finished = false;
     uint64_t m_submitted = 0, m_received = 0, m_peakAllocated = 0;
     std::unique_ptr<NVEncFilmGrainModelProbe<std::shared_ptr<RGYBitstream>>> m_modelOutput;
+    std::unique_ptr<NVEncFilmGrainNativeProbe<std::shared_ptr<RGYBitstream>>> m_nativeOutput;
 
     static void cudaCheck(cudaError_t e) {
         if (e != cudaSuccess) throw std::runtime_error(cudaGetErrorString(e));
@@ -69,11 +71,19 @@ public:
         m_config=NVEncFilmGrainReconConfig::parse(j);
         m_frameBytes=m_config.requireLayout(width,height,depth);
         std::optional<NVEncFilmGrainModelConfig> modelConfig;
+        std::optional<NVEncFilmGrainNativeConfig> nativeConfig;
+        if(j.contains("model_output") && j.contains("native_model_output"))
+            throw std::runtime_error("choose one explicit model output diagnostic");
         if(j.contains("model_output"))modelConfig=NVEncFilmGrainModelConfig::parse(j.at("model_output"),m_config.frames);
+        if(j.contains("native_model_output")) {
+            nativeConfig=NVEncFilmGrainNativeConfig::parse(j.at("native_model_output"),m_config.frames);
+            nativeConfig->requireLayout(width,height,depth);
+        }
         if (!std::filesystem::create_directory(m_config.directory))
             throw std::runtime_error("reconstruction probe requires a new output directory");
         jsonFile(m_config.directory/"manifest.json",j); status();
         if(modelConfig)m_modelOutput=std::make_unique<NVEncFilmGrainModelProbe<std::shared_ptr<RGYBitstream>>>(std::move(*modelConfig),m_config.directory/"model-output.json");
+        if(nativeConfig)m_nativeOutput=std::make_unique<NVEncFilmGrainNativeProbe<std::shared_ptr<RGYBitstream>>>(std::move(*nativeConfig),m_config.directory/"native-model-output.json",width,height,depth);
     }
     ~NVEncFilmGrainReconProbe() {
         NVEncCtxAutoLock(context(m_dev->vidCtxLock()));
@@ -114,7 +124,7 @@ public:
         const auto found=m_pending.find(frameId);
         if (found==m_pending.end() || found->second.pts!=pts)
             throw std::runtime_error("reconstruction output identity differs from input");
-        if(m_modelOutput && frameId!=m_received)throw std::runtime_error("model trial reconstruction arrival order changed");
+        if(modelOutputEnabled() && frameId!=m_received)throw std::runtime_error("model trial reconstruction arrival order changed");
         auto& s=found->second;
         NVEncCtxAutoLock(context(m_dev->vidCtxLock()));
         // NVIDIA requires unmapping before CUDA reads reconstructed surfaces.
@@ -125,6 +135,7 @@ public:
         }
         std::vector<uint8_t> host(m_frameBytes);const size_t rowBytes=m_width*(m_depth==10?2:1);
         cudaCheck(cudaMemcpy2D(host.data(),rowBytes,s.device,s.pitch,rowBytes,m_height*3/2,cudaMemcpyDeviceToHost));
+        if(m_nativeOutput)m_nativeOutput->reconstruction(frameId,pts,host.data(),host.size());
         const auto stem="frame-"+std::to_string(frameId);const auto raw=m_config.directory/(stem+".raw");
         { std::ofstream out(raw,std::ios::binary);out.write(reinterpret_cast<const char*>(host.data()),host.size());out.flush();
           if (!out) throw std::runtime_error("reconstruction native write failed"); }
@@ -139,11 +150,12 @@ public:
         if (m_failed || !m_pending.empty() || m_captured!=m_config.frames || m_received!=m_submitted)
             throw std::runtime_error("reconstruction capture did not complete every requested frame");
         if(m_modelOutput)m_modelOutput->finish();
+        if(m_nativeOutput)m_nativeOutput->finish();
         m_finished=true;status();
     }
-    bool modelOutputEnabled() const {return bool(m_modelOutput);}
+    bool modelOutputEnabled() const {return bool(m_modelOutput) || bool(m_nativeOutput);}
     std::vector<std::shared_ptr<RGYBitstream>> filterOutput(std::shared_ptr<RGYBitstream> packet) {
-        if(!m_modelOutput || !packet || packet->frameIdx()<0 || uint64_t(packet->frameIdx())+1!=m_received)
+        if(!modelOutputEnabled() || !packet || packet->frameIdx()<0 || uint64_t(packet->frameIdx())+1!=m_received)
             throw std::runtime_error("model trial packet lacks matching reconstruction");
         // RGYListRef's shared pointers refer back to the pipeline's pool. A
         // pending failure may outlive that pool at teardown. Transfer the POD's
@@ -152,7 +164,8 @@ public:
         auto owned=std::shared_ptr<RGYBitstream>(new RGYBitstream(RGYBitstreamInit()),
             [](RGYBitstream* p){p->clear();delete p;});
         *owned=*packet;*packet=RGYBitstreamInit();
-        auto output=m_modelOutput->receive(owned,owned->data(),owned->size(),uint64_t(owned->frameIdx()),owned->pts());
+        auto output=m_nativeOutput?m_nativeOutput->receive(owned,owned->data(),owned->size(),uint64_t(owned->frameIdx()),owned->pts())
+            :m_modelOutput->receive(owned,owned->data(),owned->size(),uint64_t(owned->frameIdx()),owned->pts());
         std::vector<std::shared_ptr<RGYBitstream>> released;
         for(auto& item:output) {
             // Payload-only copy preserves PTS/DTS, duration, frame index, flags,
@@ -165,6 +178,7 @@ public:
     }
     void fail(const std::string& error) noexcept {
         if(m_modelOutput)m_modelOutput->fail(error);
+        if(m_nativeOutput)m_nativeOutput->fail(error);
         m_failed=true;try { status(error); } catch (...) {}
     }
 };

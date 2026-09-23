@@ -19,3 +19,17 @@ library hashes and finite inputs are in `roadmap-r3-native-engine-20260923`.
 
 Read the [implementation and qualification](../FINDINGS-2026-09-23-NATIVE-ENGINE.md)
 before interpreting its outputs. A passing diagnostic is not deployment approval.
+
+`library.cpp` exposes the eight ABI-1 functions in
+`NVEncFilmGrainNativeEngineAPI.h`. It privately links pinned AOM and the SHA256
+utility from the existing pinned FFmpeg static build; a version script hides
+their symbols. No decoder or allocator object crosses the ABI. Source plane
+paths/hashes and ordinal/PTS are explicit. Actual reconstructed planes arrive
+as read-only native uint16 spans. Separate model queries return pending or ready;
+errors are terminal and never return a replacement model. Copy model/report
+strings before the next corresponding query or close. Contexts are serial;
+separate contexts own independent state. Finish rejects missing source inputs.
+
+The encoder-side `native_model_output` diagnostic uses this ABI only when
+explicitly requested. CPU replay qualifies conversion/identity/readiness before
+the live encoder trials; it does not prove live GPU behaviour by itself.

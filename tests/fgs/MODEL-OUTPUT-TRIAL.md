@@ -43,3 +43,39 @@ they are not a total-process RAM claim. Qualify actual peak memory separately.
 
 The [current qualification findings](FINDINGS-2026-09-23-CONTINUOUS-OUTPUT.md)
 record completed CPU controls and the qualified finite live encoder trial.
+
+## Native fitting extension
+
+An alternative `native_model_output` object connects the bounded reference
+engine to actual reconstruction callbacks. It is mutually exclusive with
+`model_output`, requires 8–16 complete consecutive captures, and is diagnostic
+only. Reference CPU synthesis remains outside ordinary production analysis.
+
+It retains `schema`, `library`, `packets` and the two pending-buffer limits from
+the table above. It rejects supplied `models` and `ready_after`. Instead provide
+an absolute `engine_library` and an `engine` object:
+
+- `schema: 1`; exact `width`, `height`, `depth`, `matrix`, `frame_count`;
+  dimensions divisible by 64, native depth 8/10, matrix 1/9.
+- `shift` 6–9, `grain_shift` 0–3, and 1–32 distinct nondegenerate
+  `training_seeds` for finite template-power calibration.
+- `sources`: one entry per ordinal, containing `ordinal`, matching encoder
+  `pts`, and three `planes` in Y/Cb/Cr order. Each plane has an absolute `path`
+  and exact lowercase `sha256`; files contain unpacked native uint16 codes.
+- Optional `max_native_bytes`, at most 512 MiB, covering eight source/base
+  pairs. This counts those buffers, not all engine/AOM/process memory.
+
+The engine verifies source length/hash before fitting against the live native
+reconstruction. Shapes use the first eight training halves; strengths and seeds
+are selected with the bounded diagnostic policy. Independent halves and sliding
+windows can reject the entire output. Model readiness delays packet release,
+including hidden references; no missing decision becomes an original model.
+Status is written to `native-model-output.json` beside the reconstruction report.
+Source identity/provenance remains the experiment author's responsibility;
+matching a supplied hash is not evidence that a region contains only grain.
+
+This still uses explicitly supplied original-source planes and pre-encode
+retained fractions. It does not establish automatic retention, whole-picture
+eligibility, HDR/perceptual quality or production speed. The private native ABI
+and its initial qualification are tracked by `roadmap-r3-live-fitting-20260923`;
+live GPU qualification must complete before treating this extension as qualified.
