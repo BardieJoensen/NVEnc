@@ -3090,7 +3090,7 @@ protected:
         if (copyStatus != RGY_ERR_NONE) return { copyStatus, nullptr };
         if (nvStatus != NV_ENC_SUCCESS) return { err_to_rgy(nvStatus), nullptr };
         if (m_filmGrainReconProbe) {
-            try { m_filmGrainReconProbe->receive(lockBitstreamData.frameIdx,int64_t(lockBitstreamData.outputTimeStamp)); }
+            try { m_filmGrainReconProbe->receive(lockBitstreamData.frameIdx,int64_t(lockBitstreamData.outputTimeStamp),lockBitstreamData.frameIdxDisplay); }
             catch (const std::exception& e) {
                 m_filmGrainReconProbe->fail(e.what());
                 PrintMes(RGY_LOG_ERROR,_T("Reconstruction output: %s.\n"),char_to_tstring(e.what()).c_str());
