@@ -58,19 +58,22 @@ struct FilmGrainRetainedLumaFit {
     bool valid() const { return reasons == 0 && luma.valid(); }
 };
 
-// Refit the native luma shape for the rounded candidate, without changing its
-// proposed retention fraction. The existing 26-variable minimax solver can
-// solve a 25-variable luma problem by embedding an independent unit-variance
-// dummy predictor. Its exact zero cross terms force a zero driver coefficient.
-// This is only an algebraic embedding, never measured averaged-luma evidence.
-inline FilmGrainRetainedLumaFit film_grain_fit_retained_luma(
-    const std::vector<FilmGrainRetainedLumaMoments>& training,
-    unsigned bitDepth, unsigned sharedArShift, unsigned grainShift,
-    const uint16_t* seeds, size_t seedCount) {
-    FilmGrainRetainedLumaFit out;
-    if (training.empty() || training.size() > 20 || (bitDepth != 8 && bitDepth != 10)
-        || sharedArShift < 6 || sharedArShift > 9 || grainShift > 3
-        || !seeds || !seedCount || seedCount > 512) {
+struct FilmGrainRetainedSpatialFit {
+    bool constructed = false;
+    std::array<uint8_t, 24> coefficients{};
+    FilmGrainBalancedFit balanced{};
+    uint32_t reasons = 0;
+    bool valid() const { return constructed && reasons == 0; }
+};
+
+// Solve a native 25-variable spatial problem by embedding an independent unit
+// dummy predictor in the existing minimax solver. Its exact zero cross terms
+// force a zero driver coefficient. This is algebra, not averaged-Y evidence.
+inline FilmGrainRetainedSpatialFit film_grain_fit_retained_spatial(
+    const std::vector<FilmGrainRetainedLumaMoments>& training, unsigned sharedArShift) {
+    FilmGrainRetainedSpatialFit out;
+    out.coefficients.fill(128);
+    if (training.empty() || training.size() > 20 || sharedArShift < 6 || sharedArShift > 9) {
         out.reasons = FGS_RETAIN_MODEL_INVALID;
         return out;
     }
@@ -98,25 +101,93 @@ inline FilmGrainRetainedLumaFit film_grain_fit_retained_luma(
         out.reasons = FGS_RETAIN_MODEL_FIT;
         return out;
     }
-    FilmGrainJointTemplateParameters p;
-    p.bitDepth = bitDepth; p.lag = 3; p.arShift = sharedArShift;
-    p.grainShift = grainShift; p.lumaActive = p.cbActive = p.crActive = true;
-    p.cb.fill(128); p.cr.fill(128);
     for (unsigned i = 0; i < 24; ++i) {
         const double scaled = std::ldexp(out.balanced.predictors[i], sharedArShift);
         if (!std::isfinite(scaled) || scaled <= -128.5 || scaled >= 127.5) {
             out.reasons = FGS_RETAIN_MODEL_QUANTIZATION;
             return out;
         }
-        p.y[i] = static_cast<uint8_t>(std::lround(scaled) + 128);
+        out.coefficients[i] = static_cast<uint8_t>(std::lround(scaled) + 128);
     }
-    if (!film_grain_ar_synthesis_safe(p.y.data(), p.lag, p.arShift)) {
+    if (!film_grain_ar_synthesis_safe(out.coefficients.data(), 3, sharedArShift)) {
         out.reasons = FGS_RETAIN_MODEL_STABILITY;
         return out;
     }
+    out.constructed = true;
+    return out;
+}
+
+// Refit native luma without changing its proposed retention fraction, then
+// bind its finite template power to the exact constructed parameters.
+inline FilmGrainRetainedLumaFit film_grain_fit_retained_luma(
+    const std::vector<FilmGrainRetainedLumaMoments>& training,
+    unsigned bitDepth, unsigned sharedArShift, unsigned grainShift,
+    const uint16_t* seeds, size_t seedCount) {
+    FilmGrainRetainedLumaFit out;
+    if ((bitDepth != 8 && bitDepth != 10) || grainShift > 3
+        || !seeds || !seedCount || seedCount > 512) {
+        out.reasons = FGS_RETAIN_MODEL_INVALID;
+        return out;
+    }
+    const auto spatial = film_grain_fit_retained_spatial(training, sharedArShift);
+    out.balanced = spatial.balanced; out.reasons = spatial.reasons;
+    if (!spatial.valid()) return out;
+    FilmGrainJointTemplateParameters p;
+    p.bitDepth = bitDepth; p.lag = 3; p.arShift = sharedArShift;
+    p.grainShift = grainShift; p.lumaActive = p.cbActive = p.crActive = true;
+    p.y = spatial.coefficients; p.cb.fill(128); p.cr.fill(128);
     out.luma = film_grain_retained_luma(p, seeds, seedCount);
     if (!out.luma.valid()) out.reasons = FGS_RETAIN_MODEL_LUMA;
     return out;
+}
+
+// Explicit marginal colour fit for a SEPARATELY qualified source-luma policy.
+// Source/base moments must be consistent with an unchanged Y component. That
+// covariance identity is not a whole-picture pixel/range proof: the selector
+// still requires exact native Y counters and final-model decoder-range safety.
+//
+// Fit only the 25 colour variables, with no luma template driver. Do not label
+// an indefinite full missing Y/C target as PSD: it is a different model. Final
+// reconstructed Y/Cb, Y/Cr and spatial Cb/Cr checks must reject lost coupling.
+inline FilmGrainRetainedSpatialFit film_grain_fit_retained_colour_without_luma(
+    const std::vector<FilmGrainJointMoments>& training, unsigned sharedArShift) {
+    FilmGrainRetainedSpatialFit failure;
+    failure.reasons = FGS_RETAIN_MODEL_TARGET;
+    if (training.empty() || training.size() > 20) {
+        failure.reasons = FGS_RETAIN_MODEL_INVALID;
+        return failure;
+    }
+    constexpr size_t N = FGS_JOINT_VARIABLES, L = FGS_RETAINED_LUMA_VARIABLES;
+    std::vector<FilmGrainRetainedLumaMoments> colour;
+    for (const auto& m : training) {
+        if (m.blocks < 16 || m.blocks > 10000000 || m.observations < m.blocks
+            || m.observations > 1000000000) return failure;
+        std::array<double, 4*N*N> evidence{};
+        double scale = 0.0;
+        for (size_t i = 0; i < N; ++i) scale = std::max(scale, m.source[i*N+i]/m.observations);
+        const double tolerance = std::max(1e-12, scale*1e-9);
+        for (size_t i = 0; i < N; ++i) for (size_t j = 0; j < N; ++j) {
+            const double a = m.source[i*N+j]/m.observations;
+            const double b = m.base[i*N+j]/m.observations;
+            const double x = m.sourceBase[i*N+j]/m.observations;
+            evidence[i*2*N+j] = a;
+            evidence[(i+N)*2*N+j+N] = b;
+            evidence[i*2*N+j+N] = evidence[(j+N)*2*N+i] = x;
+            if ((i == 24 && std::abs(x-b) > tolerance)
+                || (j == 24 && std::abs(x-a) > tolerance)) return failure;
+        }
+        if (!joint_model_detail::semidefinite<2*N>(evidence)) return failure;
+        FilmGrainRetainedLumaMoments marginal;
+        marginal.blocks = m.blocks; marginal.observations = m.observations;
+        for (size_t i = 0; i < L; ++i) for (size_t j = 0; j < L; ++j) {
+            const size_t index = (i == 24 ? 25 : i)*N + (j == 24 ? 25 : j);
+            marginal.source[i*L+j] = m.source[index];
+            marginal.base[i*L+j] = m.base[index];
+            marginal.sourceBase[i*L+j] = m.sourceBase[index];
+        }
+        colour.push_back(marginal);
+    }
+    return film_grain_fit_retained_spatial(colour, sharedArShift);
 }
 
 struct FilmGrainRetainedChroma {
