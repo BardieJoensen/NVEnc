@@ -28,6 +28,8 @@ enum FilmGrainRetentionCheck : uint32_t {
     FGS_RETAIN_ALL_CHECKS = (1u << 8) - 1
 };
 enum FilmGrainRetentionPopulationCheck : uint32_t {
+    // Includes the actual final decoder clamp, even for a zero-strength curve.
+    // Legal input code values alone do not prove this check.
     FGS_RETAIN_NATIVE_RANGE = 1u << 0,
     FGS_RETAIN_SOURCE_POPULATION = 1u << 1,
     FGS_RETAIN_RECONSTRUCTED_POPULATION = 1u << 2,
@@ -88,7 +90,8 @@ enum class FilmGrainRetentionPopulation : unsigned {
 // evidence. Rejected tiles and partial borders must be counted as well.
 //
 // Revision 1 has no qualified model for Quiet/Rejected/Border populations.
-// Such cells can pass only with exactly unchanged native base and zero grain.
+// Such cells can pass only with exactly unchanged native base, zero grain and
+// measured final decoder-range safety. An active zero curve can still clamp.
 // Future population-specific acceptance requires separate qualification; it
 // must not be enabled by setting these check bits on a rejected source tile.
 struct FilmGrainRetentionPopulationCell {
@@ -129,8 +132,15 @@ inline FilmGrainRetentionCoverage film_grain_retention_coverage(
         result.samples += cell.samples;
         result.populationSamples[population] += cell.samples;
         if (cell.scaling == 0 && cell.changedSamples == 0) {
-            result.exactZeroSamples += cell.samples;
-            continue; // Exact source/no synthesis is a proof, even without grain evidence.
+            // Zero strength is not an absent grain component: AV1 can still
+            // clamp an active component to restricted Y/C ranges. Require
+            // native range evidence for the actual model and population.
+            if (!(cell.checks.measured & FGS_RETAIN_NATIVE_RANGE))
+                result.reasons |= FGS_RETAIN_UNMEASURED;
+            else if (!(cell.checks.passed & FGS_RETAIN_NATIVE_RANGE))
+                result.reasons |= FGS_RETAIN_FAILED_CHECK;
+            else result.exactZeroSamples += cell.samples;
+            continue; // No grain classification is needed once this is proven.
         }
         const bool supported = cell.population == FilmGrainRetentionPopulation::Grain
             && cell.trainBlocks >= 16 && cell.checkBlocks >= 16
