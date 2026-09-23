@@ -7,7 +7,7 @@ int main() {
     const auto c=NVEncFilmGrainReconConfig::parse(base);
     assert(c.requireLayout(3840,2160,10)==24883200);
     assert(c.requireLayout(1024,512,8)==786432);
-    for (unsigned failure=0;failure<11;++failure) {
+    for (unsigned failure=0;failure<14;++failure) {
         auto j=base;
         if(failure==0)j["frames"]=json::array();
         if(failure==1)j["frames"]={1,1};
@@ -20,6 +20,9 @@ int main() {
         if(failure==8)j["output_directory"]="relative";
         if(failure==9)j["schema"]=2;
         if(failure==10)j["frames"]=std::vector<int>(17,1);
+        if(failure==11)j["max_device_bytes"]=-1;
+        if(failure==12)j["max_device_bytes"]=uint64_t(2147483649);
+        if(failure==13)j["max_device_bytes"]=uint64_t(0);
         bool threw=false;try{NVEncFilmGrainReconConfig::parse(j);}catch(...){threw=true;}assert(threw);
     }
     for (unsigned failure=0;failure<5;++failure) {

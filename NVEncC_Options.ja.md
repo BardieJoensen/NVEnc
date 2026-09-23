@@ -1005,6 +1005,11 @@ reconstructed-output capability and no parallel encoding. The JSON manifest uses
 `schema: 1`, 1–16 unique encoded input ordinals in `frames`, an absolute **new**
 `output_directory`, and `max_output_bytes` covering all requested native surfaces
 plus metadata (maximum 512 MiB). Dimensions are limited to 4096×2160.
+Every input needs a distinct live reconstruction surface, including unrequested
+frames, because NVENC reorders these buffers. Only requested pictures are copied
+to host/storage. `max_device_bytes` bounds concurrent pitched surfaces (default
+512 MiB, maximum 2048 MiB); UHD with lookahead can require a larger explicit
+budget. Allocation/budget failures stop the diagnostic.
 
 Each selected frame writes packed NV12/P010 and JSON identity/layout metadata.
 Capture matches the submitted ordinal and timestamp to NVENC output, unmaps
