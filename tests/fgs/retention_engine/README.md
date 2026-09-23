@@ -3,7 +3,10 @@
 This development-only CPU engine fits a frozen shape from the first eight native
 source/reconstructed-base pairs, calibrates bounded strengths/seeds using pinned
 AOM synthesis, and checks every picture and sliding eight-picture window. It
-accepts 8–16 tile-aligned progressive 4:2:0 pictures. It does not choose pre-encode
+accepts 8–16 progressive 4:2:0 pictures with complete even dimensions up to
+4096×2160 and both spatial folds populated. Disjoint even rectangles include
+every native pixel in the means; moments use actual support counts. Aligned
+64-pixel dimensions preserve their earlier geometry. It does not choose pre-encode
 retention fractions or grant source-population/perceptual approval.
 
 `reference.cpp` is a manual JSON adapter. Its optional IVF path also exercises

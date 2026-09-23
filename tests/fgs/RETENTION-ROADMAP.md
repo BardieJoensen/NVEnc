@@ -136,11 +136,19 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [complete native geometry](FINDINGS-2026-09-23-NATIVE-GEOMETRY.md) completes
+D61. Full 1080p/UHD fitting and independent source/reconstruction/decoder checks
+pass without cropping. Actual sample counts replace tile-count weighting for
+ragged dimensions. Ordinary output and aligned model controls remain exact.
+D62 next implements explicit source segments alongside modeled output, followed
+by automatic bounded source/fraction decisions. R1 population rules and R3–R8
+status are unchanged; this does not admit previously unsupported regions.
+
 The [per-picture candidate path](FINDINGS-2026-09-23-FRAME-FRACTIONS.md)
 completes D60. Changing fractions, immutable source/model association and source
 transitions pass on both native depths; ordinary SDR/HDR outputs are exact.
-The native fitter still needs complete non-tile-aligned geometry before whole
-1080p/2160p tests, followed by actual automatic source/fraction evidence. R3–R8
+Complete non-tile-aligned geometry and 1080p/2160p tests are now qualified in
+D61; actual automatic source/fraction evidence remains open. R3–R8
 remain open; explicit schedules do not grant source admission.
 
 The [independent temporal selector](FINDINGS-2026-09-23-INDEPENDENT-WINDOW.md)
