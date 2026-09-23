@@ -6790,6 +6790,17 @@ RGY_ERR NVEncCore::Encode() {
         it->reset();
     }
     m_pipelineTasks.clear();
+    // Some pipeline drain paths finish NVENC while releasing tasks rather than
+    // sending an explicit null frame. Check the requested capture contract at
+    // the common completion boundary too, so missing frames cannot report success.
+    if (m_filmGrainReconProbe) {
+        try { m_filmGrainReconProbe->finish(); }
+        catch (const std::exception& e) {
+            m_filmGrainReconProbe->fail(e.what());
+            PrintMes(RGY_LOG_ERROR,_T("Reconstruction completion: %s.\n"),char_to_tstring(e.what()).c_str());
+            if (encodeCompleted) err = RGY_ERR_INVALID_DATA_TYPE;
+        }
+    }
     PrintMes(RGY_LOG_DEBUG, _T("Waiting for writer to finish...\n"));
     m_pFileWriter->WaitFin();
     PrintMes(RGY_LOG_DEBUG, _T("Close reader...\n"));
