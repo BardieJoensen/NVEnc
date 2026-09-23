@@ -207,6 +207,12 @@ LD_LIBRARY_PATH=/usr/local/lib vspipe --version
 </details>
 
 ### 7. Build NVEncC
+
+Meson builds require Meson 1.4 or newer and CUDA 10.2 or newer. Older Meson
+versions can silently reuse CUDA objects after included headers change. Use a
+current Meson in an isolated build environment if the distribution package is
+older. Reconfigure and rebuild existing build directories after upgrading.
+
 ```Shell
 git clone https://github.com/rigaya/NVEnc --recursive
 cd NVEnc
@@ -597,6 +603,12 @@ cd ../../../
 </details>
 
 ### 7. Build NVEncC
+
+Meson builds require Meson 1.4 or newer and CUDA 10.2 or newer. Older Meson
+versions can silently reuse CUDA objects after included headers change. Use a
+current Meson in an isolated build environment if the distribution package is
+older. Reconfigure and rebuild existing build directories after upgrading.
+
 ```Shell
 git clone https://github.com/rigaya/NVEnc --recursive
 cd NVEnc
