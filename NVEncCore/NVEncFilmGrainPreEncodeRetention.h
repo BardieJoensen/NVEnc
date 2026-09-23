@@ -44,4 +44,15 @@ inline nlohmann::json preEncodeRetentionEvidence(const PreEncodeRetentionDecisio
         {"preserved_components",d.preservedComponents},{"whole_source",d.wholeSource()},
         {"grain_model","off; candidate measurement only"}};
 }
+// This finite fitter currently supports all-partial candidates only. A model
+// failure cannot retroactively restore source pixels that NVENC has encoded.
+// Reject before fitting if ordinary guards preserved any component; the manual
+// controller must encode a new whole-source output or keep the original file.
+inline void requirePartialRetentionModel(const PreEncodeRetentionDecision& d,
+    const std::array<float,3>& expected) {
+    if(d.requested!=expected || d.effective!=expected || d.reasonMask || d.preservedComponents)
+        throw std::runtime_error("native candidate model cannot override source preservation");
+    for(float f:expected)if(!std::isfinite(f)||f<0||f>=1)
+        throw std::runtime_error("native candidate model requires all-partial fractions");
+}
 }
