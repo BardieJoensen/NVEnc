@@ -13,7 +13,9 @@ int main() {
         const unsigned w=config.engine.at("width"),h=config.engine.at("height"),depth=config.engine.at("depth");
         const auto report=std::filesystem::u8path(input.at("report").get<std::string>());
         require(report.is_absolute() && !std::filesystem::exists(report),"new absolute report required");
-        NVEncFilmGrainNativeProbe<uint64_t> probe(config,report,w,h,depth);
+        std::optional<std::array<float,3>> retention;
+        if(input.contains("pre_encode_retention"))retention=input.at("pre_encode_retention").get<std::array<float,3>>();
+        NVEncFilmGrainNativeProbe<uint64_t> probe(config,report,w,h,depth,retention);
         const auto path=std::filesystem::u8path(input.at("ivf").get<std::string>());const auto size=std::filesystem::file_size(path);
         require(size>=32 && size<=256u*1024*1024,"IVF byte budget");std::vector<uint8_t> original(size);std::ifstream file(path,std::ios::binary);file.read(reinterpret_cast<char*>(original.data()),size);require(bool(file),"IVF read failed");
         require(std::equal(original.begin(),original.begin()+4,"DKIF") && little(original.data()+4,2)==0 && little(original.data()+6,2)==32
@@ -33,7 +35,15 @@ int main() {
             std::shared_ptr<fgsdiagnostic::NativeSourceFrame> source;
             std::array<std::vector<uint16_t>,3> saved;
             if(config.memorySource() && input.contains("source_planes")) {
-                source=std::make_shared<fgsdiagnostic::NativeSourceFrame>(sourceMemory,i,int(i),pts,1,24,w,h,depth);
+                std::optional<fgsdiagnostic::PreEncodeRetentionDecision> decision;
+                if(input.contains("retention_decisions")) {
+                    const auto& d=input.at("retention_decisions").at(i);decision.emplace();
+                    decision->requested=d.at("requested").get<std::array<float,3>>();
+                    decision->effective=d.at("effective").get<std::array<float,3>>();
+                    decision->reasonMask=d.at("reason_mask").get<uint32_t>();
+                    decision->preservedComponents=d.at("preserved_components").get<uint32_t>();
+                }
+                source=std::make_shared<fgsdiagnostic::NativeSourceFrame>(sourceMemory,i,int(i),pts,1,24,w,h,depth,decision);
                 for(unsigned c=0;c<3;++c) {
                     const auto path=std::filesystem::u8path(input.at("source_planes").at(i).at(c).get<std::string>());
                     auto& values=source->planes[c];require(std::filesystem::file_size(path)==values.size()*2,"memory source plane bytes differ");

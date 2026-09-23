@@ -111,8 +111,8 @@ eligibility remain separate work.
 The outer manifest can supply `pre_encode_retention: [Y, Cb, Cr]` with three
 finite fractions in [0,1], stored as float32. This requires `capture_source`
 and `denoiser=bilateral`, with every ordinal from zero through N−1 (1–16 frames). The encode must end at
-exactly N; extra or missing frames reject the trial. It cannot be combined
-with either model-output mode or an ordinary grain-table export.
+exactly N; extra or missing frames reject the trial. Precomputed model output
+and an ordinary grain-table export cannot be combined with this mode.
 
 The filter keeps an untouched copy of the denoised base before ordinary
 retention, recovery, source caps and compensation. Each component is blended
@@ -128,3 +128,19 @@ and preserved-component mask. The optional joint probe with `template_seeds`
 also records this decision beside independently captured pristine/final bases.
 Ordinary mode allocates no candidate buffers. Automatic fraction selection,
 source eligibility and approved replacement models remain separate work.
+
+The `native_model_output` extension can fit actual all-partial candidates when
+`engine.source_mode` is `memory` and every requested fraction is less than one.
+The filter first submits the measured base with grain off. Its immutable decision
+must match the requested fractions exactly, with no fallback/support reason and
+no preserved component, before the native engine sees that reconstruction.
+Missing, changed or unexpected decisions reject the complete trial. The model
+writer then emits the fitted complete model bound to that exact packet/base.
+
+If any source component was preserved, this fitting path rejects instead of
+adding grain over it. Component-preserving models are not supported by this
+extension. A terminal whole-source encode uses `[1,1,1]` without model output;
+any late partial-candidate failure requires a fresh source encode or keeping the
+original file. A failed partial output is never relabeled as a source fallback.
+Successful fitting still does not establish source population eligibility,
+perceptual quality or automatic fraction selection.

@@ -89,7 +89,8 @@ public:
             throw std::runtime_error("reconstruction probe requires a new output directory");
         jsonFile(m_config.directory/"manifest.json",j); status();
         if(modelConfig)m_modelOutput=std::make_unique<NVEncFilmGrainModelProbe<std::shared_ptr<RGYBitstream>>>(std::move(*modelConfig),m_config.directory/"model-output.json");
-        if(nativeConfig)m_nativeOutput=std::make_unique<NVEncFilmGrainNativeProbe<std::shared_ptr<RGYBitstream>>>(std::move(*nativeConfig),m_config.directory/"native-model-output.json",width,height,depth);
+        if(nativeConfig)m_nativeOutput=std::make_unique<NVEncFilmGrainNativeProbe<std::shared_ptr<RGYBitstream>>>(std::move(*nativeConfig),m_config.directory/"native-model-output.json",width,height,depth,
+            m_config.preEncodeRetention?std::make_optional(m_config.retention):std::nullopt);
     }
     ~NVEncFilmGrainReconProbe() {
         NVEncCtxAutoLock(context(m_dev->vidCtxLock()));

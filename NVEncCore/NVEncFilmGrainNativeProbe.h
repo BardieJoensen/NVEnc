@@ -131,6 +131,7 @@ template<class Token> class NVEncFilmGrainNativeProbe {
     Buffer m_buffer;
     std::filesystem::path m_report;
     unsigned m_width,m_height,m_depth;
+    std::optional<std::array<float,3>> m_retention;
     uint64_t m_reconstructed=0,m_received=0;
     bool m_failed=false,m_finished=false;
     std::string m_error;
@@ -139,16 +140,23 @@ template<class Token> class NVEncFilmGrainNativeProbe {
         report["complete"]=m_finished && !m_failed && report.at("complete").template get<bool>() && engine.at("complete").template get<bool>();
         report["failed"]=m_failed || report.at("failed").template get<bool>() || engine.at("failed").template get<bool>();
         report["trial_error"]=m_error;report["reconstructed"]=m_reconstructed;
+        if(m_retention)report["pre_encode_retention"]=*m_retention;
         auto temp=m_report;temp+=".tmp";
         {std::ofstream out(temp);out<<report.dump(2)<<'\n';out.flush();if(!out)throw std::runtime_error("native model report write failed");}
         std::filesystem::rename(temp,m_report);
     }
 public:
     NVEncFilmGrainNativeProbe(NVEncFilmGrainNativeConfig config,const std::filesystem::path& report,
-        unsigned width,unsigned height,unsigned depth)
+        unsigned width,unsigned height,unsigned depth,std::optional<std::array<float,3>> retention={})
         :m_config(std::move(config)),m_engine(m_config.engineLibrary,m_config.engine),
         m_buffer(m_config.packets.library,m_config.packets.packets.size(),32,m_config.packets.maxPackets,m_config.packets.maxBytes),
-        m_report(report),m_width(width),m_height(height),m_depth(depth) {m_config.requireLayout(width,height,depth);status();}
+        m_report(report),m_width(width),m_height(height),m_depth(depth),m_retention(std::move(retention)) {
+        m_config.requireLayout(width,height,depth);
+        if(m_retention && !m_config.memorySource())throw std::runtime_error("native retention requires memory sources");
+        if(m_retention)for(float f:*m_retention)if(!std::isfinite(f)||f<0||f>=1)
+            throw std::runtime_error("native retention requires finite all-partial fractions");
+        status();
+    }
     void reconstruction(uint64_t ordinal,int64_t pts,const uint8_t* raw,size_t bytes,
         const fgsdiagnostic::NativeSourceFrame* source=nullptr) {
         try {
@@ -171,6 +179,8 @@ public:
             if(m_config.memorySource()) {
                 if(!source)throw std::runtime_error("native model requires original memory source");
                 source->requireIdentity(ordinal,source->sourceId,pts,source->timebaseNum,source->timebaseDen,m_width,m_height,m_depth);
+                if(bool(source->retention)!=bool(m_retention))throw std::runtime_error("native model retention decision is missing or unexpected");
+                if(m_retention)fgsdiagnostic::requirePartialRetentionModel(*source->retention,*m_retention);
                 std::array<FgsNativePlane,3> original{};
                 for(unsigned c=0;c<3;++c)original[c]={source->planes[c].data(),source->planes[c].size(),c?m_width/2:m_width};
                 m_engine.pushPair(ordinal,pts,original.data(),planes.data());

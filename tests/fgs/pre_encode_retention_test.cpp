@@ -23,5 +23,19 @@ int main() {
     const auto source=preEncodeRetentionDecision({{1,1,1}},true,true,false,0,false,7);
     assert(source.wholeSource() && source.preservedComponents==7);
     assert(preEncodeRetentionEvidence(source).at("grain_model")=="off; candidate measurement only");
+    const std::array<float,3> requested{{.1f,.25f,.75f}};
+    auto valid=preEncodeRetentionDecision(requested,true,true,false,0,false,7);
+    requirePartialRetentionModel(valid,requested);
+    for(unsigned mutation=0;mutation<6;++mutation) {
+        auto d=valid;auto expected=requested;bool rejected=false;
+        if(mutation==0)d.effective[1]=1;
+        if(mutation==1)d.reasonMask=1;
+        if(mutation==2)d.preservedComponents=2;
+        if(mutation==3)d.requested[1]=.5;
+        if(mutation==4)expected[1]=.5;
+        if(mutation==5)d.effective=d.requested=expected={{1,1,1}};
+        try{requirePartialRetentionModel(d,expected);}catch(...){rejected=true;}
+        assert(rejected);++cases;
+    }
     std::cout<<cases+1<<" pre-encode preservation, guard and invalid-candidate controls passed\n";
 }

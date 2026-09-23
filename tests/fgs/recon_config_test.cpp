@@ -11,6 +11,15 @@ int main() {
     const auto s=NVEncFilmGrainReconConfig::parse(source);assert(s.captureSource);s.requireLayout(3840,2160,10);
     auto retention=source;retention["frames"]={0,1,2};retention["pre_encode_retention"]={0,.25,1};
     const auto candidate=NVEncFilmGrainReconConfig::parse(retention);assert(candidate.preEncodeRetention && candidate.retention[1]==.25f);
+    auto native=retention;native["pre_encode_retention"]={0,.25,.75};native["native_model_output"]={{"engine",{{"source_mode","memory"}}}};
+    assert(NVEncFilmGrainReconConfig::parse(native).preEncodeRetention);
+    for(unsigned failure=0;failure<3;++failure) {
+        auto bad=native;bool rejected=false;
+        if(failure==0)bad["native_model_output"]["engine"]["source_mode"]="files";
+        if(failure==1)bad["pre_encode_retention"][1]=1;
+        if(failure==2)bad["pre_encode_retention"][0]=true;
+        try{NVEncFilmGrainReconConfig::parse(bad);}catch(...){rejected=true;}assert(rejected);
+    }
     for(unsigned failure=0;failure<11;++failure) {
         auto bad=retention;bool rejected=false;
         if(failure==0)bad["capture_source"]=false;

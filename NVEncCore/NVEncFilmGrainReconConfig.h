@@ -57,16 +57,21 @@ struct NVEncFilmGrainReconConfig {
             if(!c.captureSource || !fractions.is_array() || fractions.size()!=3
                 || *c.frames.begin()!=0 || *c.frames.rbegin()+1!=c.frames.size())
                 throw std::runtime_error("pre-encode retention requires three fractions and consecutive source captures from zero");
-            // Candidate measurements have no approved replacement model yet.
-            // Never attach the ordinary model to a changed base or let a later
-            // model override undo a source-preserving decision.
-            if(j.contains("model_output") || j.contains("native_model_output"))
-                throw std::runtime_error("pre-encode candidate capture cannot be combined with model output");
+            // Ordinary/precomputed models cannot describe an independently
+            // changed base. Native fitting must consume the matching original.
+            if(j.contains("model_output"))
+                throw std::runtime_error("pre-encode candidate cannot be combined with precomputed model output");
             for(unsigned p=0;p<3;++p) {
                 if(!fractions[p].is_number())throw std::runtime_error("retention fractions must be numeric");
                 const double f=fractions[p].get<double>();
                 if(!std::isfinite(f)||f<0||f>1)throw std::runtime_error("retention fractions must be finite and in [0,1]");
                 c.retention[p]=float(f);
+            }
+            if(j.contains("native_model_output")) {
+                if(j.at("native_model_output").at("engine").at("source_mode")!="memory")
+                    throw std::runtime_error("pre-encode model fitting requires original memory sources");
+                for(float f:c.retention)if(f>=1)
+                    throw std::runtime_error("pre-encode model fitting requires all-partial fractions");
             }
             c.preEncodeRetention=true;
         }
