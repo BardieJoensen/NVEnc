@@ -999,6 +999,8 @@ AV1パケットのフィルムグレインseedを補正する実験用オプシ�
 
 ### --film-grain-recon-probe &lt;manifest&gt;
 
+The finite `pre_encode_retention: [Y,Cb,Cr]` candidate experiment requires consecutive source captures and emits grain-off base measurements. It preserves ordinary source fallbacks and cannot be combined with model output or table export. See the [candidate contract](tests/fgs/MODEL-OUTPUT-TRIAL.md#finite-pre-encode-candidates).
+
 `--av1-film-grain` と `capture_source: true` を指定すると、FGS 入力の原画像をフレーム識別情報付きで保持します。`max_source_bytes` は保持メモリを制限し、`max_output_bytes` は原画像の出力も含みます。ABI 2 の `engine.source_mode: "memory"` で直接モデルへ渡せます。[仕様](tests/fgs/MODEL-OUTPUT-TRIAL.md#direct-original-source-transport)を参照してください。
 
 Explicit development-only NVENC reconstructed-picture capture. Disabled by default.

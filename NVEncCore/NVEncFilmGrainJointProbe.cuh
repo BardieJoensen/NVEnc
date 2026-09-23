@@ -237,7 +237,7 @@ public:
         if(!m_templateSeeds.empty())m_captureIdentity.emplace(source.frameId,std::make_pair(source.timestamp,source.epoch));
     }
     void final_model(FilmGrainCollectFrame source,FilmGrainCollectFrame base,
-        const NV_ENC_FILM_GRAIN_PARAMS_AV1& params,cudaStream_t stream) {
+        const NV_ENC_FILM_GRAIN_PARAMS_AV1& params,cudaStream_t stream,const Json& retention=Json()) {
         if(m_templateSeeds.empty()||!m_requested.count(source.frameId))return;
         configure(source);source.epoch=base.epoch=m_epoch;
         const auto identity=m_captureIdentity.find(source.frameId);
@@ -252,6 +252,7 @@ public:
             {"timebase",{m_timebaseNum,m_timebaseDen}},{"model",model},
             {"base",dump_frame(base,prefix+"-encoder-base")},
             {"base_stage","final native input to NVENC; after source retention/recovery, before lossy compression"}};
+        if(!retention.is_null())record["pre_encode_retention"]=retention;
         std::array<FilmGrainNativeComponentCounts,3> counts{};
         check(cudaMemcpyAsync(counts.data(),m_sourceCounts,sizeof(counts),cudaMemcpyDeviceToHost,m_stream));
         check(cudaStreamSynchronize(m_stream));
