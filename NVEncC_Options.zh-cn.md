@@ -893,7 +893,7 @@ editing the source. Without this option, scene detection is unchanged.
 
 ### --film-grain-recon-probe &lt;manifest&gt;
 
-结合 `--film-grain auto` 设置 `capture_source: true` 可保留 FGS 输入原始图像并校验帧标识。`max_source_bytes` 限制保留内存，`max_output_bytes` 也包含原始图像输出。ABI 2 的 `engine.source_mode: "memory"` 可将原始平面直接传入模型。详见[接口说明](tests/fgs/MODEL-OUTPUT-TRIAL.md#direct-original-source-transport)。
+结合 `--av1-film-grain` 设置 `capture_source: true` 可保留 FGS 输入原始图像并校验帧标识。`max_source_bytes` 限制保留内存，`max_output_bytes` 也包含原始图像输出。ABI 2 的 `engine.source_mode: "memory"` 可将原始平面直接传入模型。详见[接口说明](tests/fgs/MODEL-OUTPUT-TRIAL.md#direct-original-source-transport)。
 
 Explicit development-only NVENC reconstructed-picture capture. Disabled by default.
 Requires synchronous Linux AV1 NVENC, progressive NV12/P010, API 12.1 or newer,
