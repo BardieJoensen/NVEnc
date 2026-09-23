@@ -136,14 +136,14 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
-The [streaming writer and packet-identity prerequisites](FINDINGS-2026-09-23-PACKET-IDENTITY.md)
-now preserve seven qualified outputs and check 603 coded/displayed bindings.
-Bounded replay demonstrates the required delay until future-picture reconstruction
-is available. Actual callback order, output FIFO integration and automatic
-selection remain open. The next probe build records receive order explicitly.
-D42 is prepared but has not encoded; an external node restart interrupted its
-drain and its prior pause no longer exists. Continue manually after checking
-runtime ownership. Full CPU: 214 Python tests in 30 suites and 37 C++ programs, then targeted identity checks.
+The [continuous output and bounded integration](FINDINGS-2026-09-23-CONTINUOUS-OUTPUT.md)
+completes D42's changing-picture trial and D45's CPU FIFO work. All32 selected
+pictures match actual AV1 output in independent decoders. Recorded NVENC receive
+order now validates the reconstruction association; the FIFO also waits for
+model readiness. Its finite precomputed-model encoder hook is implemented but
+still needs an actual build/GPU qualification. Automatic selection and new real
+population admission remain open. Continue live output qualification and then
+R3–R8; the diagnostic pause is released and nothing restarts automatically.
 
 The [10-bit and metric calibration follow-up](FINDINGS-2026-09-23-GRAIN-METRICS.md)
 completes D39–D41. Three constructive proposals now pass the original checks and

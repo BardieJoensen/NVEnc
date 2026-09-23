@@ -2642,6 +2642,10 @@ RGY_ERR NVEncCore::SetInputParam(InEncodeVideoParam *inputParam) {
             PrintMes(RGY_LOG_ERROR, _T("Reconstruction probe: %s.\n"),char_to_tstring(e.what()).c_str());
             return RGY_ERR_INVALID_PARAM;
         }
+        if (m_filmGrainReconProbe->modelOutputEnabled() && m_filmGrainSeedGuard) {
+            PrintMes(RGY_LOG_ERROR,_T("The complete-model trial cannot be combined with seed correction.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
         m_stCreateEncodeParams.enableReconFrameOutput = 1;
     }
     m_stCreateEncodeParams.enableEncodeAsync   = ENABLE_ASYNC != 0;

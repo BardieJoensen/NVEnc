@@ -31,7 +31,7 @@ struct Context {
     uint64_t limit=0,packets=0,coded=0,shown=0,modified=0,materialized=0;
     bool failed=false,finished=false;std::string error,report;
     std::vector<uint8_t> output;
-    Json lastHeaders=Json::array();int64_t lastPts=0;
+    Json lastHeaders=Json::array();int64_t lastPts=0;std::string lastHash;
     bool lastPacketComplete=false;
     ~Context(){ff_cbs_fragment_free(&fragment);ff_cbs_close(&reader);ff_cbs_close(&writer);av_packet_free(&packet);}
     void initialize(uint64_t maxPackets) {
@@ -55,6 +55,7 @@ struct Context {
     int process(const uint8_t* data,size_t bytes,int64_t pts) {
         ready();require(data && bytes && bytes<=maxPacketBytes && packets<limit,"input packet/count limit");
         output.clear();lastHeaders=Json::array();lastPts=pts;lastPacketComplete=false;
+        lastHash=hash(data,bytes);
         require(av_new_packet(packet,int(bytes))>=0,"packet allocation failed");
         memcpy(packet->data,data,bytes);packet->pts=packet->dts=pts;
         require(ff_cbs_read_packet(reader,&fragment,packet)>=0,"CBS parse failed");
@@ -67,7 +68,7 @@ struct Context {
             if(type==AV1_OBU_SEQUENCE_HEADER)require(++sequences==1 && !pictureSeen,"mid-packet sequence transition unqualified");
             if(type==AV1_OBU_FRAME_HEADER || type==AV1_OBU_FRAME)pictureSeen=true;
         }
-        bool packetChanged=false;std::string packetHash;
+        bool packetChanged=false;
         for(int i=0;i<fragment.nb_units;++i) {
             auto& unit=fragment.units[i];
             require(unit.type!=AV1_OBU_REDUNDANT_FRAME_HEADER,"redundant headers unqualified");
@@ -98,8 +99,7 @@ struct Context {
                     require(state->sequence_header && state->sequence_header->film_grain_params_present && (h->show_frame || h->showable_frame),"sequence/frame cannot carry grain");
                     const auto& colour=state->sequence_header->color_config;
                     require(!colour.mono_chrome && colour.subsampling_x && colour.subsampling_y && state->bit_depth<=10,"unsupported grain layout");
-                    if(packetHash.empty())packetHash=hash(data,bytes);
-                    require(packetHash==expected.packetHash && pts==expected.pts && bool(input.apply_grain)==expected.beforeApply && (!input.apply_grain || input.grain_seed==expected.beforeSeed) && h->order_hint==expected.orderHint,"requested picture identity mismatch");
+                    require(lastHash==expected.packetHash && pts==expected.pts && bool(input.apply_grain)==expected.beforeApply && (!input.apply_grain || input.grain_seed==expected.beforeSeed) && h->order_hint==expected.orderHint,"requested picture identity mismatch");
                     result=expected.grain;h->film_grain=result;packetChanged=true;++modified;requests.erase(found);
                 }
                 ++coded;
@@ -122,7 +122,7 @@ struct Context {
     void finish(){require(!failed,"stream failed");if(finished)return;ready();require(packets && coded && requests.empty(),"empty coded stream or missing requested picture");finished=true;}
     const char* describe() {
         report=Json{{"complete",finished && !failed},{"failed",failed},{"packets",packets},{"coded_pictures",coded},{"show_existing",shown},{"modified_models",modified},{"materialized_original_models",materialized},{"pending",requests.size()},
-            {"last_packet_complete",lastPacketComplete && !failed},{"last_pts",lastPts},{"last_headers",lastHeaders}}.dump();return report.c_str();
+            {"last_packet_complete",lastPacketComplete && !failed},{"last_pts",lastPts},{"last_packet_sha256",lastHash},{"last_headers",lastHeaders}}.dump();return report.c_str();
     }
     int fail(const std::exception& e) noexcept {
         failed=true;

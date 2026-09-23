@@ -1014,9 +1014,18 @@ budget. Allocation/budget failures stop the diagnostic.
 Each selected frame writes packed NV12/P010 and JSON identity/layout metadata.
 Capture matches the submitted ordinal and timestamp to NVENC output, unmaps
 before reading the reconstruction, and fails if a requested frame is missing.
-This probe does not change grain parameters or quality decisions. It is not a
+Capture alone does not change grain parameters or quality decisions. It is not a
 routine validation option; decoded-picture equivalence must qualify each new
 input/configuration before the captured surfaces are used as model evidence.
+
+For a finite complete-model output trial, the manifest may explicitly include
+`model_output`; see [the trial contract](tests/fgs/MODEL-OUTPUT-TRIAL.md).
+That extension changes grain headers using supplied models and a bounded packet
+FIFO. It requires all 1–16 input pictures, exact original packet hashes/encoder
+PTS and an isolated model library. It does not enable automatic retention.
+Missing decisions, mismatched packets or incomplete output fail the encode.
+The ordinary option-off path and capture manifests without this extension do
+not load that library or buffer model output.
 
 ### --film-grain-joint-probe &lt;manifest&gt;
 Development diagnostic for `--av1-film-grain denoiser=bilateral`; disabled by default.

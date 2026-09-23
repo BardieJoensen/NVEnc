@@ -19,6 +19,8 @@ int fgs_av1_model_process(void*, const uint8_t* input, size_t bytes, int64_t pts
 // calls are allowed after finish. A repeated successful finish is harmless.
 int fgs_av1_model_finish(void*);
 const char* fgs_av1_model_error(void*);
+// A completed packet report includes original packet SHA-256/PTS and all coded
+// and show-existing identities. Read only when last_packet_complete is true.
 const char* fgs_av1_model_report(void*);
 void fgs_av1_model_close(void*);
 #ifdef __cplusplus

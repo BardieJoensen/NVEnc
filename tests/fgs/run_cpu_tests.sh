@@ -96,6 +96,9 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/scene_schedule_test.cpp -o "$OUT/fgs_scene_schedule_test"
 "$OUT/fgs_scene_schedule_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore \
+    tests/fgs/model_probe_config_test.cpp -ldl -o "$OUT/fgs_model_probe_config_test"
+"$OUT/fgs_model_probe_config_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/training_history_test.cpp -o "$OUT/fgs_training_history_test"
 "$OUT/fgs_training_history_test"
 "$OUT/fgs_solver_test"
