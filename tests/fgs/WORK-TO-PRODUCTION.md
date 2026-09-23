@@ -1,8 +1,8 @@
 # FGS encoder and library repair: current work and handoff
 
-**Active continuous roadmap work:** [strict full-picture candidate policy](FINDINGS-2026-09-23-STRICT-POLICY.md) completes D56. Actual 8-bit output and both constructed clean-base controls pass original full spatial checks. Actual 10-bit output correctly rejects a colour-mean shift; D57 adds independent training/check mean evidence before the bounded fraction integration. R3–R8 remain open; continue without stopping at diagnostic checkpoints.
+**Active continuous roadmap work:** [independent native means and bounded colour trials](FINDINGS-2026-09-23-INDEPENDENT-MEANS.md) complete D57/D58. Training/check means agree independently; strict 8-bit output passes, while the constructed 10-bit case rejects every tested colour fraction and preserves source fallback. D59 applies the same disjoint evidence to the previously calibrated frame/window policy, removing its global-mean selection leakage. Continue bounded automatic source/fraction integration and R3–R8 without stopping at these diagnostic checkpoints.
 
-Latest GPU-qualified diagnostic is `build-36897c38/nvencc`, SHA `fb07687265c3bc7d4c7ae079bd6f7a46664c716eac5f7ba73581d04a1c52d140`. All owned pauses are released with current Tdarr limits preserved. CPU: 214 Python tests in 30 suites plus 46 C++ programs. Legacy output is byte-compatible; strict failures remain explicit. Production stays ordinary `cb903a17`, retention/FEL off; reserved footage is unopened. Local ledgers track continuing manual work. Nothing restarts automatically.
+Latest GPU-qualified diagnostic is `build-649d41a9/nvencc`, SHA `d92cc8907e0e1951169ee7d61380460f3c105e532ae0a468b88d6e92589e3ccf`. All owned pauses are released with current limits preserved. CPU: 214 Python / 30 suites plus 46 C++ programs. Previous policies preserve exact outputs, strict failures remain visible, and no new source admission follows. Production stays ordinary `cb903a17`, retention/FEL off; reserved footage is unopened. No automatic restart is scheduled.
 
 The dated entries below preserve earlier checkpoints; their then-current builds and next steps are historical.
 

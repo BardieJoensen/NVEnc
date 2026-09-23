@@ -136,6 +136,13 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [independent-mean and fraction follow-up](FINDINGS-2026-09-23-INDEPENDENT-MEANS.md)
+completes D57/D58. Native means and all attempted decisions agree independently;
+actual strict 8-bit output passes. Constructed 10-bit remains rejected across
+four additional fractions, with exact source fallback. Apply separate means to
+the calibrated frame/window policy, then continue automatic source/fraction
+integration. This is a diagnostic gate improvement, not R3 completion.
+
 The [strict full-picture policy](FINDINGS-2026-09-23-STRICT-POLICY.md) completes
 D56. Original spatial bounds now independently veto each picture, with unchanged
 legacy output. Known 8-bit actual NVENC output passes; the 10-bit counterpart
