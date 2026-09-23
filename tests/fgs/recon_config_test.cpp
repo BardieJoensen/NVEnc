@@ -9,6 +9,23 @@ int main() {
     assert(c.requireLayout(1024,512,8)==786432);
     auto source=base;source["capture_source"]=true;source["max_source_bytes"]=uint64_t(536870912);
     const auto s=NVEncFilmGrainReconConfig::parse(source);assert(s.captureSource);s.requireLayout(3840,2160,10);
+    auto retention=source;retention["frames"]={0,1,2};retention["pre_encode_retention"]={0,.25,1};
+    const auto candidate=NVEncFilmGrainReconConfig::parse(retention);assert(candidate.preEncodeRetention && candidate.retention[1]==.25f);
+    for(unsigned failure=0;failure<11;++failure) {
+        auto bad=retention;bool rejected=false;
+        if(failure==0)bad["capture_source"]=false;
+        if(failure==1)bad["frames"]={1,2,3};
+        if(failure==2)bad["frames"]={0,2};
+        if(failure==3)bad["pre_encode_retention"]={0,1};
+        if(failure==4)bad["pre_encode_retention"]={0,true,1};
+        if(failure==5)bad["pre_encode_retention"]={0,-.1,1};
+        if(failure==6)bad["pre_encode_retention"]={0,1.001,1};
+        if(failure==7)bad["pre_encode_retention"]={0,std::numeric_limits<double>::infinity(),1};
+        if(failure==8)bad["model_output"]=nullptr;
+        if(failure==9)bad["native_model_output"]=nullptr;
+        if(failure==10)bad["pre_encode_retention"]="0,.25,1";
+        try{NVEncFilmGrainReconConfig::parse(bad);}catch(...){rejected=true;}assert(rejected);
+    }
     for(unsigned failure=0;failure<7;++failure) {
         auto bad=source;bool rejected=false;
         if(failure==0)bad["capture_source"]=1;

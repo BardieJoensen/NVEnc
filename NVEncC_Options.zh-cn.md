@@ -893,6 +893,8 @@ editing the source. Without this option, scene detection is unchanged.
 
 ### --film-grain-recon-probe &lt;manifest&gt;
 
+The finite `pre_encode_retention: [Y,Cb,Cr]` candidate experiment requires consecutive source captures and emits grain-off base measurements. It preserves ordinary source fallbacks and cannot be combined with model output or table export. See the [candidate contract](tests/fgs/MODEL-OUTPUT-TRIAL.md#finite-pre-encode-candidates).
+
 结合 `--av1-film-grain` 设置 `capture_source: true` 可保留 FGS 输入原始图像并校验帧标识。`max_source_bytes` 限制保留内存，`max_output_bytes` 也包含原始图像输出。ABI 2 的 `engine.source_mode: "memory"` 可将原始平面直接传入模型。详见[接口说明](tests/fgs/MODEL-OUTPUT-TRIAL.md#direct-original-source-transport)。
 
 Explicit development-only NVENC reconstructed-picture capture. Disabled by default.

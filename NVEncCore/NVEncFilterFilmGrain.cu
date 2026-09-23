@@ -49,6 +49,7 @@
 #include "NVEncFilmGrainTraining.h"
 #include "NVEncFilmGrainJointProbe.cuh"
 #include "NVEncFilmGrainSourceFrame.cuh"
+#include "NVEncFilmGrainRetentionBlend.cuh"
 #include "NVEncFilmGrainReconConfig.h"
 #include "NVEncFilmGrainModel.h"
 #include "NVEncFilterDegrain.h"
@@ -2175,6 +2176,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         m_motionDegrainParam.reset();
     }
     m_sourceMemory.reset(); m_sourceFrames.clear(); m_sourceOrdinal = 0;
+    m_preEncodeRetention = false; m_preEncodeBase.reset(); m_preEncodeInvalid.reset();
     if (!prm->sourceProbePath.empty()) {
         try {
             const auto path = std::filesystem::path(prm->sourceProbePath);
@@ -2186,6 +2188,15 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
                 config.requireLayout(prm->frameIn.width, prm->frameIn.height, depth);
                 m_sourceMemory = std::make_shared<fgsdiagnostic::SourceMemory>(config.maxSourceBytes);
                 m_sourceFrames.assign(config.frames.begin(), config.frames.end());
+                if (config.preEncodeRetention) {
+                    if (!prm->tableOutPath.empty()) throw std::runtime_error("pre-encode candidate cannot publish an ordinary grain table");
+                    m_preEncodeRetention = true; m_preEncodeFractions = config.retention;
+                    m_preEncodeBase = std::make_unique<CUFrameBuf>(prm->frameOut);
+                    m_preEncodeBase->releasePtr();
+                    if ((sts = m_preEncodeBase->alloc()) != RGY_ERR_NONE) return sts;
+                    m_preEncodeInvalid = std::make_unique<CUMemBufPair>(sizeof(unsigned long long));
+                    if ((sts = m_preEncodeInvalid->alloc()) != RGY_ERR_NONE) return sts;
+                }
             }
         } catch (const std::exception& error) {
             AddMessage(RGY_LOG_ERROR, _T("FGS source transport: %s\n"), char_to_tstring(error.what()).c_str());
@@ -2268,6 +2279,10 @@ RGY_ERR NVEncFilterFilmGrain::finishTable() {
     }
     if (m_sourceMemory && !m_sourceFrames.empty() && m_sourceOrdinal <= m_sourceFrames.back()) {
         AddMessage(RGY_LOG_ERROR, _T("FGS source transport: missing requested source frames.\n"));
+        return RGY_ERR_INVALID_PARAM;
+    }
+    if (m_preEncodeRetention && m_sourceOrdinal != m_sourceFrames.size()) {
+        AddMessage(RGY_LOG_ERROR, _T("FGS pre-encode retention: incomplete finite candidate.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
     if (!m_tableWriter) return RGY_ERR_NONE;
@@ -2390,14 +2405,59 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     NVEncFilmGrainDiagnostics diagnostics;
     diagnostics.totalBlocks = m_blocksX * m_blocksY;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
+    bool trialHaveBase = false, trialSupportLimited = false;
     auto attachResult = [&]() -> RGY_ERR {
+        std::optional<fgsdiagnostic::PreEncodeRetentionDecision> retentionDecision;
+        nlohmann::json retentionEvidence;
+        if (m_preEncodeRetention) {
+            if (m_sourceOrdinal >= m_sourceFrames.size()) {
+                AddMessage(RGY_LOG_ERROR, _T("FGS pre-encode retention: frame exceeds finite candidate.\n"));
+                return RGY_ERR_INVALID_PARAM;
+            }
+            unsigned active = 0;
+            if (params.applyGrain) {
+                for (unsigned i=0; i<params.numYPoints; ++i) if (params.pointYScaling[i]) active |= 1;
+                for (unsigned i=0; i<params.numCbPoints; ++i) if (params.pointCbScaling[i]) active |= 2;
+                for (unsigned i=0; i<params.numCrPoints; ++i) if (params.pointCrScaling[i]) active |= 4;
+            }
+            retentionDecision = fgsdiagnostic::preEncodeRetentionDecision(m_preEncodeFractions,
+                trialHaveBase, diagnostics.reliable, diagnostics.sourceFidelityFallback,
+                sourceReasonMask, trialSupportLimited, active);
+            const auto& decision = *retentionDecision;
+            if (decision.wholeSource()) {
+                if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
+            } else {
+                auto destination = joint_probe_view(output); destination.complete = false;
+                const FilmGrainCollectRetention fractions{decision.effective[0], decision.effective[1], decision.effective[2]};
+                const auto error = film_grain_retention_blend_async(joint_probe_view(source),
+                    joint_probe_view(&m_preEncodeBase->frame), destination, fractions,
+                    static_cast<unsigned long long *>(m_preEncodeInvalid->ptrDevice), stream);
+                if (error != cudaSuccess) return err_to_rgy(error);
+                if ((sts = m_preEncodeInvalid->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
+                const auto waited = cudaStreamSynchronize(stream);
+                if (waited != cudaSuccess) return err_to_rgy(waited);
+                if (*static_cast<const unsigned long long *>(m_preEncodeInvalid->ptrHost)) {
+                    AddMessage(RGY_LOG_ERROR, _T("FGS pre-encode retention: invalid native samples.\n"));
+                    return RGY_ERR_INVALID_PARAM;
+                }
+            }
+            // The ordinary model describes a different base. Candidate-only
+            // packets must explicitly disable it, including inherited grain.
+            std::memset(&params, 0, sizeof(params));
+            diagnostics.reliable = false;
+            retentionEvidence = fgsdiagnostic::preEncodeRetentionEvidence(decision);
+            AddMessage(RGY_LOG_DEBUG, _T("fgs-pre-encode frame=%d ordinal=%llu requested=%.4f/%.4f/%.4f effective=%.4f/%.4f/%.4f reasons=%u preserved=%u grain=0\n"),
+                source->inputFrameId, static_cast<unsigned long long>(m_sourceOrdinal),
+                decision.requested[0], decision.requested[1], decision.requested[2],
+                decision.effective[0], decision.effective[1], decision.effective[2], decision.reasonMask, decision.preservedComponents);
+        }
         if (m_jointProbe) {
             try {
                 if (!m_jointProbe->visited(source->inputFrameId)) {
                     m_jointProbe->collect(joint_probe_view(source), joint_probe_view(output), stream,
                         diagnostics.sceneReset || explicitSceneCut, "source_fallback");
                 }
-                m_jointProbe->final_model(joint_probe_view(source), joint_probe_view(output), params, stream);
+                m_jointProbe->final_model(joint_probe_view(source), joint_probe_view(output), params, stream, retentionEvidence);
                 m_jointProbe->save(joint_probe_view(source), stream);
             } catch (const std::exception& error) {
                 AddMessage(RGY_LOG_ERROR, _T("FGS joint probe: %s\n"), char_to_tstring(error.what()).c_str());
@@ -2409,7 +2469,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             try {
                 if (std::binary_search(m_sourceFrames.begin(), m_sourceFrames.end(), m_sourceOrdinal)) {
                     result->originalSource = fgsdiagnostic::captureNativeSource(joint_probe_view(source), m_sourceMemory,
-                        m_sourceOrdinal, m_tableTimebase.n(), m_tableTimebase.d(), stream);
+                        m_sourceOrdinal, m_tableTimebase.n(), m_tableTimebase.d(), stream, retentionDecision);
                 }
                 ++m_sourceOrdinal;
             } catch (const std::exception& error) {
@@ -2864,6 +2924,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     m_state->lastTimestamp = source->timestamp;
     diagnostics.modelFrames = static_cast<int>(m_state->history.size());
     diagnostics.sceneReset = sceneReset;
+    if (m_preEncodeRetention) {
+        // Freeze B before ordinary retention, recovery, caps or compensation.
+        // Every finite candidate blends S with this untouched native buffer.
+        if ((sts = copyFrameAsync(&m_preEncodeBase->frame, output, stream)) != RGY_ERR_NONE) return sts;
+        copyFramePropWithoutRes(&m_preEncodeBase->frame, source);
+        trialHaveBase = true;
+    }
     if (m_jointProbe) {
         try {
             // Capture the actual denoised base before retention/source restoration.
@@ -3537,6 +3604,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if (sts != RGY_ERR_NONE) return sts;
     }
     if ((sts = guardCopiedChromaRange()) != RGY_ERR_NONE) return sts;
+    trialSupportLimited = sourceCurveLimited || recoveryGain < 1.0;
     if (modelValid && params.applyGrain && !m_tableOutPath.empty()) {
         recordTableEntry(source->timestamp, source->duration, params);
     }
@@ -3615,6 +3683,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
 }
 
 void NVEncFilterFilmGrain::close() {
+    m_preEncodeBase.reset(); m_preEncodeInvalid.reset(); m_preEncodeRetention = false;
+    m_sourceMemory.reset(); m_sourceFrames.clear(); m_sourceOrdinal = 0;
     m_jointProbe.reset();
     m_tableWriter.reset();
     m_motionDegrain.reset();

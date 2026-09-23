@@ -6,8 +6,10 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <vector>
+#include "NVEncFilmGrainPreEncodeRetention.h"
 
 namespace fgsdiagnostic {
 struct SourceMemory {
@@ -34,6 +36,7 @@ public:
     const int64_t pts;
     const int timebaseNum,timebaseDen;
     const unsigned width,height,depth;
+    const std::optional<PreEncodeRetentionDecision> retention;
     std::array<std::vector<uint16_t>,3> planes;
 
     static uint64_t nativeBytes(unsigned w,unsigned h,unsigned d) {
@@ -42,8 +45,8 @@ public:
         return uint64_t(w)*h*3;
     }
     NativeSourceFrame(std::shared_ptr<SourceMemory> memory,uint64_t index,int id,int64_t timestamp,
-        int tbNum,int tbDen,unsigned w,unsigned h,unsigned d)
-        :m_memory(std::move(memory)),ordinal(index),sourceId(id),pts(timestamp),timebaseNum(tbNum),timebaseDen(tbDen),width(w),height(h),depth(d) {
+        int tbNum,int tbDen,unsigned w,unsigned h,unsigned d,std::optional<PreEncodeRetentionDecision> decision={})
+        :m_memory(std::move(memory)),ordinal(index),sourceId(id),pts(timestamp),timebaseNum(tbNum),timebaseDen(tbDen),width(w),height(h),depth(d),retention(std::move(decision)) {
         if(!m_memory || index>10000000 || id<0 || timestamp==INT64_MIN || tbNum<=0 || tbDen<=0)
             throw std::runtime_error("native source identity invalid");
         const auto bytes=nativeBytes(w,h,d);m_memory->acquire(bytes);m_bytes=bytes;

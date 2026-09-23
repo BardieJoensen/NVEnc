@@ -5,9 +5,10 @@
 
 namespace fgsdiagnostic {
 inline std::shared_ptr<const NativeSourceFrame> captureNativeSource(const fgsmodel::FilmGrainCollectFrame& f,
-    const std::shared_ptr<SourceMemory>& memory,uint64_t ordinal,int tbNum,int tbDen,cudaStream_t stream) {
+    const std::shared_ptr<SourceMemory>& memory,uint64_t ordinal,int tbNum,int tbDen,cudaStream_t stream,
+    std::optional<PreEncodeRetentionDecision> decision={}) {
     if(!fgsmodel::film_grain_collect_layout_valid(f))throw std::runtime_error("native source GPU view invalid");
-    auto frame=std::make_shared<NativeSourceFrame>(memory,ordinal,f.frameId,f.timestamp,tbNum,tbDen,f.width,f.height,f.bitDepth);
+    auto frame=std::make_shared<NativeSourceFrame>(memory,ordinal,f.frameId,f.timestamp,tbNum,tbDen,f.width,f.height,f.bitDepth,std::move(decision));
     const unsigned unit=f.bitDepth==8?1:2;
     for(unsigned c=0;c<3;++c) {
         const unsigned w=c?f.width/2:f.width,h=c?f.height/2:f.height;

@@ -113,6 +113,9 @@ public:
         if(m_config.captureSource && m_config.frames.count(p.frameIdx)) {
             if(!source)throw std::runtime_error("requested original source is missing");
             source->requireIdentity(p.frameIdx,sourceId,s.pts,tbNum,tbDen,m_width,m_height,m_depth);
+            if(bool(source->retention)!=m_config.preEncodeRetention
+                || (source->retention && source->retention->requested!=m_config.retention))
+                throw std::runtime_error("pre-encode retention decision differs between filter and reconstruction");
             m_peakSourceBytes=std::max(m_peakSourceBytes,source->peakBytes());
             if(m_peakSourceBytes>m_config.maxSourceBytes)throw std::runtime_error("source budget differs between filter and reconstruction");
             s.source=std::move(source);
@@ -160,9 +163,11 @@ public:
                 if(!out)throw std::runtime_error("original source write failed");
                 planes.push_back({{"path",path.u8string()},{"samples",values.size()}});
             }
-            jsonFile(m_config.directory/(stem+"-source.json"),{{"complete",true},{"frame_id",frameId},{"source_frame_id",s.sourceId},
+            Json original={{"complete",true},{"frame_id",frameId},{"source_frame_id",s.sourceId},
                 {"pts",pts},{"timebase",{s.timebaseNum,s.timebaseDen}},{"width",m_width},{"height",m_height},{"depth",m_depth},
-                {"format","planar_native_uint16"},{"planes",planes}});
+                {"format","planar_native_uint16"},{"planes",planes}};
+            if(s.source->retention)original["pre_encode_retention"]=fgsdiagnostic::preEncodeRetentionEvidence(*s.source->retention);
+            jsonFile(m_config.directory/(stem+"-source.json"),original);
             ++m_sources;
         }
         { std::ofstream out(raw,std::ios::binary);out.write(reinterpret_cast<const char*>(host.data()),host.size());out.flush();

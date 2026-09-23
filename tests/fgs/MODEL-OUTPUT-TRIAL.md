@@ -105,3 +105,26 @@ still requires tile-aligned dimensions. The source-transport qualification is
 recorded in [the source-transport findings](FINDINGS-2026-09-23-SOURCE-TRANSPORT.md)
 and `roadmap-r3-source-transport-20260923`. Pre-encode fractions and source
 eligibility remain separate work.
+
+## Finite pre-encode candidates
+
+The outer manifest can supply `pre_encode_retention: [Y, Cb, Cr]` with three
+finite fractions in [0,1], stored as float32. This requires `capture_source`
+and every ordinal from zero through N−1 (1–16 frames). The encode must end at
+exactly N; extra or missing frames reject the trial. It cannot be combined
+with either model-output mode or an ordinary grain-table export.
+
+The filter keeps an untouched copy of the denoised base before ordinary
+retention, recovery, source caps and compensation. Each component is blended
+once with its original source using the qualified native nearest-even operation.
+Ordinary source fallbacks and limited-support/recovery decisions retain the
+whole source. Inactive components retain their original pixels. All candidate
+outputs explicitly disable synthetic grain: these are base measurements,
+not finished quality-qualified outputs. Full-source preservation describes the
+input to NVENC, which remains a lossy encoder.
+
+`frame-N-source.json` records the requested/effective fractions, reason mask,
+and preserved-component mask. The optional joint probe with `template_seeds`
+also records this decision beside independently captured pristine/final bases.
+Ordinary mode allocates no candidate buffers. Automatic fraction selection,
+source eligibility and approved replacement models remain separate work.

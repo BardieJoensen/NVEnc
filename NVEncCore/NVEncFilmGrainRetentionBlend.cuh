@@ -1,5 +1,6 @@
 // Native per-component residual blend for the experimental retention path.
-// No encoder call sites. The caller owns all storage until stream completion.
+// Explicit finite encoder diagnostic; ordinary mode has no call site.
+// The caller owns all storage until stream completion.
 #pragma once
 #include "NVEncFilmGrainJointCollect.cuh"
 
