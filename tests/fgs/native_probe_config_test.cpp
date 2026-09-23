@@ -12,6 +12,8 @@ int main() {
     assert(NVEncFilmGrainNativeConfig::parse(strict,captured).spatialPolicy()=="full_picture");
     strict["engine"]["spatial_policy"]="full_picture_means";
     assert(NVEncFilmGrainNativeConfig::parse(strict,captured).spatialPolicy()=="full_picture_means");
+    strict["engine"]["spatial_policy"]="frame_window_means";
+    assert(NVEncFilmGrainNativeConfig::parse(strict,captured).spatialPolicy()=="frame_window_means");
     for(const auto& policy:{Json("unknown"),Json(true),Json(nullptr)}) {
         strict["engine"]["spatial_policy"]=policy;bool rejected=false;
         try{NVEncFilmGrainNativeConfig::parse(strict,captured);}catch(...){rejected=true;}assert(rejected);

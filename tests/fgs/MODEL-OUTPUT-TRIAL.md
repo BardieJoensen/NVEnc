@@ -161,3 +161,14 @@ and global mean are terminal vetoes. At most four seeds are evaluated. Missing
 mean evidence cannot pass, and opposite shifts in the two halves cannot cancel.
 Older policies preserve their recorded decisions. The consumer requires exact
 confirmation of this new policy too; no source eligibility follows from it.
+
+`frame_window_means` applies disjoint native means to the earlier calibrated
+frame/window policy. Each training half must pass native Y spatial checks,
+all-channel variance bounds and its own mean bound. The first training pass
+then faces independent-half shape/variance/mean and global-mean vetoes; none
+of those vetoes causes a seed retry. The same complete spatial/cross-component
+eight-picture sliding windows remain mandatory before model release. This
+removes global-mean selection leakage from the older diagnostic without hiding
+its original full-spatial per-picture failures or granting source eligibility.
+All older policy names preserve their decisions; this policy also requires
+explicit runtime confirmation.

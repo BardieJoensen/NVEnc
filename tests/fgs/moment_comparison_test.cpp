@@ -144,6 +144,36 @@ int main() {
         c.moments.folds[0].mean[0]+=1.;c.moments.folds[1].mean[0]-=1.;return c;
     },FilmGrainMomentSpatialPolicy::FullPicture);
     assert(oldPolicy.selected==0 && oldPolicy.passesDiagnostic);
+    calls=0;
+    const auto windowMean=film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
+        FilmGrainMomentCandidate c;c.calibrated=true;c.moments=source;
+        if(calls++==0) {
+            c.moments.folds[0].mean[0]+=.126;c.moments.folds[1].mean[0]-=.126;
+        }
+        return c;
+    },FilmGrainMomentSpatialPolicy::FrameWindowMeans);
+    assert(calls==2 && windowMean.selected==1 && windowMean.passesDiagnostic);
+    for(unsigned kind=0;kind<5;++kind) {
+        calls=0;
+        const auto veto=film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
+            FilmGrainMomentCandidate c;c.calibrated=true;c.moments=source;++calls;
+            if(kind==0) {c.moments.folds[1].mean[0]+=.3;c.moments.mean[0]+=.15;}
+            if(kind==1)c.moments.folds[1].meanValid=false;
+            if(kind==2)c.moments.folds[1].y[1]=.1;
+            if(kind==3)c.moments.folds[1].colour[0][0]=.5;
+            if(kind==4)c.moments.mean[1]+=.126;
+            return c;
+        },FilmGrainMomentSpatialPolicy::FrameWindowMeans);
+        assert(calls==1 && veto.selected==0 && !veto.passesDiagnostic
+            && veto.reason==FilmGrainMomentSelectionReason::CheckFold);
+    }
+    // The calibrated temporal policy preserves its per-picture protection;
+    // colour spatial failures stay explicit and must pass the pooled window.
+    const auto windowShape=film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
+        FilmGrainMomentCandidate c;c.calibrated=true;c.moments=colourShape;return c;
+    },FilmGrainMomentSpatialPolicy::FrameWindowMeans);
+    assert(windowShape.selected==0 && windowShape.passesDiagnostic
+        && !windowShape.attempts[0].comparison.fullPass);
     assert(!film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
         assert(false);return FilmGrainMomentCandidate{};
     },static_cast<FilmGrainMomentSpatialPolicy>(9)).complete);

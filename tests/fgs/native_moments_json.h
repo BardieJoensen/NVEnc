@@ -36,7 +36,7 @@ inline Json comparison(const fgsmodel::FilmGrainMomentComparison& c) {
     Json folds=Json::array();
     for (const auto& f:c.folds) folds.push_back({{"valid",f.valid},{"y",matrix(f.y)},
         {"cb",matrix(f.cb)},{"cr",matrix(f.cr)},{"common",matrix(f.common)},
-        {"cbcr_lag_max",f.cross},{"pass_bounds",f.fullPass},{"frame_pass",f.framePass},
+        {"cbcr_lag_max",f.cross},{"pass_bounds",f.fullPass},{"frame_shape_pass",f.frameShapePass},{"frame_pass",f.framePass},
         {"mean_valid",f.meanValid},{"mean_error",f.meanError},{"mean_pass",f.meanPass}});
     return {{"valid",c.valid},{"mean_error",c.meanError},{"mean_pass",c.meanPass},
         {"folds",folds},{"pass_bounds",c.fullPass}};

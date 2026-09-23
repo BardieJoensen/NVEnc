@@ -155,7 +155,8 @@ public:
         const auto& c=config_;
         require(c.spatialPolicy==FilmGrainMomentSpatialPolicy::FrameWindow
             || c.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPicture
-            || c.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPictureMeans,"unsupported spatial policy");
+            || c.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPictureMeans
+            || c.spatialPolicy==FilmGrainMomentSpatialPolicy::FrameWindowMeans,"unsupported spatial policy");
         require(c.width>=64 && c.height>=64 && c.width<=4096 && c.height<=2160
             && c.width%64==0 && c.height%64==0 && (c.depth==8 || c.depth==10)
             && (c.matrix==1 || c.matrix==9) && c.frames>=8 && c.frames<=16
@@ -217,7 +218,8 @@ public:
     }
     Json report() const {
         return {{"complete",finished_ && !failed_},{"failed",failed_},{"error",error_},
-            {"spatial_policy",config_.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPictureMeans?"full_picture_means"
+            {"spatial_policy",config_.spatialPolicy==FilmGrainMomentSpatialPolicy::FrameWindowMeans?"frame_window_means"
+                :config_.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPictureMeans?"full_picture_means"
                 :config_.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPicture?"full_picture":"frame_window"},
             {"received",received_},{"selected",selected_},{"windows",window_.windows()},
             {"release_through",window_.releaseThrough()},{"ready_at",readyAt_},
