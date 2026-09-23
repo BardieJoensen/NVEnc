@@ -3337,6 +3337,41 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         std::memset(&params, 0, sizeof(params));
         if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
     }
+    std::array<FilmGrainSourceRange,2> range{};
+    bool rangeCollected = false;
+    auto guardCopiedChromaRange = [&]() -> RGY_ERR {
+        if (!modelValid || !params.applyGrain || prm->filmGrain.residualRetain >= 0.0f) return RGY_ERR_NONE;
+        if (!rangeCollected) {
+            for (int i=0; i<blockCount; ++i) for (unsigned c=0; c<2; ++c) {
+                range[c].samples += metrics[i].chromaSamples[c];
+                if (metrics[i].chromaSamples[c]) {
+                    range[c].minimum = std::min(range[c].minimum, metrics[i].chromaMinimum[c]);
+                    range[c].maximum = std::max(range[c].maximum, metrics[i].chromaMaximum[c]);
+                }
+            }
+            rangeCollected = true;
+        }
+        const auto mask = film_grain_copied_chroma_range_mask(params, bitDepth,
+            static_cast<uint64_t>(source->width / 2) * (source->height / 2), range);
+        if (mask) {
+            AddMessage(RGY_LOG_DEBUG, _T("fgs-source-range frame=%d copiedChromaMask=%u cb=%u/%u cr=%u/%u samples=%llu/%llu source=1\n"),
+                source->inputFrameId, mask, range[0].minimum, range[0].maximum, range[1].minimum, range[1].maximum,
+                static_cast<unsigned long long>(range[0].samples), static_cast<unsigned long long>(range[1].samples));
+            sourceReasonMask |= FGS_SOURCE_SUPPORT;
+            diagnostics.sourceFidelityFallback = true;
+            diagnostics.modelHeld = false;
+            diagnostics.reliable = false;
+            modelValid = false;
+            // A rejected source must never count toward the stable recovery
+            // window, including frames already being held in source fallback.
+            m_state->synthesisRecovery.preserveSource();
+            std::memset(&params, 0, sizeof(params));
+            if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
+        }
+        return RGY_ERR_NONE;
+    };
+    // Evaluate before recovery counting, and again after native curve rounding.
+    if ((sts = guardCopiedChromaRange()) != RGY_ERR_NONE) return sts;
     const bool recoveryAllowed = m_state->synthesisRecovery.allow(modelValid,
         freshFitValid || diagnostics.freshModel, diagnostics.modelFrames >= prm->filmGrain.modelWindow);
     const bool recoveryHeld = modelValid && !recoveryAllowed;
@@ -3465,33 +3500,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         }
         if (sts != RGY_ERR_NONE) return sts;
     }
-    if (modelValid && params.applyGrain && prm->filmGrain.residualRetain < 0.0f) {
-        std::array<FilmGrainSourceRange,2> range{};
-        for (int i=0; i<blockCount; ++i) for (unsigned c=0; c<2; ++c) {
-            range[c].samples += metrics[i].chromaSamples[c];
-            if (metrics[i].chromaSamples[c]) {
-                range[c].minimum = std::min(range[c].minimum, metrics[i].chromaMinimum[c]);
-                range[c].maximum = std::max(range[c].maximum, metrics[i].chromaMaximum[c]);
-            }
-        }
-        const auto mask = film_grain_copied_chroma_range_mask(params, bitDepth,
-            static_cast<uint64_t>(source->width / 2) * (source->height / 2), range);
-        if (mask) {
-            AddMessage(RGY_LOG_DEBUG, _T("fgs-source-range frame=%d copiedChromaMask=%u cb=%u/%u cr=%u/%u samples=%llu/%llu source=1\n"),
-                source->inputFrameId, mask, range[0].minimum, range[0].maximum, range[1].minimum, range[1].maximum,
-                static_cast<unsigned long long>(range[0].samples), static_cast<unsigned long long>(range[1].samples));
-            sourceReasonMask |= FGS_SOURCE_SUPPORT;
-            diagnostics.sourceFidelityFallback = true;
-            diagnostics.modelHeld = false;
-            diagnostics.reliable = false;
-            modelValid = false;
-            // Apply before recording/output. Re-entry uses the existing stable
-            // source/synthesis recovery path instead of flashing grain back on.
-            m_state->synthesisRecovery.preserveSource();
-            std::memset(&params, 0, sizeof(params));
-            if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
-        }
-    }
+    if ((sts = guardCopiedChromaRange()) != RGY_ERR_NONE) return sts;
     if (modelValid && params.applyGrain && !m_tableOutPath.empty()) {
         recordTableEntry(source->timestamp, source->duration, params);
     }
