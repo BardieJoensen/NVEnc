@@ -5,8 +5,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
-#include "NVEncFilmGrainNativeMoments.h"
-#include "json.hpp"
+#include "native_moments_json.h"
 using Json=nlohmann::json;
 int main() {
     try {
@@ -18,8 +17,8 @@ int main() {
             if(std::filesystem::file_size(path)!=count*2)throw std::runtime_error("native plane byte count differs");
             data[c].resize(count);std::ifstream file(path,std::ios::binary);file.read(reinterpret_cast<char*>(data[c].data()),count*2);if(!file)throw std::runtime_error("plane read failed");planes[c]={data[c].data(),count,width};
         }
-        const auto start=std::chrono::steady_clock::now();const auto m=fgsmodel::film_grain_native_moments(planes,w,h,depth);Json folds=Json::array();
-        for(const auto& f:m.folds)folds.push_back({{"y",f.y},{"colour",f.colour},{"common",f.common},{"cross",f.cross}});
-        std::cout<<Json({{"valid",m.valid},{"width",w},{"height",h},{"depth",depth},{"mean",m.mean},{"blocks",m.blocks},{"folds",folds},{"seconds",std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count()}}).dump()<<'\n';return m.valid?0:1;
+        const auto start=std::chrono::steady_clock::now();const auto m=fgsmodel::film_grain_native_moments(planes,w,h,depth);
+        auto report=fgsdiagnostic::moments(m);report["seconds"]=std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();
+        std::cout<<report.dump()<<'\n';return m.valid?0:1;
     }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 2;}
 }

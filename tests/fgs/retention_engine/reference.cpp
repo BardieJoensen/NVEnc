@@ -36,8 +36,9 @@ int main() {
         config.width=input.at("width");config.height=input.at("height");config.depth=input.at("depth");config.matrix=input.at("matrix");config.frames=input.at("frame_count");
         config.shift=input.value("shift",6u);config.grainShift=input.value("grain_shift",0u);config.maxNativeBytes=input.value("max_native_bytes",512ull*1024*1024);
         const auto spatial=input.value("spatial_policy",std::string("frame_window"));
-        require(spatial=="frame_window" || spatial=="full_picture","unsupported spatial policy");
-        config.spatialPolicy=spatial=="full_picture"?FilmGrainMomentSpatialPolicy::FullPicture:FilmGrainMomentSpatialPolicy::FrameWindow;
+        require(spatial=="frame_window" || spatial=="full_picture" || spatial=="full_picture_means","unsupported spatial policy");
+        config.spatialPolicy=spatial=="full_picture_means"?FilmGrainMomentSpatialPolicy::FullPictureMeans
+            :spatial=="full_picture"?FilmGrainMomentSpatialPolicy::FullPicture:FilmGrainMomentSpatialPolicy::FrameWindow;
         const auto seeds=input.at("training_seeds").get<std::vector<unsigned>>();for(auto seed:seeds){require(seed<=65535,"seed range");config.trainingSeeds.push_back(uint16_t(seed));}
         require(frames.is_array() && frames.size()<=16,"input frame budget");
         const auto rawDirectory=std::filesystem::u8path(input.at("raw_directory").get<std::string>());

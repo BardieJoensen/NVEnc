@@ -48,3 +48,12 @@ failure rejects instead of trying another seed. Neither policy grants source
 eligibility. The engine report names the active policy; the encoder requires
 explicit confirmation for `full_picture`, since older ABI-compatible libraries
 can otherwise ignore an unknown JSON key.
+
+`full_picture_means` adds complete native-pixel means measured separately on the
+fixed checkerboard training/check halves, before detrending. The training mean
+uses the unchanged 0.125 code-unit limit and may reject a seed before selection.
+After the first training spatial/mean pass, the independent mean, spatial checks
+and global mean are terminal vetoes. At most four seeds are evaluated. Missing
+mean evidence cannot pass, and opposite shifts in the two halves cannot cancel.
+Older policies preserve their recorded decisions. The consumer requires exact
+confirmation of this new policy too; no source eligibility follows from it.

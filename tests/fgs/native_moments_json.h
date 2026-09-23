@@ -14,6 +14,8 @@ inline fgsmodel::FilmGrainNativeMoments moments(const Json& j) {
         auto& a=m.folds[f]; const auto& b=j.at("folds").at(f);
         a.y=b.at("y").get<decltype(a.y)>(); a.colour=b.at("colour").get<decltype(a.colour)>();
         a.common=b.at("common").get<decltype(a.common)>(); a.cross=b.at("cross").get<decltype(a.cross)>();
+        a.meanValid=b.value("mean_valid",false);
+        if (a.meanValid) a.mean=b.at("mean").get<decltype(a.mean)>();
     }
     return m;
 }
@@ -22,7 +24,8 @@ inline fgsmodel::FilmGrainNativeMoments read(const Json& path) {
 }
 inline Json moments(const fgsmodel::FilmGrainNativeMoments& m) {
     Json folds=Json::array();
-    for (const auto& f:m.folds) folds.push_back({{"y",f.y},{"colour",f.colour},{"common",f.common},{"cross",f.cross}});
+    for (const auto& f:m.folds) folds.push_back({{"y",f.y},{"colour",f.colour},{"common",f.common},{"cross",f.cross},
+        {"mean_valid",f.meanValid},{"mean",f.mean}});
     return {{"valid",m.valid},{"width",m.width},{"height",m.height},{"depth",m.depth},
         {"blocks",m.blocks},{"mean",m.mean},{"folds",folds}};
 }
@@ -33,7 +36,8 @@ inline Json comparison(const fgsmodel::FilmGrainMomentComparison& c) {
     Json folds=Json::array();
     for (const auto& f:c.folds) folds.push_back({{"valid",f.valid},{"y",matrix(f.y)},
         {"cb",matrix(f.cb)},{"cr",matrix(f.cr)},{"common",matrix(f.common)},
-        {"cbcr_lag_max",f.cross},{"pass_bounds",f.fullPass},{"frame_pass",f.framePass}});
+        {"cbcr_lag_max",f.cross},{"pass_bounds",f.fullPass},{"frame_pass",f.framePass},
+        {"mean_valid",f.meanValid},{"mean_error",f.meanError},{"mean_pass",f.meanPass}});
     return {{"valid",c.valid},{"mean_error",c.meanError},{"mean_pass",c.meanPass},
         {"folds",folds},{"pass_bounds",c.fullPass}};
 }

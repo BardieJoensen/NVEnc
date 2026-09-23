@@ -7,6 +7,10 @@
 
 namespace fgsmodel {
 struct FilmGrainNativeMomentFold {
+    // Complete native samples in this fixed checkerboard half, before
+    // detrending. Missing older diagnostic evidence is never a zero mean.
+    bool meanValid=false;
+    std::array<double,3> mean{};
     std::array<double,625> y{};
     std::array<std::array<double,676>,2> colour{};
     std::array<double,9> common{};
@@ -65,7 +69,8 @@ inline void detrend(double* tile,unsigned side) {
     for(unsigned y=0;y<side;++y)for(unsigned x=0;x<side;++x)tile[y*side+x]-=mean+sx*(x-center)+sy*(y-center);
 }
 inline void load_tiles(const std::array<FilmGrainNativePlane,3>& planes,
-    unsigned bx,unsigned by,unsigned depth,std::array<std::array<double,4096>,4>& tiles) {
+    unsigned bx,unsigned by,unsigned depth,std::array<std::array<double,4096>,4>& tiles,
+    std::array<double,3>* meanSums=nullptr) {
     const double scale=double(1u<<(depth-8));
     for(unsigned field=0;field<4;++field) {
         const unsigned side=field?32:64,c=field<2?0:field-1;const auto& p=planes[c];auto& tile=tiles[field];
@@ -74,6 +79,10 @@ inline void load_tiles(const std::array<FilmGrainNativePlane,3>& planes,
                 const auto offset=size_t(by*64+y*2)*p.stride+bx*64+x*2;
                 tile[y*side+x]=(unsigned(p.data[offset])+p.data[offset+1]+p.data[offset+p.stride]+p.data[offset+p.stride+1])/(4.*scale);
             } else tile[y*side+x]=p.data[size_t(by*side+y)*p.stride+bx*side+x]/scale;
+        }
+        if(meanSums && field!=1) {
+            double sum=0.;for(unsigned i=0;i<side*side;++i)sum+=tile[i];
+            (*meanSums)[c]+=sum;
         }
         detrend(tile.data(),side);
     }
@@ -89,7 +98,7 @@ inline FilmGrainNativeMoments film_grain_native_moments(
     std::array<std::array<double,4096>,4> tiles{};
     for(unsigned by=0;by<height/64;++by)for(unsigned bx=0;bx<width/64;++bx) {
         auto& fold=result.folds[(by+bx)&1];
-        native_moments_detail::load_tiles(planes,bx,by,depth,tiles);
+        native_moments_detail::load_tiles(planes,bx,by,depth,tiles,&fold.mean);
         native_moments_detail::spatial(tiles[0].data(),64,fold.y);
         for(unsigned c=0;c<2;++c) {
             std::array<double,625> marginal{};native_moments_detail::spatial(tiles[c+2].data(),32,marginal);
@@ -110,6 +119,11 @@ inline FilmGrainNativeMoments film_grain_native_moments(
     }
     for(unsigned f=0;f<2;++f) {
         auto& fold=result.folds[f];const double yCount=result.blocks[f]*58*58,cCount=result.blocks[f]*26*26;
+        for(unsigned c=0;c<3;++c) {
+            fold.mean[c]/=result.blocks[f]*(c?32*32:64*64);
+            if(!std::isfinite(fold.mean[c]))return result;
+        }
+        fold.meanValid=true;
         for(auto& matrix:fold.colour)matrix[24*26+24]=fold.common[0];
         for(auto& value:fold.y)value/=yCount;
         for(auto& matrix:fold.colour)for(auto& value:matrix)value/=cCount;

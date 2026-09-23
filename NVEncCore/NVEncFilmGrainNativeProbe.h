@@ -21,8 +21,8 @@ struct NVEncFilmGrainNativeConfig {
         c.engineLibrary=std::filesystem::u8path(j.at("engine_library").get<std::string>());
         if(!c.engineLibrary.is_absolute())throw std::runtime_error("native engine library must be absolute");
         c.engine=j.at("engine");
-        if(c.spatialPolicy()!="frame_window" && c.spatialPolicy()!="full_picture")
-            throw std::runtime_error("native spatial policy must be frame_window or full_picture");
+        if(c.spatialPolicy()!="frame_window" && c.spatialPolicy()!="full_picture" && c.spatialPolicy()!="full_picture_means")
+            throw std::runtime_error("native spatial policy must be frame_window, full_picture or full_picture_means");
         const auto mode=c.engine.value("source_mode",std::string("files"));
         if(mode!="files" && mode!="memory")throw std::runtime_error("native source mode must be files or memory");
         if(!c.engine.is_object() || NVEncFilmGrainModelConfig::integer(c.engine,"frame_count",8,16)!=captured.size()
@@ -160,9 +160,9 @@ public:
             throw std::runtime_error("native retention requires finite all-partial fractions");
         // Older ABI-compatible libraries ignore unknown configuration keys.
         // A stricter requested policy needs explicit runtime confirmation.
-        if(m_config.spatialPolicy()=="full_picture"
-            && m_engine.report().value("spatial_policy",std::string())!="full_picture")
-            throw std::runtime_error("native engine did not confirm full_picture spatial policy");
+        if(m_config.spatialPolicy()!="frame_window"
+            && m_engine.report().value("spatial_policy",std::string())!=m_config.spatialPolicy())
+            throw std::runtime_error("native engine did not confirm "+m_config.spatialPolicy()+" spatial policy");
         status();
     }
     void reconstruction(uint64_t ordinal,int64_t pts,const uint8_t* raw,size_t bytes,

@@ -6,6 +6,7 @@ static FilmGrainNativeMoments fixture() {
     FilmGrainNativeMoments m;
     m.valid=true; m.width=m.height=128; m.depth=10; m.blocks={2,2}; m.mean={80,128,128};
     for (auto& f:m.folds) {
+        f.meanValid=true; f.mean=m.mean;
         for (unsigned i=0;i<25;++i) f.y[i*25+i]=1.;
         for (auto& c:f.colour) for (unsigned i=0;i<26;++i) c[i*26+i]=1.;
         f.common[0]=f.common[4]=f.common[8]=1.;
@@ -93,6 +94,56 @@ int main() {
         ++calls;FilmGrainMomentCandidate c;c.calibrated=true;c.moments=colourShape;return c;
     },FilmGrainMomentSpatialPolicy::FullPicture);
     assert(calls==4 && noSpatial.complete && noSpatial.selected==-1);
+    calls=0;
+    const auto trainedMean=film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
+        FilmGrainMomentCandidate c;c.calibrated=true;c.moments=source;
+        if(calls++==0) {
+            c.moments.folds[0].mean[2]+=.126;
+            c.moments.folds[1].mean[2]-=.126; // Global cancellation must not pass.
+        }
+        return c;
+    },FilmGrainMomentSpatialPolicy::FullPictureMeans);
+    assert(calls==2 && trainedMean.selected==1 && trainedMean.passesDiagnostic);
+    const auto boundaryMean=film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
+        FilmGrainMomentCandidate c;c.calibrated=true;c.moments=source;
+        c.moments.mean[1]+=.125;for(auto& f:c.moments.folds)f.mean[1]+=.125;return c;
+    },FilmGrainMomentSpatialPolicy::FullPictureMeans);
+    assert(boundaryMean.selected==0 && boundaryMean.passesDiagnostic);
+    for(unsigned kind=0;kind<5;++kind) {
+        calls=0;
+        const auto veto=film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
+            FilmGrainMomentCandidate c;c.calibrated=true;c.moments=source;++calls;
+            if(kind==0)c.moments.folds[1].mean[1]+=.126;
+            if(kind==1)c.moments.folds[1].meanValid=false;
+            if(kind==2)c.moments.folds[1].mean[1]=std::numeric_limits<double>::infinity();
+            if(kind==3)c.moments.mean[1]+=.126;
+            if(kind==4)c.moments.folds[1].cross[3]=.09;
+            return c;
+        },FilmGrainMomentSpatialPolicy::FullPictureMeans);
+        assert(calls==1 && veto.selected==0 && !veto.passesDiagnostic
+            && veto.reason==FilmGrainMomentSelectionReason::CheckFold);
+    }
+    for(unsigned kind=0;kind<3;++kind) {
+        calls=0;
+        const auto absent=film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
+            FilmGrainMomentCandidate c;c.calibrated=true;c.moments=source;++calls;
+            if(kind==0)c.moments.folds[0].meanValid=false;
+            if(kind==1)c.moments.folds[0].mean[0]=std::numeric_limits<double>::quiet_NaN();
+            if(kind==2)c.moments.folds[0].mean[0]+=.126;
+            return c;
+        },FilmGrainMomentSpatialPolicy::FullPictureMeans);
+        assert(calls==4 && absent.complete && absent.selected==-1);
+    }
+    auto missingMean=source;missingMean.folds[1].meanValid=false;
+    assert(!film_grain_select_moment_seed(missingMean,seeds,4,[&](unsigned) {
+        assert(false);return FilmGrainMomentCandidate{};
+    },FilmGrainMomentSpatialPolicy::FullPictureMeans).complete);
+    // The new measurements do not silently change an older declared policy.
+    const auto oldPolicy=film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
+        FilmGrainMomentCandidate c;c.calibrated=true;c.moments=source;
+        c.moments.folds[0].mean[0]+=1.;c.moments.folds[1].mean[0]-=1.;return c;
+    },FilmGrainMomentSpatialPolicy::FullPicture);
+    assert(oldPolicy.selected==0 && oldPolicy.passesDiagnostic);
     assert(!film_grain_select_moment_seed(source,seeds,4,[&](unsigned) {
         assert(false);return FilmGrainMomentCandidate{};
     },static_cast<FilmGrainMomentSpatialPolicy>(9)).complete);
@@ -144,5 +195,13 @@ int main() {
     pool[3]=nullptr; assert(!film_grain_average_moments(pool.data(),8).valid);
     assert(!film_grain_average_moments(nullptr,0).valid);
     assert(!film_grain_average_moments(pool.data(),9).valid);
+    pool.fill(&source);pool[3]=&missingMean;
+    const auto incompleteMean=film_grain_average_moments(pool.data(),8);
+    assert(incompleteMean.valid && incompleteMean.folds[0].meanValid
+        && !incompleteMean.folds[1].meanValid && incompleteMean.folds[1].mean[0]==0.);
+    auto positiveMean=source;positiveMean.folds[0].mean[0]+=.125;
+    pool[3]=&positiveMean;
+    const auto pooledMean=film_grain_average_moments(pool.data(),8);
+    assert(pooledMean.folds[0].meanValid && pooledMean.folds[0].mean[0]==80.+.125/8);
     std::cout<<"Moment policy: "<<invalid<<" invalid measurements, independent-fold selection, bounded search, window identities/tails and isolated dropout controls passed\n";
 }

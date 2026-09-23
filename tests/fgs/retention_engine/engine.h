@@ -154,7 +154,8 @@ public:
         :config_(std::move(config)),witness_(std::move(witness)) {
         const auto& c=config_;
         require(c.spatialPolicy==FilmGrainMomentSpatialPolicy::FrameWindow
-            || c.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPicture,"unsupported spatial policy");
+            || c.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPicture
+            || c.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPictureMeans,"unsupported spatial policy");
         require(c.width>=64 && c.height>=64 && c.width<=4096 && c.height<=2160
             && c.width%64==0 && c.height%64==0 && (c.depth==8 || c.depth==10)
             && (c.matrix==1 || c.matrix==9) && c.frames>=8 && c.frames<=16
@@ -216,7 +217,8 @@ public:
     }
     Json report() const {
         return {{"complete",finished_ && !failed_},{"failed",failed_},{"error",error_},
-            {"spatial_policy",config_.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPicture?"full_picture":"frame_window"},
+            {"spatial_policy",config_.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPictureMeans?"full_picture_means"
+                :config_.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPicture?"full_picture":"frame_window"},
             {"received",received_},{"selected",selected_},{"windows",window_.windows()},
             {"release_through",window_.releaseThrough()},{"ready_at",readyAt_},
             {"native_buffer_bytes",nativeBytes_},{"peak_native_buffer_bytes",peakNativeBytes_},

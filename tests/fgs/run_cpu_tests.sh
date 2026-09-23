@@ -108,7 +108,7 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore \
 $CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/native_variance_test.cpp -o "$OUT/fgs_native_variance_test"
 "$OUT/fgs_native_variance_test"
-$CXX -std=c++17 -O2 -Wall -I NVEncCore \
+$CXX -std=c++17 -O2 -Wall -I NVEncCore -I json \
     tests/fgs/native_moments_test.cpp -o "$OUT/fgs_native_moments_test"
 "$OUT/fgs_native_moments_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore \

@@ -10,6 +10,8 @@ int main() {
     auto c=NVEncFilmGrainNativeConfig::parse(j,captured);c.requireLayout(1024,512,10);
     assert(c.spatialPolicy()=="frame_window");auto strict=j;strict["engine"]["spatial_policy"]="full_picture";
     assert(NVEncFilmGrainNativeConfig::parse(strict,captured).spatialPolicy()=="full_picture");
+    strict["engine"]["spatial_policy"]="full_picture_means";
+    assert(NVEncFilmGrainNativeConfig::parse(strict,captured).spatialPolicy()=="full_picture_means");
     for(const auto& policy:{Json("unknown"),Json(true),Json(nullptr)}) {
         strict["engine"]["spatial_policy"]=policy;bool rejected=false;
         try{NVEncFilmGrainNativeConfig::parse(strict,captured);}catch(...){rejected=true;}assert(rejected);
