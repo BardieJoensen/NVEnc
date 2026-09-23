@@ -136,6 +136,13 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [pre-encode candidate path](FINDINGS-2026-09-23-PREENCODE-RETENTION.md)
+completes D54. Eighteen positive/nine negative GPU encodes and independent
+native rounding/source/reconstruction checks pass; ordinary SDR/HDR is unchanged.
+`5adc0f3e` is qualified for finite bilateral candidate measurements. D55 connects
+those actual bases to complete model output, with source-preservation vetoes;
+bounded automatic fractions, source eligibility and R3–R8 remain open.
+
 The [direct-source connection](FINDINGS-2026-09-23-SOURCE-TRANSPORT.md)
 completes D53: originals are carried through the pipeline into live model fitting.
 Native 8/10-bit output, source identity/lifetime, complete decoder/oracle checks
