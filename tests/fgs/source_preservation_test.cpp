@@ -36,6 +36,15 @@ int main() {
         p.clipToRestrictedRange=1;assert(film_grain_component_source_preserved(counts,f,123,component,p,false));
         source.back()=base.back()=0;counts=film_grain_source_component_counts(f,123,component,source.data(),base.data(),n);
         assert(!film_grain_component_source_preserved(counts,f,123,component,p,false));
+        // The source-copy coverage shortcut must consume the final clamp
+        // proof too. This source/base contains a native zero, with an active
+        // zero curve and restricted-range synthesis: output is not exact.
+        FilmGrainRetentionPopulationCell cell;
+        cell.population=FilmGrainRetentionPopulation::Border;cell.samples=n;
+        cell.checks={FGS_RETAIN_NATIVE_RANGE,0};
+        if(film_grain_component_source_preserved(counts,f,123,component,p,false))
+            cell.checks.passed=FGS_RETAIN_NATIVE_RANGE;
+        assert(film_grain_retention_coverage(f,component,{cell}).reasons & FGS_RETAIN_FAILED_CHECK);
         p.applyGrain=0;assert(film_grain_component_source_preserved(counts,f,123,component,p,false));p.applyGrain=1;
         source.back()=base.back()=238*scale;counts=film_grain_source_component_counts(f,123,component,source.data(),base.data(),n);
         assert(film_grain_component_source_preserved(counts,f,123,component,p,false)==(component!=0));

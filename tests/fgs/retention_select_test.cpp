@@ -104,6 +104,15 @@ int main() {
                 "zero curve certified changed unsupported source");
             c.cells.back().changedSamples = 0;
             require(assess(c).accepted(), "exact source with zero grain needs no grain classification");
+            c.cells.back().checks = {};
+            r = assess(c);
+            require((r.reasons & FGS_RETAIN_UNMEASURED) && !r.coverage.exactZeroSamples,
+                "zero curve bypassed missing decoder range proof");
+            c.cells.back().checks = {FGS_RETAIN_NATIVE_RANGE, 0};
+            require(assess(c).reasons & FGS_RETAIN_FAILED_CHECK,
+                "zero curve bypassed restricted-range clipping failure");
+            c.cells.back().checks.passed = FGS_RETAIN_NATIVE_RANGE;
+            require(assess(c).accepted(), "proven exact/no-clamp source incorrectly needs a grain fit");
             c.cells.back().scaling = 1;
             require(assess(c).reasons & FGS_RETAIN_UNSUPPORTED_SYNTHESIS, "quiet source received unproven grain"); ++cases;
         }

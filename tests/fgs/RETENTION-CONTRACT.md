@@ -92,6 +92,15 @@ average to make it pass. Account separately for rejected tiles, image borders,
 textured/quiet regions and occupied lookup ranges. The selected patch count is
 not the percentage of the picture that has been qualified.
 
+An unchanged native base with zero grain strength also requires proof that the
+actual decoder range clamp leaves that population unchanged. A present zero
+curve still invokes the AV1 restricted-range clamp; a legal full-depth source
+code can therefore change. The exact-source shortcut must measure and pass
+`FGS_RETAIN_NATIVE_RANGE`, including the final active-component/range/matrix
+state. A missing check remains unknown, and a clipping failure rejects the
+candidate. The complete-component preservation helper provides this proof for
+an exactly copied component; a grain classification is unnecessary in that case.
+
 The per-component 26-variable vector contains 24 causal lag-three colour
 neighbours, averaged luma, and current colour. Collect source, actual rounded
 base and asymmetric source/base cross moments on the inner 26x26 samples.
