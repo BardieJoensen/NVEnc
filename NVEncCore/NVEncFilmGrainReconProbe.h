@@ -121,6 +121,7 @@ public:
         { std::ofstream out(raw,std::ios::binary);out.write(reinterpret_cast<const char*>(host.data()),host.size());out.flush();
           if (!out) throw std::runtime_error("reconstruction native write failed"); }
         jsonFile(m_config.directory/(stem+".json"),{{"complete",true},{"frame_id",frameId},{"source_frame_id",s.sourceId},
+            {"receive_ordinal",m_received-1},
             {"pts",pts},{"api_display_id",displayId},{"duration",s.duration},{"timebase",{s.timebaseNum,s.timebaseDen}},
             {"width",m_width},{"height",m_height},{"depth",m_depth},{"shift",m_depth==10?6:0},
             {"format",m_depth==10?"p010":"nv12"},{"pitch",rowBytes},{"device_pitch",s.pitch},{"bytes",host.size()},{"raw",raw.u8string()}});
