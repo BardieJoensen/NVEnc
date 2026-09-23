@@ -64,6 +64,20 @@ inline void detrend(double* tile,unsigned side) {
     const auto mean=sum/(side*side),sx=sumx/norm,sy=sumy/norm;
     for(unsigned y=0;y<side;++y)for(unsigned x=0;x<side;++x)tile[y*side+x]-=mean+sx*(x-center)+sy*(y-center);
 }
+inline void load_tiles(const std::array<FilmGrainNativePlane,3>& planes,
+    unsigned bx,unsigned by,unsigned depth,std::array<std::array<double,4096>,4>& tiles) {
+    const double scale=double(1u<<(depth-8));
+    for(unsigned field=0;field<4;++field) {
+        const unsigned side=field?32:64,c=field<2?0:field-1;const auto& p=planes[c];auto& tile=tiles[field];
+        for(unsigned y=0;y<side;++y)for(unsigned x=0;x<side;++x) {
+            if(field==1) {
+                const auto offset=size_t(by*64+y*2)*p.stride+bx*64+x*2;
+                tile[y*side+x]=(unsigned(p.data[offset])+p.data[offset+1]+p.data[offset+p.stride]+p.data[offset+p.stride+1])/(4.*scale);
+            } else tile[y*side+x]=p.data[size_t(by*side+y)*p.stride+bx*side+x]/scale;
+        }
+        detrend(tile.data(),side);
+    }
+}
 } // namespace native_moments_detail
 
 inline FilmGrainNativeMoments film_grain_native_moments(
@@ -71,20 +85,11 @@ inline FilmGrainNativeMoments film_grain_native_moments(
     FilmGrainNativeMoments result;const auto basic=film_grain_native_variance(planes,width,height,depth);
     if(!basic.valid)return result;
     result.width=width;result.height=height;result.depth=depth;result.mean=basic.mean;result.blocks=basic.blocks;
-    const double scale=double(1u<<(depth-8));const auto positions=native_moments_detail::offsets();
+    const auto positions=native_moments_detail::offsets();
     std::array<std::array<double,4096>,4> tiles{};
     for(unsigned by=0;by<height/64;++by)for(unsigned bx=0;bx<width/64;++bx) {
         auto& fold=result.folds[(by+bx)&1];
-        for(unsigned field=0;field<4;++field) {
-            const unsigned side=field?32:64,c=field<2?0:field-1;const auto& p=planes[c];auto& tile=tiles[field];
-            for(unsigned y=0;y<side;++y)for(unsigned x=0;x<side;++x) {
-                if(field==1) {
-                    const auto offset=size_t(by*64+y*2)*p.stride+bx*64+x*2;
-                    tile[y*side+x]=(unsigned(p.data[offset])+p.data[offset+1]+p.data[offset+p.stride]+p.data[offset+p.stride+1])/(4.*scale);
-                } else tile[y*side+x]=p.data[size_t(by*side+y)*p.stride+bx*side+x]/scale;
-            }
-            native_moments_detail::detrend(tile.data(),side);
-        }
+        native_moments_detail::load_tiles(planes,bx,by,depth,tiles);
         native_moments_detail::spatial(tiles[0].data(),64,fold.y);
         for(unsigned c=0;c<2;++c) {
             std::array<double,625> marginal{};native_moments_detail::spatial(tiles[c+2].data(),32,marginal);
