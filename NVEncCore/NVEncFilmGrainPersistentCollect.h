@@ -25,7 +25,7 @@ inline bool film_grain_persistent_history_valid(const FilmGrainCollectFrame& cur
 }
 inline FilmGrainPersistentDetail film_grain_persistent_result_detail(
     const FilmGrainPersistentResult& result, const FilmGrainPersistentLimits& limits) {
-    if (result.reasons || result.changedSamples > result.samples) return {};
+    if (result.reasons || result.reserved || result.changedSamples > result.samples) return {};
     FilmGrainPersistentMoments m;
     m.samples = result.samples;
     for (unsigned i = 0; i < 4; ++i) m.mean[i] = result.mean[i];
