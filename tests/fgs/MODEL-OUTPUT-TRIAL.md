@@ -42,4 +42,4 @@ state, independent bitstream tokens, returned packets and reconstruction surface
 they are not a total-process RAM claim. Qualify actual peak memory separately.
 
 The [current qualification findings](FINDINGS-2026-09-23-CONTINUOUS-OUTPUT.md)
-distinguish completed CPU/decoded controls from the pending live encoder trial.
+record completed CPU controls and the qualified finite live encoder trial.

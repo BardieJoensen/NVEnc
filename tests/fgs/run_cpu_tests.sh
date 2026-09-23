@@ -99,6 +99,12 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/model_probe_config_test.cpp -ldl -o "$OUT/fgs_model_probe_config_test"
 "$OUT/fgs_model_probe_config_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore \
+    tests/fgs/retained_strength_batch_test.cpp -o "$OUT/fgs_retained_strength_batch_test"
+"$OUT/fgs_retained_strength_batch_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore \
+    tests/fgs/native_variance_test.cpp -o "$OUT/fgs_native_variance_test"
+"$OUT/fgs_native_variance_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/training_history_test.cpp -o "$OUT/fgs_training_history_test"
 "$OUT/fgs_training_history_test"
 "$OUT/fgs_solver_test"

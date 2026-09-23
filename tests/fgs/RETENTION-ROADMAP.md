@@ -136,13 +136,20 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [in-process calibration](FINDINGS-2026-09-23-INPROCESS-SELECTION.md)
+completes D47. Batched strength search preserves all 126 recorded component
+decisions and 42 independently synthesized final pictures, with a lower measured
+calibration cost. Full spatial/cross-component checks, bounded seed selection
+and live model fitting still need to join the runtime path. The current adapter
+does not approve a source or complete R3. Full CPU: 214 Python / 40 C++.
+
 The [continuous output and bounded integration](FINDINGS-2026-09-23-CONTINUOUS-OUTPUT.md)
 completes D42's changing-picture trial and D45's CPU FIFO work. All32 selected
 pictures match actual AV1 output in independent decoders. Recorded NVENC receive
 order now validates the reconstruction association; the FIFO also waits for
-model readiness. Its finite precomputed-model encoder hook is implemented but
-still needs an actual build/GPU qualification. Automatic selection and new real
-population admission remain open. Continue live output qualification and then
+model readiness. D46 qualifies the finite precomputed-model encoder hook on11
+positive and7negative runs:2,496 fresh decoded observations and117 exact native
+captures. Automatic selection and new real population admission remain open. Continue bounded in-process model selection and then
 R3–R8; the diagnostic pause is released and nothing restarts automatically.
 
 The [10-bit and metric calibration follow-up](FINDINGS-2026-09-23-GRAIN-METRICS.md)

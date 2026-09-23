@@ -66,10 +66,23 @@ pointer. The hook transfers the complete bitstream POD (including side data)
 into independently owned storage before buffering. Payload replacement leaves
 the packet's clocks, flags, index, duration and other metadata intact.
 
-The new live hook still requires a pinned encoder build, actual positive and
-failure runs, and independent decoded comparisons. Automatic source selection,
-coverage, live fitting, temporal qualification and R4–R8 remain open. Production
-stays ordinary `cb903a17`, retention/FEL off; reserved footage remains unopened.
+D46 now qualifies the live hook on `24a9c0fd`, binary SHA
+`ccc3550e90c8cdafc335758f67b796e993b27a039ddff37d6f355f3789dd3400`.
+Eleven successful encodes pass 2,496 fresh AOM/dav1d observations and 117 exact
+native reconstruction captures (121,976,832 samples). All32 continuously selected
+pictures match the oracle exactly. Native 8-bit disabling of the first picture
+materializes the changed grain reference and preserves all15 unselected grain
+pictures. Ordinary/no-op packets, clocks and HDR metadata remain exact. Seven
+negative encodes fail and do not claim complete output. The shortened source
+fails its packet binding before EOF; this is not a separate live missing-tail
+completion proof. CPU missing-decision/future-tail controls cover that boundary.
+
+The finite models wait until picture7 and peak at eight packets, 58,255 payload
+bytes on these controls; reconstruction and total process memory are separate.
+All owned pauses are released. Automatic source selection, coverage, live fitting,
+temporal qualification and R4–R8 remain open. Continue bounded in-process model
+selection next. Production stays ordinary `cb903a17`, retention/FEL off; reserved
+footage remains unopened.
 
 Local evidence under the current handoff root:
 
