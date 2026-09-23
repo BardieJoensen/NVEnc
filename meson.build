@@ -1,7 +1,8 @@
 project('nvencc', ['cpp', 'cuda'],
   version: run_command('git', 'describe', '--tags', '--abbrev=0', check: true).stdout().strip(),
   license: 'MIT',
-  meson_version: '>=0.61.0',
+  # Older Meson silently omits CUDA header dependencies in Ninja builds.
+  meson_version: '>=1.4.0',
   default_options: [
     'cpp_std=c++17',
     'buildtype=release',
@@ -77,8 +78,8 @@ cuda_ver_major = cuda_ver_parts[0].to_int()
 cuda_ver_minor = cuda_ver_parts[1].to_int()
 message('Detected CUDA version: @0@.@1@'.format(cuda_ver_major, cuda_ver_minor))
 
-if cuda_ver_major < 10
-  error('CUDA >= 10.0 required, but CUDA @0@.@1@ found.'.format(cuda_ver_major, cuda_ver_minor))
+if cuda_ver_major < 10 or (cuda_ver_major == 10 and cuda_ver_minor < 2)
+  error('CUDA >= 10.2 is required for reliable header dependency tracking; found @0@.@1@.'.format(cuda_ver_major, cuda_ver_minor))
 endif
 
 # CUDAバージョンに応じたGPU code生成オプション
