@@ -136,6 +136,13 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [actual pre-encode/model connection](FINDINGS-2026-09-23-PREENCODE-MODELS.md)
+completes D55. Native source, rounding, reconstruction, complete model output and
+source-preservation vetoes qualify together in `e4b96c4b`. Eleven positive/six
+negative GPU encodes pass, with 64 exact model outputs and independent oracle
+pictures. Original full-spatial per-picture failures remain explicit; bounded
+automatic fractions, source/detail eligibility and R3–R8 are still open.
+
 The [pre-encode candidate path](FINDINGS-2026-09-23-PREENCODE-RETENTION.md)
 completes D54. Eighteen positive/nine negative GPU encodes and independent
 native rounding/source/reconstruction checks pass; ordinary SDR/HDR is unchanged.
