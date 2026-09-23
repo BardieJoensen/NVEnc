@@ -110,7 +110,7 @@ eligibility remain separate work.
 
 The outer manifest can supply `pre_encode_retention: [Y, Cb, Cr]` with three
 finite fractions in [0,1], stored as float32. This requires `capture_source`
-and every ordinal from zero through N−1 (1–16 frames). The encode must end at
+and `denoiser=bilateral`, with every ordinal from zero through N−1 (1–16 frames). The encode must end at
 exactly N; extra or missing frames reject the trial. It cannot be combined
 with either model-output mode or an ordinary grain-table export.
 
