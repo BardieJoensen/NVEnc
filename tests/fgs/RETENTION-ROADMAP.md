@@ -9,12 +9,16 @@ This is the current task list for optional automatic retention. Start at the
 [project handoff](WORK-TO-PRODUCTION.md) for deployed builds and operational
 constraints; older experiment plans describe their recorded stages.
 
-The [finite colour-template and final-model follow-up](FINDINGS-2026-09-23-JOINT-TEMPLATE.md)
-adds exact AOM-qualified Y/Cb/Cr templates and an explicitly bounded final-model
-capture in `ca6f355c`. The encoder builds and CPU checks pass; its GPU/output
-comparison is blocked by the host NVIDIA driver/library mismatch. No study
-pause was acquired and no test encode started. The new capture does not select
-retention. R3–R8 remain open; resume manually after host maintenance.
+The [source-preservation and frame-wide follow-up](FINDINGS-2026-09-23-SOURCE-PRESERVATION.md)
+qualifies final-model capture and complete native source/base counters after the
+host reboot. Diagnostic build `696a7b40` preserves ordinary SDR/HDR outputs;
+CUDA header dependencies are now enforced. Exact-source coverage also requires
+proof against the decoder range clamp, including active zero-strength curves.
+Whole-picture curves remain rejected: individual seed failures and large
+unqualified populations are unresolved. A separate ordinary-NVENC seed-cycle
+fixture confirms rare one-frame component dropouts; a seed-only IVF experiment
+corrects them without changing coded pictures, but is not a production fix.
+No experiment is scheduled. R3–R8 remain open; retention and FEL stay off.
 
 The goal is fast, space-efficient AV1 that preserves source detail and the
 appearance of grain on both 1080p SDR and UHD HDR. Retention should keep enough
@@ -169,6 +173,12 @@ independent decoding agrees with the signalled model, and deliberately invalid,
 unsupported and excessive-grain cases are rejected. This is trial readiness.
 
 ### R4 — Temporal behaviour
+
+- Qualify handling of the three degenerate emitted seeds (0, 46372, 18904).
+  The manual IVF proof preserves coded pictures across a complete seed cycle;
+  production parser/threading/cost, wider reference/show-existing cases and
+  container/nonvideo preservation remain open. This requirement is separate
+  from the previously repaired apply-grain/reference-state toggles.
 
 - Integrate model reuse, entry to fallback and return to synthesis with the new
   curves and per-component retention. A stale model must not outlive its source

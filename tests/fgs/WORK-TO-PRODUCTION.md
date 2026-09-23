@@ -1,22 +1,32 @@
 # FGS encoder and library repair: current work and handoff
 
-**September 23 active work:** automatic retention is **not finished**.
-The [finite colour-template and final-model follow-up](FINDINGS-2026-09-23-JOINT-TEMPLATE.md)
-adds exact Y/Cb/Cr finite-template calculations and optional final model/base
-capture, including separate common-colour measurements. `ca6f355c` builds and
-passes CPU checks. Its GPU/output comparison remains unrun: the host upgrade
-installed NVIDIA 595.91.07 while 595.71.05 remains loaded. Emby and `tdarr-node`
-also fail startup with the same NVML mismatch. Finish host maintenance before
-manually retrying the saved comparison. This study acquired no pause and started
-no GPU encode; nothing is scheduled. Production configuration is unchanged.
-The last ordinary-output-compared diagnostic build remains `5826421d`.
+**September 23 active work after reboot:** automatic retention is **not finished**.
+The [source-preservation, complete-frame and seed follow-up](FINDINGS-2026-09-23-SOURCE-PRESERVATION.md)
+qualifies the formerly blocked final-model capture and new complete native
+source/base counters. Driver 595.91.07 now works. The last built and
+ordinary-output-compared diagnostic encoder is `696a7b40`, SHA
+`0d5253aa137c020a4721a838fa8713be90fb16014c4bf4a6022e2a6119a9a66b`.
+Meson now requires working CUDA header dependencies; the stale intermediate
+build was invalidated before use. Later offline guards and the manual seed
+experiment are covered by 185 Python tests in 26 suites plus 27 C++ programs.
 
-Read `roadmap-r3-joint-template-20260923/report.json` and
-`roadmap-r3-final-model-20260923/report.json` in the evidence root below.
-First qualify final capture against raw/decoded outputs, then finish R3
-whole-picture population/model acceptance and actual automatic selection.
-R4–R8 remain open. The reserved corpus remains unopened; production retention
-and FEL remain off. Preserve the user's existing September 12 maintenance note.
+Whole-picture retention remains rejected: development seed averages hide
+individual failures, and the proposed curve adds grain to large unqualified
+regions. A separate 65,536-frame ordinary-NVENC synthetic test confirms three
+rare degenerate seeds. A manual seed-only IVF correction changes three bits,
+preserves every underlying picture and restores the three grain dropouts;
+AOM and dav1d agree across the corrected sequence. This is **not deployed**, and
+library visibility/scope and production/container integration are unqualified.
+
+Read `roadmap-r3-preserved-colour-20260923/report.json`,
+`roadmap-r3-frame-curves-20260923/report.json` and
+`roadmap-r3-seed-cycle-20260923/attempt-v2/patch-report.json` in the evidence root.
+Next: complete whole-picture population/model acceptance and actual automatic
+selection, and qualify emitted-seed handling before release. R3–R8 remain open.
+The reserved corpus remains unopened. Production remains ordinary `cb903a17`,
+retention and FEL off. Owned trial pauses are released; current Tdarr limits
+(two GPU transcodes/two CPU healthchecks) are preserved. No experiment is
+scheduled. Preserve the user's existing September 12 maintenance note.
 
 **Current retention task list:** [ordered implementation and qualification roadmap](RETENTION-ROADMAP.md).
 It tracks R1–R8 with dependencies, completion criteria and the working method.
@@ -53,7 +63,7 @@ remain CPU-qualified, with no encoder output selection call sites. Read the loca
 The completed blend's commands in `roadmap-r3-selector-20260922/` are historical;
 do not rerun its create-new output paths.
 
-The last fully built and ordinary-output-compared diagnostic encoder is now
+At the earlier September 22 checkpoint, the ordinary-output-compared encoder was
 `5826421d`, SHA `0ddbb547ac0f81192c8808ae4694ab8d73fa52eaed8a53eba9fbf0182890e281`.
 Four fresh SDR/HDR encodes preserve all 1,920 decoded observations in both grain
 modes, clocks, metadata and 960 grain/training records versus `da9ce557`.
