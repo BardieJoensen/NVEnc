@@ -2189,6 +2189,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
                 m_sourceMemory = std::make_shared<fgsdiagnostic::SourceMemory>(config.maxSourceBytes);
                 m_sourceFrames.assign(config.frames.begin(), config.frames.end());
                 if (config.preEncodeRetention) {
+                    if (prm->filmGrain.denoiser != FGS_DENOISE_BILATERAL) throw std::runtime_error("pre-encode candidate requires denoiser=bilateral");
                     if (!prm->tableOutPath.empty()) throw std::runtime_error("pre-encode candidate cannot publish an ordinary grain table");
                     m_preEncodeRetention = true; m_preEncodeFractions = config.retention;
                     m_preEncodeBase = std::make_unique<CUFrameBuf>(prm->frameOut);
