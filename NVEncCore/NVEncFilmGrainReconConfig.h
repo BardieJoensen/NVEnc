@@ -11,6 +11,7 @@ struct NVEncFilmGrainReconConfig {
     std::set<uint32_t> frames;
     std::filesystem::path directory;
     uint64_t maxBytes = 0;
+    uint64_t maxDeviceBytes = 512ULL*1024*1024;
 
     static NVEncFilmGrainReconConfig parse(const nlohmann::json& j) {
         NVEncFilmGrainReconConfig c;
@@ -27,6 +28,13 @@ struct NVEncFilmGrainReconConfig {
         c.maxBytes = j.at("max_output_bytes").get<uint64_t>();
         if (!c.maxBytes || c.maxBytes > 512ULL*1024*1024)
             throw std::runtime_error("reconstruction probe budget must be 1..512 MiB");
+        if (j.contains("max_device_bytes")) {
+            if (!j.at("max_device_bytes").is_number_unsigned())
+                throw std::runtime_error("reconstruction device budget must be unsigned");
+            c.maxDeviceBytes=j.at("max_device_bytes").get<uint64_t>();
+        }
+        if (!c.maxDeviceBytes || c.maxDeviceBytes>2ULL*1024*1024*1024)
+            throw std::runtime_error("reconstruction device budget must be 1..2048 MiB");
         c.directory = std::filesystem::u8path(j.at("output_directory").get<std::string>());
         if (!c.directory.is_absolute()) throw std::runtime_error("reconstruction directory must be absolute");
         return c;
