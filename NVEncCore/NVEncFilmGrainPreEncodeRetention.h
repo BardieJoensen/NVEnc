@@ -13,6 +13,7 @@ namespace fgsdiagnostic {
 class PreEncodeRetentionPlan {
     std::vector<std::array<float,3>> frames_;
     bool varying_=false;
+    bool sourceSegments_=false;
     static std::array<float,3> fractions(const nlohmann::json& values) {
         if(!values.is_array() || values.size()!=3)
             throw std::runtime_error("pre-encode retention requires three fractions");
@@ -27,10 +28,18 @@ class PreEncodeRetentionPlan {
         return result;
     }
 public:
+    struct Segment {size_t begin=0,count=0;bool source=false;};
     static PreEncodeRetentionPlan parse(const nlohmann::json& j,size_t count) {
         PreEncodeRetentionPlan plan;
         if(!j.is_object())throw std::runtime_error("retention plan requires an object");
         const bool constant=j.contains("pre_encode_retention"),varying=j.contains("pre_encode_retention_frames");
+        if(j.contains("pre_encode_source_segments")) {
+            if(!j.at("pre_encode_source_segments").is_boolean())
+                throw std::runtime_error("pre-encode source segments must be boolean");
+            plan.sourceSegments_=j.at("pre_encode_source_segments").get<bool>();
+            if(plan.sourceSegments_ && !constant && !varying)
+                throw std::runtime_error("source segments require an explicit retention plan");
+        }
         if(!constant && !varying)return plan;
         if(constant && varying)throw std::runtime_error("retention requires one constant or per-picture request, not both");
         if(!count || count>16)throw std::runtime_error("retention plan requires 1..16 pictures");
@@ -45,6 +54,7 @@ public:
         return plan;
     }
     bool enabled() const {return !frames_.empty();}
+    bool sourceSegments() const {return sourceSegments_;}
     size_t size() const {return frames_.size();}
     const std::array<float,3>& at(uint64_t ordinal) const {
         if(ordinal>=frames_.size())throw std::runtime_error("retention input ordinal is outside finite plan");
@@ -54,10 +64,30 @@ public:
         for(const auto& row:frames_)for(float f:row)if(f>=1)
             throw std::runtime_error("pre-encode model fitting requires all-partial fractions");
     }
+    bool sourceAt(uint64_t ordinal) const {
+        return at(ordinal)==std::array<float,3>{{1,1,1}};
+    }
+    std::vector<Segment> modelSegments() const {
+        if(!enabled())return {};
+        if(!sourceSegments_) {requireAllPartial();return {{0,size(),false}};}
+        std::vector<Segment> segments;
+        for(size_t i=0;i<size();++i) {
+            const bool source=sourceAt(i);
+            if(!source)for(float f:at(i))if(f>=1)
+                throw std::runtime_error("source segments require all-partial or whole-source rows");
+            if(segments.empty() || segments.back().source!=source)segments.push_back({i,1,source});
+            else ++segments.back().count;
+        }
+        for(const auto& s:segments)if(!s.source && s.count<8)
+            throw std::runtime_error("modeled segment requires at least eight consecutive pictures");
+        return segments;
+    }
     nlohmann::json evidence() const {
         if(!enabled())return nlohmann::json::object();
-        if(varying_)return {{"pre_encode_retention_frames",frames_}};
-        return {{"pre_encode_retention",frames_[0]}};
+        nlohmann::json result=varying_?nlohmann::json{{"pre_encode_retention_frames",frames_}}:
+            nlohmann::json{{"pre_encode_retention",frames_[0]}};
+        if(sourceSegments_)result["pre_encode_source_segments"]=true;
+        return result;
     }
 };
 
@@ -98,7 +128,7 @@ inline nlohmann::json preEncodeRetentionEvidence(const PreEncodeRetentionDecisio
         {"preserved_components",d.preservedComponents},{"whole_source",d.wholeSource()},
         {"grain_model","off; candidate measurement only"}};
 }
-// This finite fitter currently supports all-partial candidates only. A model
+// Each modeled segment requires all-partial candidates. A model
 // failure cannot retroactively restore source pixels that NVENC has encoded.
 // Reject before fitting if ordinary guards preserved any component; the manual
 // controller must encode a new whole-source output or keep the original file.
@@ -108,5 +138,16 @@ inline void requirePartialRetentionModel(const PreEncodeRetentionDecision& d,
         throw std::runtime_error("native candidate model cannot override source preservation");
     for(float f:expected)if(!std::isfinite(f)||f<0||f>=1)
         throw std::runtime_error("native candidate model requires all-partial fractions");
+}
+// Only an explicitly requested, actually preserved whole source can bypass
+// fitting. A failed partial candidate is never relabelled as this outcome.
+inline void requireSourceRetentionModel(const PreEncodeRetentionDecision& d,
+    const std::array<float,3>& expected) {
+    constexpr uint32_t known=PreEncodeRetentionDecision::MissingBase|PreEncodeRetentionDecision::OrdinaryFallback
+        |PreEncodeRetentionDecision::LimitedSupport|PreEncodeRetentionDecision::InactiveComponent
+        |PreEncodeRetentionDecision::RequestedSource;
+    if(expected!=std::array<float,3>{{1,1,1}} || d.requested!=expected || d.effective!=expected
+        || d.preservedComponents!=7 || !d.reasonMask || (d.reasonMask&~known))
+        throw std::runtime_error("native source segment lacks matching whole-source preservation");
 }
 }
