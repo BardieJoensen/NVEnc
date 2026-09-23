@@ -1,31 +1,31 @@
 # FGS encoder and library repair: current work and handoff
 
 **September 23 active work after reboot:** automatic retention is **not finished**.
-The [source-preservation, complete-frame and seed follow-up](FINDINGS-2026-09-23-SOURCE-PRESERVATION.md)
-qualifies the formerly blocked final-model capture and new complete native
-source/base counters. Driver 595.91.07 now works. The last built and
-ordinary-output-compared diagnostic encoder is `696a7b40`, SHA
-`0d5253aa137c020a4721a838fa8713be90fb16014c4bf4a6022e2a6119a9a66b`.
-Meson now requires working CUDA header dependencies; the stale intermediate
-build was invalidated before use. Later offline guards and the manual seed
-experiment are covered by 185 Python tests in 26 suites plus 27 C++ programs.
+The [optional emitted-seed correction](FINDINGS-2026-09-23-SEED-INTEGRATION.md)
+now has a private isolated parser and actual Linux encoder/container qualification.
+The latest built encoder is `b2a6daeb`, SHA
+`d779c46b21b74e75c698158531bc605b3c7a067a1c5d591bf31c507ade90f260`.
+It passes 68,264 decoded observations, a complete seed cycle, SDR/HDR,
+Matroska/MP4 and ten configuration/failure controls. It is **not deployed**.
+The explicit seed option is off by default; full-title/release/canary checks and
+library visibility/scope remain separate. The prior final-model and native
+source/base diagnostics are qualified; Meson/CUDA dependency tracking is fixed.
 
-Whole-picture retention remains rejected: development seed averages hide
-individual failures, and the proposed curve adds grain to large unqualified
-regions. A separate 65,536-frame ordinary-NVENC synthetic test confirms three
-rare degenerate seeds. A manual seed-only IVF correction changes three bits,
-preserves every underlying picture and restores the three grain dropouts;
-AOM and dav1d agree across the corrected sequence. This is **not deployed**, and
-library visibility/scope and production/container integration are unqualified.
+R3's new [native population preflight](FINDINGS-2026-09-23-POPULATION-ENVELOPE.md)
+passes independent pixel-oracle and 36 real census replays. For those fixed
+lookup equations every occupied code also contains unsupported pixels, so no
+positive whole-picture curve passes the current coverage rule. Fitting the same
+patches again cannot resolve that conflict. Per-seed fidelity also remains open.
+The new helpers have no output selection call sites. The full CPU suite passes
+185 Python tests in 26 suites and 28 C++ programs.
 
-Read `roadmap-r3-preserved-colour-20260923/report.json`,
-`roadmap-r3-frame-curves-20260923/report.json` and
-`roadmap-r3-seed-cycle-20260923/attempt-v2/patch-report.json` in the evidence root.
-Next: complete whole-picture population/model acceptance and actual automatic
-selection, and qualify emitted-seed handling before release. R3–R8 remain open.
-The reserved corpus remains unopened. Production remains ordinary `cb903a17`,
-retention and FEL off. Owned trial pauses are released; current Tdarr limits
-(two GPU transcodes/two CPU healthchecks) are preserved. No experiment is
+Read `roadmap-r3-seed-integration-20260923/report.json` and
+`roadmap-r3-population-envelope-20260923/summary.json` in the evidence root.
+Next: bounded alternative lookup/population evidence, then actual automatic
+selection and temporal/quality/bytes/speed qualification. R3–R8 remain open;
+the reserved corpus is unopened. Production remains ordinary `cb903a17`,
+retention and FEL off. Both owned pauses are released; current Tdarr limits
+(two GPU transcodes/two CPU healthchecks) were preserved. No experiment is
 scheduled. Preserve the user's existing September 12 maintenance note.
 
 **Current retention task list:** [ordered implementation and qualification roadmap](RETENTION-ROADMAP.md).

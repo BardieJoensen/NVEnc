@@ -59,7 +59,9 @@ The C ABI also passes with an unrelated FFmpeg already globally loaded.
 The seed-cycle correction preserves every base picture and clock; AOM and
 dav1d agree on every corrected grain-enabled frame. Only three displayed frames
 change. This establishes a narrowly scoped repair mechanism. Actual encoder
-integration, broader container/stream checks and deployment remain separate
+integration now passes the [finite Linux trials](../FINDINGS-2026-09-23-SEED-INTEGRATION.md),
+including a complete seed cycle, SDR/HDR, Matroska/MP4 and failure propagation.
+Full-title cost, broader release checks and deployment remain separate
 qualification steps. This folder does not enable production retention or FEL,
 schedule jobs, or repair library files.
 

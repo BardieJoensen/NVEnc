@@ -1,5 +1,5 @@
 // Manual policy replay of a complete native-population census. No media writes.
-#include "NVEncFilmGrainRetentionSelect.h"
+#include "NVEncFilmGrainPopulationEnvelope.h"
 #include "json.hpp"
 #include <fstream>
 #include <iostream>
@@ -25,10 +25,19 @@ int main(int argc, char** argv) {
                 cell.checks = {row.at("measured"), row.at("passed")}; cells.push_back(cell);
             }
             const auto r = film_grain_retention_coverage(frame, c.at("component"), cells);
+            const auto e = film_grain_population_envelope(frame, c.at("component"), cells);
+            std::vector<unsigned> possible, blocked;
+            if (e.valid) for (unsigned code=0; code<(1u<<e.bitDepth); ++code) {
+                if (!e.occupancy[code]) continue;
+                (e.possible[code] ? possible : blocked).push_back(code);
+            }
             report["cases"].push_back({{"id", c.at("id")}, {"coverage_pass", r.reasons == 0},
                 {"reasons", r.reasons}, {"samples", r.samples}, {"exact_zero_samples", r.exactZeroSamples},
                 {"supported_samples", r.supportedSamples}, {"unsupported_synthesis_samples", r.unsupportedSynthesisSamples},
-                {"unproven_changed_samples", r.unprovenChangedSamples}, {"population_samples", r.populationSamples}});
+                {"unproven_changed_samples", r.unprovenChangedSamples}, {"population_samples", r.populationSamples},
+                {"envelope", {{"valid", e.valid}, {"possible_codes", possible}, {"blocked_codes", blocked},
+                    {"possible_samples", e.possibleSamples}, {"blocked_samples", e.blockedSamples},
+                    {"eligible_samples_at_blocked_codes", e.eligibleSamplesAtBlockedCodes}}}});
         }
         report["complete"] = true;
     } catch (const std::exception& error) { report["error"] = error.what(); std::cerr << error.what() << '\n'; }

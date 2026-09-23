@@ -20,6 +20,15 @@ fixture confirms rare one-frame component dropouts; a seed-only IVF experiment
 corrects them without changing coded pictures, but is not a production fix.
 No experiment is scheduled. R3–R8 remain open; retention and FEL stay off.
 
+The [isolated seed parser and Linux integration](FINDINGS-2026-09-23-SEED-INTEGRATION.md)
+now pass the complete seed cycle, SDR/HDR, Matroska/MP4 and failure controls.
+`b2a6daeb` is the latest built trial encoder; the new option remains off and is
+not deployed. The [native population envelope](FINDINGS-2026-09-23-POPULATION-ENVELOPE.md)
+adds a bounded feasibility preflight: all occupied native lookups in the 36
+recorded real censuses conflict with unsupported populations. Alternative
+lookup/population evidence or explicit source fallback is required before
+another partial-patch model can become a whole-picture selection.
+
 The goal is fast, space-efficient AV1 that preserves source detail and the
 appearance of grain on both 1080p SDR and UHD HDR. Retention should keep enough
 of the removed source residual when synthesis alone cannot reproduce it well.
@@ -176,8 +185,9 @@ unsupported and excessive-grain cases are rejected. This is trial readiness.
 
 - Qualify handling of the three degenerate emitted seeds (0, 46372, 18904).
   The manual IVF proof preserves coded pictures across a complete seed cycle;
-  production parser/threading/cost, wider reference/show-existing cases and
-  container/nonvideo preservation remain open. This requirement is separate
+  private parser/threading, hidden/show-existing cases and finite actual
+  encoder/container preservation now pass. Full-title cost and deployment
+  remain open. This requirement is separate
   from the previously repaired apply-grain/reference-state toggles.
 
 - Integrate model reuse, entry to fallback and return to synthesis with the new

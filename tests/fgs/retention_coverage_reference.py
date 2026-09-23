@@ -1,7 +1,9 @@
 """Replay whole-picture coverage against actual native rounded bases.
 
 This intentionally supplies no invented population/model qualification. With
-zero synthesis the only established proof is exact native source preservation.
+zero synthesis exact native source preservation still requires decoder-range
+evidence. This historical census supplies none, so even an unchanged component
+must remain unqualified; it cannot silently pass the newer range guard.
 The replay shows why zeroing a curve alone cannot approve a changed base.
 Source-only tile classification is held fixed across all retention candidates;
 every pixel, rejected population and partial border enters the native census.
@@ -124,7 +126,24 @@ def compare(census, binary, measured, output):
             # Exact-zero counters count only entirely unchanged cells. They are
             # diagnostic; every unproven changed sample still rejects the picture.
             assert a['supported_samples'] == a['unsupported_synthesis_samples'] == 0
-            assert a['coverage_pass'] == (changed == 0) and a['reasons'] == (64 if changed else 0)
+            unchanged_cell = any(x['changed_samples'] == 0 for x in c['cells'])
+            assert a['exact_zero_samples'] == 0  # No decoder-range evidence.
+            assert not a['coverage_pass']
+            assert a['reasons'] == (64 if changed else 0) | (4 if unchanged_cell else 0)
+            # Necessary lookup coverage, independent of fitted model outcomes.
+            occupancy, eligible = {}, {}
+            for cell in c['cells']:
+                code = cell['native_lookup']
+                occupancy[code] = occupancy.get(code, 0) + cell['samples']
+                if cell['population'] == 0 and min(cell['train_blocks'], cell['check_blocks']) >= 16:
+                    eligible[code] = eligible.get(code, 0) + cell['samples']
+            possible = sorted(code for code, count in occupancy.items() if eligible.get(code, 0) == count)
+            blocked = sorted(set(occupancy) - set(possible))
+            envelope = a['envelope']
+            assert envelope['valid'] and envelope['possible_codes'] == possible and envelope['blocked_codes'] == blocked
+            assert envelope['possible_samples'] == sum(occupancy[x] for x in possible)
+            assert envelope['blocked_samples'] == sum(occupancy[x] for x in blocked)
+            assert envelope['eligible_samples_at_blocked_codes'] == sum(eligible.get(x, 0) for x in blocked)
             k = (c['frame']['frame_id'], c['component'])
             prior = identities.setdefault(k, c['population_sha256'])
             assert prior == c['population_sha256'], 'retention changed source classification'
