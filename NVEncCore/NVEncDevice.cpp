@@ -788,6 +788,17 @@ NVENCSTATUS NVEncoder::InitSession() {
 }
 
 NVENCSTATUS NVEncoder::CreateEncoder(NV_ENC_INITIALIZE_PARAMS *initParams) {
+    if (initParams && initParams->encodeConfig
+        && !std::memcmp(&initParams->encodeGUID, &NV_ENC_CODEC_AV1_GUID, sizeof(GUID))) {
+        const auto& config = *initParams->encodeConfig;
+        PrintMes(RGY_LOG_DEBUG, _T("av1-init api=%08x initVersion=%08x configVersion=%08x rcVersion=%08x ")
+            _T("size=%ux%u maxSize=%ux%u fps=%u/%u level=%u tier=%u targetQuality=%u/%u bitrate=%u/%u grain=%u\n"),
+            m_apiVer, initParams->version, config.version, config.rcParams.version,
+            initParams->encodeWidth, initParams->encodeHeight, initParams->maxEncodeWidth, initParams->maxEncodeHeight,
+            initParams->frameRateNum, initParams->frameRateDen, config.encodeCodecConfig.av1Config.level,
+            config.encodeCodecConfig.av1Config.tier, config.rcParams.targetQuality, config.rcParams.targetQualityLSB,
+            config.rcParams.averageBitRate, config.rcParams.maxBitRate, config.encodeCodecConfig.av1Config.enableFilmGrainParams);
+    }
     NVENCSTATUS nvStatus;
     if (NV_ENC_SUCCESS != (nvStatus = m_pEncodeAPI->nvEncInitializeEncoder(m_hEncoder, initParams))) {
         NVPrintFuncError(_T("nvEncInitializeEncoder"), nvStatus);
