@@ -14,6 +14,8 @@ struct FilmGrainMomentMatrixCheck {
 };
 struct FilmGrainMomentFoldCheck {
     FilmGrainMomentMatrixCheck y{}, cb{}, cr{}, common{};
+    std::array<double,3> meanError{};
+    bool meanValid = false, meanPass = false;
     double cross = 0.;
     bool valid = false, fullPass = false, framePass = false;
 };
@@ -78,6 +80,14 @@ inline FilmGrainMomentComparison film_grain_compare_moments(
         const auto& a = source.folds[fold];
         const auto& b = actual.folds[fold];
         auto& check = result.folds[fold];
+        check.meanValid = a.meanValid && b.meanValid;
+        check.meanPass = check.meanValid;
+        for (unsigned c = 0; c < 3 && check.meanValid; ++c) {
+            check.meanError[c] = b.mean[c]-a.mean[c];
+            check.meanValid &= std::isfinite(a.mean[c]) && std::isfinite(b.mean[c])
+                && std::isfinite(check.meanError[c]);
+            check.meanPass &= check.meanValid && std::abs(check.meanError[c]) <= .125;
+        }
         check.y = film_grain_compare_moment_matrix<25>(a.y, b.y);
         check.cb = film_grain_compare_moment_matrix<26>(a.colour[0], b.colour[0]);
         check.cr = film_grain_compare_moment_matrix<26>(a.colour[1], b.colour[1]);
@@ -110,6 +120,7 @@ inline FilmGrainNativeMoments film_grain_average_moments(
         || !film_grain_moment_layout(*pictures[0])) return result;
     result.width = pictures[0]->width; result.height = pictures[0]->height;
     result.depth = pictures[0]->depth; result.blocks = pictures[0]->blocks;
+    for (auto& fold : result.folds) fold.meanValid = true;
     auto add = [](auto& out, const auto& in) {
         for (size_t i = 0; i < out.size(); ++i) {
             if (!std::isfinite(in[i])) return false;
@@ -123,6 +134,8 @@ inline FilmGrainNativeMoments film_grain_average_moments(
         if (!add(result.mean, pictures[i]->mean)) return result;
         for (unsigned f = 0; f < 2; ++f) {
             auto& out = result.folds[f]; const auto& in = pictures[i]->folds[f];
+            out.meanValid &= in.meanValid;
+            if (in.meanValid && !add(out.mean, in.mean)) return result;
             if (!add(out.y, in.y) || !add(out.common, in.common) || !add(out.cross, in.cross)
                 || !add(out.colour[0], in.colour[0]) || !add(out.colour[1], in.colour[1])) return result;
         }
@@ -132,6 +145,8 @@ inline FilmGrainNativeMoments film_grain_average_moments(
     for (auto& fold : result.folds) {
         divide(fold.y); divide(fold.colour[0]); divide(fold.colour[1]);
         divide(fold.common); divide(fold.cross);
+        if (fold.meanValid) divide(fold.mean);
+        else fold.mean = {}; // An incomplete mean cannot be used for selection.
     }
     result.valid = true;
     return result;
@@ -149,7 +164,7 @@ struct FilmGrainMomentAttempt {
     FilmGrainMomentComparison comparison{};
 };
 enum class FilmGrainMomentSelectionReason { Invalid, NoTrainingCandidate, CheckFold, Pass };
-enum class FilmGrainMomentSpatialPolicy { FrameWindow, FullPicture };
+enum class FilmGrainMomentSpatialPolicy { FrameWindow, FullPicture, FullPictureMeans };
 struct FilmGrainMomentSelection {
     FilmGrainMomentSelectionReason reason = FilmGrainMomentSelectionReason::Invalid;
     std::vector<FilmGrainMomentAttempt> attempts;
@@ -166,7 +181,13 @@ inline FilmGrainMomentSelection film_grain_select_moment_seed(
     FilmGrainMomentSpatialPolicy policy=FilmGrainMomentSpatialPolicy::FrameWindow) {
     FilmGrainMomentSelection result;
     if (!film_grain_moment_layout(source) || !seeds || !count || count > 4) return result;
-    if (policy!=FilmGrainMomentSpatialPolicy::FrameWindow && policy!=FilmGrainMomentSpatialPolicy::FullPicture) return result;
+    if (policy!=FilmGrainMomentSpatialPolicy::FrameWindow && policy!=FilmGrainMomentSpatialPolicy::FullPicture
+        && policy!=FilmGrainMomentSpatialPolicy::FullPictureMeans) return result;
+    const bool separateMeans=policy==FilmGrainMomentSpatialPolicy::FullPictureMeans;
+    if (separateMeans) for (const auto& fold:source.folds) {
+        if (!fold.meanValid) return result;
+        for (auto value:fold.mean) if (!std::isfinite(value)) return result;
+    }
     for (size_t i = 0; i < count; ++i) {
         if (seeds[i] > 65535 || seeds[i] == 0 || seeds[i] == 18904 || seeds[i] == 46372) return result;
         for (size_t j = 0; j < i; ++j) if (seeds[i] == seeds[j]) return result;
@@ -180,13 +201,17 @@ inline FilmGrainMomentSelection film_grain_select_moment_seed(
         for (auto strength : attempt.strengths) if (strength > 255) attempt.calibrated = false;
         if (attempt.calibrated) attempt.comparison = film_grain_compare_moments(source, candidate.moments);
         result.attempts.push_back(attempt);
-        const bool full=policy==FilmGrainMomentSpatialPolicy::FullPicture;
+        const bool full=policy!=FilmGrainMomentSpatialPolicy::FrameWindow;
         // Full-picture mode selects using ONLY the training fold's spatial
         // statistics. The global mean includes independent pixels, so its
         // failure vetoes the selected seed instead of selecting another one.
         if (!(full ? attempt.comparison.folds[0].fullPass : attempt.comparison.folds[0].framePass)) continue;
+        // This mean contains training pixels only. The independent half and
+        // global mean remain vetoes, never reasons to try a different seed.
+        if (separateMeans && !attempt.comparison.folds[0].meanPass) continue;
         result.selected = int(i);
         result.passesDiagnostic = full ? attempt.comparison.fullPass : attempt.comparison.folds[1].framePass;
+        if (separateMeans) result.passesDiagnostic &= attempt.comparison.folds[1].meanPass;
         result.reason = result.passesDiagnostic ? FilmGrainMomentSelectionReason::Pass
             : FilmGrainMomentSelectionReason::CheckFold;
         break;
