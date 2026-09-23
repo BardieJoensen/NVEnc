@@ -45,10 +45,12 @@ __global__ void collect(FilmGrainCollectFrame source, FilmGrainCollectFrame base
         }
         const int candidate = joint_collect_detail::retained(s,b,fraction);
         changed += candidate != s;
-        // A fixed origin keeps raw products small without rounding the history
-        // averages. All native pixels contribute, including incomplete borders.
-        const double field[4] = {s/divisor-128, candidate/divisor-128,
-            oldest/(3*divisor)-128, newer/(4*divisor)-128};
+        // Accumulate native integers, including unnormalized historical sums.
+        // All products and covariance numerators fit exactly in double (<=2^46
+        // for 4096 samples). Normalize only after centering, avoiding negative
+        // variances from subtracting nearly equal rounded history averages.
+        const double field[4] = {s-128*divisor, candidate-128*divisor,
+            oldest-384*divisor, newer-512*divisor};
         unsigned k = 0;
         for (unsigned a = 0; a < 4; ++a) {
             sums[a] += field[a];
@@ -69,10 +71,12 @@ __global__ void collect(FilmGrainCollectFrame source, FilmGrainCollectFrame base
         double total[15]{};
         for (unsigned i = 0; i < 15; ++i)
             for (unsigned w = 0; w < 8; ++w) total[i] += partial[i][w];
-        for (unsigned a = 0; a < 4; ++a) out.mean[a] = total[a]/count+128;
+        const double scale[4] = {divisor,divisor,3*divisor,4*divisor};
+        for (unsigned a = 0; a < 4; ++a) out.mean[a] = total[a]/(count*scale[a])+128;
         unsigned k = 4;
         for (unsigned a = 0; a < 4; ++a) for (unsigned b = a; b < 4; ++b) {
-            const double covariance = total[k++]/count-(total[a]/count)*(total[b]/count);
+            const double covariance = (count*total[k++]-total[a]*total[b])
+                /(double(count)*count*scale[a]*scale[b]);
             out.covariance[a*4+b] = out.covariance[b*4+a] = covariance;
         }
         out.samples = count;

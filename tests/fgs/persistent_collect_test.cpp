@@ -38,7 +38,11 @@ int main() {
     assert(film_grain_persistent_result_detail(row,limits).withinLimits);
     row.changedSamples=4097;
     assert(!film_grain_persistent_result_detail(row,limits).valid);
-    row.changedSamples=0;row.reasons=FGS_COLLECT_HISTORY;
+    row.changedSamples=0;row.reasons=0;row.reserved=1;
     assert(!film_grain_persistent_result_detail(row,limits).valid);
+    row.reserved=0;row.reasons=FGS_COLLECT_HISTORY;
+    assert(!film_grain_persistent_result_detail(row,limits).valid);
+    row.reasons=0;row.covariance[10]=-7.89491928622356e-16;
+    assert(!film_grain_persistent_result_detail(row,limits).valid); // Fix collection, not the PSD guard.
     std::cout<<"Persistent detail requires all seven adjacent, same-epoch native histories\n";
 }
