@@ -1,7 +1,11 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <algorithm>
+// The real CUDA filter includes the legacy function-like clamp macro first.
+#define clamp(value, low, high) legacy_clamp_must_not_expand_here(value, low, high)
 #include "NVEncFilmGrainJointTemplate.h"
+#undef clamp
 #include "joint_template_vectors.h"
 using namespace fgsmodel;
 template<size_t N>static uint64_t hash(const std::array<int16_t,N>& a) {
