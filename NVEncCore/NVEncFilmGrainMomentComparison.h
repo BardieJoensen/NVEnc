@@ -17,7 +17,7 @@ struct FilmGrainMomentFoldCheck {
     std::array<double,3> meanError{};
     bool meanValid = false, meanPass = false;
     double cross = 0.;
-    bool valid = false, fullPass = false, framePass = false;
+    bool valid = false, fullPass = false, frameShapePass = false, framePass = false;
 };
 struct FilmGrainMomentComparison {
     std::array<double,3> meanError{};
@@ -101,9 +101,10 @@ inline FilmGrainMomentComparison film_grain_compare_moments(
         }
         check.fullPass = check.valid && check.y.pass && check.cb.pass && check.cr.pass
             && check.common.pass && check.cross <= .08;
-        check.framePass = check.valid && result.meanPass && check.y.pass
+        check.frameShapePass = check.valid && check.y.pass
             && check.cb.variance <= .08 && check.cr.variance <= .08
             && check.common.variance <= .08;
+        check.framePass = result.meanPass && check.frameShapePass;
         result.valid &= check.valid;
         result.fullPass &= check.fullPass;
     }
@@ -164,7 +165,7 @@ struct FilmGrainMomentAttempt {
     FilmGrainMomentComparison comparison{};
 };
 enum class FilmGrainMomentSelectionReason { Invalid, NoTrainingCandidate, CheckFold, Pass };
-enum class FilmGrainMomentSpatialPolicy { FrameWindow, FullPicture, FullPictureMeans };
+enum class FilmGrainMomentSpatialPolicy { FrameWindow, FullPicture, FullPictureMeans, FrameWindowMeans };
 struct FilmGrainMomentSelection {
     FilmGrainMomentSelectionReason reason = FilmGrainMomentSelectionReason::Invalid;
     std::vector<FilmGrainMomentAttempt> attempts;
@@ -182,8 +183,10 @@ inline FilmGrainMomentSelection film_grain_select_moment_seed(
     FilmGrainMomentSelection result;
     if (!film_grain_moment_layout(source) || !seeds || !count || count > 4) return result;
     if (policy!=FilmGrainMomentSpatialPolicy::FrameWindow && policy!=FilmGrainMomentSpatialPolicy::FullPicture
-        && policy!=FilmGrainMomentSpatialPolicy::FullPictureMeans) return result;
-    const bool separateMeans=policy==FilmGrainMomentSpatialPolicy::FullPictureMeans;
+        && policy!=FilmGrainMomentSpatialPolicy::FullPictureMeans
+        && policy!=FilmGrainMomentSpatialPolicy::FrameWindowMeans) return result;
+    const bool separateMeans=policy==FilmGrainMomentSpatialPolicy::FullPictureMeans
+        || policy==FilmGrainMomentSpatialPolicy::FrameWindowMeans;
     if (separateMeans) for (const auto& fold:source.folds) {
         if (!fold.meanValid) return result;
         for (auto value:fold.mean) if (!std::isfinite(value)) return result;
@@ -201,16 +204,20 @@ inline FilmGrainMomentSelection film_grain_select_moment_seed(
         for (auto strength : attempt.strengths) if (strength > 255) attempt.calibrated = false;
         if (attempt.calibrated) attempt.comparison = film_grain_compare_moments(source, candidate.moments);
         result.attempts.push_back(attempt);
-        const bool full=policy!=FilmGrainMomentSpatialPolicy::FrameWindow;
+        const bool full=policy==FilmGrainMomentSpatialPolicy::FullPicture
+            || policy==FilmGrainMomentSpatialPolicy::FullPictureMeans;
         // Full-picture mode selects using ONLY the training fold's spatial
         // statistics. The global mean includes independent pixels, so its
         // failure vetoes the selected seed instead of selecting another one.
-        if (!(full ? attempt.comparison.folds[0].fullPass : attempt.comparison.folds[0].framePass)) continue;
+        const auto& train=attempt.comparison.folds[0];
+        if (!(full ? train.fullPass : separateMeans ? train.frameShapePass : train.framePass)) continue;
         // This mean contains training pixels only. The independent half and
         // global mean remain vetoes, never reasons to try a different seed.
         if (separateMeans && !attempt.comparison.folds[0].meanPass) continue;
         result.selected = int(i);
-        result.passesDiagnostic = full ? attempt.comparison.fullPass : attempt.comparison.folds[1].framePass;
+        const auto& check=attempt.comparison.folds[1];
+        result.passesDiagnostic = full ? attempt.comparison.fullPass
+            : separateMeans ? (attempt.comparison.meanPass && check.frameShapePass) : check.framePass;
         if (separateMeans) result.passesDiagnostic &= attempt.comparison.folds[1].meanPass;
         result.reason = result.passesDiagnostic ? FilmGrainMomentSelectionReason::Pass
             : FilmGrainMomentSelectionReason::CheckFold;
