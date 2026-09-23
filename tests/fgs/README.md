@@ -39,6 +39,13 @@ separately match the captured source and preceding Y/Cb/Cr against original
 decoding, and compare complete diagnostic-on/off outputs in both grain modes.
 Do not add these experiments to the routine Tdarr validator.
 
+The optional `template_seeds` field adds final model/native-base capture and
+separate common-colour cohorts. The reference tool independently checks those
+cohort sums too. See the [finite colour-template findings](FINDINGS-2026-09-23-JOINT-TEMPLATE.md)
+for the completed CPU/AOM evidence and still-pending GPU/output qualification.
+Template moments exclude strength scaling, displayed rounding, overlap and
+picture clipping; they cannot by themselves approve retention.
+
 The experimental R3 host selector and common-coordinate colour checks are in
 the CPU suite. Read [their scope and remaining work](FINDINGS-2026-09-22-RETENTION-SELECTION.md).
 `retention_coverage_reference.py prepare CENSUS.json PROBE_FRAME.json ...`

@@ -1,6 +1,6 @@
 # Automatic retention: remaining work and completion criteria
 
-Updated September 22, 2026: R1/R2 complete; encoder integration `da9ce557`,
+Updated September 23, 2026: R1/R2 complete; encoder integration `da9ce557`,
 independent comparison tool `128796ea`. R3 host selection/coverage and colour
 checks and native GPU blending are qualified. Grain-scale units and exact
 native brightness lookup now pass independent decoder comparisons; ordinary
@@ -8,6 +8,13 @@ output remains identical on SDR/HDR controls. Full R3 integration remains open.
 This is the current task list for optional automatic retention. Start at the
 [project handoff](WORK-TO-PRODUCTION.md) for deployed builds and operational
 constraints; older experiment plans describe their recorded stages.
+
+The [finite colour-template and final-model follow-up](FINDINGS-2026-09-23-JOINT-TEMPLATE.md)
+adds exact AOM-qualified Y/Cb/Cr templates and an explicitly bounded final-model
+capture in `ca6f355c`. The encoder builds and CPU checks pass; its GPU/output
+comparison is blocked by the host NVIDIA driver/library mismatch. No study
+pause was acquired and no test encode started. The new capture does not select
+retention. R3–R8 remain open; resume manually after host maintenance.
 
 The goal is fast, space-efficient AV1 that preserves source detail and the
 appearance of grain on both 1080p SDR and UHD HDR. Retention should keep enough

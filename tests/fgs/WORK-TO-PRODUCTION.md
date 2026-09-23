@@ -1,5 +1,23 @@
 # FGS encoder and library repair: current work and handoff
 
+**September 23 active work:** automatic retention is **not finished**.
+The [finite colour-template and final-model follow-up](FINDINGS-2026-09-23-JOINT-TEMPLATE.md)
+adds exact Y/Cb/Cr finite-template calculations and optional final model/base
+capture, including separate common-colour measurements. `ca6f355c` builds and
+passes CPU checks. Its GPU/output comparison remains unrun: the host upgrade
+installed NVIDIA 595.91.07 while 595.71.05 remains loaded. Emby and `tdarr-node`
+also fail startup with the same NVML mismatch. Finish host maintenance before
+manually retrying the saved comparison. This study acquired no pause and started
+no GPU encode; nothing is scheduled. Production configuration is unchanged.
+The last ordinary-output-compared diagnostic build remains `5826421d`.
+
+Read `roadmap-r3-joint-template-20260923/report.json` and
+`roadmap-r3-final-model-20260923/report.json` in the evidence root below.
+First qualify final capture against raw/decoded outputs, then finish R3
+whole-picture population/model acceptance and actual automatic selection.
+R4–R8 remain open. The reserved corpus remains unopened; production retention
+and FEL remain off. Preserve the user's existing September 12 maintenance note.
+
 **Current retention task list:** [ordered implementation and qualification roadmap](RETENTION-ROADMAP.md).
 It tracks R1–R8 with dependencies, completion criteria and the working method.
 R1's [decision contract](RETENTION-CONTRACT.md) and separate qualification corpus
