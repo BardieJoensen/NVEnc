@@ -4,6 +4,7 @@
 #include "NVEncFilmGrainJointCollect.cuh"
 #include "NVEncFilmGrainModelEvidence.h"
 #include "NVEncFilmGrainSourcePreservation.cuh"
+#include "NVEncFilmGrainPersistentHistory.cuh"
 #include "../json/json.hpp"
 #include <algorithm>
 #include <filesystem>
@@ -25,6 +26,10 @@ class FilmGrainJointProbe {
     std::vector<uint16_t> m_templateSeeds;
     FilmGrainCollectRetention m_retention{};
     FilmGrainCollectHistory m_history;
+    FilmGrainPersistentHistoryCache m_persistentHistory;
+    bool m_persistentDetail=false;
+    FilmGrainPersistentTile *m_persistentTiles=nullptr;
+    FilmGrainPersistentResult *m_persistentResults=nullptr;
     FilmGrainCollectTile *m_tiles=nullptr;
     FilmGrainCollectResult *m_results=nullptr;
     FilmGrainCollectGroup *m_groups=nullptr;
@@ -65,10 +70,17 @@ class FilmGrainJointProbe {
         if(!film_grain_collect_layout_valid(source))throw std::runtime_error("joint probe requires supported GPU 4:2:0 input");
         const uint64_t bytesPerFrame=uint64_t(source.width)*source.height*(source.bitDepth==8 ? 3 : 6)/2;
         const bool finalModel=!m_templateSeeds.empty();
+        const uint64_t persistentTiles=3ULL*((source.width+63)/64)*((source.height+63)/64);
         const uint64_t maximum=m_requested.size()*((finalModel ? 4 : 3)*bytesPerFrame
-            +(finalModel ? 2 : 1)*sizeof(FilmGrainCollectGroup)*FGS_COLLECT_GROUPS+sizeof(FilmGrainCollectLookup)+65536);
+            +(finalModel ? 2 : 1)*sizeof(FilmGrainCollectGroup)*FGS_COLLECT_GROUPS+sizeof(FilmGrainCollectLookup)+65536
+            +(m_persistentDetail ? persistentTiles*sizeof(FilmGrainPersistentResult)+4096 : 0));
         if(maximum>m_maxBytes)throw std::runtime_error("joint probe exceeds declared output budget");
         check(m_history.configure(source));
+        if(m_persistentDetail) {
+            check(m_persistentHistory.configure(source));
+            check(cudaMalloc(&m_persistentTiles,sizeof(*m_persistentTiles)*FGS_COLLECT_MAX_TILES));
+            check(cudaMalloc(&m_persistentResults,sizeof(*m_persistentResults)*FGS_COLLECT_MAX_TILES));
+        }
         check(cudaMalloc(&m_tiles,sizeof(*m_tiles)*FGS_COLLECT_MAX_TILES));
         check(cudaMalloc(&m_results,sizeof(*m_results)*FGS_COLLECT_MAX_TILES));
         check(cudaMalloc(&m_groups,sizeof(*m_groups)*FGS_COLLECT_GROUPS));
@@ -98,12 +110,42 @@ class FilmGrainJointProbe {
         }
         return description;
     }
+    Json persistent_detail(const FilmGrainCollectFrame& source,const FilmGrainCollectFrame& base,
+        const std::string& prefix) {
+        const auto history=m_persistentHistory.view(m_stream);
+        std::vector<FilmGrainPersistentTile> tiles;
+        for(unsigned p=0;p<3;++p) {
+            const unsigned side=p ? 32 : 64,width=p ? source.width/2 : source.width,height=p ? source.height/2 : source.height;
+            for(unsigned y=0;y<height;y+=side)for(unsigned x=0;x<width;x+=side)tiles.push_back({x,y,p});
+        }
+        std::vector<FilmGrainPersistentResult> rows(tiles.size());
+        for(size_t i=0;i<tiles.size();i+=FGS_COLLECT_MAX_TILES) {
+            const unsigned n=unsigned(std::min(size_t(FGS_COLLECT_MAX_TILES),tiles.size()-i));
+            check(cudaMemcpyAsync(m_persistentTiles,tiles.data()+i,n*sizeof(tiles[0]),cudaMemcpyHostToDevice,m_stream));
+            check(film_grain_collect_persistent_async(source,base,history,m_retention,m_persistentTiles,n,m_persistentResults,n,m_stream));
+            check(cudaMemcpyAsync(rows.data()+i,m_persistentResults,n*sizeof(rows[0]),cudaMemcpyDeviceToHost,m_stream));
+        }
+        check(cudaStreamSynchronize(m_stream));
+        const auto path=m_directory/(prefix+"-persistent.bin");binary(path,rows.data(),rows.size()*sizeof(rows[0]));
+        Json frames=Json::array();
+        for(const auto& f:history.source)frames.push_back({{"frame_id",f.frameId},{"pts",f.timestamp},{"epoch",f.epoch},{"complete",f.complete}});
+        return {{"schema",1},{"file",path.u8string()},{"row_bytes",sizeof(FilmGrainPersistentResult)},
+            {"mean_offset",offsetof(FilmGrainPersistentResult,mean)},{"covariance_offset",offsetof(FilmGrainPersistentResult,covariance)},
+            {"tiles",tiles.size()},{"order","component, native y, native x; Y64/C32 including partial borders"},
+            {"history",frames},{"history_valid",film_grain_persistent_history_valid(source,history)},
+            {"candidate","pre-retention base plus declared native rounded fraction, applied once"},
+            {"scope","measurement only; no population or model admission and no output change"}};
+    }
 public:
     FilmGrainJointProbe(const Path& manifestPath,int timebaseNum,int timebaseDen)
         :m_timebaseNum(timebaseNum),m_timebaseDen(timebaseDen) {
         if(timebaseNum<=0||timebaseDen<=0)throw std::runtime_error("joint probe needs a valid source timebase");
         Json manifest;std::ifstream input(manifestPath);if(!input)throw std::runtime_error("cannot read joint probe manifest");
         input>>manifest;
+        if(manifest.contains("persistent_detail")) {
+            if(!manifest.at("persistent_detail").is_boolean())throw std::runtime_error("persistent_detail must be boolean");
+            m_persistentDetail=manifest.at("persistent_detail").get<bool>();
+        }
         m_templateSeeds=film_grain_probe_template_seeds(manifest);
         if(manifest.at("schema")!=1||!manifest.at("frames").is_array()
             ||manifest.at("frames").empty()||manifest.at("frames").size()>16)
@@ -141,6 +183,8 @@ public:
     ~FilmGrainJointProbe() {
         if(m_stream)cudaStreamSynchronize(m_stream);
         m_history.clear();
+        m_persistentHistory.clear();
+        if(m_persistentTiles)cudaFree(m_persistentTiles);if(m_persistentResults)cudaFree(m_persistentResults);
         if(m_tiles)cudaFree(m_tiles);if(m_results)cudaFree(m_results);
         if(m_groups)cudaFree(m_groups);if(m_lookup)cudaFree(m_lookup);
         if(m_commonGroups)cudaFree(m_commonGroups);
@@ -148,7 +192,7 @@ public:
         if(m_consumed)cudaEventDestroy(m_consumed);if(m_ready)cudaEventDestroy(m_ready);
         if(m_stream)cudaStreamDestroy(m_stream);
     }
-    void reset(){++m_epoch;m_visited=-1;m_history.reset();}
+    void reset(){++m_epoch;m_visited=-1;m_history.reset();m_persistentHistory.reset();}
     bool visited(int64_t id) const{return m_visited==id;}
     void collect(FilmGrainCollectFrame source,FilmGrainCollectFrame base,cudaStream_t stream,bool sceneReset,const char *stage) {
         if(sceneReset)reset();m_visited=source.frameId;
@@ -187,6 +231,7 @@ public:
             record["common_groups_file"]=(m_directory/(prefix+"-common-groups.bin")).u8string();
             binary(m_directory/(prefix+"-common-groups.bin"),groups.data(),groups.size()*sizeof(groups[0]));
         }
+        if(m_persistentDetail)record["persistent_detail"]=persistent_detail(source,base,prefix);
         end(stream);
         json_file(m_directory/(prefix+".json"),record);m_captured.insert(source.frameId);
         if(!m_templateSeeds.empty())m_captureIdentity.emplace(source.frameId,std::make_pair(source.timestamp,source.epoch));
@@ -224,7 +269,9 @@ public:
     }
     void save(FilmGrainCollectFrame source,cudaStream_t stream) {
         if(m_captured==m_requested)return;
-        configure(source);source.epoch=m_epoch;begin(stream);check(m_history.save_async(source,m_stream));end(stream);
+        configure(source);source.epoch=m_epoch;begin(stream);check(m_history.save_async(source,m_stream));
+        if(m_persistentDetail)check(m_persistentHistory.save_async(source,m_stream));
+        end(stream);
     }
     void finish() {
         if(m_captured!=m_requested)throw std::runtime_error("joint probe did not receive every requested frame");
