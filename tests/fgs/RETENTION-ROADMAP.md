@@ -136,6 +136,13 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [independent temporal selector](FINDINGS-2026-09-23-INDEPENDENT-WINDOW.md)
+completes D59: both constructed depths pass, four earlier partial candidates
+reject late on their independent mean, and all actual GPU/decoder outcomes
+match. This removes selection leakage without hiding full-spatial failures.
+Next: ordinal-bound changing fractions, then bounded automatic source/fraction
+evidence and R4–R8. The reference fitter remains a finite diagnostic.
+
 The [independent-mean and fraction follow-up](FINDINGS-2026-09-23-INDEPENDENT-MEANS.md)
 completes D57/D58. Native means and all attempted decisions agree independently;
 actual strict 8-bit output passes. Constructed 10-bit remains rejected across
