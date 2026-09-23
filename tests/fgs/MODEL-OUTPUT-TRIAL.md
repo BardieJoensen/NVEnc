@@ -77,5 +77,6 @@ matching a supplied hash is not evidence that a region contains only grain.
 This still uses explicitly supplied original-source planes and pre-encode
 retained fractions. It does not establish automatic retention, whole-picture
 eligibility, HDR/perceptual quality or production speed. The private native ABI
-and its initial qualification are tracked by `roadmap-r3-live-fitting-20260923`;
-live GPU qualification must complete before treating this extension as qualified.
+and its completed finite CPU/GPU qualification are tracked by
+`roadmap-r3-live-fitting-20260923` and the
+[live-fitting findings](FINDINGS-2026-09-23-LIVE-FITTING.md).

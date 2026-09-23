@@ -136,6 +136,14 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [live native fitting connection](FINDINGS-2026-09-23-LIVE-FITTING.md)
+completes D52: actual NVENC reconstructions produce all 32 reference models
+and identical AV1 packets. Ten positive/six negative GPU runs, 2,432 fresh
+independent decoded observations and 101 exact captures pass. Full CPU:
+214 Python / 44 C++. Original source planes and retained fractions remain
+explicit. Continue direct original-source transport and automatic pre-encode
+selection/fallback; source eligibility and R3–R8 remain open.
+
 The [direct fitting and finite engine](FINDINGS-2026-09-23-NATIVE-ENGINE.md)
 complete D50/D51: original native source and reconstructed base now produce
 the frozen shape, strengths, selected seed and actual AV1 output in one process.
