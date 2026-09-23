@@ -136,6 +136,14 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [explicit source/model intervals](FINDINGS-2026-09-23-SOURCE-SEGMENTS.md)
+complete D62. Both transition directions and all-source outputs pass on native
+8/10-bit controls, with separate fitters, explicit grain-off models and strict
+identity checks. Ordinary controls and older models remain exact. D63 next binds
+bounded selector decisions to actual pre-encode plans, conservatively preserving
+unsupported mixtures and short intervals. Automatic source/fraction evidence,
+complete temporal/quality/bytes/speed qualification and R3–R8 remain open.
+
 The [complete native geometry](FINDINGS-2026-09-23-NATIVE-GEOMETRY.md) completes
 D61. Full 1080p/UHD fitting and independent source/reconstruction/decoder checks
 pass without cropping. Actual sample counts replace tile-count weighting for
