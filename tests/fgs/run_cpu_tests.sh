@@ -111,6 +111,9 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/moment_comparison_test.cpp -o "$OUT/fgs_moment_comparison_test"
 "$OUT/fgs_moment_comparison_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore \
+    tests/fgs/native_pair_test.cpp -o "$OUT/fgs_native_pair_test"
+"$OUT/fgs_native_pair_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/training_history_test.cpp -o "$OUT/fgs_training_history_test"
 "$OUT/fgs_training_history_test"
 "$OUT/fgs_solver_test"

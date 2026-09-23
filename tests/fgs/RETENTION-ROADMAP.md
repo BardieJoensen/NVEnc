@@ -136,6 +136,14 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [direct fitting and finite engine](FINDINGS-2026-09-23-NATIVE-ENGINE.md)
+complete D50/D51: original native source and reconstructed base now produce
+the frozen shape, strengths, selected seed and actual AV1 output in one process.
+Both 16-picture outputs match the independently qualified reference bytes.
+The engine remains a diagnostic with supplied source eligibility and pre-encode
+fractions. Next is its finite live reconstruction connection, followed by the
+remaining automatic source/fraction policy. Full CPU: 214 Python / 43 C++.
+
 The [native measurement and selection implementation](FINDINGS-2026-09-23-NATIVE-SELECTION.md)
 completes D48/D49. Complete spatial/cross-component moments match independent
 NumPy; bounded in-process seed selection preserves all 32 choices and 42
