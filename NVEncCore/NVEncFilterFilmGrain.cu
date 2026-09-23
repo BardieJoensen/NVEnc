@@ -42,6 +42,7 @@
 #include <vector>
 
 #include "NVEncFilterFilmGrain.h"
+#include "NVEncFilmGrainChromaRange.h"
 #include <fstream>
 #include "NVEncFilmGrainRecovery.h"
 #include "NVEncFilmGrainSourceGuard.h"
@@ -128,6 +129,8 @@ struct FilmGrainBlockMetric {
     float chromaMean[2];
     float chromaSigma[2];
     uint32_t flat;
+    uint32_t chromaSamples[2];
+    unsigned chromaMinimum[2], chromaMaximum[2];
     FilmGrainQuietSourceMetric sourceRegions[4];
     FilmGrainQuietSourceMetric sourceVarianceRegions[16];
 };
@@ -551,7 +554,7 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
 
 // Source-only chroma evidence, including blocks excluded from AR training.
 // Keep this before the existing metrics readback: no new host synchronization.
-template<typename Type, int shift, int components>
+template<typename Type, int shift, int components, bool collectRange = false>
 __global__ void kernel_fgs_chroma_source_metrics(const uint8_t *__restrict__ src, const int pitch,
     const int width, const int height, const int blocksX, const int component, const int channel,
     FilmGrainBlockMetric *__restrict__ metrics) {
@@ -563,17 +566,39 @@ __global__ void kernel_fgs_chroma_source_metrics(const uint8_t *__restrict__ src
     const int y0 = (index / blocksX) * blockSize;
     const int bw = min(blockSize, width - x0);
     const int bh = min(blockSize, height - y0);
-    if (bw < 8 || bh < 8) return;
+    if (bw <= 0 || bh <= 0 || (!collectRange && (bw < 8 || bh < 8))) return;
     const int count = bw * bh;
     __shared__ float tile[blockSize * blockSize];
     __shared__ float reduce[threads];
     __shared__ float mean;
+    unsigned minimum = 0xffffffffu, maximum = 0;
     float sum = 0.0f;
     for (int i = tid; i < count; i += threads) {
         const float value = static_cast<float>(load_code<Type, shift>(
             src, pitch, x0 + i % bw, y0 + i / bw, component, components));
         tile[i] = value;
         sum += value;
+        if constexpr (collectRange) {
+            minimum = min(minimum, static_cast<unsigned>(value));
+            maximum = max(maximum, static_cast<unsigned>(value));
+        }
+    }
+    if constexpr (collectRange) {
+        // Reuse pixels already loaded for the source statistics. Include tiny
+        // partial borders, even when they are too small for noise estimation.
+        for (int offset=16; offset; offset>>=1) {
+            minimum = min(minimum, __shfl_down_sync(0xffffffffu, minimum, offset));
+            maximum = max(maximum, __shfl_down_sync(0xffffffffu, maximum, offset));
+        }
+        __shared__ unsigned ranges[4];
+        if ((tid & 31)==0) { ranges[tid>>5]=minimum; ranges[2+(tid>>5)]=maximum; }
+        __syncthreads();
+        if (tid==0) {
+            metrics[index].chromaSamples[channel]=count;
+            metrics[index].chromaMinimum[channel]=min(ranges[0],ranges[1]);
+            metrics[index].chromaMaximum[channel]=max(ranges[2],ranges[3]);
+        }
+        if (bw < 8 || bh < 8) return;
     }
     reduce[tid] = sum;
     __syncthreads();
@@ -1229,7 +1254,7 @@ static RGY_ERR local_strength_stats(const RGYFrameInfo *src, const RGYFrameInfo 
 template<typename Type, int shift>
 static RGY_ERR launch_flat_metrics(const RGYFrameInfo *source, const bool analyzeChroma,
     FilmGrainBlockMetric *metrics, const int blocksX, const int blocksY, const int bitDepth,
-    cudaStream_t stream) {
+    cudaStream_t stream, const bool collectRange = false) {
     const auto luma = getPlane(source, RGY_PLANE_Y);
     kernel_fgs_flat_metrics<Type, shift><<<blocksX * blocksY, FGS_FLAT_THREADS, 0, stream>>>(
         luma.ptr[0], luma.pitch[0], luma.width, luma.height, blocksX, bitDepth, metrics);
@@ -1239,12 +1264,21 @@ static RGY_ERR launch_flat_metrics(const RGYFrameInfo *source, const bool analyz
     for (int c = 0; c < 2; ++c) {
         const auto chroma = getPlane(source, static_cast<RGY_PLANE>(RGY_PLANE_U + (semiPlanar ? 0 : c)));
         if (semiPlanar) {
-            kernel_fgs_chroma_source_metrics<Type, shift, 2><<<blocksX * blocksY, 64, 0, stream>>>(
-                chroma.ptr[0], chroma.pitch[0], source->width / 2, source->height / 2,
-                blocksX, c, c, metrics);
+            if (collectRange) {
+                kernel_fgs_chroma_source_metrics<Type, shift, 2, true><<<blocksX * blocksY, 64, 0, stream>>>(
+                    chroma.ptr[0], chroma.pitch[0], source->width / 2, source->height / 2, blocksX, c, c, metrics);
+            } else {
+                kernel_fgs_chroma_source_metrics<Type, shift, 2><<<blocksX * blocksY, 64, 0, stream>>>(
+                    chroma.ptr[0], chroma.pitch[0], source->width / 2, source->height / 2, blocksX, c, c, metrics);
+            }
         } else {
-            kernel_fgs_chroma_source_metrics<Type, shift, 1><<<blocksX * blocksY, 64, 0, stream>>>(
-                chroma.ptr[0], chroma.pitch[0], chroma.width, chroma.height, blocksX, 0, c, metrics);
+            if (collectRange) {
+                kernel_fgs_chroma_source_metrics<Type, shift, 1, true><<<blocksX * blocksY, 64, 0, stream>>>(
+                    chroma.ptr[0], chroma.pitch[0], chroma.width, chroma.height, blocksX, 0, c, metrics);
+            } else {
+                kernel_fgs_chroma_source_metrics<Type, shift, 1><<<blocksX * blocksY, 64, 0, stream>>>(
+                    chroma.ptr[0], chroma.pitch[0], chroma.width, chroma.height, blocksX, 0, c, metrics);
+            }
         }
         if ((sts = err_to_rgy(cudaGetLastError())) != RGY_ERR_NONE) return sts;
     }
@@ -2366,15 +2400,15 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
         sts = launch_flat_metrics<uint8_t, 0>(source, prm->filmGrain.analyzeChroma,
-            static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream);
+            static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream, prm->filmGrain.residualRetain < 0.0f);
         break;
     case RGY_CSP_YV12_10:
         sts = launch_flat_metrics<uint16_t, 0>(source, prm->filmGrain.analyzeChroma,
-            static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream);
+            static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream, prm->filmGrain.residualRetain < 0.0f);
         break;
     case RGY_CSP_P010:
         sts = launch_flat_metrics<uint16_t, 6>(source, prm->filmGrain.analyzeChroma,
-            static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream);
+            static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream, prm->filmGrain.residualRetain < 0.0f);
         break;
     default:
         return RGY_ERR_UNSUPPORTED;
@@ -3430,6 +3464,33 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         default: sts=RGY_ERR_UNSUPPORTED; break;
         }
         if (sts != RGY_ERR_NONE) return sts;
+    }
+    if (modelValid && params.applyGrain && prm->filmGrain.residualRetain < 0.0f) {
+        std::array<FilmGrainSourceRange,2> range{};
+        for (int i=0; i<blockCount; ++i) for (unsigned c=0; c<2; ++c) {
+            range[c].samples += metrics[i].chromaSamples[c];
+            if (metrics[i].chromaSamples[c]) {
+                range[c].minimum = std::min(range[c].minimum, metrics[i].chromaMinimum[c]);
+                range[c].maximum = std::max(range[c].maximum, metrics[i].chromaMaximum[c]);
+            }
+        }
+        const auto mask = film_grain_copied_chroma_range_mask(params, bitDepth,
+            static_cast<uint64_t>(source->width / 2) * (source->height / 2), range);
+        if (mask) {
+            AddMessage(RGY_LOG_DEBUG, _T("fgs-source-range frame=%d copiedChromaMask=%u cb=%u/%u cr=%u/%u samples=%llu/%llu source=1\n"),
+                source->inputFrameId, mask, range[0].minimum, range[0].maximum, range[1].minimum, range[1].maximum,
+                static_cast<unsigned long long>(range[0].samples), static_cast<unsigned long long>(range[1].samples));
+            sourceReasonMask |= FGS_SOURCE_SUPPORT;
+            diagnostics.sourceFidelityFallback = true;
+            diagnostics.modelHeld = false;
+            diagnostics.reliable = false;
+            modelValid = false;
+            // Apply before recording/output. Re-entry uses the existing stable
+            // source/synthesis recovery path instead of flashing grain back on.
+            m_state->synthesisRecovery.preserveSource();
+            std::memset(&params, 0, sizeof(params));
+            if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
+        }
     }
     if (modelValid && params.applyGrain && !m_tableOutPath.empty()) {
         recordTableEntry(source->timestamp, source->duration, params);
