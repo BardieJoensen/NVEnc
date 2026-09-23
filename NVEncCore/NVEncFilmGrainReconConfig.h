@@ -33,8 +33,11 @@ struct NVEncFilmGrainReconConfig {
         if (!j.at("max_output_bytes").is_number_unsigned())
             throw std::runtime_error("reconstruction probe requires an unsigned byte budget");
         c.maxBytes = j.at("max_output_bytes").get<uint64_t>();
-        if (!c.maxBytes || c.maxBytes > 512ULL*1024*1024)
-            throw std::runtime_error("reconstruction probe budget must be 1..512 MiB");
+        // Disk evidence includes both original uint16 planes and reconstruction.
+        // Sixteen complete UHD 10-bit pairs need about 760 MiB. This does not
+        // enlarge either the source-memory or device allocation budget.
+        if (!c.maxBytes || c.maxBytes > 1024ULL*1024*1024)
+            throw std::runtime_error("reconstruction probe budget must be 1..1024 MiB");
         if (j.contains("max_device_bytes")) {
             if (!j.at("max_device_bytes").is_number_unsigned())
                 throw std::runtime_error("reconstruction device budget must be unsigned");

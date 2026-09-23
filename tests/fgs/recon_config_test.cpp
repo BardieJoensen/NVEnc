@@ -9,6 +9,18 @@ int main() {
     assert(c.requireLayout(1024,512,8)==786432);
     auto source=base;source["capture_source"]=true;source["max_source_bytes"]=uint64_t(536870912);
     const auto s=NVEncFilmGrainReconConfig::parse(source);assert(s.captureSource);s.requireLayout(3840,2160,10);
+    auto full=source;full["frames"]=json::array();
+    for(unsigned i=0;i<16;++i)full["frames"].push_back(i);
+    for(unsigned width:{1920u,3840u,4096u})for(unsigned depth:{8u,10u}) {
+        const unsigned height=width==1920?1080:2160;
+        const uint64_t pixels=uint64_t(width)*height;
+        const uint64_t bytes=(pixels*3+pixels*3/2*(depth==10?2:1))*16+65536;
+        full["max_output_bytes"]=bytes;
+        NVEncFilmGrainReconConfig::parse(full).requireLayout(width,height,depth);
+        full["max_output_bytes"]=bytes-1;
+        bool rejected=false;try{NVEncFilmGrainReconConfig::parse(full).requireLayout(width,height,depth);}
+        catch(...){rejected=true;}assert(rejected);
+    }
     auto retention=source;retention["frames"]={0,1,2};retention["pre_encode_retention"]={0,.25,1};
     const auto candidate=NVEncFilmGrainReconConfig::parse(retention);assert(candidate.preEncodeRetention() && candidate.retention.at(2)[1]==.25f);
     auto native=retention;native["pre_encode_retention"]={0,.25,.75};native["native_model_output"]={{"engine",{{"source_mode","memory"}}}};
@@ -72,7 +84,7 @@ int main() {
         if(failure==4)j["frames"]={1.5};
         if(failure==5)j["frames"]={true};
         if(failure==6)j["max_output_bytes"]=-1;
-        if(failure==7)j["max_output_bytes"]=uint64_t(536870913);
+        if(failure==7)j["max_output_bytes"]=uint64_t(1073741825);
         if(failure==8)j["output_directory"]="relative";
         if(failure==9)j["schema"]=2;
         if(failure==10)j["frames"]=std::vector<int>(17,1);

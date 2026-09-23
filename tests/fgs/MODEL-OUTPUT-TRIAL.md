@@ -94,8 +94,11 @@ Missing or mismatched sources reject the diagnostic.
 `max_source_bytes` bounds live native source allocations (default/maximum
 512 MiB). It excludes transient per-plane download staging, the native fitting
 engine's separately bounded clones, encoder surfaces and other process memory.
-The existing `max_output_bytes` must also cover three native uint16 source planes
-per requested picture. Source captures have `frame-N-source.json` and three
+The explicit `max_output_bytes` disk budget (at most 1 GiB) must also cover
+three native uint16 source planes per requested picture. Sixteen complete UHD
+10-bit source/reconstruction pairs require about 760 MiB plus metadata. The
+source-memory and device budgets remain separately enforced. Source captures
+have `frame-N-source.json` and three
 `frame-N-source-C.raw` files. Ordinary mode does not allocate or download sources.
 
 To feed those originals directly into fitting, use `engine.source_mode: "memory"`
