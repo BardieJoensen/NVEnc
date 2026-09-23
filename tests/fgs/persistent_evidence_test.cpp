@@ -60,6 +60,48 @@ int main() {
     result=film_grain_apply_persistent_veto(candidate,bad,limits);
     assert(result.unknownSamples==uint64_t(97)*65-1 && result.reasons==FGS_RETAIN_UNMEASURED);
     assert(!(candidate.checks.measured & FGS_RETAIN_DETAIL) && !(candidate.checks.passed & FGS_RETAIN_DETAIL));
+    // Independent flat grain has no historical picture direction. A complete
+    // separate proof can remain in force; the projection cannot create one.
+    constexpr auto independent=FilmGrainPersistentUnknownPolicy::UseIndependentCandidateChecks;
+    FilmGrainRetentionPopulationCell support;
+    support.population=FilmGrainRetentionPopulation::Grain;support.scaling=16;
+    support.samples=uint64_t(97)*65;support.changedSamples=support.samples-1;
+    support.trainBlocks=support.checkBlocks=16;
+    support.checks={FGS_RETAIN_ALL_POPULATION_CHECKS,FGS_RETAIN_ALL_POPULATION_CHECKS};
+    candidate.cells={support};candidate.checks={FGS_RETAIN_ALL_CHECKS,FGS_RETAIN_ALL_CHECKS};
+    result=film_grain_apply_persistent_veto(candidate,bad,limits,independent);
+    assert(!result.reasons && result.independentCandidateEvidenceUsed && result.unknownSamples==support.changedSamples);
+    assert(candidate.checks.complete(FGS_RETAIN_ALL_CHECKS));
+    for(unsigned missing=0;missing<8;++missing) {
+        auto incomplete=candidate;incomplete.checks.measured&=~(1u<<missing);incomplete.checks.passed&=~(1u<<missing);
+        result=film_grain_apply_persistent_veto(incomplete,bad,limits,independent);
+        assert(result.reasons && !result.independentCandidateEvidenceUsed);
+        assert(!(incomplete.checks.passed&FGS_RETAIN_DETAIL));
+        auto failed=candidate;failed.checks.passed&=~(1u<<missing);
+        result=film_grain_apply_persistent_veto(failed,bad,limits,independent);
+        assert(result.reasons && !result.independentCandidateEvidenceUsed);
+        assert(!(failed.checks.passed&(1u<<missing)));
+    }
+    auto undersupported=candidate;undersupported.cells[0].checkBlocks=15;
+    result=film_grain_apply_persistent_veto(undersupported,bad,limits,independent);
+    assert(result.reasons && !result.independentCandidateEvidenceUsed);
+    auto noRange=candidate;noRange.cells[0].checks.passed&=~uint32_t(FGS_RETAIN_NATIVE_RANGE);
+    result=film_grain_apply_persistent_veto(noRange,bad,limits,independent);
+    assert(result.reasons && !result.independentCandidateEvidenceUsed);
+    auto inconsistent=candidate;inconsistent.cells[0].changedSamples--;
+    result=film_grain_apply_persistent_veto(inconsistent,bad,limits,independent);
+    assert((result.reasons&FGS_RETAIN_INVALID) && !result.independentCandidateEvidenceUsed);
+    for(auto population:{FilmGrainRetentionPopulation::Quiet,FilmGrainRetentionPopulation::Rejected,FilmGrainRetentionPopulation::Border}) {
+        auto unsupported=candidate;unsupported.cells[0].population=population;
+        result=film_grain_apply_persistent_veto(unsupported,bad,limits,independent);
+        assert(result.reasons && !result.independentCandidateEvidenceUsed);
+    }
+    auto damaged=candidate;
+    result=film_grain_apply_persistent_veto(damaged,lost,limits,independent);
+    assert((result.reasons&FGS_RETAIN_FAILED_CHECK) && !result.independentCandidateEvidenceUsed);
+    auto stale=bad;stale.request.frame.epoch++;
+    result=film_grain_apply_persistent_veto(candidate,stale,limits,independent);
+    assert((result.reasons&FGS_RETAIN_STALE_EVIDENCE) && !result.independentCandidateEvidenceUsed);
     // Selector control: the native detail veto forces a higher colour fraction.
     // Other evidence below is a policy fixture, not a claim of model fidelity.
     frame.width=192;frame.height=132; // Separate partial-border control with usable anchors.

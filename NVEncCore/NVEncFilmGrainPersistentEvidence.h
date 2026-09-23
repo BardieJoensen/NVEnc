@@ -18,6 +18,14 @@ struct FilmGrainPersistentEvidence {
 struct FilmGrainPersistentAssessment {
     uint32_t reasons = 0;
     uint64_t samples = 0, changedSamples = 0, unknownSamples = 0, conflictSamples = 0;
+    bool independentCandidateEvidenceUsed = false;
+};
+enum class FilmGrainPersistentUnknownPolicy {
+    RequireAnchors,
+    // Flat independent grain need not have a persistent spatial direction.
+    // Missing anchors may rely on already complete, independently established
+    // candidate/detail/model/coverage evidence. They never establish that proof.
+    UseIndependentCandidateChecks
 };
 inline FilmGrainPersistentAssessment film_grain_assess_persistent_evidence(
     const FilmGrainRetentionCandidate& candidate, const FilmGrainPersistentEvidence& evidence,
@@ -77,8 +85,21 @@ inline FilmGrainPersistentAssessment film_grain_assess_persistent_evidence(
 // are still required, even when every persistent direction stays within bounds.
 inline FilmGrainPersistentAssessment film_grain_apply_persistent_veto(
     FilmGrainRetentionCandidate& candidate, const FilmGrainPersistentEvidence& evidence,
-    const FilmGrainPersistentLimits& limits) {
-    const auto result = film_grain_assess_persistent_evidence(candidate,evidence,limits);
+    const FilmGrainPersistentLimits& limits,
+    FilmGrainPersistentUnknownPolicy unknownPolicy = FilmGrainPersistentUnknownPolicy::RequireAnchors) {
+    auto result = film_grain_assess_persistent_evidence(candidate,evidence,limits);
+    if (result.reasons == FGS_RETAIN_UNMEASURED
+        && unknownPolicy == FilmGrainPersistentUnknownPolicy::UseIndependentCandidateChecks
+        && film_grain_assess_retention_candidate(candidate.request,candidate).accepted()) {
+        // Those independent checks must describe the same actual native base.
+        // Complete coverage bounds this sum by the component's sample count.
+        uint64_t changed = 0;
+        for (const auto& cell : candidate.cells) changed += cell.changedSamples;
+        if (changed == result.changedSamples) {
+            result.reasons = 0;
+            result.independentCandidateEvidenceUsed = true;
+        } else result.reasons |= FGS_RETAIN_INVALID;
+    }
     if (result.reasons) {
         candidate.checks.passed &= ~uint32_t(FGS_RETAIN_DETAIL);
         if (result.reasons & FGS_RETAIN_FAILED_CHECK) candidate.checks.measured |= FGS_RETAIN_DETAIL;

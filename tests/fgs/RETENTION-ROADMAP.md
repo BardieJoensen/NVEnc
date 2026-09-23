@@ -136,7 +136,7 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
-The [native persistent-detail work](FINDINGS-2026-09-23-PERSISTENT-DETAIL.md) adds complete development-frame measurements and a candidate-bound veto. Seven-frame GPU and encoder lifecycle qualification is active. This protects persistent residual without reclassifying it as grain; it does not yet complete population/model admission or encoder output selection.
+The [native persistent-detail work](FINDINGS-2026-09-23-PERSISTENT-DETAIL.md) adds complete development-frame measurements and a candidate-bound veto. Seven-frame GPU and encoder lifecycle qualification now passes on `04bd03aa`: 321 GPU cases, 7,182 history-plane comparisons and 3,040 encoded control frames. Independent AOM/dav1d evidence covers both grain modes. D27 keeps missing temporal anchors distinct from complete independent candidate evidence without granting new check bits or relaxing R1. Full CPU: 214 Python tests in 30 suites plus 32 C++. Whole-picture model/admission and actual output selection remain open.
 
 The [frozen stationarity controls](FINDINGS-2026-09-23-STATIONARITY-CONTROLS.md)
 reject short-history consistency plus small-translation matching as a sufficient

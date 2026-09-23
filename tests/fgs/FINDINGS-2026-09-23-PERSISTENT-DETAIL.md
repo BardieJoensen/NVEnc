@@ -1,7 +1,8 @@
 # Native persistent-detail protection — September 23, 2026
 
-The CPU measurement and selector veto are implemented. The bounded GPU collector
-and seven-frame encoder diagnostic are implemented but are still being qualified.
+The CPU measurement, bounded GPU collector and seven-frame encoder diagnostic
+are qualified on the declared controls. The current trial build is `04bd03aa`,
+SHA `385790542b0b9a069dcaf3025bd1ab8e62652ba145e0823d6c820250be972da7`.
 They do not select a new output model or change production. R3–R8 remain open.
 
 Persistent source structure, including persistent grain, is protected as detail.
@@ -54,3 +55,65 @@ Evidence lives in `roadmap-r3-persistent-detail-20260923/` (complete CPU study),
 Read each final report before treating the corresponding GPU/runtime stage as
 qualified. Actual selection/model integration and moving output qualification
 remain the next work; these necessary measurements do not complete R3.
+
+## GPU and encoder evidence
+
+The final collector passes 321 cases: 82,944 valid tiles, 1,293 rejected tiles,
+159,740,208 native samples, 432 one-pixel borders and 4,815 rejected invalid
+calls. Mean/covariance error versus the independent reference is at most
+2.85e-14/1.37e-12. All 690 candidate-component veto replays match the independent
+reference. Native integral sums make covariance centering exact before
+normalization; the earlier raw floating-average formulation produced a tiny
+negative variance on constant borders. Its failed example is retained. The
+strict PSD check and quality bounds were preserved. The reserved record word
+is initialized so binary evidence contains no indeterminate padding.
+
+The collector takes about 3.61 ms per full UHD candidate in this run, excluding
+history copies, allocation, upload/download and encoder work. This is not an
+end-to-end throughput or deployment-cost result.
+
+Thirty-eight GPU history controls verify 7,182 native plane copies, startup,
+rolling order, reset, cuts, skipped/repeated frames, clocks, incomplete updates,
+stream ownership and the memory cap. The encoder comparisons cover 3,040
+encoded frames across SDR, HDR, ordinary/automatic modes and explicit scene
+cuts. The first revision adds 2,432 direct AOM/dav1d decoded observations, with
+grain enabled and disabled. The corrected build preserves all their encoded
+packet payloads, clocks and stream metadata; decoder evidence is reused only
+after that exact equality and is not counted twice. Each runtime revision also
+checks 53,305,344 native samples and 126 original-source plane matches.
+
+The public AOM API control `AV1D_SET_SKIP_FILM_GRAIN` is used for grain-disabled
+comparisons. The tested system FFmpeg AOM wrapper did not suppress grain when
+asked to export its metadata; that attempted control is retained as invalid
+comparison evidence. `tests/fgs/aom_decode_hash.cpp` now provides an explicit
+finite comparison against the pinned AOM 3.14.1 library.
+
+All owned GPU pauses are released and current Tdarr limits preserved. The
+reserved qualification corpus remains unopened. D27 continues the application
+of the new veto alongside independent detail/model checks: flat independent
+grain has no persistent contrast anchor, so absence of that anchor cannot serve
+as its own admission or replace complete independent evidence.
+
+## Applying the veto alongside independent evidence
+
+D27's actual flat-grain runtime captures have 32,768 source-supported colour
+pixels per component yet no persistent contrast anchor. Mandatory anchors
+would block them despite that separate source evidence. Source support alone
+still does not prove a complete candidate or synthesized picture.
+
+The default helper remains strict. An explicit `UseIndependentCandidateChecks`
+mode may preserve already complete, independently established candidate,
+detail, model, native-range and whole-picture coverage checks when missing
+anchors are the only unresolved projection result. Its changed-sample count
+must agree with the native measurement. It never creates or repairs check bits.
+Observed losses, invalid/stale/partial evidence, failed/unmeasured checks,
+insufficient independent blocks and R1 quiet/rejected/border restrictions still
+reject. Unknown samples and use of independent evidence remain reported.
+This is a host-policy integration prerequisite, with no new encoder output call
+sites or population/model admission. The full CPU suite passes 214 Python tests
+in 30 suites and 32 C++ programs.
+
+D26's cleanup receipt removes 2,676,847,441 bytes of completed scratch. Duplicate
+native planes are mapped by hash to the retained v2 captures. Current build,
+active model-work inputs, ordinary comparison outputs and one small AOM control
+remain available; protected originals and reserved sources are unchanged.
