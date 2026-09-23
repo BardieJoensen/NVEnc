@@ -11,6 +11,12 @@ cd "$(dirname "$0")/../.."
 CXX=${CXX:-g++}
 OUT=${TMPDIR:-/tmp}
 $CXX -std=c++17 -O2 -Wall -I NVEncCore \
+    tests/fgs/model_evidence_test.cpp -o "$OUT/fgs_model_evidence_test"
+"$OUT/fgs_model_evidence_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore \
+    tests/fgs/joint_template_test.cpp -o "$OUT/fgs_joint_template_test"
+"$OUT/fgs_joint_template_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/native_scaling_test.cpp -o "$OUT/fgs_native_scaling_test"
 "$OUT/fgs_native_scaling_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore \

@@ -2,10 +2,12 @@
 // MIT license, as NVEncFilmGrainModel.h. Not a production retention policy.
 #pragma once
 #include "NVEncFilmGrainJointCollect.cuh"
+#include "NVEncFilmGrainModelEvidence.h"
 #include "../json/json.hpp"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -17,11 +19,15 @@ class FilmGrainJointProbe {
     using Path=std::filesystem::path;
     Path m_directory;
     std::set<int64_t> m_requested,m_captured;
+    std::set<int64_t> m_finalCaptured;
+    std::map<int64_t,std::pair<int64_t,uint64_t>> m_captureIdentity;
+    std::vector<uint16_t> m_templateSeeds;
     FilmGrainCollectRetention m_retention{};
     FilmGrainCollectHistory m_history;
     FilmGrainCollectTile *m_tiles=nullptr;
     FilmGrainCollectResult *m_results=nullptr;
     FilmGrainCollectGroup *m_groups=nullptr;
+    FilmGrainCollectGroup *m_commonGroups=nullptr;
     FilmGrainCollectLookup *m_lookup=nullptr;
     cudaStream_t m_stream=nullptr;
     cudaEvent_t m_ready=nullptr,m_consumed=nullptr;
@@ -56,12 +62,15 @@ class FilmGrainJointProbe {
         }
         if(!film_grain_collect_layout_valid(source))throw std::runtime_error("joint probe requires supported GPU 4:2:0 input");
         const uint64_t bytesPerFrame=uint64_t(source.width)*source.height*(source.bitDepth==8 ? 3 : 6)/2;
-        const uint64_t maximum=m_requested.size()*(3*bytesPerFrame+sizeof(FilmGrainCollectGroup)*FGS_COLLECT_GROUPS+sizeof(FilmGrainCollectLookup)+65536);
+        const bool finalModel=!m_templateSeeds.empty();
+        const uint64_t maximum=m_requested.size()*((finalModel ? 4 : 3)*bytesPerFrame
+            +(finalModel ? 2 : 1)*sizeof(FilmGrainCollectGroup)*FGS_COLLECT_GROUPS+sizeof(FilmGrainCollectLookup)+65536);
         if(maximum>m_maxBytes)throw std::runtime_error("joint probe exceeds declared output budget");
         check(m_history.configure(source));
         check(cudaMalloc(&m_tiles,sizeof(*m_tiles)*FGS_COLLECT_MAX_TILES));
         check(cudaMalloc(&m_results,sizeof(*m_results)*FGS_COLLECT_MAX_TILES));
         check(cudaMalloc(&m_groups,sizeof(*m_groups)*FGS_COLLECT_GROUPS));
+        if(finalModel)check(cudaMalloc(&m_commonGroups,sizeof(*m_commonGroups)*FGS_COLLECT_GROUPS));
         check(cudaMalloc(&m_lookup,sizeof(*m_lookup)));
         m_width=source.width;m_height=source.height;m_depth=source.bitDepth;m_shift=source.storageShift;m_configured=true;
     }
@@ -92,6 +101,7 @@ public:
         if(timebaseNum<=0||timebaseDen<=0)throw std::runtime_error("joint probe needs a valid source timebase");
         Json manifest;std::ifstream input(manifestPath);if(!input)throw std::runtime_error("cannot read joint probe manifest");
         input>>manifest;
+        m_templateSeeds=film_grain_probe_template_seeds(manifest);
         if(manifest.at("schema")!=1||!manifest.at("frames").is_array()
             ||manifest.at("frames").empty()||manifest.at("frames").size()>16)
             throw std::runtime_error("joint probe requires 1..16 explicit frame IDs");
@@ -130,6 +140,7 @@ public:
         m_history.clear();
         if(m_tiles)cudaFree(m_tiles);if(m_results)cudaFree(m_results);
         if(m_groups)cudaFree(m_groups);if(m_lookup)cudaFree(m_lookup);
+        if(m_commonGroups)cudaFree(m_commonGroups);
         if(m_consumed)cudaEventDestroy(m_consumed);if(m_ready)cudaEventDestroy(m_ready);
         if(m_stream)cudaStreamDestroy(m_stream);
     }
@@ -150,6 +161,7 @@ public:
             check(cudaMemcpyAsync(m_tiles,tiles.data()+i,n*sizeof(tiles[0]),cudaMemcpyHostToDevice,m_stream));
             check(film_grain_collect_joint_async(source,base,previous,m_retention,m_tiles,n,m_results,n,m_stream));
             check(film_grain_collect_reduce_async(m_tiles,m_results,n,m_groups,FGS_COLLECT_GROUPS,i==0,m_stream));
+            if(m_commonGroups)check(film_grain_collect_reduce_common_async(m_tiles,m_results,n,m_commonGroups,FGS_COLLECT_GROUPS,i==0,m_stream));
         }
         check(film_grain_collect_lookup_async(source,base,m_retention.y,m_lookup,m_stream));
         std::vector<FilmGrainCollectGroup> groups(FGS_COLLECT_GROUPS);FilmGrainCollectLookup lookup;
@@ -165,8 +177,33 @@ public:
             {"moment_count",FGS_COLLECT_MOMENTS},{"lookup_y",lookup.luma},{"lookup_c",lookup.chroma},
             {"groups_file",(m_directory/(prefix+"-groups.bin")).u8string()}};
         binary(m_directory/(prefix+"-groups.bin"),groups.data(),groups.size()*sizeof(groups[0]));
+        if(m_commonGroups) {
+            check(cudaMemcpyAsync(groups.data(),m_commonGroups,groups.size()*sizeof(groups[0]),cudaMemcpyDeviceToHost,m_stream));
+            check(cudaStreamSynchronize(m_stream));
+            record["common_groups_file"]=(m_directory/(prefix+"-common-groups.bin")).u8string();
+            binary(m_directory/(prefix+"-common-groups.bin"),groups.data(),groups.size()*sizeof(groups[0]));
+        }
         end(stream);
         json_file(m_directory/(prefix+".json"),record);m_captured.insert(source.frameId);
+        if(!m_templateSeeds.empty())m_captureIdentity.emplace(source.frameId,std::make_pair(source.timestamp,source.epoch));
+    }
+    void final_model(FilmGrainCollectFrame source,FilmGrainCollectFrame base,
+        const NV_ENC_FILM_GRAIN_PARAMS_AV1& params,cudaStream_t stream) {
+        if(m_templateSeeds.empty()||!m_requested.count(source.frameId))return;
+        configure(source);source.epoch=base.epoch=m_epoch;
+        const auto identity=m_captureIdentity.find(source.frameId);
+        if(!film_grain_collect_base_valid(source,base)||identity==m_captureIdentity.end()
+            ||identity->second!=std::make_pair(source.timestamp,source.epoch)||m_finalCaptured.count(source.frameId))
+            throw std::runtime_error("joint probe lost final model/frame correspondence");
+        const auto model=film_grain_final_model_evidence(params,source.bitDepth,m_templateSeeds);
+        const std::string prefix="frame-"+std::to_string(source.frameId);
+        begin(stream);
+        Json record={{"schema",1},{"frame_id",source.frameId},{"pts",source.timestamp},{"epoch",source.epoch},
+            {"timebase",{m_timebaseNum,m_timebaseDen}},{"model",model},
+            {"base",dump_frame(base,prefix+"-encoder-base")},
+            {"base_stage","final native input to NVENC; after source retention/recovery, before lossy compression"}};
+        end(stream);
+        json_file(m_directory/(prefix+"-final.json"),record);m_finalCaptured.insert(source.frameId);
     }
     void save(FilmGrainCollectFrame source,cudaStream_t stream) {
         if(m_captured==m_requested)return;
@@ -174,8 +211,10 @@ public:
     }
     void finish() {
         if(m_captured!=m_requested)throw std::runtime_error("joint probe did not receive every requested frame");
+        if(!m_templateSeeds.empty()&&m_finalCaptured!=m_requested)
+            throw std::runtime_error("joint probe did not receive every requested final model");
         check(cudaStreamSynchronize(m_stream));
-        json_file(m_directory/"status.json",{{"complete",true},{"captured_frames",m_captured}});
+        json_file(m_directory/"status.json",{{"complete",true},{"captured_frames",m_captured},{"final_model_frames",m_finalCaptured}});
     }
 };
 } // namespace fgsmodel

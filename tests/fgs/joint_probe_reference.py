@@ -43,6 +43,7 @@ def compare_frame(path):
              for x in range(0, width//2-31, 32)]
     assert case['tiles'] == len(tiles)
     cpu = np.zeros(80, dtype=GROUP_DTYPE)
+    common = np.zeros(80, dtype=GROUP_DTYPE) if 'common_groups_file' in case else None
     reasons = {}
     for tile in tiles:
         block = block_reference(case, source, base, previous, tile, native)
@@ -51,24 +52,34 @@ def compare_frame(path):
         if not block['observations']:
             continue
         index = (tile[2]-1)*40 + block['check_fold']*20 + block['brightness_group']
-        cpu[index]['blocks'] += 1
-        cpu[index]['observations'] += 676
-        cpu[index]['other'] += block['other_colour_reasons'] == 0
-        cpu[index]['moments'] += np.concatenate([block[k].ravel() for k in MOMENTS])
-    binary = Path(case['groups_file'])
-    assert binary.stat().st_size == 80*GROUP_DTYPE.itemsize
-    gpu = np.fromfile(binary, dtype=GROUP_DTYPE)
-    for key in ('blocks', 'observations', 'other'):
-        assert np.array_equal(cpu[key], gpu[key]), (path, key)
+        groups = [cpu[index]]
+        if common is not None and not block['other_colour_reasons']:
+            groups.append(common[index])
+        moments = np.concatenate([block[k].ravel() for k in MOMENTS])
+        for group in groups:
+            group['blocks'] += 1
+            group['observations'] += 676
+            group['other'] += block['other_colour_reasons'] == 0
+            group['moments'] += moments
     worst = 0.
-    for index, (c, g) in enumerate(zip(cpu, gpu)):
-        norm = max(1., float(c['moments'][:676].reshape(26, 26).diagonal().max()))
-        error = float(np.abs(c['moments']-g['moments']).max()) / norm
-        assert np.isfinite(error) and error <= TOLERANCE, (path, index, error)
-        worst = max(worst, error)
+    populations = [('groups_file', cpu)] + ([('common_groups_file', common)] if common is not None else [])
+    for name, expected in populations:
+        binary = Path(case[name])
+        assert binary.stat().st_size == 80*GROUP_DTYPE.itemsize
+        gpu = np.fromfile(binary, dtype=GROUP_DTYPE)
+        for key in ('blocks', 'observations', 'other'):
+            assert np.array_equal(expected[key], gpu[key]), (path, name, key)
+        for index, (c, g) in enumerate(zip(expected, gpu)):
+            norm = max(1., float(c['moments'][:676].reshape(26, 26).diagonal().max()))
+            error = float(np.abs(c['moments']-g['moments']).max()) / norm
+            assert np.isfinite(error) and error <= TOLERANCE, (path, name, index, error)
+            worst = max(worst, error)
+    binary = Path(case['groups_file'])
     return dict(frame=case['frame_id'], stage=case['stage'], scene_reset=case['scene_reset'],
                 previous_complete=case['previous']['complete'], tiles=len(tiles),
                 accepted=int(cpu['blocks'].sum()), reasons=reasons, maximum_group_error=worst,
+                common_accepted=int(common['blocks'].sum()) if common is not None else None,
+                common_groups_sha256=hashlib.sha256(Path(case['common_groups_file']).read_bytes()).hexdigest() if common is not None else None,
                 record_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
                 groups_sha256=hashlib.sha256(binary.read_bytes()).hexdigest())
 
