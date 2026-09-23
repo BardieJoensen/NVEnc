@@ -105,6 +105,12 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/native_variance_test.cpp -o "$OUT/fgs_native_variance_test"
 "$OUT/fgs_native_variance_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore \
+    tests/fgs/native_moments_test.cpp -o "$OUT/fgs_native_moments_test"
+"$OUT/fgs_native_moments_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore \
+    tests/fgs/moment_comparison_test.cpp -o "$OUT/fgs_moment_comparison_test"
+"$OUT/fgs_moment_comparison_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore \
     tests/fgs/training_history_test.cpp -o "$OUT/fgs_training_history_test"
 "$OUT/fgs_training_history_test"
 "$OUT/fgs_solver_test"

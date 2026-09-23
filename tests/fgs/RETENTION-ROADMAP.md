@@ -136,6 +136,15 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [native measurement and selection implementation](FINDINGS-2026-09-23-NATIVE-SELECTION.md)
+completes D48/D49. Complete spatial/cross-component moments match independent
+NumPy; bounded in-process seed selection preserves all 32 choices and 42
+candidate pictures. All 18 sliding windows and 128 known-negative comparisons
+match the recorded policy. Independent-fold selection, isolated dropout,
+invalid/quiet evidence and sequence/tail rejection have explicit regressions.
+Source/base shape fitting and actual automatic selection/integration are next.
+This diagnostic policy does not grant new source/population admission.
+
 The [in-process calibration](FINDINGS-2026-09-23-INPROCESS-SELECTION.md)
 completes D47. Batched strength search preserves all 126 recorded component
 decisions and 42 independently synthesized final pictures, with a lower measured

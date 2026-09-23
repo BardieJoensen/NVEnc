@@ -1,5 +1,6 @@
 // In-process pinned AOM/native measurement adapter for automatic calibration.
 // Shape/source eligibility and independent final quality checks remain external.
+// Explicit select=true also runs the finite D42 diagnostic seed policy.
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -8,6 +9,7 @@
 #include <stdexcept>
 #include "NVEncFilmGrainNativeVariance.h"
 #include "NVEncFilmGrainRetainedStrengthBatch.h"
+#include "native_moments_json.h"
 #include "json.hpp"
 extern "C" {
 #include "av1/decoder/grain_synthesis.h"
@@ -70,7 +72,11 @@ int main() {
             const auto measurement=film_grain_native_variance(outputPlanes,w,h,depth);require(measurement.valid,"invalid synthesized measurement");return measurement;
         };
         const auto start=std::chrono::steady_clock::now();Json rows=Json::array();
-        for(auto seed:seeds) {
+        const bool select=j.value("select",false);
+        FilmGrainNativeMoments sourceMoments;
+        if(select) { sourceMoments=film_grain_native_moments(sourcePlanes,w,h,depth);require(sourceMoments.valid,"invalid source moments"); }
+        auto calibrate=[&](unsigned seed) {
+            FilmGrainMomentCandidate candidate;
             Json trace=Json::array();
             const auto fitted=film_grain_calibrate_retained_strength_batch(targets,[&](const std::array<unsigned,3>& strengths) {
                 const auto stats=render(seed,strengths);trace.push_back({{"scales",strengths},{"total_variance",stats.variance[0]}});
@@ -83,9 +89,18 @@ int main() {
             if(fitted.valid) {
                 const auto stats=render(seed,strengths);const auto path=std::filesystem::u8path(prefix.u8string()+"-"+std::to_string(seed)+".raw");require(!std::filesystem::exists(path),"output exists");std::ofstream output(path,std::ios::binary);for(const auto& a:rendered)output.write(reinterpret_cast<const char*>(a.data()),a.size()*2);output.flush();require(bool(output),"output write failed");
                 row["output"]=path.u8string();row["final_variance"]=stats.variance;row["mean"]=stats.mean;
+                candidate.calibrated=true;candidate.strengths=strengths;
+                if(select) {
+                    candidate.moments=film_grain_native_moments(outputPlanes,w,h,depth);
+                    row["moments"]=fgsdiagnostic::moments(candidate.moments);
+                }
             }
             rows.push_back(row);
-        }
+            return candidate;
+        };
+        Json selection=nullptr;
+        if(select) selection=fgsdiagnostic::selection(film_grain_select_moment_seed(sourceMoments,seeds.data(),seeds.size(),calibrate));
+        else for(auto seed:seeds) calibrate(seed);
         Json probes=Json::array();
         if(j.contains("independence_scales")) {
             const auto& scales=j.at("independence_scales");require(scales.is_array() && scales.size()<=16,"probe budget");
@@ -99,6 +114,6 @@ int main() {
             const auto value=depth==8?images.source.planes[c][y*images.source.stride[c]+x]:reinterpret_cast<uint16_t*>(images.source.planes[c]+y*images.source.stride[c])[x];
             require(value==base[c][size_t(y)*(c?w/2:w)+x],"AOM changed its base input");
         }
-        std::cout<<Json({{"complete",true},{"source_variance",target.variance},{"base_variance",original.variance},{"source_mean",target.mean},{"base_mean",original.mean},{"rows",rows},{"independence",probes},{"seconds",std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count()}}).dump()<<'\n';return 0;
+        std::cout<<Json({{"complete",true},{"source_variance",target.variance},{"base_variance",original.variance},{"source_mean",target.mean},{"base_mean",original.mean},{"rows",rows},{"selection",selection},{"source_moments",select?fgsdiagnostic::moments(sourceMoments):Json(nullptr)},{"independence",probes},{"seconds",std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count()}}).dump()<<'\n';return 0;
     }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}
 }
