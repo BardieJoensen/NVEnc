@@ -3185,7 +3185,18 @@ public:
                 if (m_outQeueueMtx) {
                     lock.emplace(*m_outQeueueMtx);
                 }
-                m_outQeueue.push_back(std::make_unique<PipelineTaskOutputBitstream>(outBs.second));
+                if (m_filmGrainReconProbe && m_filmGrainReconProbe->modelOutputEnabled()) {
+                    try {
+                        for (auto& packet : m_filmGrainReconProbe->filterOutput(outBs.second))
+                            m_outQeueue.push_back(std::make_unique<PipelineTaskOutputBitstream>(std::move(packet)));
+                    } catch (const std::exception& e) {
+                        m_filmGrainReconProbe->fail(e.what());
+                        PrintMes(RGY_LOG_ERROR,_T("Complete-model output: %s.\n"),char_to_tstring(e.what()).c_str());
+                        return RGY_ERR_INVALID_DATA_TYPE;
+                    }
+                } else {
+                    m_outQeueue.push_back(std::make_unique<PipelineTaskOutputBitstream>(outBs.second));
+                }
             }
             if (getOneFrame) {
                 return RGY_ERR_NONE;

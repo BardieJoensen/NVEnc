@@ -1,14 +1,17 @@
 // Explicit NVENC reconstruction capture for compressed-base grain research.
-// Disabled by default; no model, image or rate-control decision is changed.
+// Disabled by default. Capture-only unless model_output is explicitly supplied.
 // MIT license, as NVEncFilmGrainModel.h.
 #pragma once
 #include <fstream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <vector>
 #include "NVEncDevice.h"
 #include "CuvidDecode.h"
 #include "NVEncFilmGrainReconConfig.h"
+#include "NVEncFilmGrainModelProbe.h"
+#include "NVEncUtil.h"
 
 class NVEncFilmGrainReconProbe {
     using Json = nlohmann::json;
@@ -30,6 +33,7 @@ class NVEncFilmGrainReconProbe {
     std::set<uint32_t> m_captured;
     bool m_failed = false, m_finished = false;
     uint64_t m_submitted = 0, m_received = 0, m_peakAllocated = 0;
+    std::unique_ptr<NVEncFilmGrainModelProbe<std::shared_ptr<RGYBitstream>>> m_modelOutput;
 
     static void cudaCheck(cudaError_t e) {
         if (e != cudaSuccess) throw std::runtime_error(cudaGetErrorString(e));
@@ -64,9 +68,12 @@ public:
         std::ifstream file(manifest); Json j; file>>j;
         m_config=NVEncFilmGrainReconConfig::parse(j);
         m_frameBytes=m_config.requireLayout(width,height,depth);
+        std::optional<NVEncFilmGrainModelConfig> modelConfig;
+        if(j.contains("model_output"))modelConfig=NVEncFilmGrainModelConfig::parse(j.at("model_output"),m_config.frames);
         if (!std::filesystem::create_directory(m_config.directory))
             throw std::runtime_error("reconstruction probe requires a new output directory");
         jsonFile(m_config.directory/"manifest.json",j); status();
+        if(modelConfig)m_modelOutput=std::make_unique<NVEncFilmGrainModelProbe<std::shared_ptr<RGYBitstream>>>(std::move(*modelConfig),m_config.directory/"model-output.json");
     }
     ~NVEncFilmGrainReconProbe() {
         NVEncCtxAutoLock(context(m_dev->vidCtxLock()));
@@ -107,6 +114,7 @@ public:
         const auto found=m_pending.find(frameId);
         if (found==m_pending.end() || found->second.pts!=pts)
             throw std::runtime_error("reconstruction output identity differs from input");
+        if(m_modelOutput && frameId!=m_received)throw std::runtime_error("model trial reconstruction arrival order changed");
         auto& s=found->second;
         NVEncCtxAutoLock(context(m_dev->vidCtxLock()));
         // NVIDIA requires unmapping before CUDA reads reconstructed surfaces.
@@ -130,9 +138,33 @@ public:
     void finish() {
         if (m_failed || !m_pending.empty() || m_captured!=m_config.frames || m_received!=m_submitted)
             throw std::runtime_error("reconstruction capture did not complete every requested frame");
+        if(m_modelOutput)m_modelOutput->finish();
         m_finished=true;status();
     }
+    bool modelOutputEnabled() const {return bool(m_modelOutput);}
+    std::vector<std::shared_ptr<RGYBitstream>> filterOutput(std::shared_ptr<RGYBitstream> packet) {
+        if(!m_modelOutput || !packet || packet->frameIdx()<0 || uint64_t(packet->frameIdx())+1!=m_received)
+            throw std::runtime_error("model trial packet lacks matching reconstruction");
+        // RGYListRef's shared pointers refer back to the pipeline's pool. A
+        // pending failure may outlive that pool at teardown. Transfer the POD's
+        // complete ownership into a separately allocated token before buffering;
+        // leave the pool entry empty, including its side-data ownership.
+        auto owned=std::shared_ptr<RGYBitstream>(new RGYBitstream(RGYBitstreamInit()),
+            [](RGYBitstream* p){p->clear();delete p;});
+        *owned=*packet;*packet=RGYBitstreamInit();
+        auto output=m_modelOutput->receive(owned,owned->data(),owned->size(),uint64_t(owned->frameIdx()),owned->pts());
+        std::vector<std::shared_ptr<RGYBitstream>> released;
+        for(auto& item:output) {
+            // Payload-only copy preserves PTS/DTS, duration, frame index, flags,
+            // picture type and every other bitstream field in the original token.
+            if(item.token->copy(item.bytes.data(),item.bytes.size())!=RGY_ERR_NONE)
+                throw std::runtime_error("model trial payload allocation failed");
+            released.push_back(std::move(item.token));
+        }
+        return released;
+    }
     void fail(const std::string& error) noexcept {
+        if(m_modelOutput)m_modelOutput->fail(error);
         m_failed=true;try { status(error); } catch (...) {}
     }
 };

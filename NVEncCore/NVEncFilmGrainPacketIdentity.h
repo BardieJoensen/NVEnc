@@ -1,5 +1,5 @@
 // Bounded identity/buffering prerequisite for experimental reconstructed-base
-// models. No source eligibility, picture-quality or encoder output call sites.
+// models. This does not establish source eligibility or picture quality.
 // MIT license, as NVEncFilmGrainModel.h.
 #pragma once
 #include <algorithm>
