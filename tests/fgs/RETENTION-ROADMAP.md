@@ -136,6 +136,13 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [per-picture candidate path](FINDINGS-2026-09-23-FRAME-FRACTIONS.md)
+completes D60. Changing fractions, immutable source/model association and source
+transitions pass on both native depths; ordinary SDR/HDR outputs are exact.
+The native fitter still needs complete non-tile-aligned geometry before whole
+1080p/2160p tests, followed by actual automatic source/fraction evidence. R3–R8
+remain open; explicit schedules do not grant source admission.
+
 The [independent temporal selector](FINDINGS-2026-09-23-INDEPENDENT-WINDOW.md)
 completes D59: both constructed depths pass, four earlier partial candidates
 reject late on their independent mean, and all actual GPU/decoder outcomes
