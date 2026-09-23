@@ -4,11 +4,13 @@
 #pragma once
 #include "NVEncFilmGrainNativeEngineAPI.h"
 #include "NVEncFilmGrainModelProbe.h"
+#include "NVEncFilmGrainSourceFrame.h"
 
 struct NVEncFilmGrainNativeConfig {
     NVEncFilmGrainModelConfig packets;
     std::filesystem::path engineLibrary;
     nlohmann::json engine;
+    bool memorySource() const {return engine.value("source_mode",std::string("files"))=="memory";}
     static NVEncFilmGrainNativeConfig parse(const nlohmann::json& j,const std::set<uint32_t>& captured) {
         if(!j.is_object() || j.contains("models") || j.contains("ready_after") || captured.size()<8)
             throw std::runtime_error("native model trial needs 8..16 pictures and runtime model readiness");
@@ -18,6 +20,8 @@ struct NVEncFilmGrainNativeConfig {
         c.engineLibrary=std::filesystem::u8path(j.at("engine_library").get<std::string>());
         if(!c.engineLibrary.is_absolute())throw std::runtime_error("native engine library must be absolute");
         c.engine=j.at("engine");
+        const auto mode=c.engine.value("source_mode",std::string("files"));
+        if(mode!="files" && mode!="memory")throw std::runtime_error("native source mode must be files or memory");
         if(!c.engine.is_object() || NVEncFilmGrainModelConfig::integer(c.engine,"frame_count",8,16)!=captured.size()
             || !c.engine.at("sources").is_array() || c.engine.at("sources").size()!=captured.size())
             throw std::runtime_error("native source/model packet count differs");
@@ -44,6 +48,7 @@ class NVEncFilmGrainNativeLibrary {
     void* m_library=nullptr;
 #endif
     int (*m_push)(void*,uint64_t,int64_t,const FgsNativePlane*)=nullptr;
+    int (*m_pushPair)(void*,uint64_t,int64_t,const FgsNativePlane*,const FgsNativePlane*)=nullptr;
     int (*m_model)(void*,uint64_t,const char**,size_t*)=nullptr;
     int (*m_finish)(void*)=nullptr;
     const char* (*m_report)(void*)=nullptr;
@@ -85,10 +90,12 @@ public:
             const auto version=symbol<unsigned (*)()>("fgs_native_engine_abi_version");
             const auto open=symbol<void* (*)(const char*,size_t)>("fgs_native_engine_open");
             m_push=symbol<decltype(m_push)>("fgs_native_engine_push");m_model=symbol<decltype(m_model)>("fgs_native_engine_model");
+            m_pushPair=symbol<decltype(m_pushPair)>("fgs_native_engine_push_pair");
             m_finish=symbol<decltype(m_finish)>("fgs_native_engine_finish");m_report=symbol<decltype(m_report)>("fgs_native_engine_report");
             m_error=symbol<decltype(m_error)>("fgs_native_engine_error");m_close=symbol<decltype(m_close)>("fgs_native_engine_close");
-            if(!version || version()!=1 || !open || !m_push || !m_model || !m_finish || !m_report || !m_error || !m_close)
-                throw std::runtime_error("native model engine requires ABI 1");
+            if(!version || (version()!=1 && version()!=2) || !open || !m_push || !m_model || !m_finish || !m_report || !m_error || !m_close
+                || (version()==2 && !m_pushPair) || (config.value("source_mode",std::string("files"))=="memory" && version()!=2))
+                throw std::runtime_error("native model engine requires ABI 1 files or ABI 2 source pairs");
             const auto text=config.dump();m_context=open(text.data(),text.size());
             if(!m_context)check(-1);
         }catch(...){close();throw;}
@@ -97,6 +104,10 @@ public:
     NVEncFilmGrainNativeLibrary(const NVEncFilmGrainNativeLibrary&)=delete;
     NVEncFilmGrainNativeLibrary& operator=(const NVEncFilmGrainNativeLibrary&)=delete;
     void push(uint64_t ordinal,int64_t pts,const FgsNativePlane base[3]) {check(m_push(m_context,ordinal,pts,base));}
+    void pushPair(uint64_t ordinal,int64_t pts,const FgsNativePlane source[3],const FgsNativePlane base[3]) {
+        if(!m_pushPair)throw std::runtime_error("native pair ABI is unavailable");
+        check(m_pushPair(m_context,ordinal,pts,source,base));
+    }
     fgsmodel::FilmGrainModelDecision model(uint64_t ordinal) {
         const char* text=nullptr;size_t count=0;const int rc=m_model(m_context,ordinal,&text,&count);check(rc);
         if(rc==0) {
@@ -138,7 +149,8 @@ public:
         :m_config(std::move(config)),m_engine(m_config.engineLibrary,m_config.engine),
         m_buffer(m_config.packets.library,m_config.packets.packets.size(),32,m_config.packets.maxPackets,m_config.packets.maxBytes),
         m_report(report),m_width(width),m_height(height),m_depth(depth) {m_config.requireLayout(width,height,depth);status();}
-    void reconstruction(uint64_t ordinal,int64_t pts,const uint8_t* raw,size_t bytes) {
+    void reconstruction(uint64_t ordinal,int64_t pts,const uint8_t* raw,size_t bytes,
+        const fgsdiagnostic::NativeSourceFrame* source=nullptr) {
         try {
             const unsigned unit=m_depth==10?2:1;const uint64_t expected=uint64_t(m_width)*m_height*3/2*unit;
             if(m_failed || m_finished || ordinal!=m_reconstructed || ordinal>=m_config.packets.packets.size()
@@ -156,7 +168,17 @@ public:
                 for(size_t i=0;i<n;++i)data[c][i]=code(c?size_t(m_width)*m_height+2*i+c-1:i);
                 planes[c]={data[c].data(),n,w};
             }
-            m_engine.push(ordinal,pts,planes.data());++m_reconstructed;status();
+            if(m_config.memorySource()) {
+                if(!source)throw std::runtime_error("native model requires original memory source");
+                source->requireIdentity(ordinal,source->sourceId,pts,source->timebaseNum,source->timebaseDen,m_width,m_height,m_depth);
+                std::array<FgsNativePlane,3> original{};
+                for(unsigned c=0;c<3;++c)original[c]={source->planes[c].data(),source->planes[c].size(),c?m_width/2:m_width};
+                m_engine.pushPair(ordinal,pts,original.data(),planes.data());
+            } else {
+                if(source)throw std::runtime_error("native file mode received unexpected memory source");
+                m_engine.push(ordinal,pts,planes.data());
+            }
+            ++m_reconstructed;status();
         }catch(const std::exception& e){fail(e.what());throw;}
     }
     std::vector<typename Buffer::Output> receive(Token token,const uint8_t* data,size_t bytes,uint64_t input,int64_t pts) {

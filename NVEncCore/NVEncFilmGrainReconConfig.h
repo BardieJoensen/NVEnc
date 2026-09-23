@@ -12,6 +12,8 @@ struct NVEncFilmGrainReconConfig {
     std::filesystem::path directory;
     uint64_t maxBytes = 0;
     uint64_t maxDeviceBytes = 512ULL*1024*1024;
+    bool captureSource = false;
+    uint64_t maxSourceBytes = 512ULL*1024*1024;
 
     static NVEncFilmGrainReconConfig parse(const nlohmann::json& j) {
         NVEncFilmGrainReconConfig c;
@@ -35,6 +37,17 @@ struct NVEncFilmGrainReconConfig {
         }
         if (!c.maxDeviceBytes || c.maxDeviceBytes>2ULL*1024*1024*1024)
             throw std::runtime_error("reconstruction device budget must be 1..2048 MiB");
+        if(j.contains("capture_source")) {
+            if(!j.at("capture_source").is_boolean())throw std::runtime_error("capture_source must be boolean");
+            c.captureSource=j.at("capture_source").get<bool>();
+        }
+        if(j.contains("max_source_bytes")) {
+            if(!c.captureSource || !j.at("max_source_bytes").is_number_unsigned())
+                throw std::runtime_error("source byte budget requires explicit source capture and unsigned bytes");
+            c.maxSourceBytes=j.at("max_source_bytes").get<uint64_t>();
+        }
+        if(!c.maxSourceBytes || c.maxSourceBytes>512ULL*1024*1024)
+            throw std::runtime_error("source byte budget must be 1..512 MiB");
         c.directory = std::filesystem::u8path(j.at("output_directory").get<std::string>());
         if (!c.directory.is_absolute()) throw std::runtime_error("reconstruction directory must be absolute");
         return c;
@@ -44,7 +57,9 @@ struct NVEncFilmGrainReconConfig {
             || (width & 1) || (height & 1) || (depth != 8 && depth != 10))
             throw std::runtime_error("reconstruction probe requires progressive 8/10-bit 4:2:0, at most 4096x2160");
         const uint64_t bytes = uint64_t(width)*height*3/2*(depth == 10 ? 2 : 1);
-        if (frames.empty() || frames.size() > 16 || bytes*frames.size()+65536 > maxBytes)
+        const uint64_t sourceBytes=captureSource?uint64_t(width)*height*3:0;
+        if (frames.empty() || frames.size() > 16 || (bytes+sourceBytes)*frames.size()+65536 > maxBytes
+            || (captureSource && sourceBytes>maxSourceBytes))
             throw std::runtime_error("reconstruction byte budget does not cover all requested frames");
         return bytes;
     }

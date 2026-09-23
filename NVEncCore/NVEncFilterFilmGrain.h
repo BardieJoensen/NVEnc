@@ -87,6 +87,8 @@ struct NVEncFilmGrainAnalyzerConfig {
 // applyGrain == 0.  The latter explicitly disables a model inherited from the
 // previous AV1 frame when analysis is not reliable; reliable() is diagnostic
 // and must not be used to skip that update.
+namespace fgsdiagnostic { class NativeSourceFrame; struct SourceMemory; }
+
 class RGYFrameDataFilmGrain : public RGYFrameData {
 public:
     RGYFrameDataFilmGrain();
@@ -101,6 +103,7 @@ public:
     bool reliable() const { return m_diagnostics.reliable; }
     int64_t timestamp() const { return m_timestamp; }
     int inputFrameId() const { return m_inputFrameId; }
+    std::shared_ptr<const fgsdiagnostic::NativeSourceFrame> originalSource; // explicit diagnostic only
 
 private:
     NV_ENC_FILM_GRAIN_PARAMS_AV1 m_params;
@@ -119,6 +122,7 @@ public:
     tstring sceneCutPath;          // optional frame-preserving source schedule
     tstring tableOutPath;          // write measured grain as an AOM filmgrn1 table (empty = off)
     tstring jointProbePath;        // bounded integration diagnostic manifest (empty = off)
+    tstring sourceProbePath;       // reconstruction manifest; source transport only when requested
     rgy_rational<int> timebase;    // timebase of the frame timestamps (for the table's 10 MHz intervals)
 
     NVEncFilterParamFilmGrain();
@@ -161,6 +165,9 @@ private:
     bool m_detailReferenceValid;
     std::unique_ptr<fgsmodel::FilmGrainTrainingHistory> m_trainingHistory;
     std::unique_ptr<fgsmodel::FilmGrainJointProbe> m_jointProbe;
+    std::shared_ptr<fgsdiagnostic::SourceMemory> m_sourceMemory;
+    std::vector<uint32_t> m_sourceFrames;
+    uint64_t m_sourceOrdinal = 0;
     // Two future pictures let startup training be corroborated before NVENC
     // sees the opening base. Three bounded slots preserve one-output ordering.
     std::array<std::unique_ptr<CUFrameBuf>, 3> m_trainingSources;

@@ -1007,6 +1007,8 @@ container rollout remain experimental. The ordinary path loads no extra library.
 
 ### --film-grain-recon-probe &lt;manifest&gt;
 
+The explicit manifest can also set `capture_source: true` with `--film-grain auto` to transport the original FGS input through the pipeline. It validates picture identity, bounds live source memory with `max_source_bytes`, and includes source planes in `max_output_bytes`. Native fitting can use ABI 2 with `engine.source_mode: "memory"`; see the [direct-source contract](tests/fgs/MODEL-OUTPUT-TRIAL.md#direct-original-source-transport).
+
 Explicit development-only NVENC reconstructed-picture capture. Disabled by default.
 Requires synchronous Linux AV1 NVENC, progressive NV12/P010, API 12.1 or newer,
 reconstructed-output capability and no parallel encoding. The JSON manifest uses

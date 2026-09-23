@@ -12,6 +12,7 @@
 #include "NVEncFilmGrainReconConfig.h"
 #include "NVEncFilmGrainModelProbe.h"
 #include "NVEncFilmGrainNativeProbe.h"
+#include "NVEncFilmGrainSourceFrame.h"
 #include "NVEncUtil.h"
 
 class NVEncFilmGrainReconProbe {
@@ -25,6 +26,7 @@ class NVEncFilmGrainReconProbe {
         int sourceId = -1;
         int64_t pts = 0, duration = 0;
         int timebaseNum = 0, timebaseDen = 0;
+        std::shared_ptr<const fgsdiagnostic::NativeSourceFrame> source;
     };
     NVGPUInfo* m_dev;
     NVEncFilmGrainReconConfig m_config;
@@ -34,6 +36,7 @@ class NVEncFilmGrainReconProbe {
     std::set<uint32_t> m_captured;
     bool m_failed = false, m_finished = false;
     uint64_t m_submitted = 0, m_received = 0, m_peakAllocated = 0;
+    uint64_t m_sources = 0, m_peakSourceBytes = 0;
     std::unique_ptr<NVEncFilmGrainModelProbe<std::shared_ptr<RGYBitstream>>> m_modelOutput;
     std::unique_ptr<NVEncFilmGrainNativeProbe<std::shared_ptr<RGYBitstream>>> m_nativeOutput;
 
@@ -53,7 +56,8 @@ class NVEncFilmGrainReconProbe {
         jsonFile(m_config.directory/"status.json", {{"complete",m_finished && !m_failed && m_captured==m_config.frames},
             {"requested_frames",m_config.frames},{"captured_frames",m_captured},
             {"failed",m_failed},{"error",error},{"native_bytes",m_frameBytes*m_captured.size()},
-            {"submitted",m_submitted},{"received",m_received},{"peak_device_bytes",m_peakAllocated}});
+            {"submitted",m_submitted},{"received",m_received},{"peak_device_bytes",m_peakAllocated},
+            {"source_frames",m_sources},{"source_bytes",uint64_t(m_width)*m_height*3*m_sources},{"peak_source_bytes",m_peakSourceBytes}});
     }
     void release(Surface& s) noexcept {
         // The owner must keep the encoder/context alive until this probe closes.
@@ -78,6 +82,8 @@ public:
         if(j.contains("native_model_output")) {
             nativeConfig=NVEncFilmGrainNativeConfig::parse(j.at("native_model_output"),m_config.frames);
             nativeConfig->requireLayout(width,height,depth);
+            if(nativeConfig->memorySource()!=m_config.captureSource)
+                throw std::runtime_error("native memory mode requires source capture; file mode uses its supplied sources");
         }
         if (!std::filesystem::create_directory(m_config.directory))
             throw std::runtime_error("reconstruction probe requires a new output directory");
@@ -94,7 +100,8 @@ public:
 
     // Encoded input ordinal identifies the requested surface. Its output must
     // carry that same ordinal AND timestamp after NVENC's picture reordering.
-    void submit(NV_ENC_PIC_PARAMS& p,int sourceId,int tbNum,int tbDen) {
+    void submit(NV_ENC_PIC_PARAMS& p,int sourceId,int tbNum,int tbDen,
+        std::shared_ptr<const fgsdiagnostic::NativeSourceFrame> source = {}) {
         if (m_failed || m_finished) throw std::runtime_error("reconstruction probe is not accepting inputs");
         // NVENC reorders reconstructed output buffers. Sparse output pointers
         // can alias another picture in an AV1 hidden-frame group; supply a
@@ -103,6 +110,13 @@ public:
             throw std::runtime_error("duplicate or invalid reconstruction input identity");
         auto& s=m_pending[p.frameIdx];s.sourceId=sourceId;s.pts=int64_t(p.inputTimeStamp);
         s.duration=int64_t(p.inputDuration);s.timebaseNum=tbNum;s.timebaseDen=tbDen;
+        if(m_config.captureSource && m_config.frames.count(p.frameIdx)) {
+            if(!source)throw std::runtime_error("requested original source is missing");
+            source->requireIdentity(p.frameIdx,sourceId,s.pts,tbNum,tbDen,m_width,m_height,m_depth);
+            m_peakSourceBytes=std::max(m_peakSourceBytes,source->peakBytes());
+            if(m_peakSourceBytes>m_config.maxSourceBytes)throw std::runtime_error("source budget differs between filter and reconstruction");
+            s.source=std::move(source);
+        } else if(source)throw std::runtime_error("unexpected original source attachment");
         const auto format=m_depth==10?NV_ENC_BUFFER_FORMAT_YUV420_10BIT:NV_ENC_BUFFER_FORMAT_NV12;
         if (p.inputWidth!=m_width || p.inputHeight!=m_height || p.bufferFmt!=format)
             throw std::runtime_error("reconstruction input layout changed");
@@ -135,8 +149,22 @@ public:
         }
         std::vector<uint8_t> host(m_frameBytes);const size_t rowBytes=m_width*(m_depth==10?2:1);
         cudaCheck(cudaMemcpy2D(host.data(),rowBytes,s.device,s.pitch,rowBytes,m_height*3/2,cudaMemcpyDeviceToHost));
-        if(m_nativeOutput)m_nativeOutput->reconstruction(frameId,pts,host.data(),host.size());
+        if(m_nativeOutput)m_nativeOutput->reconstruction(frameId,pts,host.data(),host.size(),s.source.get());
         const auto stem="frame-"+std::to_string(frameId);const auto raw=m_config.directory/(stem+".raw");
+        if(s.source) {
+            Json planes=Json::array();
+            for(unsigned c=0;c<3;++c) {
+                const auto path=m_config.directory/(stem+"-source-"+std::to_string(c)+".raw");
+                const auto& values=s.source->planes[c];std::ofstream out(path,std::ios::binary);
+                out.write(reinterpret_cast<const char*>(values.data()),values.size()*2);out.flush();
+                if(!out)throw std::runtime_error("original source write failed");
+                planes.push_back({{"path",path.u8string()},{"samples",values.size()}});
+            }
+            jsonFile(m_config.directory/(stem+"-source.json"),{{"complete",true},{"frame_id",frameId},{"source_frame_id",s.sourceId},
+                {"pts",pts},{"timebase",{s.timebaseNum,s.timebaseDen}},{"width",m_width},{"height",m_height},{"depth",m_depth},
+                {"format","planar_native_uint16"},{"planes",planes}});
+            ++m_sources;
+        }
         { std::ofstream out(raw,std::ios::binary);out.write(reinterpret_cast<const char*>(host.data()),host.size());out.flush();
           if (!out) throw std::runtime_error("reconstruction native write failed"); }
         jsonFile(m_config.directory/(stem+".json"),{{"complete",true},{"frame_id",frameId},{"source_frame_id",s.sourceId},
@@ -147,13 +175,15 @@ public:
         release(s);m_pending.erase(found);m_captured.insert(frameId);status();
     }
     void finish() {
-        if (m_failed || !m_pending.empty() || m_captured!=m_config.frames || m_received!=m_submitted)
+        if (m_failed || !m_pending.empty() || m_captured!=m_config.frames || m_received!=m_submitted
+            || (m_config.captureSource && m_sources!=m_config.frames.size()))
             throw std::runtime_error("reconstruction capture did not complete every requested frame");
         if(m_modelOutput)m_modelOutput->finish();
         if(m_nativeOutput)m_nativeOutput->finish();
         m_finished=true;status();
     }
     bool modelOutputEnabled() const {return bool(m_modelOutput) || bool(m_nativeOutput);}
+    bool sourceCaptureEnabled() const {return m_config.captureSource;}
     std::vector<std::shared_ptr<RGYBitstream>> filterOutput(std::shared_ptr<RGYBitstream> packet) {
         if(!modelOutputEnabled() || !packet || packet->frameIdx()<0 || uint64_t(packet->frameIdx())+1!=m_received)
             throw std::runtime_error("model trial packet lacks matching reconstruction");
