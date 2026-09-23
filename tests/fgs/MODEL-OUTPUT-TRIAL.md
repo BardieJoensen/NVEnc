@@ -80,3 +80,27 @@ eligibility, HDR/perceptual quality or production speed. The private native ABI
 and its completed finite CPU/GPU qualification are tracked by
 `roadmap-r3-live-fitting-20260923` and the
 [live-fitting findings](FINDINGS-2026-09-23-LIVE-FITTING.md).
+
+## Direct original-source transport
+
+The outer reconstruction manifest can request `capture_source: true` with
+`--film-grain auto`. For the same explicit ordinals, the filter carries immutable
+native Y/Cb/Cr originals alongside its per-picture result. This is the input to
+the FGS filter, after any preceding crop/resize/filter operations. It is not the
+partially retained output or the older luma-only history. Ordinal, source ID,
+timestamp, timebase and layout must match the encoder submission exactly.
+Missing or mismatched sources reject the diagnostic.
+
+`max_source_bytes` bounds live native source allocations (default/maximum
+512 MiB). It excludes transient per-plane download staging, the native fitting
+engine's separately bounded clones, encoder surfaces and other process memory.
+The existing `max_output_bytes` must also cover three native uint16 source planes
+per requested picture. Source captures have `frame-N-source.json` and three
+`frame-N-source-C.raw` files. Ordinary mode does not allocate or download sources.
+
+To feed those originals directly into fitting, use `engine.source_mode: "memory"`
+and ABI 2. Source records keep ordinal/PTS but omit `planes`; file and direct modes
+cannot be mixed. Capture-only mode supports even 1080p/UHD dimensions; fitting
+still requires tile-aligned dimensions. The source-transport qualification is
+tracked in `roadmap-r3-source-transport-20260923`. Pre-encode fractions and source
+eligibility remain separate work.

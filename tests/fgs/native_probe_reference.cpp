@@ -25,11 +25,24 @@ int main() {
         }
         require(packets.size()==count && input.at("captures").is_array() && input.at("captures").size()<=count,"native capture count differs");
         std::vector<uint8_t> output(original.begin(),original.begin()+32);Json releases=Json::array();
+        auto sourceMemory=std::make_shared<fgsdiagnostic::SourceMemory>(512ull*1024*1024);
         for(size_t i=0;i<input.at("captures").size();++i) {
             const auto path=std::filesystem::u8path(input.at("captures").at(i).get<std::string>());const size_t expected=size_t(w)*h*3/2*(depth==10?2:1);
             require(std::filesystem::file_size(path)==expected,"native capture bytes differ");std::vector<uint8_t> raw(expected);std::ifstream file(path,std::ios::binary);file.read(reinterpret_cast<char*>(raw.data()),raw.size());require(bool(file),"capture read failed");
             const auto before=raw;const auto pts=config.packets.packets[i].pts;
-            probe.reconstruction(i,pts,raw.data(),raw.size());require(before==raw,"native adapter modified captured input");
+            std::shared_ptr<fgsdiagnostic::NativeSourceFrame> source;
+            std::array<std::vector<uint16_t>,3> saved;
+            if(config.memorySource() && input.contains("source_planes")) {
+                source=std::make_shared<fgsdiagnostic::NativeSourceFrame>(sourceMemory,i,int(i),pts,1,24,w,h,depth);
+                for(unsigned c=0;c<3;++c) {
+                    const auto path=std::filesystem::u8path(input.at("source_planes").at(i).at(c).get<std::string>());
+                    auto& values=source->planes[c];require(std::filesystem::file_size(path)==values.size()*2,"memory source plane bytes differ");
+                    std::ifstream file(path,std::ios::binary);file.read(reinterpret_cast<char*>(values.data()),values.size()*2);require(bool(file),"memory source read failed");
+                }
+                saved=source->planes;
+            }
+            probe.reconstruction(i,pts,raw.data(),raw.size(),source.get());require(before==raw,"native adapter modified captured input");
+            if(source)require(source->planes==saved,"native adapter modified original source");
             const auto& p=packets[i];const auto released=probe.receive(i,original.data()+p.offset,p.bytes,i,pts);
             for(const auto& item:released) {
                 require(item.ordinal==item.token,"metadata token changed");put(output,item.bytes.size(),4);put(output,uint64_t(packets[item.ordinal].pts),8);output.insert(output.end(),item.bytes.begin(),item.bytes.end());releases.push_back({{"received",i},{"packet",item.ordinal}});

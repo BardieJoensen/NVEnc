@@ -3,6 +3,7 @@
     fgs_native_engine_abi_version;
     fgs_native_engine_open;
     fgs_native_engine_push;
+    fgs_native_engine_push_pair;
     fgs_native_engine_model;
     fgs_native_engine_finish;
     fgs_native_engine_report;

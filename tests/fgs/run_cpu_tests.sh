@@ -10,6 +10,8 @@ set -e
 cd "$(dirname "$0")/../.."
 CXX=${CXX:-g++}
 OUT=${TMPDIR:-/tmp}
+$CXX -std=c++17 -O2 -Wall -I NVEncCore tests/fgs/source_frame_test.cpp -o "$OUT/fgs_source_frame_test"
+"$OUT/fgs_source_frame_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore tests/fgs/recon_config_test.cpp -o "$OUT/fgs_recon_config_test"
 "$OUT/fgs_recon_config_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc tests/fgs/source_luma_select_test.cpp -o "$OUT/fgs_source_luma_select_test"

@@ -7,6 +7,19 @@ int main() {
     const auto c=NVEncFilmGrainReconConfig::parse(base);
     assert(c.requireLayout(3840,2160,10)==24883200);
     assert(c.requireLayout(1024,512,8)==786432);
+    auto source=base;source["capture_source"]=true;source["max_source_bytes"]=uint64_t(536870912);
+    const auto s=NVEncFilmGrainReconConfig::parse(source);assert(s.captureSource);s.requireLayout(3840,2160,10);
+    for(unsigned failure=0;failure<7;++failure) {
+        auto bad=source;bool rejected=false;
+        if(failure==0)bad["capture_source"]=1;
+        if(failure==1)bad["max_source_bytes"]=-1;
+        if(failure==2)bad["max_source_bytes"]=uint64_t(0);
+        if(failure==3)bad["max_source_bytes"]=uint64_t(536870913);
+        if(failure==4)bad["capture_source"]=false;
+        if(failure==5)bad["max_source_bytes"]=uint64_t(1);
+        if(failure==6)bad["max_output_bytes"]=uint64_t(3*24883200+65536);
+        try{NVEncFilmGrainReconConfig::parse(bad).requireLayout(3840,2160,10);}catch(...){rejected=true;}assert(rejected);
+    }
     for (unsigned failure=0;failure<14;++failure) {
         auto j=base;
         if(failure==0)j["frames"]=json::array();

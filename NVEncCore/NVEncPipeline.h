@@ -3446,7 +3446,8 @@ protected:
         m_encTimestamp->add(timestamp, inputFrameId, (encPicParams.frameIdx = id), duration, metadatalist);
 
         if (m_filmGrainReconProbe) {
-            try { m_filmGrainReconProbe->submit(encPicParams,inputFrameId,m_outputTimebase.n(),m_outputTimebase.d()); }
+            try { m_filmGrainReconProbe->submit(encPicParams,inputFrameId,m_outputTimebase.n(),m_outputTimebase.d(),
+                filmGrainFrameData ? filmGrainFrameData->originalSource : nullptr); }
             catch (const std::exception& e) {
                 m_filmGrainReconProbe->fail(e.what());
                 PrintMes(RGY_LOG_ERROR,_T("Reconstruction input: %s.\n"),char_to_tstring(e.what()).c_str());

@@ -48,6 +48,8 @@
 #include "NVEncFilmGrainSourceGuard.h"
 #include "NVEncFilmGrainTraining.h"
 #include "NVEncFilmGrainJointProbe.cuh"
+#include "NVEncFilmGrainSourceFrame.cuh"
+#include "NVEncFilmGrainReconConfig.h"
 #include "NVEncFilmGrainModel.h"
 #include "NVEncFilterDegrain.h"
 #include "NVEncFilterDenoiseFFT3D.h"
@@ -2172,6 +2174,24 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         m_motionDegrain.reset();
         m_motionDegrainParam.reset();
     }
+    m_sourceMemory.reset(); m_sourceFrames.clear(); m_sourceOrdinal = 0;
+    if (!prm->sourceProbePath.empty()) {
+        try {
+            const auto path = std::filesystem::path(prm->sourceProbePath);
+            if (std::filesystem::file_size(path) > 65536) throw std::runtime_error("source probe manifest too large");
+            nlohmann::json manifest; std::ifstream file(path); file >> manifest;
+            const auto config = NVEncFilmGrainReconConfig::parse(manifest);
+            if (config.captureSource) {
+                const unsigned depth = prm->frameIn.csp == RGY_CSP_NV12 || prm->frameIn.csp == RGY_CSP_YV12 ? 8 : 10;
+                config.requireLayout(prm->frameIn.width, prm->frameIn.height, depth);
+                m_sourceMemory = std::make_shared<fgsdiagnostic::SourceMemory>(config.maxSourceBytes);
+                m_sourceFrames.assign(config.frames.begin(), config.frames.end());
+            }
+        } catch (const std::exception& error) {
+            AddMessage(RGY_LOG_ERROR, _T("FGS source transport: %s\n"), char_to_tstring(error.what()).c_str());
+            return RGY_ERR_INVALID_PARAM;
+        }
+    }
     m_jointProbe.reset();
     if (!prm->jointProbePath.empty()) {
         try {
@@ -2245,6 +2265,10 @@ RGY_ERR NVEncFilterFilmGrain::finishTable() {
             AddMessage(RGY_LOG_ERROR, _T("FGS joint probe: %s\n"), char_to_tstring(error.what()).c_str());
             return RGY_ERR_INVALID_PARAM;
         }
+    }
+    if (m_sourceMemory && !m_sourceFrames.empty() && m_sourceOrdinal <= m_sourceFrames.back()) {
+        AddMessage(RGY_LOG_ERROR, _T("FGS source transport: missing requested source frames.\n"));
+        return RGY_ERR_INVALID_PARAM;
     }
     if (!m_tableWriter) return RGY_ERR_NONE;
     tstring error;
@@ -2380,8 +2404,20 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 return RGY_ERR_INVALID_PARAM;
             }
         }
-        output->dataList.push_back(std::make_shared<RGYFrameDataFilmGrain>(
-            params, diagnostics, source->timestamp, source->inputFrameId));
+        auto result = std::make_shared<RGYFrameDataFilmGrain>(params, diagnostics, source->timestamp, source->inputFrameId);
+        if (m_sourceMemory) {
+            try {
+                if (std::binary_search(m_sourceFrames.begin(), m_sourceFrames.end(), m_sourceOrdinal)) {
+                    result->originalSource = fgsdiagnostic::captureNativeSource(joint_probe_view(source), m_sourceMemory,
+                        m_sourceOrdinal, m_tableTimebase.n(), m_tableTimebase.d(), stream);
+                }
+                ++m_sourceOrdinal;
+            } catch (const std::exception& error) {
+                AddMessage(RGY_LOG_ERROR, _T("FGS source transport: %s\n"), char_to_tstring(error.what()).c_str());
+                return RGY_ERR_INVALID_PARAM;
+            }
+        }
+        output->dataList.push_back(std::move(result));
         return RGY_ERR_NONE;
     };
     if (!prm->filmGrain.enable || interlaced(*source)

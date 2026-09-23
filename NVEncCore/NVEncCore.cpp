@@ -2642,6 +2642,10 @@ RGY_ERR NVEncCore::SetInputParam(InEncodeVideoParam *inputParam) {
             PrintMes(RGY_LOG_ERROR, _T("Reconstruction probe: %s.\n"),char_to_tstring(e.what()).c_str());
             return RGY_ERR_INVALID_PARAM;
         }
+        if (m_filmGrainReconProbe->sourceCaptureEnabled() && !inputParam->av1.filmGrainAuto) {
+            PrintMes(RGY_LOG_ERROR,_T("Source transport requires --film-grain auto.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
         if (m_filmGrainReconProbe->modelOutputEnabled() && m_filmGrainSeedGuard) {
             PrintMes(RGY_LOG_ERROR,_T("The complete-model trial cannot be combined with seed correction.\n"));
             return RGY_ERR_UNSUPPORTED;
@@ -3583,6 +3587,7 @@ RGY_ERR NVEncCore::InitFilters(const InEncodeVideoParam *inputParam) {
         param->filmGrain.denoiser = inputParam->av1.filmGrainDenoiser;
         param->tableOutPath = inputParam->av1.filmGrainTableOut;
         param->jointProbePath = inputParam->av1.filmGrainJointProbe;
+        param->sourceProbePath = inputParam->av1.filmGrainReconProbe;
         param->sceneCutPath = inputParam->av1.filmGrainSceneCuts;
         param->timebase = m_outputTimebase;
         param->filmGrain.motionRefs = inputParam->av1.filmGrainMotionRefs;
