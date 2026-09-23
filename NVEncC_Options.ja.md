@@ -999,7 +999,7 @@ AV1パケットのフィルムグレインseedを補正する実験用オプシ�
 
 ### --film-grain-recon-probe &lt;manifest&gt;
 
-`--film-grain auto` と `capture_source: true` を指定すると、FGS 入力の原画像をフレーム識別情報付きで保持します。`max_source_bytes` は保持メモリを制限し、`max_output_bytes` は原画像の出力も含みます。ABI 2 の `engine.source_mode: "memory"` で直接モデルへ渡せます。[仕様](tests/fgs/MODEL-OUTPUT-TRIAL.md#direct-original-source-transport)を参照してください。
+`--av1-film-grain` と `capture_source: true` を指定すると、FGS 入力の原画像をフレーム識別情報付きで保持します。`max_source_bytes` は保持メモリを制限し、`max_output_bytes` は原画像の出力も含みます。ABI 2 の `engine.source_mode: "memory"` で直接モデルへ渡せます。[仕様](tests/fgs/MODEL-OUTPUT-TRIAL.md#direct-original-source-transport)を参照してください。
 
 Explicit development-only NVENC reconstructed-picture capture. Disabled by default.
 Requires synchronous Linux AV1 NVENC, progressive NV12/P010, API 12.1 or newer,

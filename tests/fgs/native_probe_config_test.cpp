@@ -10,7 +10,7 @@ int main() {
     auto c=NVEncFilmGrainNativeConfig::parse(j,captured);c.requireLayout(1024,512,10);
     assert(!c.memorySource());auto memory=j;memory["engine"]["source_mode"]="memory";
     assert(NVEncFilmGrainNativeConfig::parse(memory,captured).memorySource());
-    for(const auto mode:{Json("unknown"),Json(1),Json(nullptr)}) {
+    for(const auto& mode:{Json("unknown"),Json(1),Json(nullptr)}) {
         memory["engine"]["source_mode"]=mode;bool rejected=false;
         try{NVEncFilmGrainNativeConfig::parse(memory,captured);}catch(...){rejected=true;}assert(rejected);
     }

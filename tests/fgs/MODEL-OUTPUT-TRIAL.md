@@ -84,7 +84,7 @@ and its completed finite CPU/GPU qualification are tracked by
 ## Direct original-source transport
 
 The outer reconstruction manifest can request `capture_source: true` with
-`--film-grain auto`. For the same explicit ordinals, the filter carries immutable
+`--av1-film-grain`. For the same explicit ordinals, the filter carries immutable
 native Y/Cb/Cr originals alongside its per-picture result. This is the input to
 the FGS filter, after any preceding crop/resize/filter operations. It is not the
 partially retained output or the older luma-only history. Ordinal, source ID,

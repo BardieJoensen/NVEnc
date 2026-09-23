@@ -2643,7 +2643,7 @@ RGY_ERR NVEncCore::SetInputParam(InEncodeVideoParam *inputParam) {
             return RGY_ERR_INVALID_PARAM;
         }
         if (m_filmGrainReconProbe->sourceCaptureEnabled() && !inputParam->av1.filmGrainAuto) {
-            PrintMes(RGY_LOG_ERROR,_T("Source transport requires --film-grain auto.\n"));
+            PrintMes(RGY_LOG_ERROR,_T("Source transport requires --av1-film-grain.\n"));
             return RGY_ERR_UNSUPPORTED;
         }
         if (m_filmGrainReconProbe->modelOutputEnabled() && m_filmGrainSeedGuard) {
