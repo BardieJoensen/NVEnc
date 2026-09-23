@@ -136,6 +136,8 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [complete retained-model constructors](FINDINGS-2026-09-23-RETAINED-MODEL.md) now fit native Y and both colour components from actual rounded bases, bind exact finite luma evidence and calibrate integer strength with bounded measured callbacks. Independent solves match 1,992 coefficients; full CPU passes 214 Python tests in 30 suites and 34 C++ programs. Complete coupled-colour candidates still fail source fidelity. D29 constructive selection controls are active; actual output integration remains open. Continue the roadmap without treating this checkpoint as completion.
+
 The [native persistent-detail work](FINDINGS-2026-09-23-PERSISTENT-DETAIL.md) adds complete development-frame measurements and a candidate-bound veto. Seven-frame GPU and encoder lifecycle qualification now passes on `04bd03aa`: 321 GPU cases, 7,182 history-plane comparisons and 3,040 encoded control frames. Independent AOM/dav1d evidence covers both grain modes. D27 keeps missing temporal anchors distinct from complete independent candidate evidence without granting new check bits or relaxing R1. Full CPU: 214 Python tests in 30 suites plus 32 C++. Whole-picture model/admission and actual output selection remain open.
 
 The [frozen stationarity controls](FINDINGS-2026-09-23-STATIONARITY-CONTROLS.md)
