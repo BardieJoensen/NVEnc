@@ -6,6 +6,11 @@ also misses fast zero-grain motion and cannot distinguish persistent noise from
 static detail. No source population was promoted and no encoder output changed.
 Automatic partial retention remains unfinished.
 
+The later [disjoint-frame-pair follow-up](FINDINGS-2026-09-23-MOTION-HOLDOUT.md)
+removes the recorded flat-grain false motion conflicts on these development
+controls. Fast-motion and persistent-grain counterexamples remain unresolved;
+the original frozen results below remain valid for the first diagnostic.
+
 ## What was implemented
 
 `temporal_stationarity_reference.py` extends the existing eight-frame reference

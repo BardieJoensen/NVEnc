@@ -142,6 +142,10 @@ population classifier. Fast zero-grain detail and persistent grain evade the
 necessary checks; flat independent grain also exposes false motion conflicts.
 All 3,960 real tiles retain their R1 classifications. The CPU reference and
 counterexamples are reusable, but no new population acceptance is enabled.
+The [disjoint-frame-pair revision](FINDINGS-2026-09-23-MOTION-HOLDOUT.md) removes
+the flat-grain false motion conflicts in those development controls. It still
+cannot approve fast-motion or persistent-grain populations. Full CPU now passes
+208 Python tests in 29 suites and 29 C++ programs; output selection remains off.
 
 The [source-only temporal population study](FINDINGS-2026-09-23-TEMPORAL-POPULATIONS.md)
 adds independently checked measurements on structured regions. All 3,960 real

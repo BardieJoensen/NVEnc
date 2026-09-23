@@ -120,3 +120,4 @@ python3 tests/fgs/test_amplitude_regression.py
 python3 tests/fgs/test_native_pq_compare.py
 python3 tests/fgs/test_temporal_population.py
 python3 tests/fgs/test_temporal_stationarity.py
+python3 tests/fgs/test_temporal_motion_holdout.py

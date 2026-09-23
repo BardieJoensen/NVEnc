@@ -10,8 +10,11 @@ completed trial scratch has cleanup receipts. No experiment is scheduled.
 The [frozen motion/correlation study](FINDINGS-2026-09-23-STATIONARITY-CONTROLS.md)
 measures 1,024 known-source controls and replays 3,960 real HDR development tiles.
 Fast zero-grain motion and persistent grain evade its necessary checks, so it
-does not establish a new safe population classifier. No source classification
-or output policy changed. Full CPU: 201 Python tests in 28 suites plus 29 C++.
+does not establish a new safe population classifier. Its
+[disjoint-frame-pair improvement](FINDINGS-2026-09-23-MOTION-HOLDOUT.md) removes
+the flat-grain false motion conflicts on development controls, while preserving
+the unresolved counterexamples. No source classification or output policy
+changed. Full CPU: 208 Python tests in 29 suites plus 29 C++.
 R3–R8 remain open; production stays ordinary `cb903a17`, retention/FEL off.
 Next model work needs independent motion evidence and explicit preservation of
 temporally persistent residual before a new population can be admitted.
