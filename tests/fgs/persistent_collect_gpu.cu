@@ -93,7 +93,7 @@ int main(int argc,char** argv) {
             checked(cudaMemcpy(rows.data(),output,rows.size()*sizeof(rows[0]),cudaMemcpyDeviceToHost));
             json result={{"id",c.at("id")},{"milliseconds",ms},{"invalid_calls_rejected",rejections},{"tiles",json::array()}};
             for(const auto& row:rows)result["tiles"].push_back({{"reasons",row.reasons},{"samples",row.samples},
-                {"changed_samples",row.changedSamples},{"mean",row.mean},{"covariance",row.covariance}});
+                {"changed_samples",row.changedSamples},{"reserved",row.reserved},{"mean",row.mean},{"covariance",row.covariance}});
             report["cases"].push_back(std::move(result));
             checked(cudaEventDestroy(start));checked(cudaEventDestroy(end));checked(cudaStreamDestroy(stream));
             std::cout<<c.at("id")<<" tiles="<<tiles.size()<<" ms="<<ms<<std::endl;

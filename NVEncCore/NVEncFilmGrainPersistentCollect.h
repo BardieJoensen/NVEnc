@@ -11,7 +11,7 @@ struct FilmGrainPersistentHistory { FilmGrainCollectFrame source[7]{}; };
 // Native component coordinates, unlike the chroma-grid joint collector.
 struct FilmGrainPersistentTile { unsigned x = 0, y = 0, component = 0; };
 struct FilmGrainPersistentResult {
-    uint32_t reasons = 0, samples = 0, changedSamples = 0;
+    uint32_t reasons = 0, samples = 0, changedSamples = 0, reserved = 0;
     double mean[4]{}, covariance[16]{};
 };
 inline bool film_grain_persistent_history_valid(const FilmGrainCollectFrame& current,

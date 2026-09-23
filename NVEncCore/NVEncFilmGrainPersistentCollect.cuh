@@ -19,7 +19,7 @@ __global__ void collect(FilmGrainCollectFrame source, FilmGrainCollectFrame base
     const unsigned height = tile.component ? source.height/2 : source.height;
     if (thread == 0) {
         out.reasons = validHistory ? 0 : FGS_COLLECT_HISTORY;
-        out.samples = out.changedSamples = 0;
+        out.samples = out.changedSamples = out.reserved = 0;
         if (tile.component > 2 || tile.x % side || tile.y % side
             || tile.x >= width || tile.y >= height) out.reasons |= FGS_COLLECT_COORDINATES;
     }
