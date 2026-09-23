@@ -90,5 +90,28 @@ int main() {
     assert(film_grain_fit_retained_luma({impossible},10,7,1,seeds.data(),4).reasons==FGS_RETAIN_MODEL_TARGET);
     assert(!film_grain_fit_retained_luma({native},12,7,1,seeds.data(),4).valid());
     assert(!film_grain_fit_retained_luma({native},10,7,1,nullptr,4).valid());
+    // Source Y is copied; a colour-only model must neither synthesize it nor
+    // invent a luma driver to explain a finite empirical source correlation.
+    auto colour=moments(.1,.02);
+    colour.base[24*N+24]=colour.source[24*N+24];
+    for (size_t i=0;i<N;++i) colour.sourceBase[i*N+24]=colour.source[i*N+24];
+    const auto marginal=film_grain_fit_retained_colour_without_luma({colour},7);
+    assert(marginal.valid() && marginal.coefficients[23]==141);
+    assert(marginal.balanced.predictors[24]==0.);
+    // The full missing covariance remains indefinite, and is NOT repaired.
+    assert(!film_grain_joint_target(colour,{}).valid);
+    const auto coupledSource=moments(.1,.6);
+    colour.source=coupledSource.source;
+    for (size_t i=0;i<N;++i) colour.sourceBase[i*N+24]=colour.source[i*N+24];
+    const auto stronglyCoupled=film_grain_fit_retained_colour_without_luma({colour},7);
+    assert(stronglyCoupled.valid()); // Still only a marginal fit; joint output must veto lost coupling.
+    for (unsigned defect=0;defect<4;++defect) {
+        auto bad=colour;
+        if (defect==0) bad.base[24*N+24]*=.9;
+        if (defect==1) bad.sourceBase[25*N+24]=0.;
+        if (defect==2) bad.sourceBase[0]=1e12;
+        if (defect==3) bad.blocks=15;
+        assert(!film_grain_fit_retained_colour_without_luma({bad},7).valid());
+    }
     std::cout<<"Retained model: native luma, analytic quantization, exact model binding, shared shift and invalid evidence passed\n";
 }

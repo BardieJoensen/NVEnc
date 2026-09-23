@@ -44,6 +44,20 @@ int main() {
             m.sourceBase = group.at("sourceBase").get<fgsmodel::FilmGrainJointMatrix>();
             groups.push_back(m);
         }
+        if (in.value("source_luma", false)) {
+            const auto model = fgsmodel::film_grain_fit_retained_colour_without_luma(groups, p.arShift);
+            std::array<int,25> coefficients{};
+            std::array<double,25> predictors{};
+            for (unsigned i=0;i<24;++i) {
+                coefficients[i]=int(model.coefficients[i])-128;
+                predictors[i]=std::ldexp(double(coefficients[i]),-int(p.arShift));
+            }
+            std::cout << json({{"valid",model.valid()},{"reasons",model.reasons},
+                {"coefficients",coefficients},{"predictors",std::vector<std::array<double,25>>(groups.size(),predictors)},
+                {"fit_excess",model.balanced.maximumRelativeExcess},
+                {"scope","Marginal colour; exact source Y and actual full colour fidelity still required"}}).dump() << '\n';
+            continue;
+        }
         const auto model = fgsmodel::film_grain_fit_retained_chroma(groups, luma);
         std::array<int, 25> signedCoefficients{};
         for (unsigned i = 0; i < 25; ++i) signedCoefficients[i] = int(model.coefficients[i])-128;
