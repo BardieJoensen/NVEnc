@@ -8,6 +8,16 @@ int main() {
     std::set<uint32_t> captured;
     for(unsigned i=0;i<8;++i) {captured.insert(i);j["packets"].push_back({{"pts",i},{"sha256",{std::string(64,'a')}}});j["engine"]["sources"].push_back({{"ordinal",i},{"pts",i}});}
     auto c=NVEncFilmGrainNativeConfig::parse(j,captured);c.requireLayout(1024,512,10);
+    for(const auto dims:{std::array<unsigned,2>{130,126},{1920,1080},{3840,2160},{4096,2160},{64,66}}) {
+        auto full=j;full["engine"]["width"]=dims[0];full["engine"]["height"]=dims[1];
+        NVEncFilmGrainNativeConfig::parse(full,captured).requireLayout(dims[0],dims[1],10);
+    }
+    for(const auto dims:{std::array<unsigned,2>{64,64},{1919,1080},{1920,1081},{4098,2160},{3840,2162}}) {
+        auto invalid=j;invalid["engine"]["width"]=dims[0];invalid["engine"]["height"]=dims[1];
+        bool rejected=false;
+        try{NVEncFilmGrainNativeConfig::parse(invalid,captured).requireLayout(dims[0],dims[1],10);}
+        catch(...){rejected=true;}assert(rejected);
+    }
     assert(c.spatialPolicy()=="frame_window");auto strict=j;strict["engine"]["spatial_policy"]="full_picture";
     assert(NVEncFilmGrainNativeConfig::parse(strict,captured).spatialPolicy()=="full_picture");
     strict["engine"]["spatial_policy"]="full_picture_means";

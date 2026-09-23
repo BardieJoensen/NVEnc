@@ -15,7 +15,8 @@ static void require(bool b,const char* why) { if(!b)throw std::runtime_error(why
 int main() {
     try {
         Json j;std::cin>>j;const unsigned w=j.at("width"),h=j.at("height"),depth=j.at("depth");
-        require(w>=64 && h>=64 && w<=4096 && h<=2160 && w%64==0 && h%64==0 && (depth==8 || depth==10),"unsupported native layout");
+        const auto grid=film_grain_native_grid(w,h);
+        require(grid.valid && grid.blocks[1] && (depth==8 || depth==10),"unsupported native layout");
         const auto& frames=j.at("frames");const bool fit=j.value("fit",false);
         require(frames.is_array() && !frames.empty() && frames.size()<=16 && (!fit || frames.size()>=8),"frame budget");
         const auto start=std::chrono::steady_clock::now();Json rows=Json::array();FilmGrainNativeShapeTraining training;

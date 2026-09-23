@@ -5,6 +5,7 @@
 #include "NVEncFilmGrainNativeEngineAPI.h"
 #include "NVEncFilmGrainModelProbe.h"
 #include "NVEncFilmGrainSourceFrame.h"
+#include "NVEncFilmGrainNativeGrid.h"
 
 struct NVEncFilmGrainNativeConfig {
     NVEncFilmGrainModelConfig packets;
@@ -37,7 +38,9 @@ struct NVEncFilmGrainNativeConfig {
         return c;
     }
     void requireLayout(unsigned width,unsigned height,unsigned depth) const {
-        if(width%64 || height%64 || engine.at("width")!=width || engine.at("height")!=height || engine.at("depth")!=depth)
+        const auto grid=fgsmodel::film_grain_native_grid(width,height);
+        if(!grid.valid || !grid.blocks[1] || (depth!=8 && depth!=10)
+            || engine.at("width")!=width || engine.at("height")!=height || engine.at("depth")!=depth)
             throw std::runtime_error("native model trial layout differs from reconstruction");
     }
 };

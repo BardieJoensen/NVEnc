@@ -17,32 +17,35 @@ struct FilmGrainNativePairMoments {
 namespace native_pair_detail {
 // Unlike autocovariance, S_i * B_j has no i/j symmetry. Query every oriented
 // pair on its own shifted support; negative displacements are needed too.
-inline void spatial(const double* source, const double* base, unsigned side,
+inline void spatial(const double* source, const double* base, unsigned width,unsigned height,
     std::array<double,625>& matrix) {
     const auto positions = native_moments_detail::offsets();
-    std::array<double,4225> integral{}; const unsigned stride = side+1;
+    std::array<double,4225> integral{}; const unsigned stride = width+1;
     for (int dy = -3; dy <= 3; ++dy) for (int dx = -6; dx <= 6; ++dx) {
         bool used = false;
         for (unsigned i = 0; i < 25 && !used; ++i) for (unsigned j = 0; j < 25; ++j)
             if (positions[j].y-positions[i].y == dy && positions[j].x-positions[i].x == dx) { used = true; break; }
         if (!used) continue;
-        for (unsigned y = 0; y < side; ++y) {
+        for (unsigned y = 0; y < height; ++y) {
             double row = 0.;
-            for (unsigned x = 0; x < side; ++x) {
+            for (unsigned x = 0; x < width; ++x) {
                 const int yy = int(y)+dy, xx = int(x)+dx;
-                if (yy >= 0 && yy < int(side) && xx >= 0 && xx < int(side))
-                    row += source[y*side+x]*base[unsigned(yy)*side+unsigned(xx)];
+                if (yy >= 0 && yy < int(height) && xx >= 0 && xx < int(width))
+                    row += source[y*width+x]*base[unsigned(yy)*width+unsigned(xx)];
                 integral[(y+1)*stride+x+1] = integral[y*stride+x+1]+row;
             }
         }
         for (unsigned i = 0; i < 25; ++i) for (unsigned j = 0; j < 25; ++j) {
             if (positions[j].y-positions[i].y != dy || positions[j].x-positions[i].x != dx) continue;
             const unsigned top = unsigned(3+positions[i].y), left = unsigned(3+positions[i].x);
-            const unsigned bottom = unsigned(int(side)-3+positions[i].y), right = unsigned(int(side)-3+positions[i].x);
+            const unsigned bottom = unsigned(int(height)-3+positions[i].y), right = unsigned(int(width)-3+positions[i].x);
             matrix[i*25+j] += integral[bottom*stride+right]-integral[top*stride+right]
                 -integral[bottom*stride+left]+integral[top*stride+left];
         }
     }
+}
+inline void spatial(const double* source,const double* base,unsigned side,std::array<double,625>& matrix) {
+    spatial(source,base,side,side,matrix);
 }
 } // namespace native_pair_detail
 
@@ -55,14 +58,15 @@ inline FilmGrainNativePairMoments film_grain_native_pair(
     const auto base = film_grain_native_moments(basePlanes,width,height,depth);
     if (!film_grain_moment_same_layout(source,base)) return result;
     result.width = width; result.height = height; result.depth = depth;
+    const auto grid=film_grain_native_grid(width,height);
     for (unsigned f = 0; f < 2; ++f) {
-        auto& y = result.luma[f]; y.blocks = source.blocks[f]; y.observations = y.blocks*58*58;
+        auto& y = result.luma[f]; y.blocks = source.blocks[f]; y.observations = grid.lumaObservations[f];
         for (unsigned i = 0; i < 625; ++i) {
             y.source[i] = source.folds[f].y[i]*y.observations;
             y.base[i] = base.folds[f].y[i]*y.observations;
         }
         for (unsigned c = 0; c < 2; ++c) {
-            auto& m = result.colour[c][f]; m.blocks = y.blocks; m.observations = m.blocks*26*26;
+            auto& m = result.colour[c][f]; m.blocks = y.blocks; m.observations = grid.colourObservations[f];
             for (unsigned i = 0; i < 676; ++i) {
                 m.source[i] = source.folds[f].colour[c][i]*m.observations;
                 m.base[i] = base.folds[f].colour[c][i]*m.observations;
@@ -71,29 +75,30 @@ inline FilmGrainNativePairMoments film_grain_native_pair(
     }
     const auto positions = native_moments_detail::offsets();
     std::array<std::array<double,4096>,4> s{}, b{};
-    for (unsigned by = 0; by < height/64; ++by) for (unsigned bx = 0; bx < width/64; ++bx) {
+    for (unsigned by = 0; by < grid.rows; ++by) for (unsigned bx = 0; bx < grid.columns; ++bx) {
+        const auto bounds=grid.tile(bx,by);const unsigned cw=bounds.width/2,ch=bounds.height/2;
         const unsigned fold = (by+bx)&1;
-        native_moments_detail::load_tiles(sourcePlanes,bx,by,depth,s);
-        native_moments_detail::load_tiles(basePlanes,bx,by,depth,b);
-        native_pair_detail::spatial(s[0].data(),b[0].data(),64,result.luma[fold].sourceBase);
+        native_moments_detail::load_tiles(sourcePlanes,bounds,depth,s);
+        native_moments_detail::load_tiles(basePlanes,bounds,depth,b);
+        native_pair_detail::spatial(s[0].data(),b[0].data(),bounds.width,bounds.height,result.luma[fold].sourceBase);
         for (unsigned c = 0; c < 2; ++c) {
             auto& cross = result.colour[c][fold].sourceBase;
             std::array<double,625> marginal{};
-            native_pair_detail::spatial(s[c+2].data(),b[c+2].data(),32,marginal);
+            native_pair_detail::spatial(s[c+2].data(),b[c+2].data(),cw,ch,marginal);
             for (unsigned i = 0; i < 25; ++i) for (unsigned j = 0; j < 25; ++j)
                 cross[(i==24?25:i)*26+(j==24?25:j)] += marginal[i*25+j];
             for (unsigned i = 0; i < 25; ++i) {
                 double colourLuma = 0., lumaColour = 0.;
-                for (unsigned y = 3; y < 29; ++y) for (unsigned x = 3; x < 29; ++x) {
-                    const unsigned at = unsigned(int(y)+positions[i].y)*32+unsigned(int(x)+positions[i].x);
-                    colourLuma += s[c+2][at]*b[1][y*32+x];
-                    lumaColour += s[1][y*32+x]*b[c+2][at];
+                for (unsigned y = 3; y < ch-3; ++y) for (unsigned x = 3; x < cw-3; ++x) {
+                    const unsigned at = unsigned(int(y)+positions[i].y)*cw+unsigned(int(x)+positions[i].x);
+                    colourLuma += s[c+2][at]*b[1][y*cw+x];
+                    lumaColour += s[1][y*cw+x]*b[c+2][at];
                 }
                 const unsigned row = i==24?25:i;
                 cross[row*26+24] += colourLuma; cross[24*26+row] += lumaColour;
             }
-            for (unsigned y = 3; y < 29; ++y) for (unsigned x = 3; x < 29; ++x)
-                cross[24*26+24] += s[1][y*32+x]*b[1][y*32+x];
+            for (unsigned y = 3; y < ch-3; ++y) for (unsigned x = 3; x < cw-3; ++x)
+                cross[24*26+24] += s[1][y*cw+x]*b[1][y*cw+x];
         }
     }
     for (const auto& m : result.luma) for (double v : m.sourceBase) if (!std::isfinite(v)) return result;
@@ -118,8 +123,8 @@ class FilmGrainNativeShapeTraining {
     std::array<FilmGrainJointMoments,2> colour_{};
     bool reject() { failed_ = true; return false; }
     template<class Moments> static bool add(Moments& to, const Moments& from,
-        uint64_t blocks, unsigned inner) {
-        if (from.blocks != blocks || from.observations != blocks*inner*inner) return false;
+        uint64_t blocks, uint64_t observations) {
+        if (from.blocks != blocks || from.observations != observations) return false;
         to.blocks += from.blocks; to.observations += from.observations;
         for (size_t i = 0; i < to.source.size(); ++i) {
             if (!std::isfinite(from.source[i]) || !std::isfinite(from.base[i])
@@ -141,9 +146,10 @@ public:
         if (frames_ >= 8 || ordinal != frames_ || !film_grain_moment_layout(layout)
             || (frames_ && (width_ != m.width || height_ != m.height || depth_ != m.depth || segment_ != segment)))
             return reject();
-        if (!add(luma_,m.luma[0],layout.blocks[0],58)
-            || !add(colour_[0],m.colour[0][0],layout.blocks[0],26)
-            || !add(colour_[1],m.colour[1][0],layout.blocks[0],26)) return reject();
+        const auto grid=film_grain_native_grid(m.width,m.height);
+        if (!add(luma_,m.luma[0],layout.blocks[0],grid.lumaObservations[0])
+            || !add(colour_[0],m.colour[0][0],layout.blocks[0],grid.colourObservations[0])
+            || !add(colour_[1],m.colour[1][0],layout.blocks[0],grid.colourObservations[0])) return reject();
         width_ = m.width; height_ = m.height; depth_ = m.depth; segment_ = segment; ++frames_;
         return true;
     }

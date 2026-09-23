@@ -20,29 +20,53 @@ static FilmGrainNativePairMoments fixture() {
 }
 int main() {
     unsigned exact=0;
-    for (unsigned side:{32u,64u}) {
+    for (const auto size:{std::array<unsigned,2>{32,32},{64,64},{62,46},{17,16}}) {
+        const auto width=size[0],height=size[1];
         std::array<double,4096> source{},base{};
-        for (unsigned y=0;y<side;++y) for (unsigned x=0;x<side;++x) {
-            source[y*side+x]=(x+3)*(x+3)+(y+2)*(y+2)+(x*y)%7;
-            base[y*side+x]=(2*x+1)*(y+7)+(x*y)%13;
+        for (unsigned y=0;y<height;++y) for (unsigned x=0;x<width;++x) {
+            source[y*width+x]=(x+3)*(x+3)+(y+2)*(y+2)+(x*y)%7;
+            base[y*width+x]=(2*x+1)*(y+7)+(x*y)%13;
         }
         std::array<std::pair<int,int>,25> offset{};unsigned at=0;
         for (int y=-3;y<0;++y) for (int x=-3;x<=3;++x) offset[at++]={y,x};
         for (int x=-3;x<0;++x) offset[at++]={0,x};
         offset[24]={0,0};
         std::array<double,625> cross{},reverse{};
-        native_pair_detail::spatial(source.data(),base.data(),side,cross);
-        native_pair_detail::spatial(base.data(),source.data(),side,reverse);
+        native_pair_detail::spatial(source.data(),base.data(),width,height,cross);
+        native_pair_detail::spatial(base.data(),source.data(),width,height,reverse);
         for (unsigned i=0;i<25;++i) for (unsigned j=0;j<25;++j) {
             double expected=0.;
-            for (unsigned y=3;y<side-3;++y) for (unsigned x=3;x<side-3;++x)
-                expected+=source[unsigned(int(y)+offset[i].first)*side+unsigned(int(x)+offset[i].second)]
-                    *base[unsigned(int(y)+offset[j].first)*side+unsigned(int(x)+offset[j].second)];
+            for (unsigned y=3;y<height-3;++y) for (unsigned x=3;x<width-3;++x)
+                expected+=source[unsigned(int(y)+offset[i].first)*width+unsigned(int(x)+offset[i].second)]
+                    *base[unsigned(int(y)+offset[j].first)*width+unsigned(int(x)+offset[j].second)];
             assert(cross[i*25+j]==expected && reverse[j*25+i]==expected); ++exact;
         }
         assert(cross[1]!=cross[25]); // Symmetrization or reversal loses evidence.
     }
     const auto p=fixture(); const uint16_t seeds[]={1031,2062,3093,4124};
+    auto ragged=p;ragged.width=130;ragged.height=126;
+    for(unsigned f=0;f<2;++f) {
+        auto& y=ragged.luma[f];const uint64_t n=f?6420:6348;
+        for(auto& v:y.source)v=v/y.observations*n;
+        y.blocks=3;y.observations=n;
+        for(auto& c:ragged.colour) {
+            auto& m=c[f];const uint64_t cn=f?1206:1191;
+            for(auto& v:m.source)v=v/m.observations*cn;
+            m.blocks=3;m.observations=cn;
+        }
+    }
+    FilmGrainNativeShapeTraining unequal;
+    for(unsigned i=0;i<8;++i)assert(unequal.push(i,17,ragged));
+    assert(unequal.luma().observations==8*6348);
+    assert(unequal.colour()[0].observations==8*1191);
+    assert(unequal.fit(6,0,seeds,4).valid());
+    for(unsigned c=0;c<3;++c) {
+        auto bad=ragged;
+        if(c==0)bad.luma[0].observations=3*58*58;
+        else bad.colour[c-1][0].observations=3*26*26;
+        FilmGrainNativeShapeTraining oldGeometry;
+        assert(!oldGeometry.push(0,17,bad));
+    }
     FilmGrainNativeShapeTraining train,heldout;
     auto changed=p;
     changed.luma[1].source.fill(1e10);

@@ -10,7 +10,8 @@ using Json=nlohmann::json;
 int main() {
     try {
         Json j;std::cin>>j;const unsigned w=j.at("width"),h=j.at("height"),depth=j.at("depth");
-        if(w<64 || h<64 || w>4096 || h>2160 || w%64 || h%64 || (depth!=8 && depth!=10))throw std::runtime_error("invalid layout");
+        const auto grid=fgsmodel::film_grain_native_grid(w,h);
+        if(!grid.valid || !grid.blocks[1] || (depth!=8 && depth!=10))throw std::runtime_error("invalid layout");
         std::array<std::vector<uint16_t>,3> data;std::array<fgsmodel::FilmGrainNativePlane,3> planes{};
         for(unsigned c=0;c<3;++c) {
             const auto path=std::filesystem::u8path(j.at("planes").at(c).get<std::string>());const unsigned width=c?w/2:w,height=c?h/2:h;const size_t count=size_t(width)*height;
@@ -19,6 +20,10 @@ int main() {
         }
         const auto start=std::chrono::steady_clock::now();const auto m=fgsmodel::film_grain_native_moments(planes,w,h,depth);
         auto report=fgsdiagnostic::moments(m);report["seconds"]=std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();
+        if(j.value("include_variance",false)) {
+            const auto v=fgsmodel::film_grain_native_variance(planes,w,h,depth);
+            report["variance"]={{"valid",v.valid},{"mean",v.mean},{"blocks",v.blocks},{"folds",v.variance}};
+        }
         std::cout<<report.dump()<<'\n';return m.valid?0:1;
     }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 2;}
 }

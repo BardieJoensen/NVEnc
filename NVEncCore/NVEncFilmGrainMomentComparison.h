@@ -26,12 +26,9 @@ struct FilmGrainMomentComparison {
 };
 
 inline bool film_grain_moment_layout(const FilmGrainNativeMoments& m) {
-    if (!m.valid || m.width < 64 || m.width > 4096 || m.height < 64
-        || m.height > 2160 || m.width % 64 || m.height % 64
-        || (m.depth != 8 && m.depth != 10)) return false;
-    const uint64_t columns = m.width/64, rows = m.height/64;
-    const std::array<uint64_t,2> expected = {(columns*rows+1)/2, columns*rows/2};
-    return m.blocks == expected && expected[1] > 0;
+    const auto grid=film_grain_native_grid(m.width,m.height);
+    return m.valid && grid.valid && (m.depth==8 || m.depth==10)
+        && m.blocks==grid.blocks && grid.blocks[1]>0;
 }
 
 inline bool film_grain_moment_same_layout(
