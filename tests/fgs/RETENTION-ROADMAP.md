@@ -136,6 +136,13 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [strict full-picture policy](FINDINGS-2026-09-23-STRICT-POLICY.md) completes
+D56. Original spatial bounds now independently veto each picture, with unchanged
+legacy output. Known 8-bit actual NVENC output passes; the 10-bit counterpart
+rejects a Cr mean shift. Continue independent training/check mean evidence and
+bounded fraction/source integration. No real-source admission or R3 completion
+follows from the constructed controls.
+
 The [actual pre-encode/model connection](FINDINGS-2026-09-23-PREENCODE-MODELS.md)
 completes D55. Native source, rounding, reconstruction, complete model output and
 source-preservation vetoes qualify together in `e4b96c4b`. Eleven positive/six
