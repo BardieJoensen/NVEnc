@@ -10,9 +10,26 @@ int main() {
     auto source=base;source["capture_source"]=true;source["max_source_bytes"]=uint64_t(536870912);
     const auto s=NVEncFilmGrainReconConfig::parse(source);assert(s.captureSource);s.requireLayout(3840,2160,10);
     auto retention=source;retention["frames"]={0,1,2};retention["pre_encode_retention"]={0,.25,1};
-    const auto candidate=NVEncFilmGrainReconConfig::parse(retention);assert(candidate.preEncodeRetention && candidate.retention[1]==.25f);
+    const auto candidate=NVEncFilmGrainReconConfig::parse(retention);assert(candidate.preEncodeRetention() && candidate.retention.at(2)[1]==.25f);
     auto native=retention;native["pre_encode_retention"]={0,.25,.75};native["native_model_output"]={{"engine",{{"source_mode","memory"}}}};
-    assert(NVEncFilmGrainReconConfig::parse(native).preEncodeRetention);
+    assert(NVEncFilmGrainReconConfig::parse(native).preEncodeRetention());
+    auto varying=native;varying.erase("pre_encode_retention");
+    varying["pre_encode_retention_frames"]={{0,.25,.75},{.1,.25,.5},{0,0,0}};
+    const auto scheduled=NVEncFilmGrainReconConfig::parse(varying);
+    assert(scheduled.preEncodeRetention() && scheduled.retention.size()==3
+        && scheduled.retention.at(1)[0]==.1f && scheduled.retention.at(2)[1]==0.f);
+    for(unsigned failure=0;failure<8;++failure) {
+        auto bad=varying;bool rejected=false;
+        if(failure==0)bad["pre_encode_retention"]={0,0,0};
+        if(failure==1)bad["pre_encode_retention_frames"][2][2]=1;
+        if(failure==2)bad["frames"]={0,2,3};
+        if(failure==3)bad["capture_source"]=false;
+        if(failure==4)bad["pre_encode_retention_frames"].erase(2);
+        if(failure==5)bad["native_model_output"]["engine"]["source_mode"]="files";
+        if(failure==6)bad["model_output"]=nullptr;
+        if(failure==7)bad["pre_encode_retention_frames"][0][0]=.99999999999;
+        try{NVEncFilmGrainReconConfig::parse(bad);}catch(...){rejected=true;}assert(rejected);
+    }
     for(unsigned failure=0;failure<3;++failure) {
         auto bad=native;bool rejected=false;
         if(failure==0)bad["native_model_output"]["engine"]["source_mode"]="files";

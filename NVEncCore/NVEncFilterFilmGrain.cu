@@ -2176,7 +2176,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         m_motionDegrainParam.reset();
     }
     m_sourceMemory.reset(); m_sourceFrames.clear(); m_sourceOrdinal = 0;
-    m_preEncodeRetention = false; m_preEncodeBase.reset(); m_preEncodeInvalid.reset();
+    m_preEncodeRetention = false; m_preEncodeFractions = {}; m_preEncodeBase.reset(); m_preEncodeInvalid.reset();
     if (!prm->sourceProbePath.empty()) {
         try {
             const auto path = std::filesystem::path(prm->sourceProbePath);
@@ -2188,7 +2188,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
                 config.requireLayout(prm->frameIn.width, prm->frameIn.height, depth);
                 m_sourceMemory = std::make_shared<fgsdiagnostic::SourceMemory>(config.maxSourceBytes);
                 m_sourceFrames.assign(config.frames.begin(), config.frames.end());
-                if (config.preEncodeRetention) {
+                if (config.preEncodeRetention()) {
                     if (prm->filmGrain.denoiser != FGS_DENOISE_BILATERAL) throw std::runtime_error("pre-encode candidate requires denoiser=bilateral");
                     if (!prm->tableOutPath.empty()) throw std::runtime_error("pre-encode candidate cannot publish an ordinary grain table");
                     m_preEncodeRetention = true; m_preEncodeFractions = config.retention;
@@ -2421,7 +2421,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 for (unsigned i=0; i<params.numCbPoints; ++i) if (params.pointCbScaling[i]) active |= 2;
                 for (unsigned i=0; i<params.numCrPoints; ++i) if (params.pointCrScaling[i]) active |= 4;
             }
-            retentionDecision = fgsdiagnostic::preEncodeRetentionDecision(m_preEncodeFractions,
+            retentionDecision = fgsdiagnostic::preEncodeRetentionDecision(m_preEncodeFractions.at(m_sourceOrdinal),
                 trialHaveBase, diagnostics.reliable, diagnostics.sourceFidelityFallback,
                 sourceReasonMask, trialSupportLimited, active);
             const auto& decision = *retentionDecision;
@@ -3684,7 +3684,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
 }
 
 void NVEncFilterFilmGrain::close() {
-    m_preEncodeBase.reset(); m_preEncodeInvalid.reset(); m_preEncodeRetention = false;
+    m_preEncodeBase.reset(); m_preEncodeInvalid.reset(); m_preEncodeRetention = false; m_preEncodeFractions = {};
     m_sourceMemory.reset(); m_sourceFrames.clear(); m_sourceOrdinal = 0;
     m_jointProbe.reset();
     m_tableWriter.reset();

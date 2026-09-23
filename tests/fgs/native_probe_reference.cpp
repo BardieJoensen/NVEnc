@@ -13,8 +13,7 @@ int main() {
         const unsigned w=config.engine.at("width"),h=config.engine.at("height"),depth=config.engine.at("depth");
         const auto report=std::filesystem::u8path(input.at("report").get<std::string>());
         require(report.is_absolute() && !std::filesystem::exists(report),"new absolute report required");
-        std::optional<std::array<float,3>> retention;
-        if(input.contains("pre_encode_retention"))retention=input.at("pre_encode_retention").get<std::array<float,3>>();
+        const auto retention=fgsdiagnostic::PreEncodeRetentionPlan::parse(input,count);
         NVEncFilmGrainNativeProbe<uint64_t> probe(config,report,w,h,depth,retention);
         const auto path=std::filesystem::u8path(input.at("ivf").get<std::string>());const auto size=std::filesystem::file_size(path);
         require(size>=32 && size<=256u*1024*1024,"IVF byte budget");std::vector<uint8_t> original(size);std::ifstream file(path,std::ios::binary);file.read(reinterpret_cast<char*>(original.data()),size);require(bool(file),"IVF read failed");

@@ -172,3 +172,13 @@ removes global-mean selection leakage from the older diagnostic without hiding
 its original full-spatial per-picture failures or granting source eligibility.
 All older policy names preserve their decisions; this policy also requires
 explicit runtime confirmation.
+
+A finite candidate manifest may instead set `pre_encode_retention_frames` to
+one `[Y,Cb,Cr]` row per consecutive input picture (at most 16). It cannot also
+set `pre_encode_retention`. Each row is immutable and indexed by input ordinal,
+not NVENC packet receive order. Filter, original-source attachment, reconstruction
+and model fitting must agree on that picture's request. Capture-only schedules
+may include full-source rows, which always signal grain off. Native model output
+requires every row to be all-partial; any ordinary preservation veto still
+rejects the trial. Constant syntax keeps its prior behaviour. This carries
+explicit experimental decisions and does not grant automatic source eligibility.

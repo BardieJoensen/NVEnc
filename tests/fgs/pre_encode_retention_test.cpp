@@ -37,5 +37,48 @@ int main() {
         try{requirePartialRetentionModel(d,expected);}catch(...){rejected=true;}
         assert(rejected);++cases;
     }
+    using Json=nlohmann::json;
+    const auto disabled=PreEncodeRetentionPlan::parse(Json::object(),16);
+    assert(!disabled.enabled() && disabled.evidence().empty());
+    bool outside=false;try {disabled.at(0);}catch(...){outside=true;}assert(outside);
+    const Json fixed={{"pre_encode_retention",{0,.1,.75}}};
+    for(unsigned count:{1u,16u}) {
+        const auto plan=PreEncodeRetentionPlan::parse(fixed,count);
+        assert(plan.enabled() && plan.size()==count && plan.at(count-1)==plan.at(0));
+        assert(plan.at(0)[1]==.1f && plan.evidence().contains("pre_encode_retention"));
+        plan.requireAllPartial();outside=false;try{plan.at(count);}catch(...){outside=true;}assert(outside);
+    }
+    const Json varying={{"pre_encode_retention_frames",{{0,.1,.75},{.1,.25,.5},{1,1,1}}}};
+    const auto plan=PreEncodeRetentionPlan::parse(varying,3);
+    assert(plan.size()==3 && plan.at(0)[1]==.1f && plan.at(1)[1]==.25f && plan.at(2)[1]==1.f);
+    assert(plan.evidence().contains("pre_encode_retention_frames") && !plan.evidence().contains("pre_encode_retention"));
+    outside=false;try{plan.requireAllPartial();}catch(...){outside=true;}assert(outside);
+    for(unsigned ordinal=0;ordinal<3;++ordinal) {
+        const auto d=preEncodeRetentionDecision(plan.at(ordinal),true,true,false,0,false,7);
+        assert(d.requested==plan.at(ordinal) && d.effective==plan.at(ordinal));
+        if(ordinal<2)requirePartialRetentionModel(d,plan.at(ordinal));
+        outside=false;try{requirePartialRetentionModel(d,plan.at((ordinal+1)%3));}catch(...){outside=true;}assert(outside);
+    }
+    for(unsigned kind=0;kind<17;++kind) {
+        auto j=varying;size_t count=3;
+        if(kind==0)j["pre_encode_retention"]={0,0,0};
+        if(kind==1)count=0;
+        if(kind==2)count=17;
+        if(kind==3)count=2;
+        if(kind==4)count=4;
+        if(kind==5)j["pre_encode_retention_frames"]=Json::array();
+        if(kind==6)j["pre_encode_retention_frames"]=true;
+        if(kind==7)j["pre_encode_retention_frames"][1]={0,.25};
+        if(kind==8)j["pre_encode_retention_frames"][1]={0,.25,.5,.75};
+        if(kind==9)j["pre_encode_retention_frames"][1][0]=true;
+        if(kind==10)j["pre_encode_retention_frames"][1][0]=-.01;
+        if(kind==11)j["pre_encode_retention_frames"][1][0]=1.01;
+        if(kind==12)j["pre_encode_retention_frames"][1][0]=std::numeric_limits<double>::infinity();
+        if(kind==13)j["pre_encode_retention_frames"][1][0]=nullptr;
+        if(kind==14)j["pre_encode_retention_frames"][1]="0,.25,.5";
+        if(kind==15)j=nullptr;
+        if(kind==16)j["pre_encode_retention_frames"][1][0]=std::numeric_limits<double>::quiet_NaN();
+        bool rejected=false;try{PreEncodeRetentionPlan::parse(j,count);}catch(...){rejected=true;}assert(rejected);++cases;
+    }
     std::cout<<cases+1<<" pre-encode preservation, guard and invalid-candidate controls passed\n";
 }
