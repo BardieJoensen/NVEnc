@@ -16,6 +16,8 @@ $CXX -std=c++17 -O2 -Wall -I NVEncCore -I NVEncSDK/Common/inc tests/fgs/source_l
 "$OUT/fgs_source_luma_select_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore tests/fgs/retained_strength_test.cpp -o "$OUT/fgs_retained_strength_test"
 "$OUT/fgs_retained_strength_test"
+$CXX -std=c++17 -O2 -Wall -I NVEncCore tests/fgs/packet_identity_test.cpp -o "$OUT/fgs_packet_identity_test"
+"$OUT/fgs_packet_identity_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore tests/fgs/retained_model_test.cpp -o "$OUT/fgs_retained_model_test"
 "$OUT/fgs_retained_model_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore tests/fgs/persistent_evidence_test.cpp -o "$OUT/fgs_persistent_evidence_test"

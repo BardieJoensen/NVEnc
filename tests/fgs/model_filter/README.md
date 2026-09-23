@@ -50,6 +50,12 @@ Independent contexts can run concurrently on the same read-only input allocation
 Input/output packets are bounded to 32 MiB. Copy returned output before the next
 process call or close. No FFmpeg object or allocator crosses the ABI.
 
+The report also describes the last successfully processed packet's coded and
+shown-reference identities, order hints and grain state. Trust that observation
+only when `last_packet_complete` is true and `failed` is false. The
+[identity follow-up](../FINDINGS-2026-09-23-PACKET-IDENTITY.md) covers its replay and
+the remaining live reconstruction/buffering requirements.
+
 Any queue/process/finish failure makes the stream terminal. A failed process
 returns no output; close/open starts afresh. Finish requires a coded picture and
 no pending request. Successful repeated finish is harmless; queue/process after
@@ -57,7 +63,8 @@ finish fails. The caller must discard incomplete output after a later failure.
 Closing is not successful completion.
 
 Current scope is progressive AV1 4:2:0 at 8/10 bits, lag-three models and the
-previously qualified colour lookup. Layered streams and redundant headers reject.
+previously qualified colour lookup. Layered streams, redundant headers and
+mid-packet sequence changes reject.
 Dynamic selection, encoder frame identity, reconstruction availability under
 reordering, bounded output buffering and pipeline error propagation remain open.
 

@@ -25,10 +25,14 @@ struct Context {
     CodedBitstreamContext *reader=nullptr,*writer=nullptr;
     CodedBitstreamFragment fragment{};AVPacket* packet=nullptr;
     std::array<AV1RawFilmGrainParams,8> original{},changed{};
+    std::array<uint64_t,8> referencePicture{};
+    std::array<unsigned,8> referenceHint{};
     std::array<bool,8> valid{};std::map<uint64_t,Request> requests;
     uint64_t limit=0,packets=0,coded=0,shown=0,modified=0,materialized=0;
     bool failed=false,finished=false;std::string error,report;
     std::vector<uint8_t> output;
+    Json lastHeaders=Json::array();int64_t lastPts=0;
+    bool lastPacketComplete=false;
     ~Context(){ff_cbs_fragment_free(&fragment);ff_cbs_close(&reader);ff_cbs_close(&writer);av_packet_free(&packet);}
     void initialize(uint64_t maxPackets) {
         require(maxPackets && maxPackets<=1000000,"packet limit out of range");limit=maxPackets;
@@ -50,9 +54,19 @@ struct Context {
     }
     int process(const uint8_t* data,size_t bytes,int64_t pts) {
         ready();require(data && bytes && bytes<=maxPacketBytes && packets<limit,"input packet/count limit");
-        output.clear();require(av_new_packet(packet,int(bytes))>=0,"packet allocation failed");
+        output.clear();lastHeaders=Json::array();lastPts=pts;lastPacketComplete=false;
+        require(av_new_packet(packet,int(bytes))>=0,"packet allocation failed");
         memcpy(packet->data,data,bytes);packet->pts=packet->dts=pts;
         require(ff_cbs_read_packet(reader,&fragment,packet)>=0,"CBS parse failed");
+        // The reader has consumed the whole packet when its sequence state is
+        // inspected. A later sequence could otherwise describe an earlier
+        // picture. This prototype accepts one sequence header before pictures.
+        unsigned sequences=0;bool pictureSeen=false;
+        for(int i=0;i<fragment.nb_units;++i) {
+            const auto type=fragment.units[i].type;
+            if(type==AV1_OBU_SEQUENCE_HEADER)require(++sequences==1 && !pictureSeen,"mid-packet sequence transition unqualified");
+            if(type==AV1_OBU_FRAME_HEADER || type==AV1_OBU_FRAME)pictureSeen=true;
+        }
         bool packetChanged=false;std::string packetHash;
         for(int i=0;i<fragment.nb_units;++i) {
             auto& unit=fragment.units[i];
@@ -63,9 +77,14 @@ struct Context {
             auto* h=unit.type==AV1_OBU_FRAME?&obu->obu.frame.header:&obu->obu.frame_header;
             require(!obu->header.spatial_id && !obu->header.temporal_id,"layered stream unqualified");
             AV1RawFilmGrainParams input{},result{};
+            uint64_t picture=coded;unsigned hint=h->order_hint;
+            const auto* state=static_cast<CodedBitstreamAV1Context*>(reader->priv_data);
+            require(state->sequence_header && lastHeaders.size()<4096,"missing sequence or header budget");
+            const auto* sequence=state->sequence_header;
+            const unsigned hintBits=sequence->enable_order_hint?sequence->order_hint_bits_minus_1+1:0;
             if(h->show_existing_frame) {
                 const unsigned ref=h->frame_to_show_map_idx;require(ref<8 && valid[ref],"missing shown grain reference");
-                input=original[ref];result=changed[ref];++shown;
+                input=original[ref];result=changed[ref];picture=referencePicture[ref];hint=referenceHint[ref];++shown;
             } else {
                 input=h->film_grain;
                 if(input.apply_grain && !input.update_grain) {
@@ -85,17 +104,25 @@ struct Context {
                 }
                 ++coded;
             }
-            for(unsigned ref=0;ref<8;++ref)if(h->refresh_frame_flags&(1u<<ref)){original[ref]=input;changed[ref]=result;valid[ref]=true;}
+            lastHeaders.push_back({{"coded_index",picture},{"show_existing",bool(h->show_existing_frame)},
+                {"show",bool(h->show_frame)},{"showable",bool(h->showable_frame)},
+                {"frame_type",h->frame_type},{"order_hint",hint},{"order_hint_bits",hintBits},
+                {"apply",bool(input.apply_grain)},{"seed",input.grain_seed},
+                {"output_seed",result.grain_seed},{"refresh",h->refresh_frame_flags}});
+            for(unsigned ref=0;ref<8;++ref)if(h->refresh_frame_flags&(1u<<ref)){
+                original[ref]=input;changed[ref]=result;referencePicture[ref]=picture;referenceHint[ref]=hint;valid[ref]=true;
+            }
         }
         require(ff_cbs_write_packet(writer,packet,&fragment)>=0,"CBS serialization failed");
         require(packet->size>0 && size_t(packet->size)<=maxPacketBytes,"serialized packet limit");
         if(packetChanged)output.assign(packet->data,packet->data+packet->size);
         else output.assign(data,data+bytes);
-        ff_cbs_fragment_reset(&fragment);av_packet_unref(packet);++packets;return packetChanged?1:0;
+        ff_cbs_fragment_reset(&fragment);av_packet_unref(packet);++packets;lastPacketComplete=true;return packetChanged?1:0;
     }
     void finish(){require(!failed,"stream failed");if(finished)return;ready();require(packets && coded && requests.empty(),"empty coded stream or missing requested picture");finished=true;}
     const char* describe() {
-        report=Json{{"complete",finished && !failed},{"failed",failed},{"packets",packets},{"coded_pictures",coded},{"show_existing",shown},{"modified_models",modified},{"materialized_original_models",materialized},{"pending",requests.size()}}.dump();return report.c_str();
+        report=Json{{"complete",finished && !failed},{"failed",failed},{"packets",packets},{"coded_pictures",coded},{"show_existing",shown},{"modified_models",modified},{"materialized_original_models",materialized},{"pending",requests.size()},
+            {"last_packet_complete",lastPacketComplete && !failed},{"last_pts",lastPts},{"last_headers",lastHeaders}}.dump();return report.c_str();
     }
     int fail(const std::exception& e) noexcept {
         failed=true;
