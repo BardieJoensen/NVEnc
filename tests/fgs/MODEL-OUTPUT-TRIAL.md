@@ -102,5 +102,6 @@ To feed those originals directly into fitting, use `engine.source_mode: "memory"
 and ABI 2. Source records keep ordinal/PTS but omit `planes`; file and direct modes
 cannot be mixed. Capture-only mode supports even 1080p/UHD dimensions; fitting
 still requires tile-aligned dimensions. The source-transport qualification is
-tracked in `roadmap-r3-source-transport-20260923`. Pre-encode fractions and source
+recorded in [the source-transport findings](FINDINGS-2026-09-23-SOURCE-TRANSPORT.md)
+and `roadmap-r3-source-transport-20260923`. Pre-encode fractions and source
 eligibility remain separate work.

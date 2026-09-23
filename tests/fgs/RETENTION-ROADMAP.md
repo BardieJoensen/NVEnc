@@ -136,6 +136,14 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [direct-source connection](FINDINGS-2026-09-23-SOURCE-TRANSPORT.md)
+completes D53: originals are carried through the pipeline into live model fitting.
+Native 8/10-bit output, source identity/lifetime, complete decoder/oracle checks
+and explicit rejection controls pass. Ordinary SDR/HDR output is unchanged.
+The declared frame/window policy passes independently; original per-picture
+full-spatial failures remain recorded. Next: automatic pre-encode fractions,
+eligibility and source-preserving fallback. Full CPU: 214 Python / 45 C++.
+
 The [live native fitting connection](FINDINGS-2026-09-23-LIVE-FITTING.md)
 completes D52: actual NVENC reconstructions produce all 32 reference models
 and identical AV1 packets. Ten positive/six negative GPU runs, 2,432 fresh
