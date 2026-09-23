@@ -73,7 +73,7 @@ inline bool film_grain_joint_template(const FilmGrainJointTemplateParameters& p,
             const int filtered = value + floor_shift(prediction + (1 << (p.arShift - 1)), p.arShift);
             chroma.clipped += filtered < low || filtered > high;
             ++chroma.filtered;
-            value = static_cast<int16_t>(std::clamp(filtered, low, high));
+            value = static_cast<int16_t>((std::clamp)(filtered, low, high));
         }
     }
     out.parameters = p; out.seed = seed; out.valid = true;

@@ -80,7 +80,7 @@ inline bool film_grain_luma_template(const uint8_t* coeff, unsigned lag,
             const int value = sample + floor_shift(prediction + (1 << (arShift - 1)), arShift);
             output.clipped += value < low || value > high;
             ++output.filtered;
-            sample = static_cast<int16_t>(std::clamp(value, low, high));
+            sample = static_cast<int16_t>((std::clamp)(value, low, high));
         }
     }
     return true;
