@@ -568,7 +568,7 @@ NVENCSTATUS NVEncoder::NvEncUnregisterAsyncEvent(void *completionEvent) {
     return NV_ENC_SUCCESS;
 }
 
-NVENCSTATUS NVEncoder::NvEncRegisterResource(NV_ENC_INPUT_RESOURCE_TYPE resourceType, void* resourceToRegister, uint32_t width, uint32_t height, uint32_t pitch, NV_ENC_BUFFER_FORMAT inputFormat, void** registeredResource) {
+NVENCSTATUS NVEncoder::NvEncRegisterResource(NV_ENC_INPUT_RESOURCE_TYPE resourceType, void* resourceToRegister, uint32_t width, uint32_t height, uint32_t pitch, NV_ENC_BUFFER_FORMAT inputFormat, void** registeredResource, NV_ENC_BUFFER_USAGE usage) {
     NVENCSTATUS nvStatus = NV_ENC_SUCCESS;
     NV_ENC_REGISTER_RESOURCE registerResParams;
     INIT_STRUCT(registerResParams);
@@ -579,7 +579,7 @@ NVENCSTATUS NVEncoder::NvEncRegisterResource(NV_ENC_INPUT_RESOURCE_TYPE resource
     registerResParams.height = height;
     registerResParams.pitch = pitch;
     registerResParams.bufferFormat = inputFormat;
-    registerResParams.bufferUsage = NV_ENC_INPUT_IMAGE;
+    registerResParams.bufferUsage = usage;
 
     nvStatus = m_pEncodeAPI->nvEncRegisterResource(m_hEncoder, &registerResParams);
     if (nvStatus != NV_ENC_SUCCESS) {
@@ -1010,6 +1010,9 @@ NVENCSTATUS NVEncoder::GetCurrentDeviceNVEncCapability(NVEncCodecFeature& codecF
     add_cap_info(NV_ENC_CAPS_SUPPORT_LOOKAHEAD,            false, true,  _T("Lookahead"));
     add_cap_info(NV_ENC_CAPS_SUPPORT_TEMPORAL_AQ,          false, true,  _T("AQ (temporal)"));
     add_cap_info(NV_ENC_CAPS_SUPPORT_WEIGHTED_PREDICTION,  false, true,  _T("Weighted Prediction"));
+    if (nvenc_api_ver_check(m_apiVer, nvenc_api_ver(12, 1))) {
+        add_cap_info(NV_ENC_CAPS_OUTPUT_RECON_SURFACE, false, true, _T("Reconstructed Output"));
+    }
     if (nvenc_api_ver_check(m_apiVer, nvenc_api_ver(12, 2))) {
         add_cap_info(NV_ENC_CAPS_SUPPORT_TEMPORAL_FILTER,  false, true, _T("Temporal Filter"));
         add_cap_info(NV_ENC_CAPS_SUPPORT_LOOKAHEAD_LEVEL,  false, true, _T("Lookahead Level"));

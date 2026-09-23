@@ -194,7 +194,7 @@ public:
     NVENCSTATUS NvEncGetSequenceParams(NV_ENC_SEQUENCE_PARAM_PAYLOAD *sequenceParamPayload);
     NVENCSTATUS NvEncRegisterAsyncEvent(void **completionEvent);
     NVENCSTATUS NvEncUnregisterAsyncEvent(void *completionEvent);
-    NVENCSTATUS NvEncRegisterResource(NV_ENC_INPUT_RESOURCE_TYPE resourceType, void *resourceToRegister, uint32_t width, uint32_t height, uint32_t pitch, NV_ENC_BUFFER_FORMAT inputFormat, void **registeredResource);
+    NVENCSTATUS NvEncRegisterResource(NV_ENC_INPUT_RESOURCE_TYPE resourceType, void *resourceToRegister, uint32_t width, uint32_t height, uint32_t pitch, NV_ENC_BUFFER_FORMAT inputFormat, void **registeredResource, NV_ENC_BUFFER_USAGE usage = NV_ENC_INPUT_IMAGE);
     NVENCSTATUS NvEncUnregisterResource(NV_ENC_REGISTERED_PTR registeredRes);
     NVENCSTATUS NvEncMapInputResource(void *registeredResource, void **mappedResource);
     NVENCSTATUS NvEncUnmapInputResource(NV_ENC_INPUT_PTR mappedInputBuffer);

@@ -856,6 +856,7 @@ struct NVEncVideoParamAV1 {
     tstring filmGrainTable;                        // AOM filmgrn1 parameter table
     tstring filmGrainTableOut;                     // write measured grain as an AOM filmgrn1 table
     tstring filmGrainJointProbe;                   // explicit bounded source/base/history diagnostic
+    tstring filmGrainReconProbe;                   // explicit bounded NVENC reconstructed output diagnostic
     tstring filmGrainSeedGuard;                    // explicit experimental parser library path
 
     NVEncVideoParamAV1();
