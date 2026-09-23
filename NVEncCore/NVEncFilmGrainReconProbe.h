@@ -1,0 +1,128 @@
+// Explicit NVENC reconstruction capture for compressed-base grain research.
+// Disabled by default; no model, image or rate-control decision is changed.
+// MIT license, as NVEncFilmGrainModel.h.
+#pragma once
+#include <fstream>
+#include <map>
+#include <memory>
+#include <vector>
+#include "NVEncDevice.h"
+#include "CuvidDecode.h"
+#include "NVEncFilmGrainReconConfig.h"
+
+class NVEncFilmGrainReconProbe {
+    using Json = nlohmann::json;
+    using Path = std::filesystem::path;
+    struct Surface {
+        void* device = nullptr;
+        void* registered = nullptr;
+        void* mapped = nullptr;
+        size_t pitch = 0;
+        int sourceId = -1;
+        int64_t pts = 0, duration = 0;
+        int timebaseNum = 0, timebaseDen = 0;
+    };
+    NVGPUInfo* m_dev;
+    NVEncFilmGrainReconConfig m_config;
+    unsigned m_width, m_height, m_depth;
+    uint64_t m_frameBytes, m_allocated = 0;
+    std::map<uint32_t,Surface> m_pending;
+    std::set<uint32_t> m_captured;
+    bool m_failed = false;
+
+    static void cudaCheck(cudaError_t e) {
+        if (e != cudaSuccess) throw std::runtime_error(cudaGetErrorString(e));
+    }
+    static void nvCheck(NVENCSTATUS e) {
+        if (e != NV_ENC_SUCCESS) throw std::runtime_error("NVENC reconstruction API error " + std::to_string(int(e)));
+    }
+    static void jsonFile(const Path& path, const Json& value) {
+        auto temp = path; temp += ".tmp";
+        { std::ofstream out(temp); out << value.dump(2) << '\n'; out.flush();
+          if (!out) throw std::runtime_error("reconstruction JSON write failed"); }
+        std::filesystem::rename(temp,path);
+    }
+    void status(const std::string& error = {}) {
+        jsonFile(m_config.directory/"status.json", {{"complete",!m_failed && m_captured==m_config.frames},
+            {"requested_frames",m_config.frames},{"captured_frames",m_captured},
+            {"failed",m_failed},{"error",error},{"native_bytes",m_frameBytes*m_captured.size()}});
+    }
+    void release(Surface& s) noexcept {
+        // The owner must keep the encoder/context alive until this probe closes.
+        if (s.mapped) m_dev->encoder()->NvEncUnmapInputResource(s.mapped);
+        if (s.registered) m_dev->encoder()->NvEncUnregisterResource(s.registered);
+        if (s.device) { cudaFree(s.device); m_allocated -= s.pitch*(m_height*3/2); }
+        s = {};
+    }
+public:
+    NVEncFilmGrainReconProbe(NVGPUInfo* dev,const Path& manifest,unsigned width,unsigned height,unsigned depth)
+        : m_dev(dev),m_width(width),m_height(height),m_depth(depth),m_frameBytes(0) {
+        if (!dev || !dev->encoder() || std::filesystem::file_size(manifest)>65536)
+            throw std::runtime_error("invalid reconstruction probe manifest or encoder");
+        std::ifstream file(manifest); Json j; file>>j;
+        m_config=NVEncFilmGrainReconConfig::parse(j);
+        m_frameBytes=m_config.requireLayout(width,height,depth);
+        if (!std::filesystem::create_directory(m_config.directory))
+            throw std::runtime_error("reconstruction probe requires a new output directory");
+        jsonFile(m_config.directory/"manifest.json",j); status();
+    }
+    ~NVEncFilmGrainReconProbe() {
+        NVEncCtxAutoLock(context(m_dev->vidCtxLock()));
+        for (auto& p : m_pending) release(p.second);
+    }
+    NVEncFilmGrainReconProbe(const NVEncFilmGrainReconProbe&)=delete;
+    NVEncFilmGrainReconProbe& operator=(const NVEncFilmGrainReconProbe&)=delete;
+
+    // Encoded input ordinal identifies the requested surface. Its output must
+    // carry that same ordinal AND timestamp after NVENC's picture reordering.
+    void submit(NV_ENC_PIC_PARAMS& p,int sourceId,int tbNum,int tbDen) {
+        if (m_failed) throw std::runtime_error("reconstruction probe already failed");
+        if (!m_config.frames.count(p.frameIdx)) return;
+        if (m_captured.count(p.frameIdx) || m_pending.count(p.frameIdx) || sourceId<0 || tbNum<=0 || tbDen<=0)
+            throw std::runtime_error("duplicate or invalid reconstruction input identity");
+        auto& s=m_pending[p.frameIdx];s.sourceId=sourceId;s.pts=int64_t(p.inputTimeStamp);
+        s.duration=int64_t(p.inputDuration);s.timebaseNum=tbNum;s.timebaseDen=tbDen;
+        const auto format=m_depth==10?NV_ENC_BUFFER_FORMAT_YUV420_10BIT:NV_ENC_BUFFER_FORMAT_NV12;
+        if (p.inputWidth!=m_width || p.inputHeight!=m_height || p.bufferFmt!=format)
+            throw std::runtime_error("reconstruction input layout changed");
+        NVEncCtxAutoLock(context(m_dev->vidCtxLock()));
+        const size_t rowBytes=m_width*(m_depth==10?2:1);
+        cudaCheck(cudaMallocPitch(&s.device,&s.pitch,rowBytes,m_height*3/2));
+        m_allocated+=s.pitch*(m_height*3/2);
+        if (m_allocated>512ULL*1024*1024 || s.pitch>UINT32_MAX)
+            throw std::runtime_error("reconstruction device allocation budget exceeded");
+        nvCheck(m_dev->encoder()->NvEncRegisterResource(NV_ENC_INPUT_RESOURCE_TYPE_CUDADEVICEPTR,
+            s.device,m_width,m_height,static_cast<uint32_t>(s.pitch),format,&s.registered,NV_ENC_OUTPUT_RECON));
+        nvCheck(m_dev->encoder()->NvEncMapInputResource(s.registered,&s.mapped));
+        p.outputReconBuffer=s.mapped;p.encodePicFlags|=NV_ENC_PIC_FLAG_OUTPUT_RECON_FRAME;
+    }
+    void receive(uint32_t frameId,int64_t pts) {
+        if (m_failed) throw std::runtime_error("reconstruction probe already failed");
+        if (!m_config.frames.count(frameId)) return;
+        const auto found=m_pending.find(frameId);
+        if (found==m_pending.end() || found->second.pts!=pts)
+            throw std::runtime_error("reconstruction output identity differs from input");
+        auto& s=found->second;
+        NVEncCtxAutoLock(context(m_dev->vidCtxLock()));
+        // NVIDIA requires unmapping before CUDA reads reconstructed surfaces.
+        nvCheck(m_dev->encoder()->NvEncUnmapInputResource(s.mapped));s.mapped=nullptr;
+        std::vector<uint8_t> host(m_frameBytes);const size_t rowBytes=m_width*(m_depth==10?2:1);
+        cudaCheck(cudaMemcpy2D(host.data(),rowBytes,s.device,s.pitch,rowBytes,m_height*3/2,cudaMemcpyDeviceToHost));
+        const auto stem="frame-"+std::to_string(frameId);const auto raw=m_config.directory/(stem+".raw");
+        { std::ofstream out(raw,std::ios::binary);out.write(reinterpret_cast<const char*>(host.data()),host.size());out.flush();
+          if (!out) throw std::runtime_error("reconstruction native write failed"); }
+        jsonFile(m_config.directory/(stem+".json"),{{"complete",true},{"frame_id",frameId},{"source_frame_id",s.sourceId},
+            {"pts",pts},{"duration",s.duration},{"timebase",{s.timebaseNum,s.timebaseDen}},
+            {"width",m_width},{"height",m_height},{"depth",m_depth},{"shift",m_depth==10?6:0},
+            {"format",m_depth==10?"p010":"nv12"},{"pitch",rowBytes},{"device_pitch",s.pitch},{"bytes",host.size()},{"raw",raw.u8string()}});
+        release(s);m_pending.erase(found);m_captured.insert(frameId);status();
+    }
+    void finish() {
+        if (m_failed || !m_pending.empty() || m_captured!=m_config.frames)
+            throw std::runtime_error("reconstruction capture did not complete every requested frame");
+        status();
+    }
+    void fail(const std::string& error) noexcept {
+        m_failed=true;try { status(error); } catch (...) {}
+    }
+};

@@ -111,6 +111,7 @@
     - [--film-grain-table \<path\> \[AV1\]](#--film-grain-table-path-av1)
     - [--film-grain-table-out \<path\>](#--film-grain-table-out-path)
     - [--film-grain-seed-guard \<library\>](#--film-grain-seed-guard-library)
+    - [--film-grain-recon-probe \<manifest\>](#--film-grain-recon-probe-manifest)
     - [--film-grain-joint-probe \<manifest\>](#--film-grain-joint-probe-manifest)
     - [--level \<string\>](#--level-string)
     - [--profile \<string\>](#--profile-string)
@@ -889,6 +890,22 @@ editing the source. Without this option, scene detection is unchanged.
 不支持并行编码。库缺失、ABI 不兼容、无效数据包或超过 32 MiB 的数据包会使
 编码失败。Linux 库隔离及独立数据包和解码器测试已通过；完整编码器和容器部署
 仍处于实验阶段。未指定此选项时不加载额外库。
+
+### --film-grain-recon-probe &lt;manifest&gt;
+
+Explicit development-only NVENC reconstructed-picture capture. Disabled by default.
+Requires synchronous Linux AV1 NVENC, progressive NV12/P010, API 12.1 or newer,
+reconstructed-output capability and no parallel encoding. The JSON manifest uses
+`schema: 1`, 1–16 unique encoded input ordinals in `frames`, an absolute **new**
+`output_directory`, and `max_output_bytes` covering all requested native surfaces
+plus metadata (maximum 512 MiB). Dimensions are limited to 4096×2160.
+
+Each selected frame writes packed NV12/P010 and JSON identity/layout metadata.
+Capture matches the submitted ordinal and timestamp to NVENC output, unmaps
+before reading the reconstruction, and fails if a requested frame is missing.
+This probe does not change grain parameters or quality decisions. It is not a
+routine validation option; decoded-picture equivalence must qualify each new
+input/configuration before the captured surfaces are used as model evidence.
 
 ### --film-grain-joint-probe &lt;manifest&gt;
 Development diagnostic for `--av1-film-grain denoiser=bilateral`; disabled by default.

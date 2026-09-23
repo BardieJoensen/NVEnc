@@ -64,6 +64,7 @@
 #include "NVEncFilterSsim.h"
 #include "NVEncFilmGrain.h"
 #include "NVEncFilmGrainSeedGuard.h"
+#include "NVEncFilmGrainReconProbe.h"
 #include "NVEncFilterFilmGrain.h"
 #include "NvHWEncoder.h"
 #include "dynlink_nvcuvid.h"
@@ -2959,6 +2960,7 @@ protected:
     const DOVIRpu *m_doviRpu;
     const NVEncFilmGrainTable *m_filmGrainTable;
     std::shared_ptr<NVEncFilmGrainSeedGuard> m_filmGrainSeedGuard;
+    std::shared_ptr<NVEncFilmGrainReconProbe> m_filmGrainReconProbe;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 m_filmGrainParamsCache;
     bool m_filmGrainParamsCacheValid;
     bool m_forceFilmGrainParamsUpdate;
@@ -2982,13 +2984,13 @@ public:
         NVGPUInfo *dev, NVEncRunCtx *runCtx, RGY_CODEC encCodec, int encWidth, int encHeight, RGY_CSP encCsp, int encBitdepth, RGY_PICSTRUCT encPicStruct,
         const NV_ENC_CONFIG& stEncConfig, const NV_ENC_INITIALIZE_PARAMS& stCreateEncodeParams,
         RGYTimecode *timecode, RGYTimestamp *encTimestamp, rgy_rational<int> outputTimebase, const RGYHDR10Plus *hdr10plus, const DOVIRpu *doviRpu,
-        const NVEncFilmGrainTable *filmGrainTable, std::shared_ptr<NVEncFilmGrainSeedGuard> filmGrainSeedGuard, std::vector<NVEncRCParam>& dynamicRC, std::vector<int>& keyFile, bool keyOnChapter, std::vector<std::unique_ptr<AVChapter>>& chapters,
+        const NVEncFilmGrainTable *filmGrainTable, std::shared_ptr<NVEncFilmGrainSeedGuard> filmGrainSeedGuard, std::shared_ptr<NVEncFilmGrainReconProbe> filmGrainReconProbe, std::vector<NVEncRCParam>& dynamicRC, std::vector<int>& keyFile, bool keyOnChapter, std::vector<std::unique_ptr<AVChapter>>& chapters,
          int outMaxQueueSize, RGYParamThread threadParam, std::shared_ptr<RGYLog> log)
         : PipelineTask(PipelineTaskType::NVENC, dev, outMaxQueueSize, m_bEnableOutputThread, threadParam, log),
         m_runCtx(runCtx), m_encCodec(encCodec), m_encWidth(encWidth), m_encHeight(encHeight), m_encCsp(encCsp), m_encBitdepth(encBitdepth), m_encPicStruct(encPicStruct),
         m_stEncConfig(stEncConfig), m_stCreateEncodeParams(stCreateEncodeParams),
         m_timecode(timecode), m_encTimestamp(encTimestamp), m_outputTimebase(outputTimebase),
-        m_bitStreamOut(), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu), m_filmGrainTable(filmGrainTable), m_filmGrainSeedGuard(std::move(filmGrainSeedGuard)), m_filmGrainParamsCache(), m_filmGrainParamsCacheValid(false), m_forceFilmGrainParamsUpdate(false),
+        m_bitStreamOut(), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu), m_filmGrainTable(filmGrainTable), m_filmGrainSeedGuard(std::move(filmGrainSeedGuard)), m_filmGrainReconProbe(std::move(filmGrainReconProbe)), m_filmGrainParamsCache(), m_filmGrainParamsCacheValid(false), m_forceFilmGrainParamsUpdate(false),
         m_dynamicRC(dynamicRC), m_appliedDynamicRC(-1), m_keyFile(keyFile), m_keyOnChapter(keyOnChapter), m_Chapters(chapters),
         m_threadOutput(), m_threadOutputPromise(), m_threadOutputFuture(), m_threadOutputResult(), m_threadOutputAbort(false) {
         if (m_encCodec == RGY_CODEC_AV1
@@ -3087,6 +3089,14 @@ protected:
         nvStatus = m_dev->encoder()->NvEncUnlockBitstream(pEncodeBuffer->stOutputBfr.hBitstreamBuffer);
         if (copyStatus != RGY_ERR_NONE) return { copyStatus, nullptr };
         if (nvStatus != NV_ENC_SUCCESS) return { err_to_rgy(nvStatus), nullptr };
+        if (m_filmGrainReconProbe) {
+            try { m_filmGrainReconProbe->receive(lockBitstreamData.frameIdx,int64_t(lockBitstreamData.outputTimeStamp)); }
+            catch (const std::exception& e) {
+                m_filmGrainReconProbe->fail(e.what());
+                PrintMes(RGY_LOG_ERROR,_T("Reconstruction output: %s.\n"),char_to_tstring(e.what()).c_str());
+                return { RGY_ERR_INVALID_DATA_TYPE, nullptr };
+            }
+        }
         if (m_filmGrainSeedGuard) {
             const int result = m_filmGrainSeedGuard->process(output->data(), output->size());
             if (result < 0) {
@@ -3424,6 +3434,14 @@ protected:
         }
         m_encTimestamp->add(timestamp, inputFrameId, (encPicParams.frameIdx = id), duration, metadatalist);
 
+        if (m_filmGrainReconProbe) {
+            try { m_filmGrainReconProbe->submit(encPicParams,inputFrameId,m_outputTimebase.n(),m_outputTimebase.d()); }
+            catch (const std::exception& e) {
+                m_filmGrainReconProbe->fail(e.what());
+                PrintMes(RGY_LOG_ERROR,_T("Reconstruction input: %s.\n"),char_to_tstring(e.what()).c_str());
+                return RGY_ERR_INVALID_PARAM;
+            }
+        }
         NVENCSTATUS nvStatus = m_dev->encoder()->NvEncEncodePicture(&encPicParams);
         if (nvStatus != NV_ENC_SUCCESS && nvStatus != NV_ENC_ERR_NEED_MORE_INPUT) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to add frame into the encoder.\n"));
@@ -3463,6 +3481,14 @@ protected:
             sts = outputThreadFunc(false);
             if (sts != RGY_ERR_NONE) {
                 return sts;
+            }
+        }
+        if (m_filmGrainReconProbe) {
+            try { m_filmGrainReconProbe->finish(); }
+            catch (const std::exception& e) {
+                m_filmGrainReconProbe->fail(e.what());
+                PrintMes(RGY_LOG_ERROR,_T("Reconstruction completion: %s.\n"),char_to_tstring(e.what()).c_str());
+                return RGY_ERR_INVALID_DATA_TYPE;
             }
         }
         const auto flushMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - flushStart).count();

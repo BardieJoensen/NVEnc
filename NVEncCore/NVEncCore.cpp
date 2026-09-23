@@ -377,6 +377,7 @@ NVEncCore::NVEncCore() :
     m_stEncConfig(),
     m_filmGrainTable(),
     m_filmGrainSeedGuard(),
+    m_filmGrainReconProbe(),
     m_filmGrainOffParams(),
     m_keyOnChapter(false),
     m_keyFile(),
@@ -1410,6 +1411,7 @@ NVENCSTATUS NVEncCore::FlushEncoder() {
 
 RGY_ERR NVEncCore::Deinitialize() {
     m_pipelineTasks.clear();
+    m_filmGrainReconProbe.reset(); // Registered surfaces must close before the NVENC session.
     m_videoQualityMetric.reset();
     m_dovirpu.reset();
     m_hdr10plus.reset();
@@ -1896,6 +1898,10 @@ RGY_ERR NVEncCore::SetInputParam(InEncodeVideoParam *inputParam) {
         }
         m_filmGrainSeedGuard = std::move(guard);
         PrintMes(RGY_LOG_INFO, _T("Experimental AV1 film grain seed guard enabled.\n"));
+    }
+    if (!inputParam->av1.filmGrainReconProbe.empty() && inputParam->codec_rgy != RGY_CODEC_AV1) {
+        PrintMes(RGY_LOG_ERROR,_T("--film-grain-recon-probe requires AV1 NVENC output.\n"));
+        return RGY_ERR_UNSUPPORTED;
     }
     if (!inputParam->av1.filmGrainJointProbe.empty()
         && (!inputParam->av1.filmGrainAuto || inputParam->av1.filmGrainDenoiser != FGS_DENOISE_BILATERAL)) {
@@ -2617,6 +2623,26 @@ RGY_ERR NVEncCore::SetInputParam(InEncodeVideoParam *inputParam) {
     if (inputParam->ctrl.lowLatency
         && m_dev->encoder()->checkAPIver(10, 0)) {
         m_stCreateEncodeParams.encodeConfig->rcParams.lowDelayKeyFrameScale = 1;
+    }
+    m_filmGrainReconProbe.reset();
+    if (!inputParam->av1.filmGrainReconProbe.empty()) {
+        if (inputParam->codec_rgy != RGY_CODEC_AV1 || ENABLE_ASYNC != 0
+            || inputParam->ctrl.parallelEnc.isEnabled() || is_interlaced(m_stPicStruct)
+            || !m_dev->encoder()->checkAPIver(12, 1)
+            || !codecFeature->getCapLimit(NV_ENC_CAPS_OUTPUT_RECON_SURFACE)
+            || (m_stCreateEncodeParams.bufferFormat != NV_ENC_BUFFER_FORMAT_NV12
+                && m_stCreateEncodeParams.bufferFormat != NV_ENC_BUFFER_FORMAT_YUV420_10BIT)) {
+            PrintMes(RGY_LOG_ERROR, _T("--film-grain-recon-probe requires synchronous AV1, progressive NV12/P010, reconstruction capability and no parallel encoding.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        try {
+            m_filmGrainReconProbe = std::make_shared<NVEncFilmGrainReconProbe>(m_dev.get(),
+                std::filesystem::path(inputParam->av1.filmGrainReconProbe),m_uEncWidth,m_uEncHeight,GetEncoderBitDepth(inputParam));
+        } catch (const std::exception& e) {
+            PrintMes(RGY_LOG_ERROR, _T("Reconstruction probe: %s.\n"),char_to_tstring(e.what()).c_str());
+            return RGY_ERR_INVALID_PARAM;
+        }
+        m_stCreateEncodeParams.enableReconFrameOutput = 1;
     }
     m_stCreateEncodeParams.enableEncodeAsync   = ENABLE_ASYNC != 0;
     m_stCreateEncodeParams.enablePTD           = true;
@@ -6318,7 +6344,7 @@ RGY_ERR NVEncCore::initPipeline(const InEncodeVideoParam *prm) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskNVEncode>(m_dev.get(), m_encRunCtx.get(),
             codec_guid_enc_to_rgy(m_stCodecGUID), m_uEncWidth, m_uEncHeight, GetEncoderCSP(prm), GetEncoderBitDepth(prm), picstruct_enc_to_rgy(m_stPicStruct),
             m_stEncConfig, m_stCreateEncodeParams, m_timecode.get(), m_encTimestamp.get(), m_outputTimebase, m_hdr10plus.get(), m_dovirpu.get(),
-            m_filmGrainTable.get(), m_filmGrainSeedGuard, m_dynamicRC, m_keyFile, m_keyOnChapter, m_Chapters, 1, prm->ctrl.threadParams.get(RGYThreadType::ENC), m_pLog));
+            m_filmGrainTable.get(), m_filmGrainSeedGuard, m_filmGrainReconProbe, m_dynamicRC, m_keyFile, m_keyOnChapter, m_Chapters, 1, prm->ctrl.threadParams.get(RGYThreadType::ENC), m_pLog));
         auto taskEnc = dynamic_cast<PipelineTaskNVEncode *>(m_pipelineTasks.back().get());
         if (taskLastCudaVpp) {
             taskLastCudaVpp->setEncodeTask(taskEnc);
