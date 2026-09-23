@@ -25,6 +25,13 @@ int main() {
     const auto candidate=NVEncFilmGrainReconConfig::parse(retention);assert(candidate.preEncodeRetention() && candidate.retention.at(2)[1]==.25f);
     auto native=retention;native["pre_encode_retention"]={0,.25,.75};native["native_model_output"]={{"engine",{{"source_mode","memory"}}}};
     assert(NVEncFilmGrainReconConfig::parse(native).preEncodeRetention());
+    auto segmented=native;segmented["frames"]=json::array();
+    for(unsigned i=0;i<16;++i)segmented["frames"].push_back(i);
+    segmented["pre_encode_source_segments"]=true;segmented["pre_encode_retention"]={1,1,1};
+    assert(NVEncFilmGrainReconConfig::parse(segmented).retention.sourceSegments());
+    auto incomplete=segmented;incomplete.erase("native_model_output");
+    bool sourceModeRejected=false;try{NVEncFilmGrainReconConfig::parse(incomplete);}catch(...){sourceModeRejected=true;}
+    assert(sourceModeRejected);
     auto varying=native;varying.erase("pre_encode_retention");
     varying["pre_encode_retention_frames"]={{0,.25,.75},{.1,.25,.5},{0,0,0}};
     const auto scheduled=NVEncFilmGrainReconConfig::parse(varying);

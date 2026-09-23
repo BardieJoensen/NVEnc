@@ -6,6 +6,7 @@
 #include "NVEncFilmGrainModelProbe.h"
 #include "NVEncFilmGrainSourceFrame.h"
 #include "NVEncFilmGrainNativeGrid.h"
+#include "NVEncFilmGrainNativeSegments.h"
 
 struct NVEncFilmGrainNativeConfig {
     NVEncFilmGrainModelConfig packets;
@@ -133,7 +134,7 @@ template<class Token> class NVEncFilmGrainNativeProbe {
     using Json=nlohmann::json;
     using Buffer=fgsmodel::FilmGrainModelBuffer<Token>;
     NVEncFilmGrainNativeConfig m_config;
-    NVEncFilmGrainNativeLibrary m_engine;
+    fgsdiagnostic::NativeModelSegments<NVEncFilmGrainNativeLibrary> m_engine;
     Buffer m_buffer;
     std::filesystem::path m_report;
     unsigned m_width,m_height,m_depth;
@@ -154,14 +155,14 @@ template<class Token> class NVEncFilmGrainNativeProbe {
 public:
     NVEncFilmGrainNativeProbe(NVEncFilmGrainNativeConfig config,const std::filesystem::path& report,
         unsigned width,unsigned height,unsigned depth,fgsdiagnostic::PreEncodeRetentionPlan retention={})
-        :m_config(std::move(config)),m_engine(m_config.engineLibrary,m_config.engine),
+        :m_config(std::move(config)),m_engine(m_config.engineLibrary,m_config.engine,retention),
         m_buffer(m_config.packets.library,m_config.packets.packets.size(),32,m_config.packets.maxPackets,m_config.packets.maxBytes),
         m_report(report),m_width(width),m_height(height),m_depth(depth),m_retention(std::move(retention)) {
         m_config.requireLayout(width,height,depth);
         if(m_retention.enabled()) {
             if(!m_config.memorySource())throw std::runtime_error("native retention requires memory sources");
             if(m_retention.size()!=m_config.packets.packets.size())throw std::runtime_error("native retention picture count differs");
-            m_retention.requireAllPartial();
+            m_retention.modelSegments();
         }
         // Older ABI-compatible libraries ignore unknown configuration keys.
         // A stricter requested policy needs explicit runtime confirmation.
@@ -193,7 +194,11 @@ public:
                 if(!source)throw std::runtime_error("native model requires original memory source");
                 source->requireIdentity(ordinal,source->sourceId,pts,source->timebaseNum,source->timebaseDen,m_width,m_height,m_depth);
                 if(bool(source->retention)!=m_retention.enabled())throw std::runtime_error("native model retention decision is missing or unexpected");
-                if(m_retention.enabled())fgsdiagnostic::requirePartialRetentionModel(*source->retention,m_retention.at(ordinal));
+                if(m_retention.enabled()) {
+                    if(m_retention.sourceSegments() && m_retention.sourceAt(ordinal))
+                        fgsdiagnostic::requireSourceRetentionModel(*source->retention,m_retention.at(ordinal));
+                    else fgsdiagnostic::requirePartialRetentionModel(*source->retention,m_retention.at(ordinal));
+                }
                 std::array<FgsNativePlane,3> original{};
                 for(unsigned c=0;c<3;++c)original[c]={source->planes[c].data(),source->planes[c].size(),c?m_width/2:m_width};
                 m_engine.pushPair(ordinal,pts,original.data(),planes.data());

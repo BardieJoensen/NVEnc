@@ -185,3 +185,29 @@ may include full-source rows, which always signal grain off. Native model output
 requires every row to be all-partial; any ordinary preservation veto still
 rejects the trial. Constant syntax keeps its prior behaviour. This carries
 explicit experimental decisions and does not grant automatic source eligibility.
+
+## Explicit whole-source intervals
+
+`pre_encode_source_segments: true` explicitly extends a native-memory trial's
+retention plan. Without it, native fitting still requires all-partial fractions.
+Every row in the new mode must either retain all three components completely
+(`[1,1,1]`) or use three fractions below one. Component-only source endpoints
+are rejected. Each contiguous modeled interval needs at least eight pictures;
+the complete trial remains limited to sixteen. Too-short intervals reject before
+encoding. This switch does not select fractions or establish source eligibility.
+
+The adapter gives each modeled interval a separate fitter and local ordinals.
+The source/packet/PTS binding remains global, and reports explicitly map the
+local fitter results back to it. Whole-source pictures never enter the fitter,
+its training history or its spatial windows. An all-source trial needs no fitting
+library context. Native source/reconstruction spans and code ranges remain
+validated, and each source row requires its matching immutable preservation
+decision. Final source models explicitly set `apply: false`, including when a
+previous reference picture carried grain.
+
+A model failure remains terminal. This mode cannot turn a previously encoded
+partial candidate into a preserved-source fallback. The controller must still
+make a fresh source-preserving encode or keep the original after such a failure.
+The segmented report identifies preserved rows, modeled intervals, local/global
+ordinals, model readiness and per-interval engine reports. Existing manifests
+retain their prior report and output behaviour.

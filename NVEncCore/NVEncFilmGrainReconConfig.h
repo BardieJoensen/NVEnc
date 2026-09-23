@@ -57,6 +57,8 @@ struct NVEncFilmGrainReconConfig {
         if(!c.maxSourceBytes || c.maxSourceBytes>512ULL*1024*1024)
             throw std::runtime_error("source byte budget must be 1..512 MiB");
         c.retention=fgsdiagnostic::PreEncodeRetentionPlan::parse(j,c.frames.size());
+        if(c.retention.sourceSegments() && !j.contains("native_model_output"))
+            throw std::runtime_error("source segments require explicit native model output");
         if(c.preEncodeRetention()) {
             if(!c.captureSource
                 || *c.frames.begin()!=0 || *c.frames.rbegin()+1!=c.frames.size())
@@ -68,7 +70,7 @@ struct NVEncFilmGrainReconConfig {
             if(j.contains("native_model_output")) {
                 if(j.at("native_model_output").at("engine").at("source_mode")!="memory")
                     throw std::runtime_error("pre-encode model fitting requires original memory sources");
-                c.retention.requireAllPartial();
+                c.retention.modelSegments();
             }
         }
         c.directory = std::filesystem::u8path(j.at("output_directory").get<std::string>());

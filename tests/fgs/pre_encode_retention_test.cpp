@@ -22,6 +22,22 @@ int main() {
     }
     const auto source=preEncodeRetentionDecision({{1,1,1}},true,true,false,0,false,7);
     assert(source.wholeSource() && source.preservedComponents==7);
+    requireSourceRetentionModel(source,{{1,1,1}});
+    for(unsigned guard=0;guard<8;++guard) {
+        const auto d=preEncodeRetentionDecision({{1,1,1}},!(guard&1),!(guard&2),false,0,guard&4,7);
+        requireSourceRetentionModel(d,{{1,1,1}});
+    }
+    for(unsigned kind=0;kind<7;++kind) {
+        auto d=source;auto expected=d.requested;
+        if(kind==0)d.requested[0]=0;
+        if(kind==1)d.effective[1]=0;
+        if(kind==2)d.preservedComponents=3;
+        if(kind==3)d.reasonMask=0;
+        if(kind==4)d.reasonMask=32;
+        if(kind==5)expected[2]=.75;
+        if(kind==6)d.requested[1]=std::numeric_limits<float>::quiet_NaN();
+        bool rejected=false;try{requireSourceRetentionModel(d,expected);}catch(...){rejected=true;}assert(rejected);
+    }
     assert(preEncodeRetentionEvidence(source).at("grain_model")=="off; candidate measurement only");
     const std::array<float,3> requested{{.1f,.25f,.75f}};
     auto valid=preEncodeRetentionDecision(requested,true,true,false,0,false,7);
@@ -42,6 +58,17 @@ int main() {
     assert(!disabled.enabled() && disabled.evidence().empty());
     bool outside=false;try {disabled.at(0);}catch(...){outside=true;}assert(outside);
     const Json fixed={{"pre_encode_retention",{0,.1,.75}}};
+    for(const auto flag:{Json(1),Json("true"),Json(nullptr)}) {
+        auto j=fixed;j["pre_encode_source_segments"]=flag;
+        bool rejected=false;try{PreEncodeRetentionPlan::parse(j,16);}catch(...){rejected=true;}assert(rejected);
+    }
+    for(unsigned kind=0;kind<3;++kind) {
+        Json j={{"pre_encode_source_segments",true}};
+        if(kind==1)j["pre_encode_retention"]={0,1,0};
+        if(kind==2)j["pre_encode_retention_frames"]={{0,0,0},{1,1,1}};
+        bool rejected=false;
+        try{PreEncodeRetentionPlan::parse(j,kind==2?2:16).modelSegments();}catch(...){rejected=true;}assert(rejected);
+    }
     for(unsigned count:{1u,16u}) {
         const auto plan=PreEncodeRetentionPlan::parse(fixed,count);
         assert(plan.enabled() && plan.size()==count && plan.at(count-1)==plan.at(0));
