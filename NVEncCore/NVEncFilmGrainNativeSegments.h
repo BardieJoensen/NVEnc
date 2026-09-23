@@ -24,6 +24,18 @@ template<class Engine> class NativeModelSegments {
     size_t count_=0;
     unsigned width_=0,height_=0,depth_=0;
     bool finished_=false,failed_=false;
+    static uint64_t integer(const Json& j,const char* key,uint64_t low,uint64_t high) {
+        const auto& v=j.at(key);
+        if(!v.is_number_integer() || v<low || v>high)
+            throw std::runtime_error("native segment integer range");
+        return v.template get<uint64_t>();
+    }
+    static int64_t timestamp(const Json& value) {
+        if(!value.is_number_integer() || value==INT64_MIN
+            || (value.is_number_unsigned() && value.template get<uint64_t>()>uint64_t(INT64_MAX)))
+            throw std::runtime_error("native segment timestamp range");
+        return value.template get<int64_t>();
+    }
     Segment& segment(uint64_t ordinal) {
         if(ordinal>=count_)throw std::runtime_error("native segment ordinal outside plan");
         for(auto& s:segments_)if(ordinal>=s.range.begin && ordinal-s.range.begin<s.range.count)return s;
@@ -48,8 +60,10 @@ public:
     NativeModelSegments(const std::filesystem::path& path,const Json& config,
         const PreEncodeRetentionPlan& plan):config_(config) {
         if(!plan.sourceSegments()) {legacy_=std::make_unique<Engine>(path,config);return;}
-        count_=config.at("frame_count").template get<size_t>();
-        width_=config.at("width");height_=config.at("height");depth_=config.at("depth");
+        integer(config,"schema",1,1);
+        count_=size_t(integer(config,"frame_count",8,16));
+        width_=unsigned(integer(config,"width",64,4096));height_=unsigned(integer(config,"height",64,2160));
+        depth_=unsigned(integer(config,"depth",8,10));
         const auto grid=fgsmodel::film_grain_native_grid(width_,height_);
         if(config.value("source_mode",std::string("files"))!="memory" || count_<8 || count_>16
             || count_!=plan.size() || !grid.valid || !grid.blocks[1] || (depth_!=8 && depth_!=10)
@@ -57,10 +71,10 @@ public:
             throw std::runtime_error("source segments require matching finite memory-source configuration");
         for(size_t i=0;i<count_;++i) {
             const auto& source=config.at("sources").at(i);
-            if(source.at("ordinal")!=i || source.contains("planes"))
+            if(integer(source,"ordinal",0,15)!=i || source.contains("planes"))
                 throw std::runtime_error("source segment global identity differs");
-            const auto pts=source.at("pts").template get<int64_t>();
-            if(pts==INT64_MIN || (i && pts<=config.at("sources").at(i-1).at("pts").template get<int64_t>()))
+            const auto pts=timestamp(source.at("pts"));
+            if(i && pts<=timestamp(config.at("sources").at(i-1).at("pts")))
                 throw std::runtime_error("source segment clock is not increasing");
         }
         for(const auto& range:plan.modelSegments()) {

@@ -30,7 +30,7 @@ struct FakeEngine {
     }
 };
 static Json config() {
-    Json j={{"width",128},{"height",64},{"depth",10},{"frame_count",16},
+    Json j={{"schema",1},{"width",128},{"height",64},{"depth",10},{"frame_count",16},
         {"source_mode","memory"},{"spatial_policy","frame_window_means"},{"sources",Json::array()}};
     for(unsigned i=0;i<16;++i)j["sources"].push_back({{"ordinal",i},{"pts",int64_t(i)*50000}});
     return j;
@@ -114,6 +114,23 @@ int main() {
         if(kind==4)j["width"]=127;
         if(kind==5)j["frame_count"]=15;
         rejects([&]{Sequence s("unused",j,plan(255));});
+    }
+    // Source-only intervals bypass the fitter but keep its strict native and
+    // clock types. Numeric truncation/wrap is not a valid identity match.
+    for(const auto key:{"schema","width","height","depth","frame_count"}) {
+        auto j=config();j[key]=double(j.at(key).get<unsigned>());
+        rejects([&]{Sequence s("unused",j,plan(65535));});
+    }
+    for(unsigned kind=0;kind<7;++kind) {
+        auto j=config();
+        if(kind==0)j["width"]=uint64_t(0x100000080ull);
+        if(kind==1)j["depth"]=uint64_t(0x10000000aull);
+        if(kind==2)j["sources"][1]["pts"]=50000.0;
+        if(kind==3)j["sources"][1]["pts"]=uint64_t(INT64_MAX)+1;
+        if(kind==4)j["sources"][0]["pts"]=INT64_MIN;
+        if(kind==5)j["sources"][0]["ordinal"]=0.0;
+        if(kind==6)j["schema"]=true;
+        rejects([&]{Sequence s("unused",j,plan(65535));});
     }
     std::cout<<"65536 source/model schedules checked ("<<accepted<<" valid); isolated fitter ordinals, whole-source zero models, exact readiness and terminal failures passed\n";
 }
