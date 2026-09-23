@@ -1013,7 +1013,10 @@ scaling, output rounding, block overlap and picture clipping, and do not prove
 picture quality. The final base is captured after retention/recovery and before
 lossy compression; it can differ from the earlier denoised base. This mode needs
 extra CPU work, a fourth native frame and a second group buffer per requested ID
-within the same declared byte budget. Completion also requires every final model.
+within the same declared byte budget. Whole-component GPU counters also report
+source/base differences, native extrema and invalid codes, including borders.
+These counters do not by themselves prove zero synthesis, safe range clipping
+or cross-component compatibility. Completion also requires every final model.
 Omit `template_seeds` to retain the original probe's work and output scope.
 
 Fractions describe independently measured rounded bases; they do not set
