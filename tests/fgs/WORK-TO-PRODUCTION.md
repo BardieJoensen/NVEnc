@@ -1,5 +1,32 @@
 # FGS encoder and library repair: current work and handoff
 
+**September 23 latest:** the [optional retention colour-range and recovery guard](FINDINGS-2026-09-23-RUNTIME-RANGE.md)
+is qualified as `53d3ff3f`, binary SHA
+`a0d760f57bbb2ff7b423ed3c117e6a09535b1e04941e80430182045df89bcaf2`.
+It fixes active-zero-curve clamping of copied chroma and prevents unsafe frames
+from counting toward recovery. Both decoders agree on the declared QVBR30
+controls; 84 native captures and 7,584 decoded observations pass. Ordinary
+SDR/HDR, neutral and full-range outputs remain unchanged. Full CPU: 185 Python
+in 26 suites plus 29 C++ programs. Read
+`roadmap-r3-runtime-range-20260923/report.json` in the evidence root.
+
+A separate small-clip compatibility issue remains: QVBR20 signals level index
+23, rejected by older AOM, including on `b2a6daeb` and plain NVENC. QVBR30 signals
+31 and decodes. Bitrate caps did not solve it; explicit 4.0/5.1 initialization
+failed. Diagnose this without changing production quality settings. The earlier
+claim that capping alone would resolve the reference-decoder issue was a test
+hypothesis, not an established fix. See the retained bounded controls.
+
+The [complete-file seed parser pass](FINDINGS-2026-09-23-SEED-INTEGRATION.md#complete-existing-stream-compatibility-and-parser-cost)
+is also complete: 521,260 AV1 video packets across four existing files, all
+idempotent with unchanged inputs. Seed candidates are not confirmed visible
+damage. No media repair, download or source protection changed.
+
+Automatic retention is still unfinished: R3's whole-picture model/selection
+and R4–R8 remain open. Production remains ordinary `cb903a17`, retention/FEL
+off. All owned pauses are released and current worker limits preserved. The
+reserved corpus is unopened; no experiment or restart job is scheduled.
+
 **September 23 active work after reboot:** automatic retention is **not finished**.
 The [optional emitted-seed correction](FINDINGS-2026-09-23-SEED-INTEGRATION.md)
 now has a private isolated parser and actual Linux encoder/container qualification.
@@ -21,7 +48,10 @@ The new helpers have no output selection call sites. The full CPU suite passes
 
 Read `roadmap-r3-seed-integration-20260923/report.json` and
 `roadmap-r3-population-envelope-20260923/summary.json` in the evidence root.
-Next: bounded alternative lookup/population evidence, then actual automatic
+The bounded alternative-lookup study is also complete: 324 legal projections
+isolate at most one eligible pixel per UHD colour component; even an unrestricted
+native 2D lookup isolates at most 37. The missing work is a qualified regional
+safety model or explicit source-preserving fallback, followed by actual automatic
 selection and temporal/quality/bytes/speed qualification. R3–R8 remain open;
 the reserved corpus is unopened. Production remains ordinary `cb903a17`,
 retention and FEL off. Both owned pauses are released; current Tdarr limits

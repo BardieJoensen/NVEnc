@@ -59,6 +59,28 @@ The evidence root from [the handoff](WORK-TO-PRODUCTION.md) contains
 `roadmap-r3-population-envelope-20260923/manifest.json`, `summary.json`,
 `comparison.json`, the retained old-reference negative and `cpu.log`.
 
-Next, compare explicitly declared alternative lookup equations and establish
-population-specific acceptance before fitting or selecting another whole-picture
-candidate. Actual automatic output selection and R3–R8 remain unfinished.
+## Alternative lookups do not resolve the coverage gap
+
+A following frozen study compares nine legal chroma lookup shapes at all six
+retention levels, on both colour components of those same three frames: 324
+cases. The source classification and 16/16 block rule remain unchanged. The
+best legal lookup isolates only **one** eligible pixel out of 2,073,600.
+
+There is also a stronger bound independent of those nine shapes. Group every
+pixel by its exact rounded luma lookup and native retained chroma value, before
+projecting to any one-dimensional curve. If an eligible and an unsupported
+pixel already share that pair, no deterministic curve based on that pair can
+separate them. Even a hypothetical unrestricted two-dimensional curve can
+isolate at most **37 Cb pixels**, or 0.0018% of the component, and no Cr pixels.
+All tested one-dimensional projections obey this upper bound. This is a bound
+for these captures, retention levels and fixed rounded luma base, not all media.
+
+The evidence is `roadmap-r3-lookup-feasibility-20260923/manifest.json` and
+`report.json`. It verifies original capture hashes and frozen population
+identities. The complete study takes 8.3 seconds on the CPU and reads no reserved
+qualification footage. These are feasibility counts, not output quality scores.
+
+Next work must establish population-specific safety or use explicitly
+source-preserving component/frame fallback. Another strength/lookup search on
+the same source rule cannot provide useful coverage here. Actual automatic
+output selection and R3–R8 remain unfinished; no limit has been relaxed.

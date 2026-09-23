@@ -67,3 +67,27 @@ schedule jobs, or repair library files.
 
 See [the current findings](../FINDINGS-2026-09-23-SOURCE-PRESERVATION.md) and the
 `roadmap-r3-seed-filter-20260923` report in the evidence root from the handoff.
+
+## Read-only existing-stream check
+
+`scan-media.cpp` checks a complete container using the private parser. It does
+not decode pixels or write media. It hashes video payloads, records hypothetical
+seed changes on owned packet copies, and checks whole-stream idempotence with
+a second context. Any parse/demux failure produces a nonzero exit and an
+incomplete JSON result. This is a diagnostic, not a library-repair command.
+
+From the repository root, with development headers for the host FFmpeg:
+
+```sh
+g++ -std=c++17 -O2 -Wall -Wextra -Ijson \
+  tests/fgs/seed_filter/scan-media.cpp -o /storage/seed-scan-media \
+  $(pkg-config --cflags --libs libavformat libavcodec libavutil) -ldl
+/storage/seed-scan-media /storage/libfgsseed.so /media/example.mkv \
+  > /storage/example-seed-scan.json
+```
+
+`changed_packets` counts potential seed corrections, not visibly damaged
+frames. Parser timing excludes the second pass, demux and hashing; wall timing
+includes them. The first video stream must be AV1. The complete four-file
+[compatibility result](../FINDINGS-2026-09-23-SEED-INTEGRATION.md#complete-existing-stream-compatibility-and-parser-cost)
+does not establish picture quality, visibility, or a need to retranscode.

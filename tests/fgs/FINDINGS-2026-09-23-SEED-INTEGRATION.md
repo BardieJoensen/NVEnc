@@ -91,3 +91,25 @@ Both finite GPU pauses were released; the current two GPU transcodes/two CPU
 healthchecks were preserved. All trials were started manually, and none is
 scheduled to restart. No library files, production encoder, flow or routine
 validation settings were changed. R3–R8 remain open.
+
+## Complete existing-stream compatibility and parser cost
+
+A separate read-only pass now covers four complete existing library files:
+Play Dirty, The Gentlemen S1E1, Amphibia S1E1 and Dune. The new
+[`scan-media.cpp`](seed_filter/scan-media.cpp) parses the first AV1 video stream,
+corrects only a private packet copy in memory, and requires a second independent
+parser context to find the result idempotent. It never opens a media output.
+It verifies EOF and records original/corrected payload hashes and clock positions.
+
+All 521,260 video packets pass. Source inode, length and modification time remain
+unchanged. Average time inside the first parser call is 2.67–3.39 microseconds
+per packet on the three smaller streams and 21.62 microseconds on the UHD stream.
+Total wall time is 162.7 seconds, including demux, I/O, two parsers and hashing;
+this is not a controlled full-title encode-speed comparison.
+
+Six and three seed-correction candidates occur in the first two files; the
+other two have none. **A candidate is not confirmed visible damage.** This
+header-only tool does not measure active component strength or playback severity,
+and does not justify redownloading or retranscoding these files. It adds parser
+compatibility and bounded-cost evidence without changing repair scope.
+Read `roadmap-r3-seed-full-stream-20260923/report.json` for the exact pins.

@@ -136,6 +136,14 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [runtime copied-colour guard](FINDINGS-2026-09-23-RUNTIME-RANGE.md) now
+protects nominal out-of-range chroma from the active-zero-curve decoder clamp
+and excludes unsafe frames from synthesis recovery. The finite NV12/P010
+transition/border controls and ordinary-output comparisons pass on `53d3ff3f`.
+This closes a prerequisite fallback defect; it does not integrate the new
+partial-retention selector. A separate QVBR20/level-signalling decoder
+compatibility finding remains under investigation. Production stays unchanged.
+
 The [first R3 study and hold guard](FINDINGS-2026-09-22-RETENTION-SELECTION.md)
 are complete. Eighteen candidate measurements expose insufficient whole-picture
 colour coverage; the successful patch fit cannot simply become a frame policy.
