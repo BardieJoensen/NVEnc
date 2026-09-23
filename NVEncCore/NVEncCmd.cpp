@@ -328,7 +328,7 @@ tstring encoder_help() {
         _T("   --film-grain-table <path>    [AV1] read film grain parameters from an AOM filmgrn1 table.\n")
         _T("   --film-grain-scene-cuts <path> source scene schedule for bilateral FGS (frame-preserving input)\n")
         _T("   --film-grain-table-out <path> write the measured film grain as an AOM filmgrn1 table\n")
-        _T("   --film-grain-joint-probe <manifest> bounded source/base/history diagnostic (bilateral only)\n")
+        _T("   --film-grain-joint-probe <manifest> bounded source/base/history/model diagnostic (bilateral only)\n")
         _T("                                  (with --av1-film-grain; also usable with --codec raw to\n")
         _T("                                   produce a denoised base + grain table for another encoder).\n")
         _T("   --bitstream-padding          [AV1] enable bitstream padding.\n"));

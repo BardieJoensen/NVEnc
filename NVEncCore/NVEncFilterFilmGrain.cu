@@ -2339,6 +2339,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                     m_jointProbe->collect(joint_probe_view(source), joint_probe_view(output), stream,
                         diagnostics.sceneReset || explicitSceneCut, "source_fallback");
                 }
+                m_jointProbe->final_model(joint_probe_view(source), joint_probe_view(output), params, stream);
                 m_jointProbe->save(joint_probe_view(source), stream);
             } catch (const std::exception& error) {
                 AddMessage(RGY_LOG_ERROR, _T("FGS joint probe: %s\n"), char_to_tstring(error.what()).c_str());

@@ -1012,6 +1012,18 @@ parent. Existing directories are rejected. Example:
 }
 ```
 
+An optional `"template_seeds": [0, 1, 19437, 65535]` field additionally
+captures the final native base sent to NVENC, its actual final grain parameters,
+separate common-colour source cohorts and finite Y/Cb/Cr template moments.
+Declare 1–32 unique integer seeds in 0–65535. These are a diagnostic ensemble;
+NVENC assigns the bitstream's per-frame seed later. The moments precede strength
+scaling, output rounding, block overlap and picture clipping, and do not prove
+picture quality. The final base is captured after retention/recovery and before
+lossy compression; it can differ from the earlier denoised base. This mode needs
+extra CPU work, a fourth native frame and a second group buffer per requested ID
+within the same declared byte budget. Completion also requires every final model.
+Omit `template_seeds` to retain the original probe's work and output scope.
+
 Fractions describe independently measured rounded bases; they do not set
 encoder retention. Input IDs refer to frames reaching the film-grain filter.
 Missing history after startup/cuts rejects temporal training. A fallback frame
