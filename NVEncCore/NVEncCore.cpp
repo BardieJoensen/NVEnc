@@ -376,6 +376,7 @@ NVEncCore::NVEncCore() :
     m_stPicStruct(),
     m_stEncConfig(),
     m_filmGrainTable(),
+    m_filmGrainSeedGuard(),
     m_filmGrainOffParams(),
     m_keyOnChapter(false),
     m_keyFile(),
@@ -1347,6 +1348,22 @@ NVENCSTATUS NVEncCore::ProcessOutput(const EncodeBuffer *pEncodeBuffer) {
     NVENCSTATUS nvStatus = m_dev->encoder()->NvEncLockBitstream(&lockBitstreamData);
     if (nvStatus == NV_ENC_SUCCESS) {
         RGYBitstream bitstream = RGYBitstreamInit(lockBitstreamData);
+        if (m_filmGrainSeedGuard) {
+            // Take ownership before changing anything in the driver's locked buffer.
+            if (bitstream.copy(bitstream.data(), bitstream.size()) != RGY_ERR_NONE) {
+                bitstream.clear();
+                m_dev->encoder()->NvEncUnlockBitstream(pEncodeBuffer->stOutputBfr.hBitstreamBuffer);
+                return NV_ENC_ERR_OUT_OF_MEMORY;
+            }
+            const int result = m_filmGrainSeedGuard->process(bitstream.data(), bitstream.size());
+            if (result < 0) {
+                PrintMes(RGY_LOG_ERROR, _T("AV1 seed correction failed: %s.\n"), char_to_tstring(m_filmGrainSeedGuard->error()).c_str());
+                bitstream.clear();
+                m_dev->encoder()->NvEncUnlockBitstream(pEncodeBuffer->stOutputBfr.hBitstreamBuffer);
+                return NV_ENC_ERR_GENERIC;
+            }
+            if (result) PrintMes(RGY_LOG_INFO, _T("AV1 grain seed corrected at output frame %lld.\n"), (long long)bitstream.frameIdx());
+        }
         if (m_videoQualityMetric) {
             if (!m_videoQualityMetric->decodeStarted()) {
                 m_videoQualityMetric->initDecode(&bitstream);
@@ -1421,6 +1438,7 @@ RGY_ERR NVEncCore::Deinitialize() {
         m_dev->close_device();
     }
     m_filmGrainTable.reset();
+    m_filmGrainSeedGuard.reset();
 
     m_timecode.reset();
     m_keyFile.clear();
@@ -1863,6 +1881,21 @@ RGY_ERR NVEncCore::SetInputParam(InEncodeVideoParam *inputParam) {
         && (!inputParam->av1.filmGrainAuto || inputParam->av1.filmGrainDenoiser != FGS_DENOISE_BILATERAL)) {
         PrintMes(RGY_LOG_ERROR, _T("--film-grain-scene-cuts requires --av1-film-grain denoiser=bilateral.\n"));
         return RGY_ERR_INVALID_PARAM;
+    }
+    m_filmGrainSeedGuard.reset();
+    if (!inputParam->av1.filmGrainSeedGuard.empty()) {
+        if (inputParam->codec_rgy != RGY_CODEC_AV1 || inputParam->ctrl.parallelEnc.isEnabled()
+            || inputParam->av1.annexB.value_or(false) || inputParam->av1.disableSeqHdr.value_or(false)) {
+            PrintMes(RGY_LOG_ERROR, _T("--film-grain-seed-guard requires AV1 with sequence headers, low-overhead OBUs and no parallel encoding.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        auto guard = std::make_shared<NVEncFilmGrainSeedGuard>();
+        if (!guard->open(inputParam->av1.filmGrainSeedGuard)) {
+            PrintMes(RGY_LOG_ERROR, _T("Film grain seed guard: %s.\n"), char_to_tstring(guard->error()).c_str());
+            return RGY_ERR_INVALID_PARAM;
+        }
+        m_filmGrainSeedGuard = std::move(guard);
+        PrintMes(RGY_LOG_INFO, _T("Experimental AV1 film grain seed guard enabled.\n"));
     }
     if (!inputParam->av1.filmGrainJointProbe.empty()
         && (!inputParam->av1.filmGrainAuto || inputParam->av1.filmGrainDenoiser != FGS_DENOISE_BILATERAL)) {
@@ -6285,7 +6318,7 @@ RGY_ERR NVEncCore::initPipeline(const InEncodeVideoParam *prm) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskNVEncode>(m_dev.get(), m_encRunCtx.get(),
             codec_guid_enc_to_rgy(m_stCodecGUID), m_uEncWidth, m_uEncHeight, GetEncoderCSP(prm), GetEncoderBitDepth(prm), picstruct_enc_to_rgy(m_stPicStruct),
             m_stEncConfig, m_stCreateEncodeParams, m_timecode.get(), m_encTimestamp.get(), m_outputTimebase, m_hdr10plus.get(), m_dovirpu.get(),
-            m_filmGrainTable.get(), m_dynamicRC, m_keyFile, m_keyOnChapter, m_Chapters, 1, prm->ctrl.threadParams.get(RGYThreadType::ENC), m_pLog));
+            m_filmGrainTable.get(), m_filmGrainSeedGuard, m_dynamicRC, m_keyFile, m_keyOnChapter, m_Chapters, 1, prm->ctrl.threadParams.get(RGYThreadType::ENC), m_pLog));
         auto taskEnc = dynamic_cast<PipelineTaskNVEncode *>(m_pipelineTasks.back().get());
         if (taskLastCudaVpp) {
             taskLastCudaVpp->setEncodeTask(taskEnc);

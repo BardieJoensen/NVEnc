@@ -22,6 +22,7 @@ std::vector<fgsseed::Obu> obus;
 std::vector<Field> fields;
 size_t traced = 0;
 unsigned types = 0, seeds = 0, active = 0;
+uint64_t shownExisting = 0, hidden = 0, copiedModels = 0;
 bool expectedSeed = false;
 std::string error;
 
@@ -51,6 +52,12 @@ void log_callback(void *, int level, const char *format, va_list args) {
         if (bit != 1 || value != obu.type) error = "OBU type mismatch";
     } else if (!strcmp(name,"obu_size")) {
         if (value != obu.bytes-obu.headerBytes) error = "OBU size mismatch";
+    } else if (!strcmp(name,"show_existing_frame")) {
+        shownExisting += value == 1;
+    } else if (!strcmp(name,"show_frame")) {
+        hidden += value == 0;
+    } else if (!strcmp(name,"update_grain")) {
+        copiedModels += value == 0;
     } else if (!strcmp(name,"apply_grain")) {
         if (value > 1 || expectedSeed) error = "invalid/repeated grain flag";
         expectedSeed = value == 1;
@@ -148,8 +155,10 @@ int main(int argc,char **argv) {
         require(error.empty(),"parser reported an error");
         const int closeStatus=fclose(out); out=nullptr;
         require(closeStatus==0,"output close failed");
-        printf("{\"complete\":true,\"packets\":%llu,\"grain_seeds\":%llu,\"patched\":%llu,\"avcodec_version\":%u}\n",
-            (unsigned long long)packets,(unsigned long long)totalSeeds,(unsigned long long)patched,avcodec_version());
+        printf("{\"complete\":true,\"packets\":%llu,\"grain_seeds\":%llu,\"patched\":%llu,"
+            "\"show_existing_headers\":%llu,\"hidden_headers\":%llu,\"copy_model_headers\":%llu,\"avcodec_version\":%u}\n",
+            (unsigned long long)packets,(unsigned long long)totalSeeds,(unsigned long long)patched,
+            (unsigned long long)shownExisting,(unsigned long long)hidden,(unsigned long long)copiedModels,avcodec_version());
         result=0;
     } catch (const std::exception& e) {
         fprintf(stderr,"seed experiment failed at packet %llu: %s; %s\n",

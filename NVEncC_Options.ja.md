@@ -110,6 +110,7 @@
   - [--av1-film-grain [\<params\>] \[AV1\]](#--av1-film-grain-params-av1)
   - [--film-grain-table \<path\> \[AV1\]](#--film-grain-table-path-av1)
   - [--film-grain-table-out \<path\>](#--film-grain-table-out-path)
+  - [--film-grain-seed-guard \<library\>](#--film-grain-seed-guard-library)
   - [--film-grain-joint-probe \<manifest\>](#--film-grain-joint-probe-manifest)
   - [--bitstream-padding \[AV1\]](#--bitstream-padding-av1)
   - [--level \<string\>](#--level-string)
@@ -981,6 +982,19 @@ editing the source. Without this option, scene detection is unchanged.
 `--av1-film-grain`で測定したフィルムグレインを標準AOM `filmgrn1` テーブルとして書き出す。同じモデルを保持する連続フレームは、10 MHzタイムベースの1つの`[start,end)`区間にまとめられ、グレインが検出されない期間はギャップとして表現される。
 
 `--codec raw`と組み合わせると、同じ実行でノイズ除去済みのベース映像を出力しながらテーブルを書き出せるため、外部のAV1エンコーダで両方を利用できる。
+
+### --film-grain-seed-guard &lt;library&gt;
+AV1パケットのフィルムグレインseedを補正する実験用オプションです。既定では無効です。
+[`tests/fgs/seed_filter`](tests/fgs/seed_filter/README.md)でビルドしたABI 1対応
+パーサーライブラリのパスを明示的に指定します。
+
+特殊なseed値0、46372、18904のみを次の値へ変更します。符号化された映像、
+モデルパラメータ、パケット長およびタイムスタンプは保持されます。自動ディテール
+保持は有効化しません。シーケンスヘッダー付きのAV1 low-overhead OBUが必要で、
+並列エンコードは使用できません。ライブラリの欠落・ABI不一致、不正なパケット、
+32 MiBを超えるパケットはエンコードエラーになります。Linuxライブラリの分離と
+独立したパケット・デコーダーテストは検証済みですが、エンコーダー全体と
+コンテナーへの導入は実験段階です。未指定時は追加ライブラリを読み込みません。
 
 ### --film-grain-joint-probe &lt;manifest&gt;
 Development diagnostic for `--av1-film-grain denoiser=bilateral`; disabled by default.

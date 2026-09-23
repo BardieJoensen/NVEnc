@@ -63,6 +63,7 @@
 #include "NVEncFilter.h"
 #include "NVEncFilterSsim.h"
 #include "NVEncFilmGrain.h"
+#include "NVEncFilmGrainSeedGuard.h"
 #include "NVEncFilterFilmGrain.h"
 #include "NvHWEncoder.h"
 #include "dynlink_nvcuvid.h"
@@ -2957,6 +2958,7 @@ protected:
     const RGYHDR10Plus *m_hdr10plus;
     const DOVIRpu *m_doviRpu;
     const NVEncFilmGrainTable *m_filmGrainTable;
+    std::shared_ptr<NVEncFilmGrainSeedGuard> m_filmGrainSeedGuard;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 m_filmGrainParamsCache;
     bool m_filmGrainParamsCacheValid;
     bool m_forceFilmGrainParamsUpdate;
@@ -2980,13 +2982,13 @@ public:
         NVGPUInfo *dev, NVEncRunCtx *runCtx, RGY_CODEC encCodec, int encWidth, int encHeight, RGY_CSP encCsp, int encBitdepth, RGY_PICSTRUCT encPicStruct,
         const NV_ENC_CONFIG& stEncConfig, const NV_ENC_INITIALIZE_PARAMS& stCreateEncodeParams,
         RGYTimecode *timecode, RGYTimestamp *encTimestamp, rgy_rational<int> outputTimebase, const RGYHDR10Plus *hdr10plus, const DOVIRpu *doviRpu,
-        const NVEncFilmGrainTable *filmGrainTable, std::vector<NVEncRCParam>& dynamicRC, std::vector<int>& keyFile, bool keyOnChapter, std::vector<std::unique_ptr<AVChapter>>& chapters,
+        const NVEncFilmGrainTable *filmGrainTable, std::shared_ptr<NVEncFilmGrainSeedGuard> filmGrainSeedGuard, std::vector<NVEncRCParam>& dynamicRC, std::vector<int>& keyFile, bool keyOnChapter, std::vector<std::unique_ptr<AVChapter>>& chapters,
          int outMaxQueueSize, RGYParamThread threadParam, std::shared_ptr<RGYLog> log)
         : PipelineTask(PipelineTaskType::NVENC, dev, outMaxQueueSize, m_bEnableOutputThread, threadParam, log),
         m_runCtx(runCtx), m_encCodec(encCodec), m_encWidth(encWidth), m_encHeight(encHeight), m_encCsp(encCsp), m_encBitdepth(encBitdepth), m_encPicStruct(encPicStruct),
         m_stEncConfig(stEncConfig), m_stCreateEncodeParams(stCreateEncodeParams),
         m_timecode(timecode), m_encTimestamp(encTimestamp), m_outputTimebase(outputTimebase),
-        m_bitStreamOut(), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu), m_filmGrainTable(filmGrainTable), m_filmGrainParamsCache(), m_filmGrainParamsCacheValid(false), m_forceFilmGrainParamsUpdate(false),
+        m_bitStreamOut(), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu), m_filmGrainTable(filmGrainTable), m_filmGrainSeedGuard(std::move(filmGrainSeedGuard)), m_filmGrainParamsCache(), m_filmGrainParamsCacheValid(false), m_forceFilmGrainParamsUpdate(false),
         m_dynamicRC(dynamicRC), m_appliedDynamicRC(-1), m_keyFile(keyFile), m_keyOnChapter(keyOnChapter), m_Chapters(chapters),
         m_threadOutput(), m_threadOutputPromise(), m_threadOutputFuture(), m_threadOutputResult(), m_threadOutputAbort(false) {
         if (m_encCodec == RGY_CODEC_AV1
@@ -3076,13 +3078,23 @@ protected:
         if (nvStatus != NV_ENC_SUCCESS) {
             return { err_to_rgy(nvStatus), nullptr };
         }
-        output->copy((uint8_t *)lockBitstreamData.bitstreamBufferPtr, lockBitstreamData.bitstreamSizeInBytes, (int64_t)0, (int64_t)lockBitstreamData.outputTimeStamp);
+        const auto copyStatus = output->copy((uint8_t *)lockBitstreamData.bitstreamBufferPtr, lockBitstreamData.bitstreamSizeInBytes, (int64_t)0, (int64_t)lockBitstreamData.outputTimeStamp);
         output->setAvgQP(lockBitstreamData.frameAvgQP);
         output->setFrametype(frametype_enc_to_rgy(lockBitstreamData.pictureType));
         output->setPicstruct(picstruct_enc_to_rgy(lockBitstreamData.pictureStruct));
         output->setFrameIdx(lockBitstreamData.frameIdx);
         output->setDuration(lockBitstreamData.outputDuration);
         nvStatus = m_dev->encoder()->NvEncUnlockBitstream(pEncodeBuffer->stOutputBfr.hBitstreamBuffer);
+        if (copyStatus != RGY_ERR_NONE) return { copyStatus, nullptr };
+        if (nvStatus != NV_ENC_SUCCESS) return { err_to_rgy(nvStatus), nullptr };
+        if (m_filmGrainSeedGuard) {
+            const int result = m_filmGrainSeedGuard->process(output->data(), output->size());
+            if (result < 0) {
+                PrintMes(RGY_LOG_ERROR, _T("AV1 seed correction failed: %s.\n"), char_to_tstring(m_filmGrainSeedGuard->error()).c_str());
+                return { RGY_ERR_INVALID_DATA_TYPE, nullptr };
+            }
+            if (result) PrintMes(RGY_LOG_INFO, _T("AV1 grain seed corrected at output frame %lld.\n"), (long long)output->frameIdx());
+        }
         return { RGY_ERR_NONE, output };
     }
 public:

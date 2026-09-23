@@ -114,6 +114,7 @@
   - [--av1-film-grain [\<params\>] \[AV1\]](#--av1-film-grain-params-av1)
   - [--film-grain-table \<path\> \[AV1\]](#--film-grain-table-path-av1)
   - [--film-grain-table-out \<path\>](#--film-grain-table-out-path)
+  - [--film-grain-seed-guard \<library\>](#--film-grain-seed-guard-library)
   - [--film-grain-joint-probe \<manifest\>](#--film-grain-joint-probe-manifest)
   - [--bitstream-padding \[AV1\]](#--bitstream-padding-av1)
   - [--level \<string\>](#--level-string)
@@ -989,6 +990,19 @@ Combined with `--codec raw`, the same run outputs the denoised base video while 
 NVEncC --codec raw --output-depth 10 --av1-film-grain denoiser=motion --film-grain-table-out grain.tbl -i input.mkv -o /dev/null
 NVEncC --codec raw --output-depth 10 --av1-film-grain denoiser=motion -i input.mkv -o - | SvtAv1EncApp -i - --fgs-table grain.tbl -b output.ivf ...
 ```
+
+### --film-grain-seed-guard &lt;library&gt;
+Experimental AV1 packet seed correction; disabled by default. Pass the explicit
+path to a compatible ABI-1 parser library built with
+[`tests/fgs/seed_filter`](tests/fgs/seed_filter/README.md).
+
+Changes only exceptional film-grain seeds 0, 46372 and 18904 to the next value.
+Coded pictures, all other grain parameters, packet lengths and timestamps are preserved.
+It does not enable automatic detail retention. Requires AV1 low-overhead OBUs
+with sequence headers and no parallel encoding. Missing/incompatible libraries,
+parser errors or packets larger than 32 MiB fail the encode. Linux library
+isolation and independent packet/decoder tests are qualified; full encoder and
+container rollout remain experimental. The ordinary path loads no extra library.
 
 ### --film-grain-joint-probe &lt;manifest&gt;
 Development diagnostic for `--av1-film-grain denoiser=bilateral`; disabled by default.

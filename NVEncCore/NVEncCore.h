@@ -202,6 +202,7 @@ protected:
     NV_ENC_PIC_STRUCT             m_stPicStruct;           //エンコードフレーム情報(プログレッシブ/インタレ)
     NV_ENC_CONFIG                 m_stEncConfig;           //エンコード設定
     std::unique_ptr<const NVEncFilmGrainTable> m_filmGrainTable;
+    std::shared_ptr<NVEncFilmGrainSeedGuard> m_filmGrainSeedGuard;
     NV_ENC_FILM_GRAIN_PARAMS_AV1  m_filmGrainOffParams;
     bool                          m_keyOnChapter;        //チャプター上にキーフレームを配置する
     std::vector<int>                   m_keyFile;             //キーフレームの指定

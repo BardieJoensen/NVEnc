@@ -1,0 +1,9 @@
+FGS_SEED_1 {
+ global:
+  fgs_av1_seed_abi_version;
+  fgs_av1_seed_open;
+  fgs_av1_seed_process;
+  fgs_av1_seed_error;
+  fgs_av1_seed_close;
+ local: *;
+};
