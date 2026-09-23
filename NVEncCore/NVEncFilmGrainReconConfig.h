@@ -8,6 +8,7 @@
 #include <set>
 #include <stdexcept>
 #include "../json/json.hpp"
+#include "NVEncFilmGrainPreEncodeRetention.h"
 
 struct NVEncFilmGrainReconConfig {
     std::set<uint32_t> frames;
@@ -16,8 +17,8 @@ struct NVEncFilmGrainReconConfig {
     uint64_t maxDeviceBytes = 512ULL*1024*1024;
     bool captureSource = false;
     uint64_t maxSourceBytes = 512ULL*1024*1024;
-    bool preEncodeRetention = false;
-    std::array<float,3> retention{{0,0,0}};
+    fgsdiagnostic::PreEncodeRetentionPlan retention;
+    bool preEncodeRetention() const {return retention.enabled();}
 
     static NVEncFilmGrainReconConfig parse(const nlohmann::json& j) {
         NVEncFilmGrainReconConfig c;
@@ -52,28 +53,20 @@ struct NVEncFilmGrainReconConfig {
         }
         if(!c.maxSourceBytes || c.maxSourceBytes>512ULL*1024*1024)
             throw std::runtime_error("source byte budget must be 1..512 MiB");
-        if(j.contains("pre_encode_retention")) {
-            const auto& fractions=j.at("pre_encode_retention");
-            if(!c.captureSource || !fractions.is_array() || fractions.size()!=3
+        c.retention=fgsdiagnostic::PreEncodeRetentionPlan::parse(j,c.frames.size());
+        if(c.preEncodeRetention()) {
+            if(!c.captureSource
                 || *c.frames.begin()!=0 || *c.frames.rbegin()+1!=c.frames.size())
                 throw std::runtime_error("pre-encode retention requires three fractions and consecutive source captures from zero");
             // Ordinary/precomputed models cannot describe an independently
             // changed base. Native fitting must consume the matching original.
             if(j.contains("model_output"))
                 throw std::runtime_error("pre-encode candidate cannot be combined with precomputed model output");
-            for(unsigned p=0;p<3;++p) {
-                if(!fractions[p].is_number())throw std::runtime_error("retention fractions must be numeric");
-                const double f=fractions[p].get<double>();
-                if(!std::isfinite(f)||f<0||f>1)throw std::runtime_error("retention fractions must be finite and in [0,1]");
-                c.retention[p]=float(f);
-            }
             if(j.contains("native_model_output")) {
                 if(j.at("native_model_output").at("engine").at("source_mode")!="memory")
                     throw std::runtime_error("pre-encode model fitting requires original memory sources");
-                for(float f:c.retention)if(f>=1)
-                    throw std::runtime_error("pre-encode model fitting requires all-partial fractions");
+                c.retention.requireAllPartial();
             }
-            c.preEncodeRetention=true;
         }
         c.directory = std::filesystem::u8path(j.at("output_directory").get<std::string>());
         if (!c.directory.is_absolute()) throw std::runtime_error("reconstruction directory must be absolute");

@@ -90,7 +90,7 @@ public:
         jsonFile(m_config.directory/"manifest.json",j); status();
         if(modelConfig)m_modelOutput=std::make_unique<NVEncFilmGrainModelProbe<std::shared_ptr<RGYBitstream>>>(std::move(*modelConfig),m_config.directory/"model-output.json");
         if(nativeConfig)m_nativeOutput=std::make_unique<NVEncFilmGrainNativeProbe<std::shared_ptr<RGYBitstream>>>(std::move(*nativeConfig),m_config.directory/"native-model-output.json",width,height,depth,
-            m_config.preEncodeRetention?std::make_optional(m_config.retention):std::nullopt);
+            m_config.retention);
     }
     ~NVEncFilmGrainReconProbe() {
         NVEncCtxAutoLock(context(m_dev->vidCtxLock()));
@@ -114,8 +114,8 @@ public:
         if(m_config.captureSource && m_config.frames.count(p.frameIdx)) {
             if(!source)throw std::runtime_error("requested original source is missing");
             source->requireIdentity(p.frameIdx,sourceId,s.pts,tbNum,tbDen,m_width,m_height,m_depth);
-            if(bool(source->retention)!=m_config.preEncodeRetention
-                || (source->retention && source->retention->requested!=m_config.retention))
+            if(bool(source->retention)!=m_config.preEncodeRetention()
+                || (source->retention && source->retention->requested!=m_config.retention.at(p.frameIdx)))
                 throw std::runtime_error("pre-encode retention decision differs between filter and reconstruction");
             m_peakSourceBytes=std::max(m_peakSourceBytes,source->peakBytes());
             if(m_peakSourceBytes>m_config.maxSourceBytes)throw std::runtime_error("source budget differs between filter and reconstruction");
