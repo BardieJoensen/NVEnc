@@ -1,5 +1,7 @@
 # FGS encoder and library repair: current work and handoff
 
+**Active continuous roadmap work:** the [native persistent-detail check](FINDINGS-2026-09-23-PERSISTENT-DETAIL.md) now has complete CPU evidence and a candidate-bound selector veto. GPU and actual encoder-history qualification are in progress. A finite owned pause is draining the current Tdarr film before the manual comparison; the controller restores the prior pause state and preserves current worker limits. R3–R8 remain open. Production stays ordinary `cb903a17`, retention/FEL off; the reserved corpus remains unopened. Continue through the remaining roadmap rather than stopping at this checkpoint.
+
 **September 23 current:** the [full-episode seed-guard comparison](FINDINGS-2026-09-23-SEED-INTEGRATION.md#complete-episode-encoder-cost)
 is complete: four SDR encodes, identical packet payloads/clocks and size,
 34,626 independent decoded observations. Mean time changes by +0.25%, within
