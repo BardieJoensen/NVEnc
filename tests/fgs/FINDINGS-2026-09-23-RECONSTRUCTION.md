@@ -106,7 +106,10 @@ Current Tdarr already specifies `--output-depth 10` for SDR as well as HDR.
 D39 therefore compares promoted 8-bit originals, promoted 8-bit rounded retention,
 and retention rounded directly at native 10-bit precision. It uses declared
 constructive controls and actual NVENC reconstruction before any new fitting.
-Continue that active work and the roadmap; keep the original failed models.
+All three now have passing constructive proposals and exact actual-output
+serialization. The [subsequent metric calibration](FINDINGS-2026-09-23-GRAIN-METRICS.md)
+separates per-picture variation from pooled shape checks and retains every
+original failure. Continue D42 and the roadmap.
 
 Read `roadmap-r3-template-correction-20260923/report.json`,
 `roadmap-r3-model-output-20260923/report.json` and `hardening-v2/report.json`,

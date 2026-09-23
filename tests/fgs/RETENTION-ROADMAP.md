@@ -136,6 +136,16 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [10-bit and metric calibration follow-up](FINDINGS-2026-09-23-GRAIN-METRICS.md)
+completes D39–D41. Three constructive proposals now pass the original checks and
+serialize exactly. Independent same-model grain draws also expose a limitation
+of the per-picture colour score: all 128 fail the combined exploratory bounds,
+while pooled comparisons pass. Isolated dropout/excess negatives show why a
+pooled-only guard is unsafe. D42 tests frozen-shape continuous output with bounded
+seed choices and separate individual-picture protections. This is an explicit
+measurement-policy investigation, not a silent relaxation of R1, approval of
+unsupported populations, or completion of automatic integration.
+
 The [compressed-base and reconstruction follow-up](FINDINGS-2026-09-23-RECONSTRUCTION.md) qualifies direct NVENC reconstructed-frame capture on `d0ad6818`: 75,970,560 exact native samples, 1,600 independent decoded observations and six failure controls. D32 refits against the actual compressed base; D34 calibrates total variance per seed. Neither complete colour policy passes both spatial halves on any tested seed. Spatial colour shape/cross-component correlation remain unresolved. Continue bounded finite-template correction and actual selection; this prerequisite does not complete R3. Production retention/FEL remain off and the reserved corpus stays unopened.
 
 The [source-luma policy and actual output trials](FINDINGS-2026-09-23-SOURCE-LUMA.md) now exercise complete colour-only decisions, copied-component range proofs and actual NVENC table output. Two constructive controls pass pre-compression checks; five negative controls preserve the source. Fourteen encodes pass 896 independent decoded observations, but compression removes retained grain that the pre-encode model expected to survive. The later D32/D34 work below measures that missing-energy error using the actual decoded base. Automatic call sites and compressed-output quality remain open. Full CPU: 214 Python tests in 30 suites and 35 C++ programs. Continue the roadmap without treating this checkpoint as completion.
