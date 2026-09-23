@@ -18,6 +18,7 @@ extern "C" {
 #define class av_class
 #include "libavcodec/cbs_av1.h"
 #undef class
+#include "libavutil/sha.h"
 }
 using Json=nlohmann::json;
 namespace {
@@ -90,6 +91,17 @@ uint32_t le32(const uint8_t* p){return le16(p)|uint32_t(le16(p+2))<<16;}
 uint64_t le64(const uint8_t* p){return le32(p)|uint64_t(le32(p+4))<<32;}
 void put32(uint8_t* p,uint32_t n){for(unsigned i=0;i<4;++i)p[i]=uint8_t(n>>(8*i));}
 void write(FILE* f,const void* data,size_t bytes){require(fwrite(data,1,bytes,f)==bytes,"output write failed");}
+std::string sourceHash(FILE* file) {
+    AVSHA* context=av_sha_alloc();require(context,"hash allocation failed");
+    const int initialized=av_sha_init(context,256);
+    if(initialized<0){av_free(context);throw std::runtime_error("hash initialization failed");}
+    std::array<uint8_t,65536> data{};size_t bytes;
+    while((bytes=fread(data.data(),1,data.size(),file))!=0)av_sha_update(context,data.data(),bytes);
+    std::array<uint8_t,32> digest{};av_sha_final(context,digest.data());av_free(context);
+    require(!ferror(file) && fseek(file,0,SEEK_SET)==0,"source hash read/rewind failed");
+    constexpr char hex[]="0123456789abcdef";std::string result;
+    for(const auto v:digest){result+=hex[v>>4];result+=hex[v&15];}return result;
+}
 struct Override { unsigned beforeSeed,orderHint; bool beforeApply; AV1RawFilmGrainParams grain; };
 }
 int main(int argc,char** argv) {
@@ -114,6 +126,10 @@ int main(int argc,char** argv) {
         }
         std::array<AV1RawFilmGrainParams,8> original{},changed{};std::array<bool,8> valid{};
         in=fopen(argv[1],"rb");require(in,"input open failed");uint8_t header[32];
+        if(!overrides.empty() || manifest.contains("source_sha256")) {
+            const auto& expected=manifest.at("source_sha256");require(expected.is_string(),"source hash required for model overrides");
+            const auto hash=expected.get<std::string>();require(hash.size()==64 && hash==sourceHash(in),"source hash mismatch");
+        }
         require(fread(header,1,32,in)==32 && !memcmp(header,"DKIF",4) && le16(header+4)==0 && le16(header+6)==32 && !memcmp(header+8,"AV01",4) && le16(header+12) && le16(header+14) && le32(header+16) && le32(header+20),"invalid AV1 IVF header");
         require(ff_cbs_init(&reader,AV_CODEC_ID_AV1,nullptr)>=0 && ff_cbs_init(&writer,AV_CODEC_ID_AV1,nullptr)>=0,"CBS initialization failed");
         out=fopen(argv[2],"wbx");require(out,"output already exists or open failed");created=true;write(out,header,32);
@@ -142,7 +158,7 @@ int main(int argc,char** argv) {
                         input=original[ref];input.apply_grain=1;input.grain_seed=seed;input.update_grain=1;input.film_grain_params_ref_idx=0;
                         // A changed reference must never silently replace the
                         // original model of a later, unselected coded picture.
-                        if(semantic(input)!=semantic(changed[ref])) {h->film_grain=input;packetChanged=true;++materialized;}
+                        if(semantic(original[ref])!=semantic(changed[ref])) {h->film_grain=input;packetChanged=true;++materialized;}
                     }
                     output=input;const auto found=overrides.find(coded);
                     if(found!=overrides.end()) {
