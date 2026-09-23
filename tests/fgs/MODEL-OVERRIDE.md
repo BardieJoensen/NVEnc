@@ -19,6 +19,7 @@ Run `model-override-ivf INPUT.ivf NEW_OUTPUT.ivf MANIFEST.json`. The schema-one
 manifest sets `max_packets` (1..1,000,000) and an array `models` (at most 16).
 A nonempty model list also requires `source_sha256`, binding the proposals to
 the exact input IVF bytes. A hash mismatch fails before output creation.
+Streams containing no coded picture also fail completion.
 Each model request binds `coded_index`, `expected_apply`, `expected_seed` and
 `expected_order_hint`. Coded order differs from displayed order when AV1 hides
 and later shows a reference picture. An empty model list supplies a no-op control
@@ -31,6 +32,9 @@ signed `coefficients` arrays (24 Y, 25 Cb, 25 Cr). It currently supports lag thr
 and the existing luma-indexed chroma lookup (128/192/256), progressive 4:2:0
 8/10-bit streams with a grain-capable sequence header. A legal serialized model
 is not proof of picture quality or source-population eligibility.
+
+The experimental [streaming C ABI](model_filter/README.md) shares this model
+syntax and preserves the qualified outputs. Encoder integration remains separate.
 
 A grain-free reference with a fresh active seed still preserves byte-identical
 no-op output. The tool compares original versus modified reference state, rather

@@ -1,0 +1,4 @@
+{
+    global: fgs_av1_model_*;
+    local: *;
+};
