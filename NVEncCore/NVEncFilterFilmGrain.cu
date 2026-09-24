@@ -49,6 +49,9 @@
 #include "NVEncFilmGrainTraining.h"
 #include "NVEncFilmGrainJointProbe.cuh"
 #include "NVEncFilmGrainSourceFrame.cuh"
+#if ENABLE_AVSW_READER
+#include "NVEncFilmGrainSourceDigest.h"
+#endif
 #include "NVEncFilmGrainRetentionBlend.cuh"
 #include "NVEncFilmGrainReconConfig.h"
 #include "NVEncFilmGrainModel.h"
@@ -2176,7 +2179,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         m_motionDegrainParam.reset();
     }
     m_sourceMemory.reset(); m_sourceFrames.clear(); m_sourceOrdinal = 0;
-    m_preEncodeRetention = false; m_preEncodeFractions = {}; m_preEncodeBase.reset(); m_preEncodeInvalid.reset();
+    m_preEncodeRetention = false; m_preEncodeFractions = {}; m_preEncodeSourceBinding = {}; m_preEncodeBase.reset(); m_preEncodeInvalid.reset();
     if (!prm->sourceProbePath.empty()) {
         try {
             const auto path = std::filesystem::path(prm->sourceProbePath);
@@ -2192,6 +2195,10 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
                     if (prm->filmGrain.denoiser != FGS_DENOISE_BILATERAL) throw std::runtime_error("pre-encode candidate requires denoiser=bilateral");
                     if (!prm->tableOutPath.empty()) throw std::runtime_error("pre-encode candidate cannot publish an ordinary grain table");
                     m_preEncodeRetention = true; m_preEncodeFractions = config.retention;
+                    m_preEncodeSourceBinding = config.sourceBinding;
+#if !ENABLE_AVSW_READER
+                    if (m_preEncodeSourceBinding.enabled()) throw std::runtime_error("source binding requires FFmpeg support");
+#endif
                     m_preEncodeBase = std::make_unique<CUFrameBuf>(prm->frameOut);
                     m_preEncodeBase->releasePtr();
                     if ((sts = m_preEncodeBase->alloc()) != RGY_ERR_NONE) return sts;
@@ -2471,6 +2478,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 if (std::binary_search(m_sourceFrames.begin(), m_sourceFrames.end(), m_sourceOrdinal)) {
                     result->originalSource = fgsdiagnostic::captureNativeSource(joint_probe_view(source), m_sourceMemory,
                         m_sourceOrdinal, m_tableTimebase.n(), m_tableTimebase.d(), stream, retentionDecision);
+#if ENABLE_AVSW_READER
+                    // Check the captured original before this frame can leave
+                    // the filter and reach NVENC. No additional GPU transfer.
+                    m_preEncodeSourceBinding.require(*result->originalSource, fgsdiagnostic::nativeSourceDigest);
+#endif
                 }
                 ++m_sourceOrdinal;
             } catch (const std::exception& error) {
@@ -3684,7 +3696,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
 }
 
 void NVEncFilterFilmGrain::close() {
-    m_preEncodeBase.reset(); m_preEncodeInvalid.reset(); m_preEncodeRetention = false; m_preEncodeFractions = {};
+    m_preEncodeBase.reset(); m_preEncodeInvalid.reset(); m_preEncodeRetention = false; m_preEncodeFractions = {}; m_preEncodeSourceBinding = {};
     m_sourceMemory.reset(); m_sourceFrames.clear(); m_sourceOrdinal = 0;
     m_jointProbe.reset();
     m_tableWriter.reset();

@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include "../json/json.hpp"
 #include "NVEncFilmGrainPreEncodeRetention.h"
+#include "NVEncFilmGrainSourceBinding.h"
 
 struct NVEncFilmGrainReconConfig {
     std::set<uint32_t> frames;
@@ -18,6 +19,7 @@ struct NVEncFilmGrainReconConfig {
     bool captureSource = false;
     uint64_t maxSourceBytes = 512ULL*1024*1024;
     fgsdiagnostic::PreEncodeRetentionPlan retention;
+    fgsdiagnostic::PreEncodeSourceBinding sourceBinding;
     bool preEncodeRetention() const {return retention.enabled();}
 
     static NVEncFilmGrainReconConfig parse(const nlohmann::json& j) {
@@ -57,6 +59,9 @@ struct NVEncFilmGrainReconConfig {
         if(!c.maxSourceBytes || c.maxSourceBytes>512ULL*1024*1024)
             throw std::runtime_error("source byte budget must be 1..512 MiB");
         c.retention=fgsdiagnostic::PreEncodeRetentionPlan::parse(j,c.frames.size());
+        c.sourceBinding=fgsdiagnostic::PreEncodeSourceBinding::parse(j,c.frames.size());
+        if(c.sourceBinding.enabled() && !c.preEncodeRetention())
+            throw std::runtime_error("source binding requires an explicit pre-encode retention plan");
         if(c.retention.sourceSegments() && !j.contains("native_model_output"))
             throw std::runtime_error("source segments require explicit native model output");
         if(c.preEncodeRetention()) {
