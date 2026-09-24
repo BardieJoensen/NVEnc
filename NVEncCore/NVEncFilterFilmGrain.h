@@ -41,6 +41,7 @@
 #include "NVEncFilmGrainModel.h"
 #include "NVEncFilmGrainScene.h"
 #include "NVEncFilmGrainPreEncodeRetention.h"
+#include "NVEncFilmGrainSourceBinding.h"
 #include "nvEncodeAPI.h"
 
 enum FGSDenoiseEngine : int {
@@ -171,6 +172,7 @@ private:
     uint64_t m_sourceOrdinal = 0;
     bool m_preEncodeRetention = false;
     fgsdiagnostic::PreEncodeRetentionPlan m_preEncodeFractions;
+    fgsdiagnostic::PreEncodeSourceBinding m_preEncodeSourceBinding;
     std::unique_ptr<CUFrameBuf> m_preEncodeBase;
     std::unique_ptr<CUMemBufPair> m_preEncodeInvalid;
     // Two future pictures let startup training be corroborated before NVENC
