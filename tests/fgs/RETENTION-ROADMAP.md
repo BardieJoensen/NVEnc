@@ -136,6 +136,14 @@ and the optional-off control preserves ordinary behaviour.
 
 ### R3 — Automatic selection and complete model integration
 
+The [source-bound selector plan](FINDINGS-2026-09-24-SELECTOR-PLAN.md) completes
+D63. The bounded R1 selector now drives a finite pre-encode schedule with exact
+original-source hashes and explicit mixture/epoch/short-interval preservation.
+Actual SDR/HDR missing-evidence fallbacks and independent output comparisons
+pass. Accepted mechanism fixtures do not establish measured real-source
+eligibility. Next derive and bind source/base/model candidate proofs, then
+complete R4–R8. Production is unchanged and reserved footage remains unopened.
+
 The [explicit source/model intervals](FINDINGS-2026-09-23-SOURCE-SEGMENTS.md)
 complete D62. Both transition directions and all-source outputs pass on native
 8/10-bit controls, with separate fitters, explicit grain-off models and strict

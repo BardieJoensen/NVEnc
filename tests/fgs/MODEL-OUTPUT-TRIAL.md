@@ -211,3 +211,34 @@ make a fresh source-preserving encode or keep the original after such a failure.
 The segmented report identifies preserved rows, modeled intervals, local/global
 ordinals, model readiness and per-interval engine reports. Existing manifests
 retain their prior report and output behaviour.
+# Source-bound selector plans
+
+The finite `retention_schedule_reference.cpp` adapter invokes the bounded R1
+selector and produces `pre_encode_retention_frames`,
+`pre_encode_source_segments: true` and `pre_encode_source_binding`. It keeps
+original proposals and reasons, preserves unsupported component mixtures and
+epoch boundaries, and turns modeled intervals shorter than eight pictures into
+source intervals before encoding. It needs 8..16 complete source inputs.
+Missing candidate or joint evidence never becomes a pass.
+
+The optional source binding has `schema: 1`, integer `width`, `height`, `depth`,
+`timebase: [numerator, denominator]` and exactly one `frames` row per input.
+Each row has consecutive `ordinal`, consecutive `source_id`, increasing signed
+integer `pts`, and three lowercase `plane_sha256` strings. Hash each complete
+native plane as canonical uint16 little-endian samples, including 8-bit input.
+The encoder checks original pixels and identity before submitting that frame.
+This explicit diagnostic requires FFmpeg support. It adds no ordinary-mode work.
+
+The adapter labels mechanism fixtures separately from measured development
+evidence. A hash establishes identity, not grain, detail or model eligibility.
+Earlier explicit manifests may remain unbound; adapter-generated plans require
+the binding. Final native/ordinary preservation vetoes still apply. Source
+preservation describes input to lossy NVENC, not lossless decoded pixels.
+
+For live model packet references, pin packets at the model hook before muxer
+metadata insertion. A muxed HDR reference can contain additional static HDR,
+HDR10+ and DV OBUs and have a different complete-packet hash. Keep both boundary
+references explicit and verify final output metadata independently; do not skip
+the runtime hash guard or strip metadata from the actual output.
+
+See [D63 findings](FINDINGS-2026-09-24-SELECTOR-PLAN.md) for scope and qualification.
