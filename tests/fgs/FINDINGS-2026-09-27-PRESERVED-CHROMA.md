@@ -1,7 +1,6 @@
 # Preserving textured colour while modelling luma grain
 
-September 27, 2026 — D71 reference mechanism passes. Actual NVENC candidate
-captures and independent carrier checks are in progress. This is not real
+September 27, 2026 — D71 reference and actual NVENC candidate/carrier checks pass. This is not real
 source admission, R3 completion or a production change.
 
 The finite reference now accepts explicit `preserved_chroma_mask` (2, 4 or 6)
@@ -15,9 +14,9 @@ bounds. Compression changes are not relabelled as lossless source preservation.
 The earlier `copied_chroma_mask` constant-colour mode remains separate and
 unchanged. The modes cannot be combined. Nonconstant colour with singular
 within-tile moments still rejects; a zero variance does not invent evidence.
-The reference-only option is rejected by live configuration, source-segment
-and native library entry points until actual pre-encode proof and library
-acknowledgement are integrated.
+At the D71 checkpoint, live entry points reject this reference-only option.
+[D72](FINDINGS-2026-09-27-PRESERVED-TRANSPORT.md) subsequently integrates and
+qualifies actual pre-encode proof and explicit library acknowledgement.
 
 CPU evidence:
 
@@ -47,7 +46,12 @@ This correction did not change any encoder/model rule or qualify real footage.
 The constructed sources isolate this mechanism; their known luma grain and
 artificial colour do not establish natural-image eligibility. Actual NVENC
 capture comparisons use the already-qualified `c7a4b827` encoder and no new
-live model option. Their results must be recorded before closing D71.
+live model option. Eight fresh captures yield four accepted reference carriers, one retained
+correlation rejection and three 10-bit whole-source overrides (ordinary fallback
+and limited support). The latter do not qualify as modeled outputs. All 768
+AOM/dav1d observations agree. Native source, candidate and reconstruction each
+match 100,663,296 samples; 25,165,824 copied candidate samples are exact.
+Independent synthesis verifies 50,331,648 samples and 36 windows.
 
 Local evidence: `roadmap-r3-preserved-chroma-20260927/` under the root linked
 by [the project handoff](WORK-TO-PRODUCTION.md). Read `plan.json`,
