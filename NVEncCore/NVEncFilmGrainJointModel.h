@@ -36,7 +36,7 @@ namespace joint_model_detail {
 // source/base component. Reject inconsistent moments; do not silently ridge
 // away a negative eigenvalue in the missing-noise covariance.
 template<size_t N> inline bool semidefinite(const std::array<double, N*N>& input) {
-    std::array<double,N*N> lower{};
+    std::array<double,N*N> residual{};
     double scale = 0.0;
     for (size_t i=0;i<N;++i) {
         if (!std::isfinite(input[i*N+i]) || input[i*N+i]<0.0) return false;
@@ -44,16 +44,40 @@ template<size_t N> inline bool semidefinite(const std::array<double, N*N>& input
     }
     const double tolerance=std::max(1e-12,scale*1e-9);
     for (size_t i=0;i<N;++i) for (size_t j=0;j<=i;++j) {
-        double value=input[i*N+j];
+        const double value=input[i*N+j];
         if (!std::isfinite(value) || !std::isfinite(input[j*N+i])
             || std::abs(value-input[j*N+i])>tolerance) return false;
-        for(size_t k=0;k<j;++k)value-=lower[i*N+k]*lower[j*N+k];
-        if(i==j) {
-            if(value < -tolerance)return false;
-            lower[i*N+j]=std::sqrt(std::max(0.0,value));
-        } else if(lower[j*N+j]>std::sqrt(tolerance)) {
-            lower[i*N+j]=value/lower[j*N+j];
-        } else if(std::abs(value)>tolerance) return false;
+        residual[i*N+j]=residual[j*N+i]=value;
+    }
+    // Eliminate the largest remaining diagonal first. Without pivoting a
+    // valid low-variance direction can be treated as zero before its larger
+    // correlated direction is eliminated (e.g. [[1e-12,1e-6],[1e-6,1]]).
+    // This is a predicate only: never change the supplied target or ridge it.
+    for(size_t k=0;k<N;++k) {
+        size_t pivot=k;
+        for(size_t i=k+1;i<N;++i)
+            if(residual[i*N+i]>residual[pivot*N+pivot])pivot=i;
+        if(residual[pivot*N+pivot]<=tolerance) {
+            // A small pivot does NOT prove PSD. Certify a lower bound on the
+            // entire remaining block; off-diagonal indefinite evidence must
+            // not disappear when the factorization reaches numerical rank.
+            for(size_t i=k;i<N;++i) {
+                double lower=residual[i*N+i];
+                for(size_t j=k;j<N;++j)if(i!=j)lower-=std::abs(residual[i*N+j]);
+                if(!std::isfinite(lower) || lower < -tolerance)return false;
+            }
+            return true;
+        }
+        if(pivot!=k) {
+            for(size_t j=0;j<N;++j)std::swap(residual[k*N+j],residual[pivot*N+j]);
+            for(size_t i=0;i<N;++i)std::swap(residual[i*N+k],residual[i*N+pivot]);
+        }
+        const double diagonal=residual[k*N+k];
+        for(size_t i=k+1;i<N;++i)for(size_t j=k+1;j<=i;++j) {
+            const double value=residual[i*N+j]-(residual[i*N+k]/diagonal)*residual[j*N+k];
+            if(!std::isfinite(value))return false;
+            residual[i*N+j]=residual[j*N+i]=value;
+        }
     }
     return true;
 }
