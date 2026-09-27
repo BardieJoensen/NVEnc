@@ -38,6 +38,9 @@ public:
     const unsigned width,height,depth;
     const std::optional<PreEncodeRetentionDecision> retention;
     std::array<std::vector<uint16_t>,3> planes;
+    // Set only after a separate GPU candidate capture agrees with the original.
+    // Published as part of the immutable shared source frame.
+    fgsmodel::FilmGrainConstantChroma copiedChroma{};
 
     static uint64_t nativeBytes(unsigned w,unsigned h,unsigned d) {
         if(w<64 || h<64 || w>4096 || h>2160 || (w&1) || (h&1) || (d!=8 && d!=10))
@@ -59,6 +62,14 @@ public:
     NativeSourceFrame& operator=(const NativeSourceFrame&)=delete;
     uint64_t liveBytes() const {return m_memory->live.load();}
     uint64_t peakBytes() const {return m_memory->peak.load();}
+    void requireCopiedChroma(unsigned mask) const {
+        struct Plane {const uint16_t* data;size_t samples,stride;};
+        std::array<Plane,3> views{};
+        for(unsigned c=0;c<3;++c)views[c]={planes[c].data(),planes[c].size(),c?width/2:width};
+        const auto original=fgsmodel::film_grain_measure_constant_chroma(views,width,height,depth,mask);
+        if(!fgsmodel::film_grain_same_constant_chroma(original,copiedChroma,mask,width,height,depth))
+            throw std::runtime_error("copied chroma lacks matching original/pre-encode pixel proof");
+    }
     void requireIdentity(uint64_t index,int id,int64_t timestamp,int tbNum,int tbDen,unsigned w,unsigned h,unsigned d) const {
         if(index!=ordinal || id!=sourceId || timestamp!=pts || tbNum<=0 || tbDen<=0
             || int64_t(tbNum)*timebaseDen!=int64_t(timebaseNum)*tbDen || w!=width || h!=height || d!=depth)

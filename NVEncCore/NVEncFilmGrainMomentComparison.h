@@ -40,14 +40,23 @@ inline bool film_grain_moment_same_layout(
 
 template<size_t N>
 inline FilmGrainMomentMatrixCheck film_grain_compare_moment_matrix(
-    const std::array<double,N*N>& source, const std::array<double,N*N>& actual) {
+    const std::array<double,N*N>& source, const std::array<double,N*N>& actual,uint64_t exactZeroRows=0) {
     FilmGrainMomentMatrixCheck result;
+    static_assert(N<64,"constant row mask size");
+    if(exactZeroRows>>N)return result;
     for (size_t i = 0; i < N; ++i) {
+        if(exactZeroRows&(1ull<<i))continue;
         if (!std::isfinite(source[i*N+i]) || source[i*N+i] <= 1e-12
             || !std::isfinite(actual[i*N+i]) || actual[i*N+i] < 0.) return result;
     }
     for (size_t i = 0; i < N; ++i) for (size_t j = 0; j < N; ++j) {
         if (!std::isfinite(source[i*N+j]) || !std::isfinite(actual[i*N+j])) return result;
+        // Caller must independently prove these components constant. Their
+        // complete rows/columns must be exactly zero, never normalized by zero.
+        if(exactZeroRows&((1ull<<i)|(1ull<<j))) {
+            if(source[i*N+j]!=0. || actual[i*N+j]!=0.)return result;
+            continue;
+        }
         // Separate square roots avoid intermediate products overflowing.
         const double error = std::abs((actual[i*N+j]-source[i*N+j])
             /std::sqrt(source[i*N+i])/std::sqrt(source[j*N+j]));
@@ -61,9 +70,19 @@ inline FilmGrainMomentMatrixCheck film_grain_compare_moment_matrix(
 }
 
 inline FilmGrainMomentComparison film_grain_compare_moments(
-    const FilmGrainNativeMoments& source, const FilmGrainNativeMoments& actual) {
+    const FilmGrainNativeMoments& source, const FilmGrainNativeMoments& actual,unsigned copiedChroma=0) {
     FilmGrainMomentComparison result;
-    if (!film_grain_moment_same_layout(source, actual)) return result;
+    if (!film_grain_moment_same_layout(source, actual) || !film_grain_copied_chroma_mask(copiedChroma)) return result;
+    if(copiedChroma) {
+        if(!film_grain_same_constant_chroma(source.constants,actual.constants,copiedChroma,source.width,source.height,source.depth))return result;
+        const double scale=double(1u<<(source.depth-8));
+        for(unsigned c=1;c<3;++c)if(copiedChroma&(1u<<c)) {
+            const double code=source.constants.code[c-1]/scale;
+            if(source.mean[c]!=code || actual.mean[c]!=code)return result;
+            for(unsigned f=0;f<2;++f)if(!source.folds[f].meanValid || !actual.folds[f].meanValid
+                || source.folds[f].mean[c]!=code || actual.folds[f].mean[c]!=code)return result;
+        }
+    }
     result.meanPass = true;
     for (unsigned c = 0; c < 3; ++c) {
         if (!std::isfinite(source.mean[c]) || !std::isfinite(actual.mean[c])) return {};
@@ -86,11 +105,16 @@ inline FilmGrainMomentComparison film_grain_compare_moments(
             check.meanPass &= check.meanValid && std::abs(check.meanError[c]) <= .125;
         }
         check.y = film_grain_compare_moment_matrix<25>(a.y, b.y);
-        check.cb = film_grain_compare_moment_matrix<26>(a.colour[0], b.colour[0]);
-        check.cr = film_grain_compare_moment_matrix<26>(a.colour[1], b.colour[1]);
-        check.common = film_grain_compare_moment_matrix<3>(a.common, b.common);
+        constexpr uint64_t colourRows=((1ull<<26)-1)^(1ull<<24); // Keep the averaged-Y variable active.
+        check.cb = film_grain_compare_moment_matrix<26>(a.colour[0], b.colour[0],(copiedChroma&2)?colourRows:0);
+        check.cr = film_grain_compare_moment_matrix<26>(a.colour[1], b.colour[1],(copiedChroma&4)?colourRows:0);
+        check.common = film_grain_compare_moment_matrix<3>(a.common, b.common,copiedChroma);
         check.valid = check.y.valid && check.cb.valid && check.cr.valid && check.common.valid;
         if (check.valid) for (unsigned i = 0; i < 49; ++i) {
+            if(copiedChroma) {
+                if(a.cross[i]!=0. || b.cross[i]!=0.){check.valid=false;break;}
+                continue;
+            }
             const double error = std::abs((b.cross[i]-a.cross[i])
                 /std::sqrt(a.common[4])/std::sqrt(a.common[8]));
             if (!std::isfinite(error)) { check.valid = false; break; }
@@ -118,6 +142,7 @@ inline FilmGrainNativeMoments film_grain_average_moments(
         || !film_grain_moment_layout(*pictures[0])) return result;
     result.width = pictures[0]->width; result.height = pictures[0]->height;
     result.depth = pictures[0]->depth; result.blocks = pictures[0]->blocks;
+    result.constants=pictures[0]->constants;
     for (auto& fold : result.folds) fold.meanValid = true;
     auto add = [](auto& out, const auto& in) {
         for (size_t i = 0; i < out.size(); ++i) {
@@ -129,6 +154,7 @@ inline FilmGrainNativeMoments film_grain_average_moments(
     };
     for (size_t i = 0; i < count; ++i) {
         if (!pictures[i] || !film_grain_moment_same_layout(*pictures[0], *pictures[i])) return result;
+        film_grain_intersect_constant_chroma(result.constants,pictures[i]->constants);
         if (!add(result.mean, pictures[i]->mean)) return result;
         for (unsigned f = 0; f < 2; ++f) {
             auto& out = result.folds[f]; const auto& in = pictures[i]->folds[f];
@@ -176,9 +202,10 @@ struct FilmGrainMomentSelection {
 template<class Measure>
 inline FilmGrainMomentSelection film_grain_select_moment_seed(
     const FilmGrainNativeMoments& source, const unsigned* seeds, size_t count, Measure measure,
-    FilmGrainMomentSpatialPolicy policy=FilmGrainMomentSpatialPolicy::FrameWindow) {
+    FilmGrainMomentSpatialPolicy policy=FilmGrainMomentSpatialPolicy::FrameWindow,unsigned copiedChroma=0) {
     FilmGrainMomentSelection result;
-    if (!film_grain_moment_layout(source) || !seeds || !count || count > 4) return result;
+    if (!film_grain_moment_layout(source) || !seeds || !count || count > 4 || !film_grain_copied_chroma_mask(copiedChroma)) return result;
+    if(copiedChroma && !source.constants.covers(copiedChroma,source.width,source.height,source.depth))return result;
     if (policy!=FilmGrainMomentSpatialPolicy::FrameWindow && policy!=FilmGrainMomentSpatialPolicy::FullPicture
         && policy!=FilmGrainMomentSpatialPolicy::FullPictureMeans
         && policy!=FilmGrainMomentSpatialPolicy::FrameWindowMeans) return result;
@@ -199,7 +226,8 @@ inline FilmGrainMomentSelection film_grain_select_moment_seed(
         attempt.seed = seeds[i]; attempt.calibrated = candidate.calibrated;
         attempt.strengths = candidate.strengths;
         for (auto strength : attempt.strengths) if (strength > 255) attempt.calibrated = false;
-        if (attempt.calibrated) attempt.comparison = film_grain_compare_moments(source, candidate.moments);
+        for(unsigned c=1;c<3;++c)if((copiedChroma&(1u<<c)) && attempt.strengths[c])attempt.calibrated=false;
+        if (attempt.calibrated) attempt.comparison = film_grain_compare_moments(source, candidate.moments,copiedChroma);
         result.attempts.push_back(attempt);
         const bool full=policy==FilmGrainMomentSpatialPolicy::FullPicture
             || policy==FilmGrainMomentSpatialPolicy::FullPictureMeans;
@@ -233,11 +261,13 @@ class FilmGrainMomentWindow {
     bool finished_ = false;
     FilmGrainMomentWindowReason reason_ = FilmGrainMomentWindowReason::None;
     FilmGrainMomentComparison lastWindow_{};
+    unsigned copiedChroma_=0;
     bool reject(FilmGrainMomentWindowReason why) {
         if (reason_ == FilmGrainMomentWindowReason::None) reason_ = why;
         return false;
     }
 public:
+    explicit FilmGrainMomentWindow(unsigned copiedChroma=0):copiedChroma_(copiedChroma) {}
     // One object per continuous segment, starting at display-input ordinal 0.
     // Failure is terminal. A compressed partial base is not source fallback.
     bool push(uint64_t ordinal, uint64_t segment, const FilmGrainNativeMoments& source,
@@ -247,14 +277,16 @@ public:
             || (frames_ && segment != segment_)) return reject(FilmGrainMomentWindowReason::Identity);
         if (!pending_.empty() && !film_grain_moment_same_layout(pending_.back().source, source))
             return reject(FilmGrainMomentWindowReason::Identity);
-        const auto frame = film_grain_compare_moments(source, actual);
+        if(copiedChroma_ && !pending_.empty() && !film_grain_same_constant_chroma(pending_.back().source.constants,
+            source.constants,copiedChroma_,source.width,source.height,source.depth))return reject(FilmGrainMomentWindowReason::Identity);
+        const auto frame = film_grain_compare_moments(source, actual,copiedChroma_);
         if (!frame.folds[0].framePass || !frame.folds[1].framePass) return reject(FilmGrainMomentWindowReason::PerFrame);
         pending_.push_back({source,actual}); segment_ = segment; ++frames_;
         if (pending_.size() == 8) {
             std::array<const FilmGrainNativeMoments*,8> sources{}, outputs{};
             for (size_t i = 0; i < 8; ++i) { sources[i] = &pending_[i].source; outputs[i] = &pending_[i].actual; }
             lastWindow_ = film_grain_compare_moments(film_grain_average_moments(sources.data(),8),
-                film_grain_average_moments(outputs.data(),8));
+                film_grain_average_moments(outputs.data(),8),copiedChroma_);
             if (!lastWindow_.fullPass) return reject(FilmGrainMomentWindowReason::Pooled);
             ++windows_; releaseThrough_ = int64_t(frames_-8); pending_.pop_front();
         }

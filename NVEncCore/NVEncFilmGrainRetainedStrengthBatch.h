@@ -3,6 +3,7 @@
 // MIT license, as NVEncFilmGrainModel.h.
 #pragma once
 #include "NVEncFilmGrainRetainedStrength.h"
+#include "NVEncFilmGrainConstantChroma.h"
 
 namespace fgsmodel {
 struct FilmGrainRetainedStrengthBatchSample {
@@ -11,6 +12,7 @@ struct FilmGrainRetainedStrengthBatchSample {
 };
 struct FilmGrainRetainedStrengthBatch {
     bool complete=false,valid=false;
+    unsigned copiedConstantMask=0;
     std::array<FilmGrainRetainedStrength,3> components;
     std::vector<FilmGrainRetainedStrengthBatchSample> samples;
 };
@@ -27,12 +29,20 @@ struct FilmGrainRetainedStrengthBatch {
 // three child processes or a second copy of the search algorithm.
 template<class Measure>
 FilmGrainRetainedStrengthBatch film_grain_calibrate_retained_strength_batch(
-    const std::array<FilmGrainRetainedStrengthTarget,3>& targets,Measure measure) {
+    const std::array<FilmGrainRetainedStrengthTarget,3>& targets,Measure measure,unsigned copiedConstantMask=0) {
     struct Requested {unsigned strength;};
     FilmGrainRetainedStrengthBatch out;
     std::array<std::vector<FilmGrainRetainedStrengthSample>,3> cache;
     std::array<bool,3> done{};
     std::array<unsigned,3> strengths{};
+    if(!film_grain_copied_chroma_mask(copiedConstantMask))return out;
+    out.copiedConstantMask=copiedConstantMask;
+    // This explicit mechanism requires a separate complete native constant
+    // proof at the caller. Zero variance by itself never selects this path.
+    for(unsigned c=1;c<3;++c)if(copiedConstantMask&(1u<<c)) {
+        if(targets[c].channels!=1 || targets[c].source[0]!=0. || targets[c].missing[0]!=0.)return out;
+        done[c]=true;out.components[c].valid=true;
+    }
     for(unsigned round=0;round<=10;++round) {
         std::array<bool,3> pending{};
         for(unsigned c=0;c<3;++c) {
@@ -54,6 +64,8 @@ FilmGrainRetainedStrengthBatch film_grain_calibrate_retained_strength_batch(
         FilmGrainRetainedStrengthBatchSample sample;
         sample.strengths=strengths;sample.measurements=measure(strengths);
         out.samples.push_back(sample);
+        for(unsigned c=1;c<3;++c)if((copiedConstantMask&(1u<<c))
+            && (!sample.measurements[c].valid || sample.measurements[c].variance[0]!=0.))return out;
         for(unsigned c=0;c<3;++c)if(pending[c]) {
             FilmGrainRetainedStrengthSample value;
             value.strength=strengths[c];value.measurement=sample.measurements[c];cache[c].push_back(value);

@@ -14,6 +14,12 @@ struct NVEncFilmGrainNativeConfig {
     nlohmann::json engine;
     bool memorySource() const {return engine.value("source_mode",std::string("files"))=="memory";}
     std::string spatialPolicy() const {return engine.value("spatial_policy",std::string("frame_window"));}
+    unsigned copiedChroma() const {
+        if(!engine.contains("copied_chroma_mask"))return 0;
+        const auto m=NVEncFilmGrainModelConfig::integer(engine,"copied_chroma_mask",0,6);
+        if(!fgsmodel::film_grain_copied_chroma_mask(unsigned(m)))throw std::runtime_error("native copied chroma mask is invalid");
+        return unsigned(m);
+    }
     static NVEncFilmGrainNativeConfig parse(const nlohmann::json& j,const std::set<uint32_t>& captured) {
         if(!j.is_object() || j.contains("models") || j.contains("ready_after") || captured.size()<8)
             throw std::runtime_error("native model trial needs 8..16 pictures and runtime model readiness");
@@ -23,6 +29,7 @@ struct NVEncFilmGrainNativeConfig {
         c.engineLibrary=std::filesystem::u8path(j.at("engine_library").get<std::string>());
         if(!c.engineLibrary.is_absolute())throw std::runtime_error("native engine library must be absolute");
         c.engine=j.at("engine");
+        c.copiedChroma();
         if(c.spatialPolicy()!="frame_window" && c.spatialPolicy()!="full_picture" && c.spatialPolicy()!="full_picture_means" && c.spatialPolicy()!="frame_window_means")
             throw std::runtime_error("native spatial policy must be frame_window, full_picture, full_picture_means or frame_window_means");
         const auto mode=c.engine.value("source_mode",std::string("files"));
@@ -159,6 +166,8 @@ public:
         m_buffer(m_config.packets.library,m_config.packets.packets.size(),32,m_config.packets.maxPackets,m_config.packets.maxBytes),
         m_report(report),m_width(width),m_height(height),m_depth(depth),m_retention(std::move(retention)) {
         m_config.requireLayout(width,height,depth);
+        if(m_retention.copiedChroma()!=m_config.copiedChroma())
+            throw std::runtime_error("native fitter and pre-encode copied chroma differ");
         if(m_retention.enabled()) {
             if(!m_config.memorySource())throw std::runtime_error("native retention requires memory sources");
             if(m_retention.size()!=m_config.packets.packets.size())throw std::runtime_error("native retention picture count differs");
@@ -197,7 +206,10 @@ public:
                 if(m_retention.enabled()) {
                     if(m_retention.sourceSegments() && m_retention.sourceAt(ordinal))
                         fgsdiagnostic::requireSourceRetentionModel(*source->retention,m_retention.at(ordinal));
-                    else fgsdiagnostic::requirePartialRetentionModel(*source->retention,m_retention.at(ordinal));
+                    else {
+                        fgsdiagnostic::requirePartialRetentionModel(*source->retention,m_retention.at(ordinal),m_retention.copiedChroma());
+                        if(m_retention.copiedChroma())source->requireCopiedChroma(m_retention.copiedChroma());
+                    }
                 }
                 std::array<FgsNativePlane,3> original{};
                 for(unsigned c=0;c<3;++c)original[c]={source->planes[c].data(),source->planes[c].size(),c?m_width/2:m_width};

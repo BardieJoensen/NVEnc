@@ -45,6 +45,9 @@ template<class Engine> class NativeModelSegments {
         const auto policy=config_.value("spatial_policy",std::string("frame_window"));
         if(policy!="frame_window" && engine.report().value("spatial_policy",std::string())!=policy)
             throw std::runtime_error("native engine did not confirm "+policy+" spatial policy");
+        const auto copied=config_.value("copied_chroma_mask",0u);
+        if(copied && engine.report().value("copied_chroma_mask",0u)!=copied)
+            throw std::runtime_error("native engine did not confirm copied chroma policy");
     }
     void sourcePlanes(const FgsNativePlane* planes) const {
         if(!planes)throw std::runtime_error("source segment has missing planes");
@@ -59,7 +62,10 @@ template<class Engine> class NativeModelSegments {
 public:
     NativeModelSegments(const std::filesystem::path& path,const Json& config,
         const PreEncodeRetentionPlan& plan):config_(config) {
-        if(!plan.sourceSegments()) {legacy_=std::make_unique<Engine>(path,config);return;}
+        const auto copied=config.contains("copied_chroma_mask")?unsigned(integer(config,"copied_chroma_mask",0,6)):0u;
+        if(!fgsmodel::film_grain_copied_chroma_mask(copied) || copied!=plan.copiedChroma())
+            throw std::runtime_error("native fitter and pre-encode copied chroma differ");
+        if(!plan.sourceSegments()) {legacy_=std::make_unique<Engine>(path,config);confirm(*legacy_);return;}
         integer(config,"schema",1,1);
         count_=size_t(integer(config,"frame_count",8,16));
         width_=unsigned(integer(config,"width",64,4096));height_=unsigned(integer(config,"height",64,2160));
@@ -153,11 +159,13 @@ public:
             }
             segments.push_back(std::move(entry));
         }
-        return {{"complete",complete && !failed},{"failed",failed},{"received",received_},
+        Json result={{"complete",complete && !failed},{"failed",failed},{"received",received_},
             {"selected",selected+preserved},{"modeled_selected",selected},{"source_preserved",preserved},
             {"mode","explicit_source_segments"},{"source_admission",false},
             {"spatial_policy",config_.value("spatial_policy",std::string("frame_window"))},
             {"segments",segments},{"models",models},{"ready_at",ready},{"rows",rows}};
+        if(config_.value("copied_chroma_mask",0u))result["copied_chroma_mask"]=config_.at("copied_chroma_mask");
+        return result;
     }
 };
 } // namespace fgsdiagnostic

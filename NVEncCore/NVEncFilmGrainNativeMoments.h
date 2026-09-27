@@ -18,6 +18,7 @@ struct FilmGrainNativeMomentFold {
 };
 struct FilmGrainNativeMoments {
     bool valid=false;
+    FilmGrainConstantChroma constants{};
     unsigned width=0,height=0,depth=0;
     std::array<double,3> mean{};
     std::array<uint64_t,2> blocks{};
@@ -103,6 +104,7 @@ inline FilmGrainNativeMoments film_grain_native_moments(
     FilmGrainNativeMoments result;const auto basic=film_grain_native_variance(planes,width,height,depth);
     if(!basic.valid)return result;
     result.width=width;result.height=height;result.depth=depth;result.mean=basic.mean;result.blocks=basic.blocks;
+    result.constants=basic.constants;
     const auto positions=native_moments_detail::offsets();const auto grid=film_grain_native_grid(width,height);
     std::array<std::array<double,4096>,4> tiles{};
     for(unsigned by=0;by<grid.rows;++by)for(unsigned bx=0;bx<grid.columns;++bx) {
