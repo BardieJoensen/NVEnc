@@ -2944,6 +2944,10 @@ protected:
 class PipelineTaskNVEncode : public PipelineTask {
 protected:
     NVEncRunCtx *m_runCtx;
+    // EOS may remain queued when an earlier output fails. Keep its wrapper
+    // alive until the output thread has stopped, and never submit EOS twice.
+    CUFrameEncHostWrap m_flushBuffer;
+    std::optional<RGY_ERR> m_flushResult;
     const RGY_CODEC m_encCodec;
     const int m_encWidth;
     const int m_encHeight;
@@ -2987,7 +2991,7 @@ public:
         const NVEncFilmGrainTable *filmGrainTable, std::shared_ptr<NVEncFilmGrainSeedGuard> filmGrainSeedGuard, std::shared_ptr<NVEncFilmGrainReconProbe> filmGrainReconProbe, std::vector<NVEncRCParam>& dynamicRC, std::vector<int>& keyFile, bool keyOnChapter, std::vector<std::unique_ptr<AVChapter>>& chapters,
          int outMaxQueueSize, RGYParamThread threadParam, std::shared_ptr<RGYLog> log)
         : PipelineTask(PipelineTaskType::NVENC, dev, outMaxQueueSize, m_bEnableOutputThread, threadParam, log),
-        m_runCtx(runCtx), m_encCodec(encCodec), m_encWidth(encWidth), m_encHeight(encHeight), m_encCsp(encCsp), m_encBitdepth(encBitdepth), m_encPicStruct(encPicStruct),
+        m_runCtx(runCtx), m_flushBuffer(&runCtx->stEOSOutputBfr(), dev->encoder(), false), m_flushResult(), m_encCodec(encCodec), m_encWidth(encWidth), m_encHeight(encHeight), m_encCsp(encCsp), m_encBitdepth(encBitdepth), m_encPicStruct(encPicStruct),
         m_stEncConfig(stEncConfig), m_stCreateEncodeParams(stCreateEncodeParams),
         m_timecode(timecode), m_encTimestamp(encTimestamp), m_outputTimebase(outputTimebase),
         m_bitStreamOut(), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu), m_filmGrainTable(filmGrainTable), m_filmGrainSeedGuard(std::move(filmGrainSeedGuard)), m_filmGrainReconProbe(std::move(filmGrainReconProbe)), m_filmGrainParamsCache(), m_filmGrainParamsCacheValid(false), m_forceFilmGrainParamsUpdate(false),
@@ -3120,10 +3124,12 @@ public:
         while (!m_threadOutputAbort) {
             struct CUFrameEncAutoDelete {
                 RGYQueueMPMP<CUFrameEnc *>& qEncodeBufferFree;
-                CUFrameEncAutoDelete(RGYQueueMPMP<CUFrameEnc *>& q) : qEncodeBufferFree(q) {};;
-                void operator()(CUFrameEnc* p) { if (p) qEncodeBufferFree.push(p); }
+                CUFrameEnc *eos;
+                CUFrameEncAutoDelete(RGYQueueMPMP<CUFrameEnc *>& q, CUFrameEnc *marker) : qEncodeBufferFree(q), eos(marker) {};
+                // An EOS marker is not an input surface available for reuse.
+                void operator()(CUFrameEnc* p) { if (p && p != eos) qEncodeBufferFree.push(p); }
             };
-            std::unique_ptr<CUFrameEnc, CUFrameEncAutoDelete> frameEnc(nullptr, CUFrameEncAutoDelete(m_runCtx->qEncodeBufferFree()));
+            std::unique_ptr<CUFrameEnc, CUFrameEncAutoDelete> frameEnc(nullptr, CUFrameEncAutoDelete(m_runCtx->qEncodeBufferFree(), &m_flushBuffer));
             {
                 CUFrameEnc *frameEncPtr = nullptr;
                 while (!m_runCtx->qEncodeBufferUsed().front_copy_and_pop_no_lock(&frameEncPtr)) {
@@ -3470,29 +3476,40 @@ protected:
     }
 
     virtual RGY_ERR flushEncoder() {
+        if (m_flushResult.has_value()) return m_flushResult.value();
+        // A drain failure is terminal: cleanup must not retry a queue whose
+        // callbacks or output state have already rejected a picture.
+        m_flushResult = RGY_ERR_UNKNOWN;
+        const auto finish = [this](RGY_ERR result) { m_flushResult = result; return result; };
         const auto flushStart = std::chrono::steady_clock::now();
         PrintMes(RGY_LOG_DEBUG, _T("flushEncoder start (used=%d, free=%d).\n"),
             (int)m_runCtx->qEncodeBufferUsed().size(), (int)m_runCtx->qEncodeBufferFree().size());
         m_runCtx->stEOSOutputBfr().stOutputBfr.bEOSFlag = true;
-        CUFrameEncHostWrap flushBuffer(&m_runCtx->stEOSOutputBfr(), m_dev->encoder(), false);
 
         const auto nvFlushStart = std::chrono::steady_clock::now();
         auto sts = err_to_rgy(m_dev->encoder()->NvEncFlushEncoderQueue(m_runCtx->stEOSOutputBfr().stOutputBfr.hOutputEvent));
         const auto nvFlushMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - nvFlushStart).count();
         PrintMes(RGY_LOG_DEBUG, _T("flushEncoder: NvEncFlushEncoderQueue returned %s (%lld ms).\n"), get_err_mes(sts), (lls)nvFlushMs);
         if (sts != RGY_ERR_NONE) {
-            return sts;
+            return finish(sts);
         }
-        m_runCtx->qEncodeBufferUsed().push(&flushBuffer);
+        m_runCtx->qEncodeBufferUsed().push(&m_flushBuffer);
 
         if (m_bEnableOutputThread) {
             // flushしたらそれを受けて出力スレッドが終了するのを待つ
-            getOutputThreadResult(300 * 1000);
+            const auto result = getOutputThreadResult(300 * 1000);
+            if (!result.has_value()) {
+                PrintMes(RGY_LOG_ERROR, _T("Encoder output thread did not complete while flushing.\n"));
+                return finish(RGY_ERR_UNKNOWN);
+            }
+            if (result.value() != RGY_ERR_NONE && result.value() != RGY_ERR_MORE_DATA) {
+                return finish(result.value());
+            }
         } else {
             // 出力スレッドがない場合は、自分で出力処理を行う必要がある
             sts = outputThreadFunc(false);
             if (sts != RGY_ERR_NONE) {
-                return sts;
+                return finish(sts);
             }
         }
         if (m_filmGrainReconProbe) {
@@ -3500,13 +3517,13 @@ protected:
             catch (const std::exception& e) {
                 m_filmGrainReconProbe->fail(e.what());
                 PrintMes(RGY_LOG_ERROR,_T("Reconstruction completion: %s.\n"),char_to_tstring(e.what()).c_str());
-                return RGY_ERR_INVALID_DATA_TYPE;
+                return finish(RGY_ERR_INVALID_DATA_TYPE);
             }
         }
         const auto flushMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - flushStart).count();
         PrintMes(RGY_LOG_DEBUG, _T("flushEncoder done (%lld ms, used=%d, free=%d).\n"),
             (lls)flushMs, (int)m_runCtx->qEncodeBufferUsed().size(), (int)m_runCtx->qEncodeBufferFree().size());
-        return RGY_ERR_MORE_DATA;
+        return finish(RGY_ERR_MORE_DATA);
     }
 public:
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
