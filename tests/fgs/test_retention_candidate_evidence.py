@@ -82,6 +82,35 @@ class CandidateEvidenceTests(unittest.TestCase):
         quiet['checks'][0] = dict(measured=96, passed=96)
         with self.assertRaises(ValueError): evidence.combine(p, m, subject, json.dumps(quiet).encode())
 
+    def test_detail_veto_records_failures_without_creating_clearance(self):
+        subject, pixel, model = self.fixture(); p, m = self.encode(pixel, model)
+        detail = dict(subject=subject, subject_sha256=evidence.digest(subject),
+                      pixel_evidence_sha256=hashlib.sha256(p).hexdigest(),
+                      layout=pixel['source_moments'],
+                      checks=[dict(measured=0, passed=0) for _ in range(3)])
+        detail['checks'][1]['measured'] = 32
+        result = evidence.combine(p, m, subject, detail_veto_bytes=json.dumps(detail).encode())
+        self.assertEqual(result['checks'][0]['unmeasured'], 96)
+        self.assertEqual(result['checks'][1]['failed'], 32)
+        self.assertEqual(result['checks'][1]['unmeasured'], 64)
+        self.assertFalse(result['source_admission'])
+        detail['checks'][1]['passed'] = 32
+        with self.assertRaises(ValueError):
+            evidence.combine(p, m, subject, detail_veto_bytes=json.dumps(detail).encode())
+
+    def test_detail_veto_requires_the_exact_candidate(self):
+        subject, pixel, model = self.fixture(); p, m = self.encode(pixel, model)
+        detail = dict(subject=subject, subject_sha256=evidence.digest(subject),
+                      pixel_evidence_sha256=hashlib.sha256(p).hexdigest(),
+                      layout=pixel['source_moments'],
+                      checks=[dict(measured=32, passed=0) for _ in range(3)])
+        for field, value in [('subject_sha256', '0'*64),
+                             ('layout', dict(width=64, height=128, depth=10)),
+                             ('pixel_evidence_sha256', '0'*64)]:
+            changed = dict(detail); changed[field] = value
+            with self.assertRaises(ValueError):
+                evidence.combine(p, m, subject, detail_veto_bytes=json.dumps(changed).encode())
+
     def test_quiet_wrong_picture_or_geometry_rejects(self):
         subject, pixel, model = self.fixture(); p, m = self.encode(pixel, model)
         quiet = dict(subject=subject, subject_sha256=evidence.digest(subject),

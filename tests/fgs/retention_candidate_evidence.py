@@ -1,7 +1,7 @@
 """Join measured facts only when every candidate stage has the same identity.
 
-This is a finite development adapter, not a source classifier. Even a complete
-set of facts in this module leaves detail checks unknown. Quiet-region facts
+This is a finite development adapter, not a source classifier. These facts
+cannot grant detail clearance. Quiet-region facts and necessary detail vetoes
 may be supplied separately for the exact same native candidate.
 Population coverage and final joint compatibility are separate inputs.
 """
@@ -28,7 +28,7 @@ def checks(value, allowed):
     return measured, passed
 
 
-def combine(pixel_bytes, model_bytes, expected_subject, quiet_bytes=None):
+def combine(pixel_bytes, model_bytes, expected_subject, quiet_bytes=None, detail_veto_bytes=None):
     """The caller supplies the independent current candidate identity.
 
     Exact file and canonical subject digests prevent accidentally combining a
@@ -43,15 +43,18 @@ def combine(pixel_bytes, model_bytes, expected_subject, quiet_bytes=None):
         raise ValueError('candidate source/base/model/output association differs')
     if len(pixel['checks']) != 3 or len(model['checks']) != 3:
         raise ValueError('all native components required')
-    quiet = None
-    if quiet_bytes is not None:
-        quiet = json.loads(quiet_bytes)
-        if (digest(quiet['subject']) != expected or quiet['subject_sha256'] != expected
-                or quiet['pixel_evidence_sha256'] != hashlib.sha256(pixel_bytes).hexdigest()
-                or quiet['layout'] != {k: pixel['source_moments'][k]
-                                       for k in ('width', 'height', 'depth')}
-                or len(quiet['checks']) != 3):
-            raise ValueError('native quiet evidence association/layout differs')
+    def associated(raw, label):
+        if raw is None: return None
+        record = json.loads(raw)
+        if (digest(record['subject']) != expected or record['subject_sha256'] != expected
+                or record['pixel_evidence_sha256'] != hashlib.sha256(pixel_bytes).hexdigest()
+                or record['layout'] != {k: pixel['source_moments'][k]
+                                        for k in ('width', 'height', 'depth')}
+                or len(record['checks']) != 3):
+            raise ValueError(f'native {label} evidence association/layout differs')
+        return record
+    quiet = associated(quiet_bytes, 'quiet')
+    detail = associated(detail_veto_bytes, 'detail veto')
     result = []
     for c, (p, m) in enumerate(zip(pixel['checks'], model['checks'])):
         pm, pp = checks(p, PIXEL_BITS); mm, mp = checks(m, MODEL_BITS)
@@ -59,11 +62,18 @@ def combine(pixel_bytes, model_bytes, expected_subject, quiet_bytes=None):
         if quiet is not None:
             qm, qp = checks(quiet['checks'][c], 64)
             measured |= qm; passed |= qp
+        if detail is not None:
+            dm, dp = checks(detail['checks'][c], 32)
+            if dp:
+                raise ValueError('necessary detail veto cannot grant clearance')
+            measured |= dm
+            passed &= ~dm
         result.append(dict(measured=measured, passed=passed,
                            failed=measured & ~passed, unmeasured=255 & ~measured))
     return dict(subject_sha256=expected, model_id=int(expected[:15], 16) or 1,
                 checks=result, source_admission=False,
                 detail_and_quiet_unmeasured=all(r['unmeasured'] & 96 == 96 for r in result),
-                detail_unmeasured=True, quiet_evidence_supplied=quiet is not None,
+                detail_unmeasured=all(r['unmeasured'] & 32 for r in result),
+                quiet_evidence_supplied=quiet is not None, detail_veto_supplied=detail is not None,
                 association='Exact declared source/pristine/rounded/reconstruction/decoded '
                             'plane hashes, frame clock, fractions, video and model identity.')

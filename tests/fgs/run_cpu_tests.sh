@@ -10,6 +10,8 @@ set -e
 cd "$(dirname "$0")/../.."
 CXX=${CXX:-g++}
 OUT=${TMPDIR:-/tmp}
+$CXX -std=c++17 -O2 -Wall -I NVEncCore tests/fgs/motion_detail_test.cpp -o "$OUT/fgs_motion_detail_test"
+"$OUT/fgs_motion_detail_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore tests/fgs/quiet_evidence_test.cpp -o "$OUT/fgs_quiet_evidence_test"
 "$OUT/fgs_quiet_evidence_test"
 $CXX -std=c++17 -O2 -Wall -I NVEncCore tests/fgs/retention_schedule_test.cpp -o "$OUT/fgs_retention_schedule_test"
@@ -175,3 +177,4 @@ python3 tests/fgs/test_retention_pixel_evidence.py
 python3 tests/fgs/test_retention_target_evidence.py
 python3 tests/fgs/test_retention_candidate_evidence.py
 python3 tests/fgs/test_quiet_evidence.py
+python3 tests/fgs/test_motion_detail.py
