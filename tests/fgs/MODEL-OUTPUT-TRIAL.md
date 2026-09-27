@@ -221,6 +221,22 @@ epoch boundaries, and turns modeled intervals shorter than eight pictures into
 source intervals before encoding. It needs 8..16 complete source inputs.
 Missing candidate or joint evidence never becomes a pass.
 
+The adapter also accepts an explicit integer `pre_encode_copied_chroma` mask
+(0/default, 2/Cb, 4/Cr or 6/both). A selected mixture survives only when its
+source-component mask matches that request exactly and the bound original has
+the same in-range constant colour code at every visible sample. The adapter
+measures this proof from the hashed native planes; input evidence cannot assert
+it. A missing proof preserves the row. A constant-code change inside one
+contiguous modeled interval preserves the entire interval. Explicit source
+segments allow separate constants in separate modeled intervals.
+
+This option does not force the selector to copy a component or bypass its
+candidate, coverage or joint checks. It adds `copied_chroma_source` to each
+decision and forwards the mask in the emitted plan. Existing manifests with
+the default zero retain their original response schema. The live fitter must
+still verify exact copying before NVENC, matching reconstruction/synthesis and
+the decoder range clamp; planning only establishes the original-source fact.
+
 The optional source binding has `schema: 1`, integer `width`, `height`, `depth`,
 `timebase: [numerator, denominator]` and exactly one `frames` row per input.
 Each row has consecutive `ordinal`, consecutive `source_id`, increasing signed

@@ -3,21 +3,27 @@
 #pragma once
 #include <stdexcept>
 #include <utility>
+#include "NVEncFilmGrainConstantChroma.h"
 #include "NVEncFilmGrainNativeGrid.h"
 #include "NVEncFilmGrainRetentionSelect.h"
 
 namespace fgsmodel {
 class FilmGrainRetentionSchedule {
 public:
-    enum Reason : uint32_t { SelectedSource=1, UnsupportedComponents=2, EpochBoundary=4, ShortModelInterval=8 };
+    enum Reason : uint32_t {
+        SelectedSource=1, UnsupportedComponents=2, EpochBoundary=4, ShortModelInterval=8,
+        MissingCopiedChroma=16, ChangedCopiedChroma=32
+    };
     struct Row {
         FilmGrainRetentionDecision selection;
+        FilmGrainConstantChroma copiedChroma;
         std::array<float,3> retain{{1,1,1}};
         uint32_t reasons=0;
         bool source() const {return retain==std::array<float,3>{{1,1,1}};}
     };
 private:
     const std::vector<FilmGrainRetentionFrame> frames_;
+    const unsigned copiedChroma_;
     std::vector<Row> rows_;
     bool failed_=false,finished_=false;
     void ready() const {
@@ -27,7 +33,10 @@ private:
         if(failed_ || !finished_)throw std::runtime_error("retention schedule is not complete");
     }
 public:
-    explicit FilmGrainRetentionSchedule(std::vector<FilmGrainRetentionFrame> frames):frames_(std::move(frames)) {
+    explicit FilmGrainRetentionSchedule(std::vector<FilmGrainRetentionFrame> frames,unsigned copiedChroma=0):
+        frames_(std::move(frames)),copiedChroma_(copiedChroma) {
+        if(!film_grain_copied_chroma_mask(copiedChroma_))
+            throw std::runtime_error("retention schedule copied mask must contain only Cb/Cr");
         if(frames_.size()<8 || frames_.size()>16)throw std::runtime_error("retention schedule needs 8..16 complete inputs");
         for(size_t i=0;i<frames_.size();++i) {
             const auto& f=frames_[i];const auto grid=film_grain_native_grid(f.width,f.height);
@@ -44,15 +53,24 @@ public:
     // Only the bounded selector creates a decision here. Callbacks receive its
     // exact source identity and fraction; they cannot edit the resulting plan.
     template<class Evaluate,class Joint>
-    void push(const FilmGrainRetentionFrame& frame,float lumaRetain,Evaluate evaluate,Joint joint) {
+    void push(const FilmGrainRetentionFrame& frame,float lumaRetain,Evaluate evaluate,Joint joint,
+        const FilmGrainConstantChroma& copiedChroma={}) {
         try {
             ready();const auto ordinal=rows_.size();
             if(ordinal>=frames_.size() || !(frame==frames_[ordinal]))
                 throw std::runtime_error("retention schedule received stale or reordered source evidence");
             Row row;row.selection=film_grain_select_retention(frame,lumaRetain,evaluate,joint);
+            row.copiedChroma=copiedChroma;
             row.retain=row.selection.selected.retain;
             if(row.selection.sourceFrame)row.reasons|=SelectedSource;
-            else if(row.selection.sourceMask)row.reasons|=UnsupportedComponents;
+            else {
+                // The request only enables a proved case. It cannot force a
+                // component copy, rescue failed joint checks or change any
+                // fractions chosen by the bounded selector.
+                if(row.selection.sourceMask!=copiedChroma_)row.reasons|=UnsupportedComponents;
+                if(copiedChroma_ && !copiedChroma.covers(copiedChroma_,frame.width,frame.height,frame.bitDepth))
+                    row.reasons|=MissingCopiedChroma;
+            }
             if(ordinal && frames_[ordinal-1].epoch!=frame.epoch)row.reasons|=EpochBoundary;
             if(row.reasons)row.retain={{1,1,1}};
             rows_.push_back(std::move(row));
@@ -67,8 +85,15 @@ public:
                 if(rows_[begin].source()) {++begin;continue;}
                 size_t end=begin+1;
                 while(end<rows_.size() && !rows_[end].source())++end;
-                if(end-begin<8)for(size_t i=begin;i<end;++i) {
-                    rows_[i].retain={{1,1,1}};rows_[i].reasons|=ShortModelInterval;
+                uint32_t reasons=end-begin<8?ShortModelInterval:0u;
+                if(copiedChroma_) {
+                    auto common=rows_[begin].copiedChroma;
+                    for(size_t i=begin+1;i<end;++i)film_grain_intersect_constant_chroma(common,rows_[i].copiedChroma);
+                    const auto& f=frames_[begin];
+                    if(!common.covers(copiedChroma_,f.width,f.height,f.bitDepth))reasons|=ChangedCopiedChroma;
+                }
+                if(reasons)for(size_t i=begin;i<end;++i) {
+                    rows_[i].retain={{1,1,1}};rows_[i].reasons|=reasons;
                 }
                 begin=end;
             }
