@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <vector>
 #include "NVEncFilmGrainPreEncodeRetention.h"
+#include "NVEncFilmGrainPreservedChroma.h"
 
 namespace fgsdiagnostic {
 struct SourceMemory {
@@ -41,6 +42,7 @@ public:
     // Set only after a separate GPU candidate capture agrees with the original.
     // Published as part of the immutable shared source frame.
     fgsmodel::FilmGrainConstantChroma copiedChroma{};
+    unsigned preservedChroma=0;
 
     static uint64_t nativeBytes(unsigned w,unsigned h,unsigned d) {
         if(w<64 || h<64 || w>4096 || h>2160 || (w&1) || (h&1) || (d!=8 && d!=10))
@@ -67,8 +69,16 @@ public:
         std::array<Plane,3> views{};
         for(unsigned c=0;c<3;++c)views[c]={planes[c].data(),planes[c].size(),c?width/2:width};
         const auto original=fgsmodel::film_grain_measure_constant_chroma(views,width,height,depth,mask);
-        if(!fgsmodel::film_grain_same_constant_chroma(original,copiedChroma,mask,width,height,depth))
+        if(preservedChroma || !fgsmodel::film_grain_same_constant_chroma(original,copiedChroma,mask,width,height,depth))
             throw std::runtime_error("copied chroma lacks matching original/pre-encode pixel proof");
+    }
+    void requirePreservedChroma(unsigned mask) const {
+        struct Plane {const uint16_t* data;size_t samples,stride;};
+        std::array<Plane,3> views{};
+        for(unsigned c=0;c<3;++c)views[c]={planes[c].data(),planes[c].size(),c?width/2:width};
+        if(preservedChroma!=mask || copiedChroma.mask
+            || !fgsmodel::film_grain_preserved_chroma_range(views,width,height,depth,mask))
+            throw std::runtime_error("preserved chroma lacks matching original/pre-encode pixel proof");
     }
     void requireIdentity(uint64_t index,int id,int64_t timestamp,int tbNum,int tbDen,unsigned w,unsigned h,unsigned d) const {
         if(index!=ordinal || id!=sourceId || timestamp!=pts || tbNum<=0 || tbDen<=0
