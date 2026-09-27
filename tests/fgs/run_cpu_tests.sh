@@ -169,3 +169,6 @@ python3 tests/fgs/test_temporal_population.py
 python3 tests/fgs/test_temporal_stationarity.py
 python3 tests/fgs/test_temporal_motion_holdout.py
 python3 tests/fgs/test_persistent_detail.py
+python3 tests/fgs/test_retention_pixel_evidence.py
+python3 tests/fgs/test_retention_target_evidence.py
+python3 tests/fgs/test_retention_candidate_evidence.py

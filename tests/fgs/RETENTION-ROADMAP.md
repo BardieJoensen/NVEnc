@@ -1,5 +1,9 @@
 # Automatic retention: remaining work and completion criteria
 
+**September 27 current:** [D64 measured evidence and target correction](FINDINGS-2026-09-27-MEASURED-EVIDENCE.md) is complete. Its rebuilt experimental library preserves ten existing controls and all 160 model decisions/output pictures. The full CPU suite passes 232 Python / 33 suites plus 49 C++ programs. Complete native quiet/range and detail/population evidence next; measured fallback is not partial-retention admission. R3–R8 remain open. The recovery entry below records the prior interruption.
+
+**September 27 checkpoint:** [usage-limit recovery and exact next steps](FINDINGS-2026-09-27-RETENTION-RESUME.md). R1/R2 remain complete; R3–R8 are open. D64's measured evidence pipeline completed four conservative source-preserving replays. Detail/quiet and regional eligibility are still missing, and the numerical fix is local and not deployed. Finish the fitter/library comparison and commit before continuing actual admission/runtime work. Older dated stage entries remain historical.
+
 Updated September 23, 2026: R1/R2 complete; encoder integration `da9ce557`,
 independent comparison tool `128796ea`. R3 host selection/coverage and colour
 checks and native GPU blending are qualified. Grain-scale units and exact

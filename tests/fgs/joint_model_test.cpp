@@ -14,6 +14,26 @@ static FilmGrainJointMoments identity_moments() {
     return m;
 }
 int main() {
+    // A tiny but correlated native reconstructed-base direction is PSD.
+    // The old fixed-order factorization discarded it too early. Scaling and
+    // coordinate order must not change the result; no input is regularized.
+    for(double scale:{1e-2,1.,1e4})for(double tiny:{1e-12,1e-10,1e-8})for(bool swap:{false,true}) {
+        std::array<double,4> rankOne{{tiny*scale,std::sqrt(tiny)*scale,
+            std::sqrt(tiny)*scale,scale}};
+        if(swap)std::swap(rankOne[0],rankOne[3]);
+        const auto original=rankOne;
+        assert(joint_model_detail::semidefinite<2>(rankOne));
+        assert(rankOne==original);
+        rankOne[1]*=2.;rankOne[2]=rankOne[1];
+        if(tiny*scale>std::max(1e-12,scale*1e-9))
+            assert(!joint_model_detail::semidefinite<2>(rankOne));
+    }
+    // Stopping at numerical rank cannot hide a large negative direction in
+    // an otherwise zero-diagonal trailing block.
+    std::array<double,9> indefinite{{1,0,0, 0,0,1e-5, 0,1e-5,0}};
+    assert(!joint_model_detail::semidefinite<3>(indefinite));
+    indefinite[5]=indefinite[7]=0.;
+    assert(joint_model_detail::semidefinite<3>(indefinite));
     std::array<double,N> retain{};
     auto m=identity_moments();
     auto target=film_grain_joint_target(m,retain);
