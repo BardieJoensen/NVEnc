@@ -1,8 +1,6 @@
 # Exact constant copied chroma in the finite retention fitter
 
-September 27, 2026 — D68 positive encoder/decoder comparisons pass, including
-1080p and UHD. A failure-cleanup crash found in a negative case remains open
-for D70; complete encoder qualification is pending. R3–R8 remain open. Production stays
+September 27, 2026 — D68 is complete after [D70 cleanup qualification](FINDINGS-2026-09-27-FLUSH-LIFECYCLE.md), including clean failures and full 1080p/UHD comparisons. R3–R8 remain open. Production stays
 ordinary `cb903a17`, retention and FEL off.
 
 The finite fitter previously required nonzero source variance and partial
@@ -71,7 +69,7 @@ held-out seed retry. The first does not establish a visible FGS defect.
 Six configuration/actual-output negatives exit normally. The seventh reaches
 the expected covariance rejection but then exits 139 during cleanup. Source
 review identifies a queued temporary EOS wrapper and a repeated flush during
-destruction. D70 fixes this separate lifecycle issue before closing D68. Its
+destruction. D70 subsequently fixes and qualifies this separate lifecycle issue. Its
 pattern also exists in the deployed source, but the observed trigger uses the
 experimental model path; no production media damage or library scope follows.
 Eight additional CPU adapter negatives reject absent, truncated or changed
@@ -80,9 +78,9 @@ pre-encode copied-plane proof, including a late border pixel.
 One invalid-mask harness expectation was corrected to the earlier validator
 that actually rejects it. The original aborted runner record is retained; its
 remaining six jobs ran in the following batch. No successful case was rerun
-for that correction. All owned pauses are released. Next finish D70’s clean
-failure/ordinary-output comparisons; broader source classification and bounded
-runtime R3–R8 remain open. The reserved corpus is unopened.
+for that correction. All owned pauses are released. D70 now passes all ten clean expected failures and sixteen positive encodes,
+closing this follow-up. Broader source classification and bounded runtime
+R3–R8 remain open. The reserved corpus is unopened.
 
 Local evidence is in `roadmap-r3-constant-chroma-20260927/` under the evidence
 root linked by [the current handoff](WORK-TO-PRODUCTION.md). Read `plan.json`,
