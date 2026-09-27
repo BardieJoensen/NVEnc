@@ -62,6 +62,8 @@ template<class Engine> class NativeModelSegments {
 public:
     NativeModelSegments(const std::filesystem::path& path,const Json& config,
         const PreEncodeRetentionPlan& plan):config_(config) {
+        if(config.contains("preserved_chroma_mask"))
+            throw std::runtime_error("preserved chroma requires qualified pre-encode source proof; reference only");
         const auto copied=config.contains("copied_chroma_mask")?unsigned(integer(config,"copied_chroma_mask",0,6)):0u;
         if(!fgsmodel::film_grain_copied_chroma_mask(copied) || copied!=plan.copiedChroma())
             throw std::runtime_error("native fitter and pre-encode copied chroma differ");

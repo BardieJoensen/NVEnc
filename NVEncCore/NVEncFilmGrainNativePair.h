@@ -114,13 +114,14 @@ struct FilmGrainNativeShape {
     FilmGrainRetainedLumaFit luma{};
     std::array<FilmGrainRetainedChroma,2> colour{};
     uint32_t reasons = FGS_RETAIN_MODEL_INVALID;
-    unsigned copiedChroma=0;
+    unsigned copiedChroma=0,preservedChroma=0;
     FilmGrainConstantChroma constants{};
     bool valid() const {
-        if(reasons || !luma.valid() || !film_grain_copied_chroma_mask(copiedChroma))return false;
+        if(reasons || !luma.valid() || !film_grain_copied_chroma_mask(copiedChroma)
+            || !film_grain_copied_chroma_mask(preservedChroma) || (copiedChroma && preservedChroma))return false;
         if(copiedChroma && !constants.covers(copiedChroma,constants.width,constants.height,constants.depth))return false;
         for(unsigned c=0;c<2;++c) {
-            if(!(copiedChroma&(2u<<c))) {if(!colour[c].valid())return false;}
+            if(!((copiedChroma|preservedChroma)&(2u<<c))) {if(!colour[c].valid())return false;}
             else {
                 // No colour regression was fitted. These coefficients are
                 // neutral placeholders for a separately proved zero curve.
@@ -138,7 +139,7 @@ class FilmGrainNativeShapeTraining {
     bool failed_ = false;
     FilmGrainRetainedLumaMoments luma_{};
     std::array<FilmGrainJointMoments,2> colour_{};
-    unsigned copiedChroma_=0;
+    unsigned copiedChroma_=0,preservedChroma_=0;
     FilmGrainConstantChroma constants_{};
     bool reject() { failed_ = true; return false; }
     template<class Moments> static bool add(Moments& to, const Moments& from,
@@ -155,7 +156,11 @@ class FilmGrainNativeShapeTraining {
         return true;
     }
 public:
-    explicit FilmGrainNativeShapeTraining(unsigned copiedChroma=0):copiedChroma_(copiedChroma) {}
+    // Preserved nonconstant colour gets no fitted regression. The caller must
+    // prove native range/zero synthesis and run the ordinary complete joint
+    // comparisons; this flag does not waive any source/quality requirement.
+    explicit FilmGrainNativeShapeTraining(unsigned copiedChroma=0,unsigned preservedChroma=0):
+        copiedChroma_(copiedChroma),preservedChroma_(preservedChroma) {}
     // Fixed first-eight training half only. It neither reads the check half
     // nor chooses which pictures/populations make a convenient fit.
     bool push(uint64_t ordinal, uint64_t segment, const FilmGrainNativePairMoments& m) {
@@ -166,7 +171,8 @@ public:
         if (frames_ >= 8 || ordinal != frames_ || !film_grain_moment_layout(layout)
             || (frames_ && (width_ != m.width || height_ != m.height || depth_ != m.depth || segment_ != segment)))
             return reject();
-        if(!film_grain_copied_chroma_mask(copiedChroma_))return reject();
+        if(!film_grain_copied_chroma_mask(copiedChroma_) || !film_grain_copied_chroma_mask(preservedChroma_)
+            || (copiedChroma_ && preservedChroma_))return reject();
         if(copiedChroma_) {
             if(!film_grain_same_constant_chroma(m.sourceConstants,m.baseConstants,copiedChroma_,m.width,m.height,m.depth)
                 || (frames_ && !film_grain_same_constant_chroma(constants_,m.sourceConstants,copiedChroma_,m.width,m.height,m.depth)))return reject();
@@ -193,11 +199,11 @@ public:
             for (size_t j = 0; j < i; ++j) if (seeds[i] == seeds[j]) return result;
         }
         result.luma = film_grain_fit_retained_luma({luma_},depth_,shift,grainShift,seeds,count);
-        result.copiedChroma=copiedChroma_;result.constants=constants_;
+        result.copiedChroma=copiedChroma_;result.preservedChroma=preservedChroma_;result.constants=constants_;
         result.reasons = result.luma.reasons;
         if (!result.luma.valid()) { result.reasons |= FGS_RETAIN_MODEL_LUMA; return result; }
         for (unsigned c = 0; c < 2; ++c) {
-            if(copiedChroma_&(2u<<c)) {result.colour[c].coefficients.fill(128);continue;}
+            if((copiedChroma_|preservedChroma_)&(2u<<c)) {result.colour[c].coefficients.fill(128);continue;}
             result.colour[c] = film_grain_fit_retained_chroma({colour_[c]},result.luma.luma);
             result.reasons |= result.colour[c].reasons;
         }

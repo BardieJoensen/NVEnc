@@ -29,6 +29,8 @@ struct NVEncFilmGrainNativeConfig {
         c.engineLibrary=std::filesystem::u8path(j.at("engine_library").get<std::string>());
         if(!c.engineLibrary.is_absolute())throw std::runtime_error("native engine library must be absolute");
         c.engine=j.at("engine");
+        if(c.engine.contains("preserved_chroma_mask"))
+            throw std::runtime_error("preserved chroma requires qualified pre-encode source proof; reference only");
         c.copiedChroma();
         if(c.spatialPolicy()!="frame_window" && c.spatialPolicy()!="full_picture" && c.spatialPolicy()!="full_picture_means" && c.spatialPolicy()!="frame_window_means")
             throw std::runtime_error("native spatial policy must be frame_window, full_picture, full_picture_means or frame_window_means");
