@@ -45,5 +45,33 @@ int main() {
         }
         assert(batch.valid==std::all_of(independent.begin(),independent.end(),[](const auto& value){return value.valid;}));++total;
     }
-    std::cout<<total<<" batched calibrations exactly match independent scalar searches; monotonicity, invalid targets and failed measurements retained\n";
+    unsigned preserved=0;
+    for(unsigned mask:{2u,4u,6u})for(double missing:{-.25,0.,.25}) {
+        std::array<FilmGrainRetainedStrengthTarget,3> targets{};
+        for(unsigned c=0;c<3;++c) {
+            targets[c].channels=c?1:2;targets[c].source={1.,1.};targets[c].missing={.3,.3};
+            if(mask&(1u<<c))targets[c].missing[0]=missing;
+        }
+        for(unsigned fault=0;fault<4;++fault) {
+            auto measure=[&](const std::array<unsigned,3>& strengths) {
+                std::array<FilmGrainRetainedStrengthMeasurement,3> values{};
+                for(unsigned c=0;c<3;++c) {
+                    values[c].valid=true;
+                    if(mask&(1u<<c)) {
+                        assert(strengths[c]==0);
+                        if(fault==1)values[c].variance[0]=1e-9;
+                        if(fault==2)values[c].valid=false;
+                    } else values[c].variance={double(strengths[c])*strengths[c]/65536.,double(strengths[c])*strengths[c]/65536.};
+                }
+                return values;
+            };
+            auto input=targets;if(fault==3)input[(mask&2)?1:2].source[0]=0.;
+            const auto batch=film_grain_calibrate_retained_strength_batch(input,measure,0,mask);
+            assert(batch.valid==(fault==0));
+            for(unsigned c=1;c<3;++c)if(mask&(1u<<c))assert(batch.components[c].strength==0);
+            ++preserved;
+        }
+    }
+    std::cout<<total<<" batched calibrations exactly match independent scalar searches; "<<preserved
+        <<" preserved-texture calibration/zero-synthesis vetoes passed\n";
 }

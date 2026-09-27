@@ -92,3 +92,15 @@ mask. Missing proof, an ordinary fallback override, a changed constant, a clamp
 or an unsupported library rejects the finite trial. Ordinary mode performs none
 of these extra transfers. This mechanism does not qualify textured copied
 colour, real-source admission or automatic selection; those remain separate.
+
+
+The standalone reference additionally supports `preserved_chroma_mask` (2/4/6,
+default 0) for nonconstant colour. It cannot be combined with constant mode.
+All source/reconstructed copied samples must be in the restricted native range;
+synthesis must preserve the reconstructed samples exactly with zero strength.
+Every ordinary full spatial/joint comparison still applies, including colour
+variance, Y/colour and colour/colour correlation and native means. Degenerate
+colour moments reject. This option alone proves neither pre-encode source copy
+nor source population eligibility. Live configuration and shared-library entry
+points reject it until their source proof is integrated. See
+[the qualification record](../FINDINGS-2026-09-27-PRESERVED-CHROMA.md).

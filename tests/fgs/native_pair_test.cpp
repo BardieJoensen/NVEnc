@@ -45,6 +45,25 @@ int main() {
     }
     const auto p=fixture(); const uint16_t seeds[]={1031,2062,3093,4124};
     for(unsigned mask:{2u,4u,6u}) {
+        auto texture=p;
+        for(unsigned c=0;c<2;++c)if(mask&(2u<<c))for(auto& fold:texture.colour[c]) {
+            fold.base=fold.source;fold.sourceBase=fold.source;
+        }
+        FilmGrainNativeShapeTraining preserved(0,mask),legacy;
+        for(unsigned i=0;i<8;++i)assert(preserved.push(i,17,texture) && legacy.push(i,17,texture));
+        const auto fit=preserved.fit(6,0,seeds,4);assert(fit.valid() && fit.preservedChroma==mask);
+        assert(!legacy.fit(6,0,seeds,4).valid());
+        for(unsigned c=0;c<2;++c)if(mask&(2u<<c)) {
+            assert(!fit.colour[c].constructed);
+            for(auto coefficient:fit.colour[c].coefficients)assert(coefficient==128);
+            auto bad=fit;bad.colour[c].coefficients[24]=129;assert(!bad.valid());
+        }
+        FilmGrainNativeShapeTraining mixed(mask,mask);assert(!mixed.push(0,17,texture));
+    }
+    for(unsigned mask:{1u,3u,5u,7u,8u}) {
+        FilmGrainNativeShapeTraining invalid(0,mask);assert(!invalid.push(0,17,p));
+    }
+    for(unsigned mask:{2u,4u,6u}) {
         auto constant=p;
         constant.sourceConstants=constant.baseConstants={p.width,p.height,p.depth,mask,{512,512}};
         for(unsigned c=0;c<2;++c)if(mask&(2u<<c))for(auto& fold:constant.colour[c]) {

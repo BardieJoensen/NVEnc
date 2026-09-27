@@ -64,6 +64,11 @@ int main() {
         const unsigned w=c?64:128,h=c?32:64;data[c].assign(w*h,512);planes[c]={data[c].data(),data[c].size(),w};
     }
     using Sequence=NativeModelSegments<FakeEngine>;
+    for(const auto& value:{Json(0),Json(2),Json(4),Json(6),Json(nullptr),Json(true)})for(unsigned mask:{0u,65535u}) {
+        auto j=config();j["preserved_chroma_mask"]=value;const auto opened=FakeEngine::opened;
+        rejects([&]{Sequence unsupported("unused",j,plan(mask));});
+        assert(FakeEngine::opened==opened);
+    }
     for(unsigned copied:{2u,4u,6u})for(bool segmented:{false,true}) {
         auto j=config();j["copied_chroma_mask"]=copied;
         Json f={.1,.25,.5};for(unsigned c=1;c<3;++c)if(copied&(1u<<c))f[c]=1;

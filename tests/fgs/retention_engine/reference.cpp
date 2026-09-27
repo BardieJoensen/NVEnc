@@ -39,6 +39,10 @@ int main() {
             const auto& m=input.at("copied_chroma_mask");
             require(m.is_number_integer() && m>=0 && m<=6,"invalid copied chroma mask");config.copiedChroma=m.get<unsigned>();
         }
+        if(input.contains("preserved_chroma_mask")) {
+            const auto& m=input.at("preserved_chroma_mask");
+            require(m.is_number_integer() && m>=0 && m<=6,"invalid preserved chroma mask");config.preservedChroma=m.get<unsigned>();
+        }
         const auto spatial=input.value("spatial_policy",std::string("frame_window"));
         require(spatial=="frame_window" || spatial=="full_picture" || spatial=="full_picture_means" || spatial=="frame_window_means","unsupported spatial policy");
         config.spatialPolicy=spatial=="frame_window_means"?FilmGrainMomentSpatialPolicy::FrameWindowMeans

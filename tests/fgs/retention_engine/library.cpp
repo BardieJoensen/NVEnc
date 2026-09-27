@@ -36,6 +36,7 @@ struct Context {
     void ready(){require(!failed,"native engine context failed");}
     void initialize(const char* data,size_t bytes) {
         require(data && bytes && bytes<=65536,"native engine manifest size");const auto j=Json::parse(data,data+bytes);
+        require(!j.contains("preserved_chroma_mask"),"preserved chroma requires qualified pre-encode source proof; reference only");
         const auto mode=j.value("source_mode",std::string("files"));
         require(mode=="files" || mode=="memory","native source mode must be files or memory");memorySource=mode=="memory";
         integer(j,"schema",1,1);config.width=integer(j,"width",64,4096);config.height=integer(j,"height",64,2160);

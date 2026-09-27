@@ -6,6 +6,7 @@
 #include <memory>
 #include "NVEncFilmGrainNativePair.h"
 #include "NVEncFilmGrainRetainedStrengthBatch.h"
+#include "NVEncFilmGrainPreservedChroma.h"
 #include "../native_moments_json.h"
 extern "C" {
 #include "av1/decoder/grain_synthesis.h"
@@ -17,7 +18,7 @@ class NativeSequenceEngine {
 public:
     struct Config {
         unsigned width=0,height=0,depth=0,matrix=0,frames=0,shift=6,grainShift=0;
-        unsigned copiedChroma=0;
+        unsigned copiedChroma=0,preservedChroma=0;
         uint64_t maxNativeBytes=512ull*1024*1024;
         std::vector<uint16_t> trainingSeeds;
         FilmGrainMomentSpatialPolicy spatialPolicy=FilmGrainMomentSpatialPolicy::FrameWindow;
@@ -80,6 +81,7 @@ private:
         int(*points[3])[2]={g.scaling_points_y,g.scaling_points_cb,g.scaling_points_cr};
         for(unsigned c=0;c<3;++c) {
             require(strengths[c]<=255,"strength outside syntax range");
+            if(config_.preservedChroma&(1u<<c))require(strengths[c]==0,"preserved chroma strength must be zero");
             for(unsigned i=0;i<(c?25:24);++i)coefficients[c][i]=int(c?shape_.colour[c-1].coefficients[i]:shape_.luma.luma.parameters().y[i])-128;
             points[c][0][0]=0;points[c][1][0]=255;points[c][0][1]=points[c][1][1]=strengths[c];
         }
@@ -88,6 +90,11 @@ private:
             for(unsigned x=0;x<(c?config_.width/2:config_.width);++x) {
                 const auto value=config_.depth==8?images_.output.planes[c][y*images_.output.stride[c]+x]
                     :reinterpret_cast<uint16_t*>(images_.output.planes[c]+y*images_.output.stride[c])[x];
+                if(config_.preservedChroma&(1u<<c)) {
+                    const auto base=config_.depth==8?images_.source.planes[c][y*images_.source.stride[c]+x]
+                        :reinterpret_cast<uint16_t*>(images_.source.planes[c]+y*images_.source.stride[c])[x];
+                    require(value==base,"preserved chroma changed during synthesis");
+                }
                 rendered_.data[c][size_t(y)*(c?config_.width/2:config_.width)+x]=value;
             }
         const auto v=film_grain_native_variance(rendered_.view(config_.width),config_.width,config_.height,config_.depth);
@@ -139,7 +146,7 @@ private:
                     const auto i=indexes[c][k];result[c].variance[k]=stats.variance[0][i]-original.variance[0][i];
                 }}
                 return result;
-            },config_.copiedChroma);
+            },config_.copiedChroma,config_.preservedChroma);
             FilmGrainMomentCandidate candidate;candidate.calibrated=fitted.valid;
             for(unsigned c=0;c<3;++c)candidate.strengths[c]=fitted.components[c].strength;
             if(fitted.valid) {
@@ -162,9 +169,11 @@ private:
     }
 public:
     explicit NativeSequenceEngine(Config config,Witness witness={})
-        :config_(std::move(config)),witness_(std::move(witness)),training_(config_.copiedChroma),window_(config_.copiedChroma) {
+        :config_(std::move(config)),witness_(std::move(witness)),training_(config_.copiedChroma,config_.preservedChroma),window_(config_.copiedChroma) {
         const auto& c=config_;
         require(film_grain_copied_chroma_mask(c.copiedChroma),"only Cb/Cr may be explicitly copied");
+        require(film_grain_copied_chroma_mask(c.preservedChroma) && !(c.copiedChroma && c.preservedChroma),
+            "preserved chroma mask invalid or combined with constant mode");
         require(c.spatialPolicy==FilmGrainMomentSpatialPolicy::FrameWindow
             || c.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPicture
             || c.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPictureMeans
@@ -197,6 +206,9 @@ public:
             require(a.valid && b.valid,"invalid native input planes");
             if(config_.copiedChroma)require(film_grain_same_constant_chroma(a.constants,b.constants,config_.copiedChroma,
                 config_.width,config_.height,config_.depth),"copied chroma requires exact constant source and base in range");
+            if(config_.preservedChroma)require(film_grain_preserved_chroma_range(source,config_.width,config_.height,config_.depth,config_.preservedChroma)
+                && film_grain_preserved_chroma_range(base,config_.width,config_.height,config_.depth,config_.preservedChroma),
+                "preserved chroma source/base outside decoder range");
             if(received_<8) {
                 const auto moments=film_grain_native_pair(source,base,config_.width,config_.height,config_.depth);
                 require(training_.push(ordinal,segment,moments),"invalid native shape training");
@@ -243,6 +255,7 @@ public:
             result["copied_chroma_mask"]=config_.copiedChroma;
             result["copied_chroma_codes"]=shape_.constants.code;
         }
+        if(config_.preservedChroma)result["preserved_chroma_mask"]=config_.preservedChroma;
         return result;
     }
 };
