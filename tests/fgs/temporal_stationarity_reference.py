@@ -33,16 +33,8 @@ def _motion(source):
                 samples_per_pair=11*11, search_radius=4)
 
 
-def diagnose(source, base, depth, frame_ids, timestamps):
-    """Eight adjacent 3x32x32 tiles; return measurements, never admission bits.
-
-    These frozen exploratory bounds test whether short-history consistency plus
-    small-translation evidence could justify a later classifier. They are not
-    visibility thresholds or sufficient evidence of source-detail preservation.
-    Motion cannot establish that a residual is noise, even after registration.
-    """
-    evidence = measure(source, base, depth, frame_ids, timestamps)
-    motion = _motion(np.asarray(source, dtype=np.float64) / (1 << (depth-8)))
+def consistency(evidence):
+    """Original frozen lag/history/mean diagnostics, without a motion search."""
     variance = np.diag(evidence['source_residual_covariance'])
     lags = np.diagonal(evidence['lag_difference_covariance'], axis1=1, axis2=2)
     history = np.diag(evidence['history_difference_covariance'])
@@ -59,11 +51,26 @@ def diagnose(source, base, depth, frame_ids, timestamps):
         if (abs(evidence['history_mean_difference'][c]) > 1
                 or abs(evidence['current_mean_difference'][c]) > 1):
             reasons.append('mean_changed')
+        conflicts.append(reasons)
+    return conflicts
+
+
+def diagnose(source, base, depth, frame_ids, timestamps):
+    """Eight adjacent 3x32x32 tiles; return measurements, never admission bits.
+
+    These frozen exploratory bounds test whether short-history consistency plus
+    small-translation evidence could justify a later classifier. They are not
+    visibility thresholds or sufficient evidence of source-detail preservation.
+    Motion cannot establish that a residual is noise, even after registration.
+    """
+    evidence = measure(source, base, depth, frame_ids, timestamps)
+    motion = _motion(np.asarray(source, dtype=np.float64) / (1 << (depth-8)))
+    conflicts = consistency(evidence)
+    for c in range(3):
         translated = ((motion['relative_improvement'][:, c] > .2)
                       & (motion['unshifted_mse'][:, c] > .04))
         if np.count_nonzero(translated) >= 4:
-            reasons.append('small_translation_evidence')
-        conflicts.append(reasons)
+            conflicts[c].append('small_translation_evidence')
     return dict(hypothesis_only=True, stationarity_qualified=False,
                 population_acceptance=False, evidence=evidence, motion=motion,
                 conflicts=conflicts)

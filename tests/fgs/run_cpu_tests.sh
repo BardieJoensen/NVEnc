@@ -178,3 +178,4 @@ python3 tests/fgs/test_retention_target_evidence.py
 python3 tests/fgs/test_retention_candidate_evidence.py
 python3 tests/fgs/test_quiet_evidence.py
 python3 tests/fgs/test_motion_detail.py
+python3 tests/fgs/test_aligned_population.py
