@@ -1,7 +1,8 @@
 """Join measured facts only when every candidate stage has the same identity.
 
 This is a finite development adapter, not a source classifier. Even a complete
-set of facts in this module leaves detail and quiet-region checks unknown.
+set of facts in this module leaves detail checks unknown. Quiet-region facts
+may be supplied separately for the exact same native candidate.
 Population coverage and final joint compatibility are separate inputs.
 """
 import hashlib
@@ -27,7 +28,7 @@ def checks(value, allowed):
     return measured, passed
 
 
-def combine(pixel_bytes, model_bytes, expected_subject):
+def combine(pixel_bytes, model_bytes, expected_subject, quiet_bytes=None):
     """The caller supplies the independent current candidate identity.
 
     Exact file and canonical subject digests prevent accidentally combining a
@@ -42,14 +43,27 @@ def combine(pixel_bytes, model_bytes, expected_subject):
         raise ValueError('candidate source/base/model/output association differs')
     if len(pixel['checks']) != 3 or len(model['checks']) != 3:
         raise ValueError('all native components required')
+    quiet = None
+    if quiet_bytes is not None:
+        quiet = json.loads(quiet_bytes)
+        if (digest(quiet['subject']) != expected or quiet['subject_sha256'] != expected
+                or quiet['pixel_evidence_sha256'] != hashlib.sha256(pixel_bytes).hexdigest()
+                or quiet['layout'] != {k: pixel['source_moments'][k]
+                                       for k in ('width', 'height', 'depth')}
+                or len(quiet['checks']) != 3):
+            raise ValueError('native quiet evidence association/layout differs')
     result = []
-    for p, m in zip(pixel['checks'], model['checks']):
+    for c, (p, m) in enumerate(zip(pixel['checks'], model['checks'])):
         pm, pp = checks(p, PIXEL_BITS); mm, mp = checks(m, MODEL_BITS)
         measured, passed = pm | mm, pp | mp
+        if quiet is not None:
+            qm, qp = checks(quiet['checks'][c], 64)
+            measured |= qm; passed |= qp
         result.append(dict(measured=measured, passed=passed,
                            failed=measured & ~passed, unmeasured=255 & ~measured))
     return dict(subject_sha256=expected, model_id=int(expected[:15], 16) or 1,
                 checks=result, source_admission=False,
-                detail_and_quiet_unmeasured=True,
+                detail_and_quiet_unmeasured=all(r['unmeasured'] & 96 == 96 for r in result),
+                detail_unmeasured=True, quiet_evidence_supplied=quiet is not None,
                 association='Exact declared source/pristine/rounded/reconstruction/decoded '
                             'plane hashes, frame clock, fractions, video and model identity.')

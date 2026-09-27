@@ -11,7 +11,8 @@ class CandidateEvidenceTests(unittest.TestCase):
                        hashes={k: [str(c)*64 for c in range(3)] for k in
                                ('source', 'pristine', 'rounded', 'reconstructed', 'decoded')},
                        fractions=[0, .25, .5])
-        pixel = dict(subject, checks=[dict(measured=145, passed=145) for _ in range(3)])
+        pixel = dict(subject, checks=[dict(measured=145, passed=145) for _ in range(3)],
+                     source_moments=dict(width=128, height=64, depth=10))
         model = dict(subject=subject, subject_sha256=evidence.digest(subject),
                      checks=[dict(measured=14, passed=14) for _ in range(3)])
         return subject, pixel, model
@@ -65,6 +66,33 @@ class CandidateEvidenceTests(unittest.TestCase):
                 evidence.combine(*self.encode(pixel, model), subject)
         subject, pixel, model = self.fixture(); pixel['checks'][0]['measured'] = True
         with self.assertRaises(ValueError): evidence.combine(*self.encode(pixel, model), subject)
+
+    def test_quiet_checks_are_separate_and_cannot_create_detail_proof(self):
+        subject, pixel, model = self.fixture(); p, m = self.encode(pixel, model)
+        quiet = dict(subject=subject, subject_sha256=evidence.digest(subject),
+                     pixel_evidence_sha256=hashlib.sha256(p).hexdigest(),
+                     layout=pixel['source_moments'],
+                     checks=[dict(measured=64, passed=64) for _ in range(3)])
+        quiet['checks'][1]['passed'] = 0
+        result = evidence.combine(p, m, subject, json.dumps(quiet).encode())
+        self.assertEqual([c['unmeasured'] for c in result['checks']], [32]*3)
+        self.assertEqual(result['checks'][1]['failed'], 64)
+        self.assertTrue(result['detail_unmeasured'])
+        self.assertFalse(result['source_admission'])
+        quiet['checks'][0] = dict(measured=96, passed=96)
+        with self.assertRaises(ValueError): evidence.combine(p, m, subject, json.dumps(quiet).encode())
+
+    def test_quiet_wrong_picture_or_geometry_rejects(self):
+        subject, pixel, model = self.fixture(); p, m = self.encode(pixel, model)
+        quiet = dict(subject=subject, subject_sha256=evidence.digest(subject),
+                     pixel_evidence_sha256=hashlib.sha256(p).hexdigest(),
+                     layout=pixel['source_moments'],
+                     checks=[dict(measured=64, passed=64) for _ in range(3)])
+        for field, value in [('subject_sha256', '0'*64),
+                             ('layout', dict(width=64, height=128, depth=10)),
+                             ('pixel_evidence_sha256', '0'*64)]:
+            changed = dict(quiet); changed[field] = value
+            with self.assertRaises(ValueError): evidence.combine(p, m, subject, json.dumps(changed).encode())
 
 
 if __name__ == '__main__':
