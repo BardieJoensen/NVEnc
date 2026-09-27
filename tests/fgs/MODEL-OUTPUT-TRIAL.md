@@ -258,3 +258,13 @@ references explicit and verify final output metadata independently; do not skip
 the runtime hash guard or strip metadata from the actual output.
 
 See [D63 findings](FINDINGS-2026-09-24-SELECTOR-PLAN.md) for scope and qualification.
+
+
+The experimental nonconstant-colour extension pairs
+`pre_encode_preserved_chroma` with native-engine `preserved_chroma_mask`
+(2/4/6, off by default). It cannot be combined with constant-colour mode. Every
+copied pre-encode sample must equal its immutable source and be decoder-range
+safe; reconstruction and synthesis then retain all original joint/mean bounds.
+The engine must acknowledge the option. This remains a finite diagnostic with
+no automatic source eligibility. See [D72's implementation and qualification
+state](FINDINGS-2026-09-27-PRESERVED-TRANSPORT.md).

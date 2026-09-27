@@ -170,6 +170,8 @@ public:
             if(s.source->retention)original["pre_encode_retention"]=fgsdiagnostic::preEncodeRetentionEvidence(*s.source->retention);
             if(s.source->copiedChroma.mask)original["pre_encode_constant_chroma"]={{"mask",s.source->copiedChroma.mask},
                 {"code",s.source->copiedChroma.code},{"samples_per_component",uint64_t(m_width)*m_height/4}};
+            if(s.source->preservedChroma)original["pre_encode_preserved_chroma_proof"]={{"mask",s.source->preservedChroma},
+                {"samples_per_component",uint64_t(m_width)*m_height/4}};
             jsonFile(m_config.directory/(stem+"-source.json"),original);
             ++m_sources;
         }

@@ -101,6 +101,7 @@ synthesis must preserve the reconstructed samples exactly with zero strength.
 Every ordinary full spatial/joint comparison still applies, including colour
 variance, Y/colour and colour/colour correlation and native means. Degenerate
 colour moments reject. This option alone proves neither pre-encode source copy
-nor source population eligibility. Live configuration and shared-library entry
-points reject it until their source proof is integrated. See
+nor source population eligibility. The experimental live path requires matching `pre_encode_preserved_chroma`,
+actual pre-encode sample proof and explicit library acknowledgement. D72
+qualification is still pending; this is not a production feature. See
 [the qualification record](../FINDINGS-2026-09-27-PRESERVED-CHROMA.md).

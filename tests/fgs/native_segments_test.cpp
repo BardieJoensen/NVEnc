@@ -28,6 +28,7 @@ struct FakeEngine {
         Json result={{"complete",finished},{"failed",failed},{"received",received},{"selected",models.size()},
             {"models",models},{"ready_at",ready},{"rows",rows},{"spatial_policy",config.at("spatial_policy")}};
         if(config.contains("copied_chroma_mask") && config.value("ack_copied",true))result["copied_chroma_mask"]=config.at("copied_chroma_mask");
+        if(config.contains("preserved_chroma_mask") && config.value("ack_preserved",true))result["preserved_chroma_mask"]=config.at("preserved_chroma_mask");
         return result;
     }
 };
@@ -64,10 +65,23 @@ int main() {
         const unsigned w=c?64:128,h=c?32:64;data[c].assign(w*h,512);planes[c]={data[c].data(),data[c].size(),w};
     }
     using Sequence=NativeModelSegments<FakeEngine>;
-    for(const auto& value:{Json(0),Json(2),Json(4),Json(6),Json(nullptr),Json(true)})for(unsigned mask:{0u,65535u}) {
+    for(const auto& value:{Json(2),Json(4),Json(6),Json(nullptr),Json(true)})for(unsigned mask:{0u,65535u}) {
         auto j=config();j["preserved_chroma_mask"]=value;const auto opened=FakeEngine::opened;
         rejects([&]{Sequence unsupported("unused",j,plan(mask));});
         assert(FakeEngine::opened==opened);
+    }
+    for(unsigned preserved:{2u,4u,6u})for(bool segmented:{false,true}) {
+        auto j=config();j["preserved_chroma_mask"]=preserved;
+        Json f={.1,.25,.5};for(unsigned c=1;c<3;++c)if(preserved&(1u<<c))f[c]=1;
+        Json request={{"pre_encode_retention",f},{"pre_encode_preserved_chroma",preserved},{"pre_encode_source_segments",segmented}};
+        const auto p=PreEncodeRetentionPlan::parse(request,16);Sequence s("unused",j,p);
+        assert(s.report().at("preserved_chroma_mask")==preserved);
+        for(unsigned i=0;i<16;++i)s.pushPair(i,i*50000,planes.data(),planes.data());
+        s.finish();assert(s.report().at("complete")==true);
+        j["ack_preserved"]=false;rejects([&]{Sequence old("unused",j,p);});
+        j.erase("preserved_chroma_mask");rejects([&]{Sequence missing("unused",j,p);});
+        j["preserved_chroma_mask"]=preserved;request.erase("pre_encode_preserved_chroma");
+        rejects([&]{Sequence mismatch("unused",j,PreEncodeRetentionPlan::parse(request,16));});
     }
     for(unsigned copied:{2u,4u,6u})for(bool segmented:{false,true}) {
         auto j=config();j["copied_chroma_mask"]=copied;

@@ -8,12 +8,18 @@ int main() {
     std::set<uint32_t> captured;
     for(unsigned i=0;i<8;++i) {captured.insert(i);j["packets"].push_back({{"pts",i},{"sha256",{std::string(64,'a')}}});j["engine"]["sources"].push_back({{"ordinal",i},{"pts",i}});}
     auto c=NVEncFilmGrainNativeConfig::parse(j,captured);c.requireLayout(1024,512,10);
-    for(const auto& value:{Json(0),Json(2),Json(4),Json(6),Json(nullptr),Json(true)}) {
+    for(unsigned mask:{0u,2u,4u,6u}) {
+        auto preserved=j;preserved["engine"]["preserved_chroma_mask"]=mask;
+        assert(NVEncFilmGrainNativeConfig::parse(preserved,captured).preservedChroma()==mask);
+    }
+    for(const auto& value:{Json(-1),Json(1),Json(3),Json(7),Json(2.0),Json(nullptr),Json(true)}) {
         auto unsupported=j;unsupported["engine"]["preserved_chroma_mask"]=value;
         bool rejected=false;
         try{NVEncFilmGrainNativeConfig::parse(unsupported,captured);}catch(...){rejected=true;}
-        assert(rejected); // Reject before even loading an older library.
+        assert(rejected);
     }
+    {auto mixed=j;mixed["engine"]["copied_chroma_mask"]=2;mixed["engine"]["preserved_chroma_mask"]=4;
+     bool rejected=false;try{NVEncFilmGrainNativeConfig::parse(mixed,captured);}catch(...){rejected=true;}assert(rejected);}
     for(const auto dims:{std::array<unsigned,2>{130,126},{1920,1080},{3840,2160},{4096,2160},{64,66}}) {
         auto full=j;full["engine"]["width"]=dims[0];full["engine"]["height"]=dims[1];
         NVEncFilmGrainNativeConfig::parse(full,captured).requireLayout(dims[0],dims[1],10);

@@ -36,13 +36,13 @@ struct Context {
     void ready(){require(!failed,"native engine context failed");}
     void initialize(const char* data,size_t bytes) {
         require(data && bytes && bytes<=65536,"native engine manifest size");const auto j=Json::parse(data,data+bytes);
-        require(!j.contains("preserved_chroma_mask"),"preserved chroma requires qualified pre-encode source proof; reference only");
         const auto mode=j.value("source_mode",std::string("files"));
         require(mode=="files" || mode=="memory","native source mode must be files or memory");memorySource=mode=="memory";
         integer(j,"schema",1,1);config.width=integer(j,"width",64,4096);config.height=integer(j,"height",64,2160);
         config.depth=integer(j,"depth",8,10);config.matrix=integer(j,"matrix",1,9);config.frames=integer(j,"frame_count",8,16);
         config.shift=integer(j,"shift",6,9);config.grainShift=integer(j,"grain_shift",0,3);
         if(j.contains("copied_chroma_mask"))config.copiedChroma=integer(j,"copied_chroma_mask",0,6);
+        if(j.contains("preserved_chroma_mask"))config.preservedChroma=integer(j,"preserved_chroma_mask",0,6);
         const auto spatial=j.value("spatial_policy",std::string("frame_window"));
         require(spatial=="frame_window" || spatial=="full_picture" || spatial=="full_picture_means" || spatial=="frame_window_means","native spatial policy must be frame_window, full_picture, full_picture_means or frame_window_means");
         config.spatialPolicy=spatial=="frame_window_means"?FilmGrainMomentSpatialPolicy::FrameWindowMeans

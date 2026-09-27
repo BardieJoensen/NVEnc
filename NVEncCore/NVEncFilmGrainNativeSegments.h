@@ -48,6 +48,9 @@ template<class Engine> class NativeModelSegments {
         const auto copied=config_.value("copied_chroma_mask",0u);
         if(copied && engine.report().value("copied_chroma_mask",0u)!=copied)
             throw std::runtime_error("native engine did not confirm copied chroma policy");
+        const auto preserved=config_.value("preserved_chroma_mask",0u);
+        if(preserved && engine.report().value("preserved_chroma_mask",0u)!=preserved)
+            throw std::runtime_error("native engine did not confirm preserved chroma policy");
     }
     void sourcePlanes(const FgsNativePlane* planes) const {
         if(!planes)throw std::runtime_error("source segment has missing planes");
@@ -62,11 +65,12 @@ template<class Engine> class NativeModelSegments {
 public:
     NativeModelSegments(const std::filesystem::path& path,const Json& config,
         const PreEncodeRetentionPlan& plan):config_(config) {
-        if(config.contains("preserved_chroma_mask"))
-            throw std::runtime_error("preserved chroma requires qualified pre-encode source proof; reference only");
         const auto copied=config.contains("copied_chroma_mask")?unsigned(integer(config,"copied_chroma_mask",0,6)):0u;
         if(!fgsmodel::film_grain_copied_chroma_mask(copied) || copied!=plan.copiedChroma())
             throw std::runtime_error("native fitter and pre-encode copied chroma differ");
+        const auto preserved=config.contains("preserved_chroma_mask")?unsigned(integer(config,"preserved_chroma_mask",0,6)):0u;
+        if(!fgsmodel::film_grain_copied_chroma_mask(preserved) || preserved!=plan.preservedChroma()
+            || (copied && preserved))throw std::runtime_error("native fitter and pre-encode preserved chroma differ");
         if(!plan.sourceSegments()) {legacy_=std::make_unique<Engine>(path,config);confirm(*legacy_);return;}
         integer(config,"schema",1,1);
         count_=size_t(integer(config,"frame_count",8,16));
@@ -167,6 +171,7 @@ public:
             {"spatial_policy",config_.value("spatial_policy",std::string("frame_window"))},
             {"segments",segments},{"models",models},{"ready_at",ready},{"rows",rows}};
         if(config_.value("copied_chroma_mask",0u))result["copied_chroma_mask"]=config_.at("copied_chroma_mask");
+        if(config_.value("preserved_chroma_mask",0u))result["preserved_chroma_mask"]=config_.at("preserved_chroma_mask");
         return result;
     }
 };

@@ -54,6 +54,24 @@ int main() {
         assert(rejected);++cases;
     }
     using Json=nlohmann::json;
+    for(unsigned mask:{2u,4u,6u}) {
+        Json f={.1,.25,.5};for(unsigned c=1;c<3;++c)if(mask&(1u<<c))f[c]=1;
+        Json j={{"pre_encode_retention",f},{"pre_encode_preserved_chroma",mask}};
+        const auto p=PreEncodeRetentionPlan::parse(j,16);
+        assert(p.preservedChroma()==mask && p.sourceChroma()==mask && p.copiedChroma()==0);
+        assert(p.modelSegments().size()==1 && p.evidence().at("pre_encode_preserved_chroma")==mask);
+        const auto d=preEncodeRetentionDecision(p.at(0),true,true,false,0,false,7);
+        requirePartialRetentionModel(d,p.at(0),p.sourceChroma());
+        for(unsigned kind=0;kind<5;++kind) {
+            auto bad=j;
+            if(kind==0)bad["pre_encode_copied_chroma"]=2;
+            if(kind==1)bad.erase("pre_encode_retention");
+            if(kind==2)bad["pre_encode_retention"][0]=1;
+            if(kind==3)bad["pre_encode_retention"][(mask&2)?1:2]=.5;
+            if(kind==4)bad["pre_encode_preserved_chroma"]=1;
+            bool rejected=false;try{PreEncodeRetentionPlan::parse(bad,16).modelSegments();}catch(...){rejected=true;}assert(rejected);
+        }
+    }
     const auto disabled=PreEncodeRetentionPlan::parse(Json::object(),16);
     assert(!disabled.enabled() && disabled.evidence().empty());
     bool outside=false;try {disabled.at(0);}catch(...){outside=true;}assert(outside);

@@ -15,7 +15,7 @@ class PreEncodeRetentionPlan {
     std::vector<std::array<float,3>> frames_;
     bool varying_=false;
     bool sourceSegments_=false;
-    unsigned copiedChroma_=0;
+    unsigned copiedChroma_=0,preservedChroma_=0;
     static std::array<float,3> fractions(const nlohmann::json& values) {
         if(!values.is_array() || values.size()!=3)
             throw std::runtime_error("pre-encode retention requires three fractions");
@@ -41,6 +41,14 @@ public:
                 || (!constant && !varying))throw std::runtime_error("copied chroma requires an explicit plan and Cb/Cr mask");
             plan.copiedChroma_=m.get<unsigned>();
         }
+        if(j.contains("pre_encode_preserved_chroma")) {
+            const auto& m=j.at("pre_encode_preserved_chroma");
+            if(!m.is_number_integer() || m<0 || m>6 || !fgsmodel::film_grain_copied_chroma_mask(m.get<unsigned>())
+                || (!constant && !varying))throw std::runtime_error("preserved chroma requires an explicit plan and Cb/Cr mask");
+            plan.preservedChroma_=m.get<unsigned>();
+        }
+        if(plan.copiedChroma_ && plan.preservedChroma_)
+            throw std::runtime_error("constant and preserved chroma modes cannot be combined");
         if(j.contains("pre_encode_source_segments")) {
             if(!j.at("pre_encode_source_segments").is_boolean())
                 throw std::runtime_error("pre-encode source segments must be boolean");
@@ -64,6 +72,8 @@ public:
     bool enabled() const {return !frames_.empty();}
     bool sourceSegments() const {return sourceSegments_;}
     unsigned copiedChroma() const {return copiedChroma_;}
+    unsigned preservedChroma() const {return preservedChroma_;}
+    unsigned sourceChroma() const {return copiedChroma_|preservedChroma_;}
     size_t size() const {return frames_.size();}
     const std::array<float,3>& at(uint64_t ordinal) const {
         if(ordinal>=frames_.size())throw std::runtime_error("retention input ordinal is outside finite plan");
@@ -78,7 +88,7 @@ public:
     }
     void requireModeledFractions(const std::array<float,3>& row) const {
         for(unsigned c=0;c<3;++c) {
-            const bool copied=(copiedChroma_&(1u<<c))!=0;
+            const bool copied=(sourceChroma()&(1u<<c))!=0;
             if(copied?row[c]!=1:row[c]>=1)
                 throw std::runtime_error("modeled row differs from explicit copied chroma mask");
         }
@@ -103,6 +113,7 @@ public:
             nlohmann::json{{"pre_encode_retention",frames_[0]}};
         if(sourceSegments_)result["pre_encode_source_segments"]=true;
         if(copiedChroma_)result["pre_encode_copied_chroma"]=copiedChroma_;
+        if(preservedChroma_)result["pre_encode_preserved_chroma"]=preservedChroma_;
         return result;
     }
 };
@@ -145,7 +156,8 @@ inline nlohmann::json preEncodeRetentionEvidence(const PreEncodeRetentionDecisio
         {"grain_model","off; candidate measurement only"}};
 }
 // Each modeled segment requires partial Y and either partial colour or an
-// explicitly copied component with a separate exact constant-pixel proof.
+// explicitly copied component with a separate exact pre-encode pixel proof.
+// Constant and general preserved-colour modes keep their own range/model guards.
 // A model failure cannot restore pixels that NVENC has already encoded. The
 // manual controller must encode a new whole-source output or keep the original.
 inline void requirePartialRetentionModel(const PreEncodeRetentionDecision& d,

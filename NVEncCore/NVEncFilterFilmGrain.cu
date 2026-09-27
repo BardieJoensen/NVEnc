@@ -2478,10 +2478,12 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 if (std::binary_search(m_sourceFrames.begin(), m_sourceFrames.end(), m_sourceOrdinal)) {
                     const unsigned copiedChroma = m_preEncodeRetention && !m_preEncodeFractions.sourceAt(m_sourceOrdinal)
                         ? m_preEncodeFractions.copiedChroma() : 0;
+                    const unsigned preservedChroma = m_preEncodeRetention && !m_preEncodeFractions.sourceAt(m_sourceOrdinal)
+                        ? m_preEncodeFractions.preservedChroma() : 0;
                     const auto candidate = joint_probe_view(output);
                     result->originalSource = fgsdiagnostic::captureNativeSource(joint_probe_view(source), m_sourceMemory,
                         m_sourceOrdinal, m_tableTimebase.n(), m_tableTimebase.d(), stream, retentionDecision,
-                        copiedChroma, copiedChroma ? &candidate : nullptr);
+                        copiedChroma, (copiedChroma || preservedChroma) ? &candidate : nullptr, preservedChroma);
 #if ENABLE_AVSW_READER
                     // Check the captured original before this frame can leave
                     // the filter and reach NVENC. No additional GPU transfer.

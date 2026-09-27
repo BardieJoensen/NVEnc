@@ -38,6 +38,16 @@ int main() {
         if(failure==8){owned->planes[1].pop_back();owned->requireIdentity(3,15,150,1,24,128,66,10);}
     });
     owned.reset();assert(memory->live==0);
+    for(unsigned mask:{2u,4u,6u}) {
+        auto proof=std::make_shared<NativeSourceFrame>(memory,0,0,0,1,24,128,66,10);
+        for(unsigned c=1;c<3;++c)for(size_t i=0;i<proof->planes[c].size();++i)proof->planes[c][i]=uint16_t(480+i%65);
+        rejects([&]{proof->requirePreservedChroma(mask);});proof->preservedChroma=mask;proof->requirePreservedChroma(mask);
+        const auto c=(mask&2)?1:2;const auto value=proof->planes[c].back();
+        proof->planes[c].back()=63;rejects([&]{proof->requirePreservedChroma(mask);});proof->planes[c].back()=value;
+        proof->planes[c].pop_back();rejects([&]{proof->requirePreservedChroma(mask);});proof->planes[c].push_back(value);
+        proof->copiedChroma.mask=mask;rejects([&]{proof->requirePreservedChroma(mask);});
+        proof.reset();assert(memory->live==0);
+    }
     rejects([&]{std::make_shared<NativeSourceFrame>(memory,0,-1,0,1,24,128,66,10);});assert(memory->live==0);
     rejects([&]{std::make_shared<NativeSourceFrame>(memory,0,0,INT64_MIN,1,24,128,66,10);});assert(memory->live==0);
     rejects([&]{std::make_shared<NativeSourceFrame>(memory,0,0,0,1,24,128,65,10);});assert(memory->live==0);
