@@ -9,6 +9,11 @@ inline fgsmodel::FilmGrainNativeMoments moments(const Json& j) {
     fgsmodel::FilmGrainNativeMoments m;
     m.valid=j.at("valid"); m.width=j.at("width"); m.height=j.at("height"); m.depth=j.at("depth");
     m.mean=j.at("mean").get<decltype(m.mean)>(); m.blocks=j.at("blocks").get<decltype(m.blocks)>();
+    if(j.contains("constants")) {
+        const auto& c=j.at("constants");
+        m.constants.width=c.at("width");m.constants.height=c.at("height");m.constants.depth=c.at("depth");
+        m.constants.mask=c.at("mask");m.constants.code=c.at("code").get<decltype(m.constants.code)>();
+    }
     if (j.at("folds").size()!=2) throw std::runtime_error("expected two folds");
     for (unsigned f=0;f<2;++f) {
         auto& a=m.folds[f]; const auto& b=j.at("folds").at(f);
@@ -26,8 +31,11 @@ inline Json moments(const fgsmodel::FilmGrainNativeMoments& m) {
     Json folds=Json::array();
     for (const auto& f:m.folds) folds.push_back({{"y",f.y},{"colour",f.colour},{"common",f.common},{"cross",f.cross},
         {"mean_valid",f.meanValid},{"mean",f.mean}});
-    return {{"valid",m.valid},{"width",m.width},{"height",m.height},{"depth",m.depth},
+    Json result={{"valid",m.valid},{"width",m.width},{"height",m.height},{"depth",m.depth},
         {"blocks",m.blocks},{"mean",m.mean},{"folds",folds}};
+    if(m.constants.mask)result["constants"]={{"width",m.constants.width},{"height",m.constants.height},
+        {"depth",m.constants.depth},{"mask",m.constants.mask},{"code",m.constants.code}};
+    return result;
 }
 inline Json matrix(const fgsmodel::FilmGrainMomentMatrixCheck& c) {
     return {{"valid",c.valid},{"variance",c.variance},{"covariance",c.covariance},{"pass_bounds",c.pass}};

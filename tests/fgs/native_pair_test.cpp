@@ -44,6 +44,32 @@ int main() {
         assert(cross[1]!=cross[25]); // Symmetrization or reversal loses evidence.
     }
     const auto p=fixture(); const uint16_t seeds[]={1031,2062,3093,4124};
+    for(unsigned mask:{2u,4u,6u}) {
+        auto constant=p;
+        constant.sourceConstants=constant.baseConstants={p.width,p.height,p.depth,mask,{512,512}};
+        for(unsigned c=0;c<2;++c)if(mask&(2u<<c))for(auto& fold:constant.colour[c]) {
+            const auto y=fold.source[24*26+24];fold.source.fill(0);fold.base.fill(0);fold.sourceBase.fill(0);
+            fold.source[24*26+24]=y;
+        }
+        FilmGrainNativeShapeTraining copied(mask),legacy;
+        for(unsigned i=0;i<8;++i)assert(copied.push(i,17,constant) && legacy.push(i,17,constant));
+        const auto fit=copied.fit(6,0,seeds,4);assert(fit.valid() && fit.copiedChroma==mask);
+        assert(!legacy.fit(6,0,seeds,4).valid());
+        for(unsigned c=0;c<2;++c)if(mask&(2u<<c)) {
+            assert(!fit.colour[c].constructed);
+            for(auto coefficient:fit.colour[c].coefficients)assert(coefficient==128);
+            auto bad=fit;bad.colour[c].coefficients[24]=129;assert(!bad.valid());
+        }
+        for(unsigned kind=0;kind<5;++kind) {
+            auto bad=constant;const auto c=(mask&2)?0:1;
+            if(kind==0)bad.baseConstants.mask=0;
+            if(kind==1)++bad.baseConstants.code[c];
+            if(kind==2)bad.colour[c][0].source[0]=1e-20;
+            if(kind==3)bad.colour[c][1].sourceBase[24*26+25]=1e-20;
+            if(kind==4)bad.sourceConstants.depth=8;
+            FilmGrainNativeShapeTraining veto(mask);assert(!veto.push(0,17,bad));
+        }
+    }
     auto ragged=p;ragged.width=130;ragged.height=126;
     for(unsigned f=0;f<2;++f) {
         auto& y=ragged.luma[f];const uint64_t n=f?6420:6348;

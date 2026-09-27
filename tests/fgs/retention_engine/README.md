@@ -71,3 +71,24 @@ removes global-mean selection leakage from the older diagnostic without hiding
 its original full-spatial per-picture failures or granting source eligibility.
 All older policy names preserve their decisions; this policy also requires
 explicit runtime confirmation.
+
+`copied_chroma_mask` is an explicit finite diagnostic extension: 2 copies Cb,
+4 copies Cr, and 6 copies both. The default is zero. Y remains modeled. Each
+copied component must be exactly constant across every native pixel of every
+original/reconstructed pair, at the same code throughout a modeled segment,
+within the inclusive restricted colour range (16–240 scaled to native depth).
+Its model has a present, zero-strength curve and neutral AR coefficients. It
+does not undergo a singular colour regression or strength search. Synthesis
+must preserve every copied sample exactly; active components retain all their
+previous diagnostics. Constant moment rows and cross terms must be exactly
+zero, with exact global/fold means; zero variance alone cannot approve a copy.
+
+Live experiments also require matching `pre_encode_copied_chroma` in the
+explicit fraction plan. Copied fractions must be exactly one, other fractions
+below one. An extra GPU capture verifies the actual pre-encode copied pixels
+against the original before submission. The immutable source frame carries
+this proof to reconstruction, and the library must explicitly acknowledge the
+mask. Missing proof, an ordinary fallback override, a changed constant, a clamp
+or an unsupported library rejects the finite trial. Ordinary mode performs none
+of these extra transfers. This mechanism does not qualify textured copied
+colour, real-source admission or automatic selection; those remain separate.

@@ -168,6 +168,8 @@ public:
                 {"pts",pts},{"timebase",{s.timebaseNum,s.timebaseDen}},{"width",m_width},{"height",m_height},{"depth",m_depth},
                 {"format","planar_native_uint16"},{"planes",planes}};
             if(s.source->retention)original["pre_encode_retention"]=fgsdiagnostic::preEncodeRetentionEvidence(*s.source->retention);
+            if(s.source->copiedChroma.mask)original["pre_encode_constant_chroma"]={{"mask",s.source->copiedChroma.mask},
+                {"code",s.source->copiedChroma.code},{"samples_per_component",uint64_t(m_width)*m_height/4}};
             jsonFile(m_config.directory/(stem+"-source.json"),original);
             ++m_sources;
         }

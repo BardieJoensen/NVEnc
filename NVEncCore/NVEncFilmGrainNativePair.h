@@ -9,6 +9,7 @@ namespace fgsmodel {
 struct FilmGrainNativePairMoments {
     bool valid = false;
     unsigned width = 0, height = 0, depth = 0;
+    FilmGrainConstantChroma sourceConstants{},baseConstants{};
     std::array<FilmGrainRetainedLumaMoments,2> luma{};
     // Component first, then disjoint spatial fold.
     std::array<std::array<FilmGrainJointMoments,2>,2> colour{};
@@ -58,6 +59,7 @@ inline FilmGrainNativePairMoments film_grain_native_pair(
     const auto base = film_grain_native_moments(basePlanes,width,height,depth);
     if (!film_grain_moment_same_layout(source,base)) return result;
     result.width = width; result.height = height; result.depth = depth;
+    result.sourceConstants=source.constants;result.baseConstants=base.constants;
     const auto grid=film_grain_native_grid(width,height);
     for (unsigned f = 0; f < 2; ++f) {
         auto& y = result.luma[f]; y.blocks = source.blocks[f]; y.observations = grid.lumaObservations[f];
@@ -112,7 +114,22 @@ struct FilmGrainNativeShape {
     FilmGrainRetainedLumaFit luma{};
     std::array<FilmGrainRetainedChroma,2> colour{};
     uint32_t reasons = FGS_RETAIN_MODEL_INVALID;
-    bool valid() const { return reasons == 0 && luma.valid() && colour[0].valid() && colour[1].valid(); }
+    unsigned copiedChroma=0;
+    FilmGrainConstantChroma constants{};
+    bool valid() const {
+        if(reasons || !luma.valid() || !film_grain_copied_chroma_mask(copiedChroma))return false;
+        if(copiedChroma && !constants.covers(copiedChroma,constants.width,constants.height,constants.depth))return false;
+        for(unsigned c=0;c<2;++c) {
+            if(!(copiedChroma&(2u<<c))) {if(!colour[c].valid())return false;}
+            else {
+                // No colour regression was fitted. These coefficients are
+                // neutral placeholders for a separately proved zero curve.
+                if(colour[c].constructed || colour[c].reasons)return false;
+                for(auto v:colour[c].coefficients)if(v!=128)return false;
+            }
+        }
+        return true;
+    }
 };
 
 class FilmGrainNativeShapeTraining {
@@ -121,6 +138,8 @@ class FilmGrainNativeShapeTraining {
     bool failed_ = false;
     FilmGrainRetainedLumaMoments luma_{};
     std::array<FilmGrainJointMoments,2> colour_{};
+    unsigned copiedChroma_=0;
+    FilmGrainConstantChroma constants_{};
     bool reject() { failed_ = true; return false; }
     template<class Moments> static bool add(Moments& to, const Moments& from,
         uint64_t blocks, uint64_t observations) {
@@ -136,6 +155,7 @@ class FilmGrainNativeShapeTraining {
         return true;
     }
 public:
+    explicit FilmGrainNativeShapeTraining(unsigned copiedChroma=0):copiedChroma_(copiedChroma) {}
     // Fixed first-eight training half only. It neither reads the check half
     // nor chooses which pictures/populations make a convenient fit.
     bool push(uint64_t ordinal, uint64_t segment, const FilmGrainNativePairMoments& m) {
@@ -146,6 +166,18 @@ public:
         if (frames_ >= 8 || ordinal != frames_ || !film_grain_moment_layout(layout)
             || (frames_ && (width_ != m.width || height_ != m.height || depth_ != m.depth || segment_ != segment)))
             return reject();
+        if(!film_grain_copied_chroma_mask(copiedChroma_))return reject();
+        if(copiedChroma_) {
+            if(!film_grain_same_constant_chroma(m.sourceConstants,m.baseConstants,copiedChroma_,m.width,m.height,m.depth)
+                || (frames_ && !film_grain_same_constant_chroma(constants_,m.sourceConstants,copiedChroma_,m.width,m.height,m.depth)))return reject();
+            // A constant's entire source/base/cross row is zero, including
+            // its relation to Y. Inconsistent moment evidence must not skip a
+            // singular fit and silently become an accepted model.
+            for(unsigned c=0;c<2;++c)if(copiedChroma_&(2u<<c))for(const auto& f:m.colour[c])
+                for(unsigned i=0;i<26;++i)for(unsigned j=0;j<26;++j)if(i!=24 || j!=24)
+                    if(f.source[i*26+j]!=0. || f.base[i*26+j]!=0. || f.sourceBase[i*26+j]!=0.)return reject();
+            constants_=m.sourceConstants;
+        }
         const auto grid=film_grain_native_grid(m.width,m.height);
         if (!add(luma_,m.luma[0],layout.blocks[0],grid.lumaObservations[0])
             || !add(colour_[0],m.colour[0][0],layout.blocks[0],grid.colourObservations[0])
@@ -161,9 +193,11 @@ public:
             for (size_t j = 0; j < i; ++j) if (seeds[i] == seeds[j]) return result;
         }
         result.luma = film_grain_fit_retained_luma({luma_},depth_,shift,grainShift,seeds,count);
+        result.copiedChroma=copiedChroma_;result.constants=constants_;
         result.reasons = result.luma.reasons;
         if (!result.luma.valid()) { result.reasons |= FGS_RETAIN_MODEL_LUMA; return result; }
         for (unsigned c = 0; c < 2; ++c) {
+            if(copiedChroma_&(2u<<c)) {result.colour[c].coefficients.fill(128);continue;}
             result.colour[c] = film_grain_fit_retained_chroma({colour_[c]},result.luma.luma);
             result.reasons |= result.colour[c].reasons;
         }

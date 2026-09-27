@@ -2,11 +2,13 @@
 // Complete disjoint native partitions; no population/coverage admission.
 // MIT license, as NVEncFilmGrainModel.h.
 #pragma once
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include "NVEncFilmGrainNativeGrid.h"
+#include "NVEncFilmGrainConstantChroma.h"
 
 namespace fgsmodel {
 struct FilmGrainNativePlane {
@@ -15,6 +17,7 @@ struct FilmGrainNativePlane {
 };
 struct FilmGrainNativeVariance {
     bool valid=false;
+    FilmGrainConstantChroma constants{};
     std::array<double,3> mean{};
     // Native Y, 2x2-averaged Y, Cb, Cr; independent checkerboard halves.
     std::array<std::array<double,4>,2> variance{};
@@ -27,14 +30,17 @@ inline FilmGrainNativeVariance film_grain_native_variance(
     const auto grid=film_grain_native_grid(width,height);
     if(!grid.valid || !grid.blocks[0] || !grid.blocks[1] || (depth!=8 && depth!=10))return result;
     const double scale=double(1u<<(depth-8));
+    result.constants.width=width;result.constants.height=height;result.constants.depth=depth;
     for(unsigned c=0;c<3;++c) {
         const unsigned w=c?width/2:width,h=c?height/2:height;const auto& p=planes[c];
         if(!p.data || p.stride<w || p.stride>65536 || p.samples<p.stride*(h-1)+w)return result;
-        uint64_t sum=0;
+        uint64_t sum=0;unsigned low=1u<<depth,high=0;
         for(unsigned y=0;y<h;++y)for(unsigned x=0;x<w;++x) {
             const auto value=p.data[size_t(y)*p.stride+x];if(value>=(1u<<depth))return result;sum+=value;
+            low=std::min<unsigned>(low,value);high=std::max<unsigned>(high,value);
         }
         result.mean[c]=double(sum)/(uint64_t(w)*h)/scale;
+        if(c && low==high){result.constants.mask|=1u<<c;result.constants.code[c-1]=low;}
     }
     result.blocks=grid.blocks;
     std::array<double,4096> tile{};

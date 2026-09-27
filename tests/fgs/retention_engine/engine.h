@@ -17,6 +17,7 @@ class NativeSequenceEngine {
 public:
     struct Config {
         unsigned width=0,height=0,depth=0,matrix=0,frames=0,shift=6,grainShift=0;
+        unsigned copiedChroma=0;
         uint64_t maxNativeBytes=512ull*1024*1024;
         std::vector<uint16_t> trainingSeeds;
         FilmGrainMomentSpatialPolicy spatialPolicy=FilmGrainMomentSpatialPolicy::FrameWindow;
@@ -90,7 +91,10 @@ private:
                 rendered_.data[c][size_t(y)*(c?config_.width/2:config_.width)+x]=value;
             }
         const auto v=film_grain_native_variance(rendered_.view(config_.width),config_.width,config_.height,config_.depth);
-        require(v.valid,"invalid synthesized variance");return v;
+        require(v.valid,"invalid synthesized variance");
+        if(config_.copiedChroma)require(film_grain_same_constant_chroma(shape_.constants,v.constants,config_.copiedChroma,
+            config_.width,config_.height,config_.depth),"copied chroma changed during synthesis");
+        return v;
     }
     Json model(unsigned seed,const std::array<unsigned,3>& strengths) const {
         Json coefficients=Json::array(),curves=Json::array();
@@ -106,7 +110,14 @@ private:
         const auto target=film_grain_native_variance(source,config_.width,config_.height,config_.depth);
         const auto original=film_grain_native_variance(base,config_.width,config_.height,config_.depth);
         const auto sourceMoments=film_grain_native_moments(source,config_.width,config_.height,config_.depth);
-        require(target.valid && original.valid && sourceMoments.valid,"invalid selection inputs");setBase(base);
+        require(target.valid && original.valid && sourceMoments.valid,"invalid selection inputs");
+        if(config_.copiedChroma) {
+            require(film_grain_same_constant_chroma(target.constants,original.constants,config_.copiedChroma,
+                config_.width,config_.height,config_.depth),"copied chroma source/base differs");
+            require(film_grain_same_constant_chroma(shape_.constants,target.constants,config_.copiedChroma,
+                config_.width,config_.height,config_.depth),"copied chroma changed within segment");
+        }
+        setBase(base);
         const unsigned indexes[3][2]={{0,1},{2,2},{3,3}};
         std::array<FilmGrainRetainedStrengthTarget,3> targets{};
         for(unsigned c=0;c<3;++c) {
@@ -128,7 +139,7 @@ private:
                     const auto i=indexes[c][k];result[c].variance[k]=stats.variance[0][i]-original.variance[0][i];
                 }}
                 return result;
-            });
+            },config_.copiedChroma);
             FilmGrainMomentCandidate candidate;candidate.calibrated=fitted.valid;
             for(unsigned c=0;c<3;++c)candidate.strengths[c]=fitted.components[c].strength;
             if(fitted.valid) {
@@ -139,7 +150,7 @@ private:
             }
             candidates.push_back({{"seed",seed},{"calibrated",fitted.valid},{"trace",trace},{"scales",candidate.strengths}});
             return candidate;
-        },config_.spatialPolicy);
+        },config_.spatialPolicy,config_.copiedChroma);
         rows_.push_back({{"ordinal",selected_},{"selection",fgsdiagnostic::selection(choice)},{"candidates",candidates}});
         require(choice.complete && choice.passesDiagnostic && choice.selected>=0,"candidate selection/check fold failed");
         require(window_.push(selected_,segment_,sourceMoments,selectedMoments),"frame/window diagnostics failed");
@@ -151,8 +162,9 @@ private:
     }
 public:
     explicit NativeSequenceEngine(Config config,Witness witness={})
-        :config_(std::move(config)),witness_(std::move(witness)) {
+        :config_(std::move(config)),witness_(std::move(witness)),training_(config_.copiedChroma),window_(config_.copiedChroma) {
         const auto& c=config_;
+        require(film_grain_copied_chroma_mask(c.copiedChroma),"only Cb/Cr may be explicitly copied");
         require(c.spatialPolicy==FilmGrainMomentSpatialPolicy::FrameWindow
             || c.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPicture
             || c.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPictureMeans
@@ -183,6 +195,8 @@ public:
             const auto a=film_grain_native_variance(source,config_.width,config_.height,config_.depth);
             const auto b=film_grain_native_variance(base,config_.width,config_.height,config_.depth);
             require(a.valid && b.valid,"invalid native input planes");
+            if(config_.copiedChroma)require(film_grain_same_constant_chroma(a.constants,b.constants,config_.copiedChroma,
+                config_.width,config_.height,config_.depth),"copied chroma requires exact constant source and base in range");
             if(received_<8) {
                 const auto moments=film_grain_native_pair(source,base,config_.width,config_.height,config_.depth);
                 require(training_.push(ordinal,segment,moments),"invalid native shape training");
@@ -217,7 +231,7 @@ public:
         require(ready(ordinal),"model is not ready");return models_.at(ordinal);
     }
     Json report() const {
-        return {{"complete",finished_ && !failed_},{"failed",failed_},{"error",error_},
+        Json result={{"complete",finished_ && !failed_},{"failed",failed_},{"error",error_},
             {"spatial_policy",config_.spatialPolicy==FilmGrainMomentSpatialPolicy::FrameWindowMeans?"frame_window_means"
                 :config_.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPictureMeans?"full_picture_means"
                 :config_.spatialPolicy==FilmGrainMomentSpatialPolicy::FullPicture?"full_picture":"frame_window"},
@@ -225,6 +239,11 @@ public:
             {"release_through",window_.releaseThrough()},{"ready_at",readyAt_},
             {"native_buffer_bytes",nativeBytes_},{"peak_native_buffer_bytes",peakNativeBytes_},
             {"models",models_},{"rows",rows_},{"source_admission",false}};
+        if(config_.copiedChroma) {
+            result["copied_chroma_mask"]=config_.copiedChroma;
+            result["copied_chroma_codes"]=shape_.constants.code;
+        }
+        return result;
     }
 };
 } // namespace fgsdiagnostic

@@ -25,8 +25,10 @@ struct FakeEngine {
         if(received>=8)for(size_t i=0;i<received;++i) {
             models.push_back({{"apply",true},{"seed",i+101}});rows.push_back({{"ordinal",i}});
         }
-        return {{"complete",finished},{"failed",failed},{"received",received},{"selected",models.size()},
+        Json result={{"complete",finished},{"failed",failed},{"received",received},{"selected",models.size()},
             {"models",models},{"ready_at",ready},{"rows",rows},{"spatial_policy",config.at("spatial_policy")}};
+        if(config.contains("copied_chroma_mask") && config.value("ack_copied",true))result["copied_chroma_mask"]=config.at("copied_chroma_mask");
+        return result;
     }
 };
 static Json config() {
@@ -62,6 +64,19 @@ int main() {
         const unsigned w=c?64:128,h=c?32:64;data[c].assign(w*h,512);planes[c]={data[c].data(),data[c].size(),w};
     }
     using Sequence=NativeModelSegments<FakeEngine>;
+    for(unsigned copied:{2u,4u,6u})for(bool segmented:{false,true}) {
+        auto j=config();j["copied_chroma_mask"]=copied;
+        Json f={.1,.25,.5};for(unsigned c=1;c<3;++c)if(copied&(1u<<c))f[c]=1;
+        Json request={{"pre_encode_retention",f},{"pre_encode_copied_chroma",copied},{"pre_encode_source_segments",segmented}};
+        const auto p=PreEncodeRetentionPlan::parse(request,16);
+        Sequence s("unused",j,p);assert(s.report().at("copied_chroma_mask")==copied);
+        for(unsigned i=0;i<16;++i)s.pushPair(i,i*50000,planes.data(),planes.data());
+        s.finish();assert(s.report().at("complete")==true);
+        j["ack_copied"]=false;rejects([&]{Sequence old("unused",j,p);});
+        j.erase("copied_chroma_mask");rejects([&]{Sequence missing("unused",j,p);});
+        j["copied_chroma_mask"]=copied;request.erase("pre_encode_copied_chroma");
+        rejects([&]{Sequence mismatch("unused",j,PreEncodeRetentionPlan::parse(request,16));});
+    }
     for(unsigned mask:{0u,65535u,255u,65280u,1u,32768u}) {
         const auto p=plan(mask);const auto prior=FakeEngine::pushed,opened=FakeEngine::opened;
         Sequence s("unused",config(),p);assert(FakeEngine::opened-opened==(mask==65535?0:1));
