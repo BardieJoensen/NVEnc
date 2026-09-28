@@ -97,6 +97,11 @@ public:
     static constexpr int holdFrames = 24;
     static constexpr int rampFrames = 16;
     FilmGrainSourceCaps() { reset(); }
+    void resetPlane(int plane) {
+        if (plane < 0 || plane >= 3) return;
+        gains_[plane].fill(1.0);
+        holds_[plane].fill(0);
+    }
     void reset() {
         for (auto& plane : gains_) plane.fill(1.0);
         for (auto& plane : holds_) plane.fill(0);
