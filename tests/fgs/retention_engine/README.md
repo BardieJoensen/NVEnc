@@ -116,8 +116,15 @@ units); zero source energy must remain zero. Failure is terminal and the
 rejected row remains unpublished. D78 additionally requires exact reconstructed
 samples for each truly constant original component: opposite constant tile
 offsets can otherwise disappear under detrending and cancel in the half means.
-The report names `native_variance_means_constant_v2`, records the constant-source
-and sample-match flags, and marks it as a necessary check only. It is not full local-detail, covariance
-or temporal qualification. Read [D75/D76](../FINDINGS-2026-09-28-SOURCE-ENERGY.md)
-and [D78](../FINDINGS-2026-09-28-CONSTANT-SOURCE.md) for implementation and current qualification status. Ordinary encoding does
-not instantiate this diagnostic path.
+D81 also bounds each visible native tile's local mean error and both fitted
+slope edge excursions to 0.125 in normalized eight-bit units. This prevents
+nonconstant-source errors from cancelling across regions or vanishing during
+detrending. These are independent basis-component bounds, not a bound on their
+sum at a corner. The report names `native_variance_means_local_planes_v3`, records
+the original constant/sample-match flags plus local maxima, worst tiles and
+local pass flags, and marks the result as a necessary check only. It is not full
+local-detail, covariance or temporal qualification. Read
+[D75/D76](../FINDINGS-2026-09-28-SOURCE-ENERGY.md),
+[D78](../FINDINGS-2026-09-28-CONSTANT-SOURCE.md) and
+[D81](../FINDINGS-2026-09-28-LOCAL-SOURCE.md) for implementation and current
+qualification status. Ordinary encoding does not instantiate this diagnostic path.

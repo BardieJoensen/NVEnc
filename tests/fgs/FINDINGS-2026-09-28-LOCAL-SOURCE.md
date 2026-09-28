@@ -31,12 +31,28 @@ check rejects all 18 counterexamples. In the captured pairs, 56 of 64 explicit
 source rows pass; all prior acceptance decisions remain unchanged. Temporary
 raw measurements are removed with size/hash receipts.
 
-Full CPU, complete native API replay and actual encoder qualification are in
-progress. The stricter diagnostic has not been deployed. Production stays
-ordinary `cb903a17`, retention/FEL off; the reserved corpus is unopened. R3–R8
-and the separate D80 periodic regression alert remain open.
+Full CPU passes 278 Python tests in 38 suites and 55 C++ programs. Native tests
+include 14 positives, 170 rejection controls and terminal failures at ordinals
+0, 8 and 15. All 20 complete native API replays preserve prior decisions,
+measurements, models and readiness; nine accepted IVF outputs remain byte-exact.
+Implementation `3dd646b8` also passes the finite ten-job actual encoder trial.
+Eight encodes succeed and two reject at the expected source ordinals (0 and 8),
+before publishing the offending model. AOM/dav1d agree on 320 decoded
+observations. Original, rounded candidate and reconstructed roles each match
+273,997,824 independently checked native samples; AOM synthesis adds 18,874,368
+oracle samples. All 40 accepted source rows pass independently solved local
+means/slopes. Ordinary SDR/HDR pairs preserve packets, clocks, metadata,
+models and decoded pictures exactly. The owned Tdarr pause is released.
+
+The qualified diagnostic binary SHA256 is
+`19397de6e61ca4a3830eb6414bc8a6921b9953d095716d7fb116b49efd0f8ab0`.
+The stricter diagnostic has not been deployed. Production stays ordinary
+`cb903a17`, retention/FEL off; the reserved corpus is unopened. R3–R8 remain
+open. D80's separate periodic comparison is now explicitly reviewed with a
+versioned development reference; its original failed comparison is retained.
+Neither result is a full release verdict.
 
 Local evidence: `roadmap-r3-local-source-reconstruction-20260928/` under the
 [current handoff root](WORK-TO-PRODUCTION.md), beginning with `plan.json`,
 `counterexamples.json`, `independent-report.json`, `full-cpu.json` and
-`replay-report.json`.
+`replay-report.json`, `gpu-comparison.json` and `report.json`.
