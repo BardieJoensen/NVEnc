@@ -51,3 +51,8 @@ per-frame `energy.json`/`traces.json` under the handoff root. Both binaries are
 pinned there, including the production binary's verified SHA256. The owned
 pause is released; nothing restarts automatically. Retention/FEL remain off
 and reserved footage is unopened.
+
+`ordinary-recovery.png` and `.pdf` plot the per-frame native luma variance
+against source, with the actual 24 fps clocks and separate hold/ramp intervals.
+`plot.py` records the reproducible Matplotlib figure; quiet intervals have no
+variance denominator and are not presented as normalized energy measurements.

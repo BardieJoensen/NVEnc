@@ -26,6 +26,15 @@ All 20 source-bound native replays preserve their existing decisions, moments,
 models and readiness. All nine accepted complete IVF outputs remain exact.
 The full suite passes 267 Python tests in 37 suites plus 54 C++ programs.
 
+Full encoder `c6c53646` also passes the bounded actual GPU regression. Six
+outputs complete and two known source-energy losses reject before publishing
+the offending model. AOM and dav1d agree in both grain modes across 320 decoded
+observations. The original, rounded candidate and reconstructed captures each
+match 273,997,824 native samples; 24 modeled frames and all 40 admitted source
+rows match their independent references. Ordinary SDR/HDR packets, clocks,
+metadata, models and pixels remain exact against D76. The binary SHA256 is
+`ccd3af265d062996b2c90822a5bd1dc7fa5be7c3d5b51f84caf42ec63190ca12`.
+
 The tiny 20-pixel quiet-transition rejection recorded in D76 remains rejected;
 this change addresses false acceptance, not its conservative quiet policy.
 The ordinary recovery findings in D77 remain separate. R3/R4 and later
@@ -34,5 +43,7 @@ sources and reserved footage are unchanged.
 
 Local evidence: `roadmap-r3-constant-source-reconstruction-20260928/` under the
 handoff root, especially `plan.json`, `targeted-tests.json`, `full-cpu.json`,
-`independent-report.json` and `replay-report.json`. Full encoder build and the
-bounded actual GPU regression are pending at this CPU checkpoint.
+`independent-report.json`, `replay-report.json`, `gpu-comparison.json` and
+`report.json`. The owned pause is released and Tdarr's worker limits are
+preserved. Natural recovery analysis and R3–R8 continue; this checkpoint is
+not completion of automatic retention.

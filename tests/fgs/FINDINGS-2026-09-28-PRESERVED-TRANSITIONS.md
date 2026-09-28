@@ -47,3 +47,9 @@ it before processing. Its failed receipt and the corrected capture-only manifest
 are retained. D75's owned pauses are released. D76's separate finite GPU work
 has its own receipt; read the live handoff for operational state. No experiment
 is scheduled and the reserved corpus remains unopened.
+
+After independent qualification, 2,337 duplicate phase-two raw witnesses
+(8,498,671,104 bytes) were removed. Reusable source/capture references, encoded
+outputs and reports remain; `completed-witness-cleanup.json` records the exact
+paths and hashes. Recreate those duplicate witnesses before rerunning their
+old raw comparisons.
