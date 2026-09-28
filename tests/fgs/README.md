@@ -16,6 +16,17 @@ and why the GPU tier is not and cannot be hosted in CI.
 
 ## Automated entry points
 
+`recovery_audit_reference.py` is an offline native source/output measurement
+helper for recovery transitions. Its caller must first verify original-source
+identity, frame clocks and independent grain-on/off decoding. It measures Y64
+and C32 tiles in bounded batches; source-only screening, stable constant areas,
+unsupported texture and uncovered borders stay separate. The screen is a
+necessary diagnostic, not grain classification or a visible-damage verdict:
+fast moving texture can pass it. HDR results are scaled native code values,
+not luminance or JND scores. Its CPU regressions include known grain loss,
+constant-area offsets, persistent/moving texture and direct least-squares
+agreement across the batch boundary. It adds no work to routine Tdarr validation.
+
 Experimental retention collection has a separate, manually invoked CUDA/NumPy
 comparison. Read [its findings and scope](FINDINGS-2026-09-22-JOINT-COLLECTION.md)
 before using it. `joint_collect_reference.py prepare DIRECTORY` writes a finite
