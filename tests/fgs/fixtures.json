@@ -127,6 +127,11 @@
       "file": "gentlemen-spatial-denoising-detail-negative-33m-150s.mkv",
       "sha256": "62670059833482ab7c325db1ac82ba30cc7182a72ddeec8bbfbca2b79a0024c7",
       "bytes": 50539916
+    },
+    "gentlemen_endpoint_recovery_positive": {
+      "file": "gentlemen-endpoint-recovery-positive-33m-150s.mkv",
+      "sha256": "aee654a4f2e44046d8fa220a4d4f819825203ccdb61d88f2addb31e0b25044ef",
+      "bytes": 50505873
     }
   },
   "provenance": {
@@ -338,6 +343,14 @@
       "encoder_core": "af37b958",
       "review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/source-variance/training-v6/failure-review.json",
       "role": "Retained actual fine-jacket blur, synthesis disabled when assessed"
+    },
+    "gentlemen_endpoint_recovery_positive": {
+      "encoder_core": "07cb2874",
+      "encoder_sha256": "86773a2bc4dd7e740617df2bcff75171d2ce510b30092df560b51360194754a8",
+      "review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/retention-prep-20260910/colour-recovery-20260922/roadmap-r4-constant-endpoints-20260928/periodic-reference-review.json",
+      "decision": "Reviewed endpoint/recovery change for this fixture; same-binary repeats exact; original thresholds and negatives retained.",
+      "role": "Decoded texture/temporal positive. Independent source-detail reference remains gentlemen_amplitude_guard_positive.",
+      "limits": "Not full encoder release approval or whole-picture source eligibility."
     }
   },
   "canary_revalidation": {
