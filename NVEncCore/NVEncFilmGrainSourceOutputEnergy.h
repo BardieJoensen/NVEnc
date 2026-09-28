@@ -9,6 +9,7 @@ struct FilmGrainSourceOutputEnergy {
     bool valid=false,pass=false;
     FilmGrainNativeVariance source{},actual{};
     std::array<double,3> meanError{};
+    std::array<bool,3> constantSource{},actualMatchesSource{};
     std::array<std::array<double,3>,2> foldMeanError{};
     std::array<std::array<double,4>,2> relativeVarianceError{};
     std::array<std::array<bool,4>,2> quiet{},variancePass{};
@@ -23,6 +24,7 @@ inline FilmGrainSourceOutputEnergy film_grain_source_output_energy(
     if(!result.source.valid || !result.actual.valid)return result;
     const auto grid=film_grain_native_grid(width,height);
     std::array<std::array<int64_t,3>,2> differences{};
+    result.constantSource.fill(true);result.actualMatchesSource.fill(true);
     // Include every visible sample and every border. Padding cannot cancel
     // opposing changes in the independent halves; sum before normalization.
     for(unsigned by=0;by<grid.rows;++by)for(unsigned bx=0;bx<grid.columns;++bx) {
@@ -31,14 +33,22 @@ inline FilmGrainSourceOutputEnergy film_grain_source_output_energy(
             const unsigned factor=c?2:1,w=tile.width/factor,h=tile.height/factor;
             for(unsigned y=0;y<h;++y)for(unsigned x=0;x<w;++x) {
                 const size_t yy=tile.y/factor+y,xx=tile.x/factor+x;
-                differences[fold][c]+=int(actual[c].data[yy*actual[c].stride+xx])
-                    -int(source[c].data[yy*source[c].stride+xx]);
+                const auto original=source[c].data[yy*source[c].stride+xx];
+                const auto reconstructed=actual[c].data[yy*actual[c].stride+xx];
+                differences[fold][c]+=int(reconstructed)-int(original);
+                result.constantSource[c]&=original==source[c].data[0];
+                result.actualMatchesSource[c]&=reconstructed==original;
             }
         }
     }
     const double scale=double(1u<<(depth-8));
     result.valid=true;result.pass=true;
     for(unsigned c=0;c<3;++c) {
+        // Tile detrending removes constant offsets. Opposite tile offsets can
+        // cancel in both spatial-half means while adding a false block edge.
+        // A truly constant original needs no noise classification: require
+        // its actual samples, including all borders, to remain unchanged.
+        result.pass&=!result.constantSource[c] || result.actualMatchesSource[c];
         // Subtract native integers before normalization, avoiding cancellation
         // between separately rounded large means at the acceptance boundary.
         result.meanError[c]=double(differences[0][c]+differences[1][c])
