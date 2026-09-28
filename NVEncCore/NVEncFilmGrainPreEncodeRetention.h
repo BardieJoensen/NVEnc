@@ -15,6 +15,7 @@ class PreEncodeRetentionPlan {
     std::vector<std::array<float,3>> frames_;
     bool varying_=false;
     bool sourceSegments_=false;
+    bool modeledSource_=false;
     unsigned copiedChroma_=0,preservedChroma_=0;
     static std::array<float,3> fractions(const nlohmann::json& values) {
         if(!values.is_array() || values.size()!=3)
@@ -56,6 +57,13 @@ public:
             if(plan.sourceSegments_ && !constant && !varying)
                 throw std::runtime_error("source segments require an explicit retention plan");
         }
+        if(j.contains("pre_encode_modeled_source")) {
+            const auto& mode=j.at("pre_encode_modeled_source");
+            if(!mode.is_boolean())throw std::runtime_error("modeled source must be boolean");
+            plan.modeledSource_=mode.get<bool>();
+            if(plan.modeledSource_ && (!constant && !varying))
+                throw std::runtime_error("modeled source requires an explicit retention plan");
+        }
         if(!constant && !varying)return plan;
         if(constant && varying)throw std::runtime_error("retention requires one constant or per-picture request, not both");
         if(!count || count>16)throw std::runtime_error("retention plan requires 1..16 pictures");
@@ -67,10 +75,17 @@ public:
                 throw std::runtime_error("retention plan requires exactly one row per input picture");
             for(const auto& row:rows)plan.frames_.push_back(fractions(row));
         }
+        if(plan.modeledSource_) {
+            if(count<8 || plan.sourceSegments_ || plan.sourceChroma())
+                throw std::runtime_error("modeled source requires 8..16 pictures without source segments or copied chroma");
+            for(const auto& row:plan.frames_)if(row!=std::array<float,3>{{1,1,1}})
+                throw std::runtime_error("modeled source requires full source in every component and picture");
+        }
         return plan;
     }
     bool enabled() const {return !frames_.empty();}
     bool sourceSegments() const {return sourceSegments_;}
+    bool modeledSource() const {return modeledSource_;}
     unsigned copiedChroma() const {return copiedChroma_;}
     unsigned preservedChroma() const {return preservedChroma_;}
     unsigned sourceChroma() const {return copiedChroma_|preservedChroma_;}
@@ -87,6 +102,10 @@ public:
         return at(ordinal)==std::array<float,3>{{1,1,1}};
     }
     void requireModeledFractions(const std::array<float,3>& row) const {
+        if(modeledSource_) {
+            if(row!=std::array<float,3>{{1,1,1}})throw std::runtime_error("modeled source fractions differ");
+            return;
+        }
         for(unsigned c=0;c<3;++c) {
             const bool copied=(sourceChroma()&(1u<<c))!=0;
             if(copied?row[c]!=1:row[c]>=1)
@@ -112,6 +131,7 @@ public:
         nlohmann::json result=varying_?nlohmann::json{{"pre_encode_retention_frames",frames_}}:
             nlohmann::json{{"pre_encode_retention",frames_[0]}};
         if(sourceSegments_)result["pre_encode_source_segments"]=true;
+        if(modeledSource_)result["pre_encode_modeled_source"]=true;
         if(copiedChroma_)result["pre_encode_copied_chroma"]=copiedChroma_;
         if(preservedChroma_)result["pre_encode_preserved_chroma"]=preservedChroma_;
         return result;
@@ -181,5 +201,13 @@ inline void requireSourceRetentionModel(const PreEncodeRetentionDecision& d,
     if(expected!=std::array<float,3>{{1,1,1}} || d.requested!=expected || d.effective!=expected
         || d.preservedComponents!=7 || !d.reasonMask || (d.reasonMask&~known))
         throw std::runtime_error("native source segment lacks matching whole-source preservation");
+}
+// Compression-only recovery is a separate explicit diagnostic. It may model a
+// requested full-source input only when ordinary analysis allowed every plane.
+// In particular, a fallback is never converted into permission to add grain.
+inline void requireModeledSourceRetention(const PreEncodeRetentionDecision& d) {
+    if(d.requested!=std::array<float,3>{{1,1,1}} || d.effective!=d.requested
+        || d.preservedComponents!=7 || d.reasonMask!=PreEncodeRetentionDecision::RequestedSource)
+        throw std::runtime_error("modeled source cannot override ordinary fallback or inactive components");
 }
 }

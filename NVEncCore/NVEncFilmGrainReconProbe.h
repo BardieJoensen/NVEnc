@@ -117,6 +117,9 @@ public:
             if(bool(source->retention)!=m_config.preEncodeRetention()
                 || (source->retention && source->retention->requested!=m_config.retention.at(p.frameIdx)))
                 throw std::runtime_error("pre-encode retention decision differs between filter and reconstruction");
+            if(source->modeledSourceCopied!=m_config.retention.modeledSource())
+                throw std::runtime_error("modeled source pixel proof differs between filter and reconstruction");
+            if(m_config.retention.modeledSource())source->requireModeledSource();
             m_peakSourceBytes=std::max(m_peakSourceBytes,source->peakBytes());
             if(m_peakSourceBytes>m_config.maxSourceBytes)throw std::runtime_error("source budget differs between filter and reconstruction");
             s.source=std::move(source);
@@ -168,6 +171,7 @@ public:
                 {"pts",pts},{"timebase",{s.timebaseNum,s.timebaseDen}},{"width",m_width},{"height",m_height},{"depth",m_depth},
                 {"format","planar_native_uint16"},{"planes",planes}};
             if(s.source->retention)original["pre_encode_retention"]=fgsdiagnostic::preEncodeRetentionEvidence(*s.source->retention);
+            if(s.source->modeledSourceCopied)original["pre_encode_modeled_source_copy_verified"]=true;
             if(s.source->copiedChroma.mask)original["pre_encode_constant_chroma"]={{"mask",s.source->copiedChroma.mask},
                 {"code",s.source->copiedChroma.code},{"samples_per_component",uint64_t(m_width)*m_height/4}};
             if(s.source->preservedChroma)original["pre_encode_preserved_chroma_proof"]={{"mask",s.source->preservedChroma},
