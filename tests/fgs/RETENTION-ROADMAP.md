@@ -23,11 +23,14 @@ source/model transitions and unchanged ordinary SDR/HDR output.
 periodic reference. These results do not qualify real source eligibility.
 
 The remaining R3 deliverable is a bounded automatic source/retention decision
-with useful real whole-picture behaviour. [D74 component evidence](FINDINGS-2026-09-28-COMPONENT-EVIDENCE.md)
-supports only a small fraction of the inspected HDR pictures; every occupied
-lookup also has unsupported pixels. More fits of the same patches cannot solve
-that coverage conflict. Missing evidence must preserve or reject, not admit.
-Keep the reserved corpus unopened until the candidate is useful and frozen.
+with useful real whole-picture behaviour. [D82 source-only model selection](FINDINGS-2026-09-28-COMPONENT-SELECTION.md)
+fixes unnecessary stationary rejections and a measured slow-motion overestimate.
+Its 1,344 known-source controls, complete HDR census and 287 Python / 55 C++
+checks pass. Necessary evidence now covers 8–10% of those pictures, but every
+occupied lookup still overlaps unsupported pixels. Measure the complementary
+source hypotheses and remaining conflicts before another classifier or fit.
+Missing evidence must preserve or reject, not admit. Keep the reserved corpus
+unopened until the candidate is useful and frozen.
 
 The full-movie amplitude regression lacks its exact Play Dirty original and
 three rebuildable generated artifacts; recovery of that prerequisite is pending.

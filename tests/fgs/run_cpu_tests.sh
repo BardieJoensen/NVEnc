@@ -188,4 +188,5 @@ python3 tests/fgs/test_quiet_evidence.py
 python3 tests/fgs/test_motion_detail.py
 python3 tests/fgs/test_aligned_population.py
 python3 tests/fgs/test_component_population.py
+python3 tests/fgs/test_component_selection.py
 python3 tests/fgs/test_recovery_audit_reference.py

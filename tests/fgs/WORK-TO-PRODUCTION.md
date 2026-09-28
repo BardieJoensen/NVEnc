@@ -1,6 +1,6 @@
 # FGS encoder: current work and handoff
 
-Updated September 28, 2026 after D81 qualification. This is the current entry
+Updated September 28, 2026 after D82 qualification. This is the current entry
 point; the [archived handoff](WORK-HISTORY-THROUGH-2026-09-28.md) preserves older
 checkpoints and the detailed repair/campaign evidence map. Dated findings are
 completed study records, not competing queues. Continue through checkpoints.
@@ -48,12 +48,16 @@ controls and exact same-binary repeats. A separately versioned positive records
 that decision; original failures, negatives and numerical bounds are retained.
 This is not a fresh full-release-gate result or independent unseen qualification.
 
-[D74 native component evidence](FINDINGS-2026-09-28-COMPONENT-EVIDENCE.md)
-improves structured-source measurements but supports only about 5% of the two
-inspected HDR pictures. Every occupied brightness lookup also includes
-unsupported pixels. Repeating fits of those supported patches cannot establish
-whole-picture eligibility. Source-copy mechanics and necessary reconstruction
-vetoes are qualified; useful real automatic partial retention is still open.
+[D82 source-only stationary/motion selection](FINDINGS-2026-09-28-COMPONENT-SELECTION.md)
+adds visible border coverage and rejects a demonstrated slow-motion grain
+estimation error. It passes 1,344 known-source controls and the full CPU suite
+(287 Python / 39 suites, 55 C++). Necessary source evidence covers about 8–10%
+of the two HDR pictures, versus D74's roughly 5%; every occupied brightness
+lookup still also includes unsupported pixels. Next measure the complementary
+source hypotheses and their remaining lookup conflicts before another classifier
+or fit. This offline prerequisite grants no source admission or runtime approval.
+Source-copy mechanics and reconstruction vetoes are qualified; useful real
+automatic partial retention is still open.
 
 The reserved qualification corpus remains unopened. The complete full-movie
 amplitude regression is also unavailable: the original Play Dirty REPACK
@@ -99,6 +103,8 @@ Evidence root:
   independent replay, build, GPU comparison, exact hashes and released pause.
 - `roadmap-r4-constant-endpoints-20260928/report.json`: D80 declared scope,
   causal controls, source/visual review, repeat evidence and reference decision.
+- `roadmap-r3-component-selection-20260928/report.json`: D82 source-only
+  selection, rejected first version, independent prediction and complete census.
 - `roadmap-r1-r2-20260922/report.json`, `r1-completion.json`, `corpus-report.json`:
   measurement contract/collector and reserved corpus provenance. Do not inspect
   reserved grain results before a useful candidate is frozen.
