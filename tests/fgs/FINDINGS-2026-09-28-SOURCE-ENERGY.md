@@ -48,8 +48,13 @@ Local evidence: `roadmap-r3-preserved-transitions-20260928/` and
 `full-cpu.json`, `independent-report.json` and `replay-report.json` pin this CPU
 checkpoint. The full Linux encoder is built at `296068e8`, SHA
 `4005998b910b5713150c34b7d67922b845e87a403138518c3c0a8ad35cf13b0c`.
-Current reproduction is complete; actual GPU rejection/positive controls and
-ordinary equivalence are pending.
+Current reproduction and D76's actual GPU/decoder qualification are complete:
+13 successful encodes and 11 clean rejections, including two ordinary SDR/HDR
+before/after pairs with exact packets, clocks, metadata, models and pictures.
+Independent AOM/dav1d comparisons cover 1,024 observations including captures;
+40 admitted source rows pass independently and the new quiet controls preserve
+their actual samples exactly. All 104 modeled frames and 55 modeled windows
+retain their checks. This qualifies the necessary veto, not complete retention.
 
 Actual captured-base preflight adds two exactly preserved full-resolution quiet
 sources and one 10-bit modeled-to-quiet transition as positives. An 8-bit quiet
@@ -62,3 +67,13 @@ search and the encoder are unchanged; they are not disguised as grain-loss
 defects or replaced with easier successful transitions. All eight D75 source
 plans now reject, and four earlier model-only responses remain exact.
 Production, library files, source protections and reserved footage are unchanged.
+
+A subsequent review demonstrates the aggregate check's constant-source blind
+spot: opposite constant tile offsets can cancel within both halves while tile
+detrending hides the added step. All six native component/depth counterexamples
+pass D76. [D78](FINDINGS-2026-09-28-CONSTANT-SOURCE.md) adds a separate exact reconstruction check for truly constant
+source planes. Its code and CPU suite pass locally; encoder qualification is
+still pending. Broader nonconstant/local-artifact limitations remain. The
+[ordinary recovery census](FINDINGS-2026-09-28-ORDINARY-RECOVERY.md) separately
+finds identical deployed/branch behaviour and an existing compressed-source
+grain loss during recovery; it does not infer library damage from these controls.

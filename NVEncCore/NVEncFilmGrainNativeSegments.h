@@ -128,6 +128,7 @@ public:
                 sourceEnergy_.push_back({{"ordinal",ordinal},{"valid",e.valid},{"pass",e.pass},
                     {"source_variance",e.source.variance},{"actual_variance",e.actual.variance},
                     {"mean_error",e.meanError},{"fold_mean_error",e.foldMeanError},
+                    {"constant_source",e.constantSource},{"actual_matches_source",e.actualMatchesSource},
                     {"relative_variance_error",e.relativeVarianceError},{"quiet",e.quiet},
                     {"variance_pass",e.variancePass}});
                 if(!e.valid || !e.pass)throw std::runtime_error("source-preserved reconstruction failed energy/mean checks");
@@ -195,7 +196,7 @@ public:
             {"segments",segments},{"models",models},{"ready_at",ready},{"rows",rows}};
         if(config_.value("copied_chroma_mask",0u))result["copied_chroma_mask"]=config_.at("copied_chroma_mask");
         if(config_.value("preserved_chroma_mask",0u))result["preserved_chroma_mask"]=config_.at("preserved_chroma_mask");
-        if(hasSource_)result["source_output_energy"]={{"policy","native_variance_means_v1"},
+        if(hasSource_)result["source_output_energy"]={{"policy","native_variance_means_constant_v2"},
             {"necessary_check_only",true},{"rows",sourceEnergy_}};
         return result;
     }

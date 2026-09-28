@@ -36,6 +36,7 @@ int main() {try {
     std::cout<<Json({{"valid",e.valid},{"pass",e.pass},{"source_admission",false},
         {"source_variance",e.source.variance},{"actual_variance",e.actual.variance},
         {"mean_error",e.meanError},{"fold_mean_error",e.foldMeanError},
+        {"constant_source",e.constantSource},{"actual_matches_source",e.actualMatchesSource},
         {"relative_variance_error",e.relativeVarianceError},{"quiet",e.quiet},{"variance_pass",e.variancePass}}).dump()<<'\n';
     return e.valid?0:1;
 }catch(const std::exception& e){std::cout<<Json({{"valid",false},{"error",e.what()}}).dump()<<'\n';return 2;}}

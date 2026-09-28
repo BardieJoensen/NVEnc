@@ -53,6 +53,25 @@ int main() {
             }
         }
         same=film_grain_source_output_energy(av,bv,w,h,depth);assert(same.valid && same.pass);++positives;
+        for(unsigned c=0;c<3;++c) {
+            const auto copy=b[c];const unsigned factor=c?2:1;
+            for(unsigned by=0;by<grid.rows;++by)for(unsigned bx=0;bx<grid.columns;++bx) {
+                const auto tile=grid.tile(bx,by);
+                const int offset=bx==0?-int(scale):bx==grid.columns-1?int(scale):0;
+                for(unsigned y=0;y<tile.height/factor;++y)for(unsigned x=0;x<tile.width/factor;++x)
+                    b[c][size_t(tile.y/factor+y)*bv[c].stride+tile.x/factor+x]=uint16_t(128*scale+offset);
+            }
+            const auto steps=film_grain_source_output_energy(av,bv,w,h,depth);
+            assert(steps.valid && !steps.pass && steps.constantSource[c] && !steps.actualMatchesSource[c]);
+            // The earlier aggregate test would accept these artificial edges:
+            // detrending removes them and both half means cancel or stay tiny.
+            for(unsigned f=0;f<2;++f) {
+                for(unsigned k=0;k<4;++k)assert(steps.actual.variance[f][k]==0 && steps.variancePass[f][k]);
+                for(unsigned k=0;k<3;++k)assert(std::abs(steps.foldMeanError[f][k])<=.125);
+            }
+            for(double mean:steps.meanError)assert(std::abs(mean)<=.125);
+            ++negatives;b[c]=copy;
+        }
         for(unsigned y=0;y<h;++y)for(unsigned x=0;x<w;++x)b[0][y*bv[0].stride+x]=uint16_t((y&1?129:127)*scale);
         const auto lines=film_grain_source_output_energy(av,bv,w,h,depth);
         assert(lines.valid && !lines.pass && lines.quiet[0][0] && !lines.variancePass[0][0]);++negatives;

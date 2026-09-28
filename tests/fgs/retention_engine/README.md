@@ -113,8 +113,11 @@ source row against its actual reconstruction before publishing a grain-off
 model. Both spatial halves must pass native/averaged luma and colour energy
 checks (8% relative variance) and complete native means (0.125 in eight-bit
 units); zero source energy must remain zero. Failure is terminal and the
-rejected row remains unpublished. The report names `native_variance_means_v1`
-and marks it as a necessary check only. It is not full local-detail, covariance
+rejected row remains unpublished. D78 additionally requires exact reconstructed
+samples for each truly constant original component: opposite constant tile
+offsets can otherwise disappear under detrending and cancel in the half means.
+The report names `native_variance_means_constant_v2`, records the constant-source
+and sample-match flags, and marks it as a necessary check only. It is not full local-detail, covariance
 or temporal qualification. Read [D75/D76](../FINDINGS-2026-09-28-SOURCE-ENERGY.md)
-for implementation and current qualification status. Ordinary encoding does
+and [D78](../FINDINGS-2026-09-28-CONSTANT-SOURCE.md) for implementation and current qualification status. Ordinary encoding does
 not instantiate this diagnostic path.

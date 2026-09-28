@@ -141,6 +141,23 @@ int main() {
             && energy.at("rows").back().at("pass")==false);
         assert(r.at("models").at(failAt).is_null() && r.at("ready_at").at(failAt)==-1);
     }
+    for(unsigned depth:{8u,10u})for(unsigned changed=0;changed<3;++changed) {
+        auto j=config();j["depth"]=depth;j["height"]=128;const unsigned scale=1u<<(depth-8);
+        std::array<std::vector<uint16_t>,3> original,actual;
+        std::array<FgsNativePlane,3> source{},base{};
+        for(unsigned c=0;c<3;++c) {
+            const unsigned w=c?64:128;original[c].assign(w*w,128*scale);actual[c]=original[c];
+            if(c==changed)for(unsigned y=0;y<w;++y)for(unsigned x=0;x<w;++x)
+                actual[c][y*w+x]=uint16_t((x<w/2?127:129)*scale);
+            source[c]={original[c].data(),original[c].size(),w};base[c]={actual[c].data(),actual[c].size(),w};
+        }
+        Sequence s("unused",j,plan(65535));rejects([&]{s.pushPair(0,0,source.data(),base.data());});
+        rejects([&]{s.model(0);});rejects([&]{s.finish();});const auto report=s.report();
+        const auto& energy=report.at("source_output_energy");const auto& row=energy.at("rows").at(0);
+        assert(energy["policy"]=="native_variance_means_constant_v2" && row["constant_source"][changed]==true
+            && row["actual_matches_source"][changed]==false && row["pass"]==false);
+        assert(report["failed"]==true && report["received"]==0 && report["models"][0].is_null());
+    }
     for(unsigned kind=0;kind<8;++kind) {
         Sequence s("unused",config(),plan(65535));auto broken=planes;
         if(kind==0)broken[1].data=nullptr;
