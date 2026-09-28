@@ -44,6 +44,19 @@ int main() {
         auto half=film_grain_source_output_energy(av,bv,w,h,depth);
         assert(half.valid && !half.pass && half.foldMeanError[0][0]==-1 && half.foldMeanError[1][0]==1);
         ++negatives;b[0]=saved;
+        // A single distant edge tile must not disappear into a UHD average.
+        // Use the ragged native dimensions and distinct padding of each plane.
+        const auto corner=grid.tile(grid.columns-1,grid.rows-1);
+        for(unsigned c=0;c<3;++c) {
+            const auto copy=b[c];const unsigned factor=c?2:1;
+            for(unsigned y=0;y<corner.height/factor;++y)for(unsigned x=0;x<corner.width/factor;++x)
+                b[c][size_t(corner.y/factor+y)*bv[c].stride+corner.x/factor+x]+=scale;
+            const auto local=film_grain_source_output_energy(av,bv,w,h,depth);
+            assert(local.valid && !local.pass && local.localMeanError[c]==1 && !local.localPlanePass[c]);
+            assert((local.localWorstTile[c]==std::array<unsigned,4>{corner.x/factor,corner.y/factor,corner.width/factor,corner.height/factor}));
+            if(w>=1920)for(const auto& fold:local.foldMeanError)for(double mean:fold)assert(std::abs(mean)<=.125);
+            ++negatives;b[c]=copy;
+        }
         // Quiet rows permit exact preservation; adding alternating lines does
         // not become a variance pass by dividing by a fabricated noise floor.
         for(unsigned c=0;c<3;++c) {
@@ -77,6 +90,33 @@ int main() {
         assert(lines.valid && !lines.pass && lines.quiet[0][0] && !lines.variancePass[0][0]);++negatives;
         assert(!film_grain_source_output_energy(av,bv,w+1,h,depth).valid);++negatives;
         assert(!film_grain_source_output_energy(av,bv,w,h,12).valid);++negatives;
+    }
+    // Nonconstant sources also need their removed local affine components.
+    // These visible step/ramp changes leave every previous aggregate check
+    // unchanged, including both independent means and all detrended energies.
+    for(unsigned depth:{8u,10u})for(unsigned changed=0;changed<3;++changed)for(unsigned kind=0;kind<3;++kind) {
+        const unsigned scale=1u<<(depth-8);
+        std::array<std::vector<uint16_t>,3> a,b;std::array<FilmGrainNativePlane,3> av{},bv{};
+        for(unsigned c=0;c<3;++c) {
+            const unsigned side=c?64:128,tile=side/2;a[c].resize(side*side);b[c].resize(side*side);
+            for(unsigned y=0;y<side;++y)for(unsigned x=0;x<side;++x) {
+                const int value=(120+(17*x+11*y+7*c+(x*y)%13)%17)*scale;
+                const int delta=kind==0?(x<tile?-4:4):2*int((kind==1?x:y)%tile)-int(tile-1);
+                a[c][y*side+x]=uint16_t(value);b[c][y*side+x]=uint16_t(value+(c==changed?delta*int(scale):0));
+            }
+            av[c]={a[c].data(),a[c].size(),side};bv[c]={b[c].data(),b[c].size(),side};
+        }
+        const auto e=film_grain_source_output_energy(av,bv,128,128,depth);
+        assert(e.valid && !e.pass && !e.constantSource[changed] && !e.localPlanePass[changed]);
+        for(unsigned c=0;c<3;++c) {
+            assert(e.meanError[c]==0);
+            for(unsigned f=0;f<2;++f)assert(e.foldMeanError[f][c]==0);
+            assert(e.localMeanError[c]==(c==changed && kind==0?4.:0.));
+            for(unsigned axis=0;axis<2;++axis)
+                assert(e.localSlopeError[c][axis]==(c==changed && kind==axis+1?double((c?32:64)-1):0.));
+        }
+        for(const auto& half:e.variancePass)for(bool pass:half)assert(pass);
+        ++negatives;
     }
     for(unsigned depth:{8u,10u}) {
         const unsigned scale=1u<<(depth-8);

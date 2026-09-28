@@ -154,9 +154,31 @@ int main() {
         Sequence s("unused",j,plan(65535));rejects([&]{s.pushPair(0,0,source.data(),base.data());});
         rejects([&]{s.model(0);});rejects([&]{s.finish();});const auto report=s.report();
         const auto& energy=report.at("source_output_energy");const auto& row=energy.at("rows").at(0);
-        assert(energy["policy"]=="native_variance_means_constant_v2" && row["constant_source"][changed]==true
+        assert(energy["policy"]=="native_variance_means_local_planes_v3" && row["constant_source"][changed]==true
             && row["actual_matches_source"][changed]==false && row["pass"]==false);
         assert(report["failed"]==true && report["received"]==0 && report["models"][0].is_null());
+    }
+    for(unsigned failAt:{0u,8u,15u})for(unsigned axis=0;axis<3;++axis) {
+        auto j=config();j["height"]=128;
+        std::array<std::vector<uint16_t>,3> original,actual;
+        std::array<FgsNativePlane,3> source{},base{};
+        for(unsigned c=0;c<3;++c) {
+            const unsigned w=c?64:128;original[c].resize(w*w);actual[c].resize(w*w);
+            for(unsigned y=0;y<w;++y)for(unsigned x=0;x<w;++x)
+                actual[c][y*w+x]=original[c][y*w+x]=uint16_t((120+(x*7+y*3)%17)*4);
+            source[c]={original[c].data(),original[c].size(),w};base[c]={actual[c].data(),actual[c].size(),w};
+        }
+        Sequence s("unused",j,plan(65535));
+        for(unsigned i=0;i<failAt;++i)s.pushPair(i,i*50000,source.data(),base.data());
+        for(unsigned y=0;y<128;++y)for(unsigned x=0;x<128;++x) {
+            const int offset=axis==0?(x<64?-4:4):2*int((axis==1?x:y)%64)-63;
+            actual[0][y*128+x]=uint16_t(int(actual[0][y*128+x])+offset*4);
+        }
+        rejects([&]{s.pushPair(failAt,failAt*50000,source.data(),base.data());});
+        rejects([&]{s.model(failAt);});rejects([&]{s.finish();});
+        const auto report=s.report();const auto& row=report.at("source_output_energy").at("rows").back();
+        assert(row["constant_source"][0]==false && row["local_plane_pass"][0]==false && row["pass"]==false);
+        assert(report["failed"]==true && report["received"]==failAt && report["models"][failAt].is_null());
     }
     for(unsigned kind=0;kind<8;++kind) {
         Sequence s("unused",config(),plan(65535));auto broken=planes;

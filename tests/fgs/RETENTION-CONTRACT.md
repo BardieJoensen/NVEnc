@@ -37,6 +37,17 @@ reconstruction energy/mean veto to the finite whole-source diagnostic; complete
 quality qualification and the bounded file-level failure policy remain R5/R8.
 Do not install a rejected fallback or silently lower its quality settings.
 
+D81 strengthens that necessary veto with native-tile local picture checks.
+Detrending must not hide a brightness step or gradient on a nonconstant source,
+and opposite errors in other tiles must not cancel it. For each visible luma
+64x64 or chroma 32x32 tile, including smaller edge tiles, bound the absolute
+mean error and each independently fitted slope's edge excursion to 0.125 in
+normalized 8-bit code units. These are three independent basis-component
+bounds, not a combined bound on their sum at a corner. Preserve the existing
+8% variance, global/spatial-half mean and exact constant-plane checks. The
+diagnostic names this stricter policy `native_variance_means_local_planes_v3`;
+it is still neither source eligibility nor complete local-detail qualification.
+
 ## Decisions, in order
 
 | Condition | Action |
