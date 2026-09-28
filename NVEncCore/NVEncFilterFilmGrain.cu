@@ -46,6 +46,7 @@
 #include <fstream>
 #include "NVEncFilmGrainRecovery.h"
 #include "NVEncFilmGrainSourceGuard.h"
+#include "NVEncFilmGrainConstantEndpoints.h"
 #include "NVEncFilmGrainTraining.h"
 #include "NVEncFilmGrainJointProbe.cuh"
 #include "NVEncFilmGrainSourceFrame.cuh"
@@ -1616,6 +1617,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
     int heldStreak;
     fgsmodel::FilmGrainSynthesisRecovery synthesisRecovery;
     fgsmodel::FilmGrainSourceCaps sourceCaps;
+    fgsmodel::FilmGrainConstantEndpoints endpointCaps;
     bool sourceFallbackActive;
     int fidelityRecoveryFrames;
     std::array<bool, 2> chromaSourceActive;
@@ -1631,7 +1633,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
         if (framesSinceModelUpdate < std::numeric_limits<int>::max()) ++framesSinceModelUpdate;
     }
     void clear(const bool resetRecovery = false) {
-        if (resetRecovery) { synthesisRecovery.reset(); sourceCaps.reset(); }
+        if (resetRecovery) { synthesisRecovery.reset(); sourceCaps.reset(); endpointCaps.reset(); }
         history.clear();
         previousBlockMeans.clear();
         stableNoise = 0.0f;
@@ -3337,7 +3339,9 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     FilmGrainSourceVarianceGuard sourceVariance;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 unlimitedParams = params;
     m_state->sourceCaps.advance(modelValid && (freshFitValid || diagnostics.freshModel));
+    m_state->endpointCaps.noModel();
     if (modelValid && params.applyGrain) {
+        m_state->endpointCaps.advance(freshFitValid || diagnostics.freshModel, bitDepth, params);
         float predicted[3][FGS_STRENGTH_LUT_SIZE];
         const uint8_t *values[3] = { params.pointYValue, params.pointCbValue, params.pointCrValue };
         const uint32_t counts[3] = { params.numYPoints, params.numCbPoints, params.numCrPoints };
@@ -3353,6 +3357,12 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             const int blockHeight = std::min(FGS_BLOCK_SIZE, luma.height - (i / m_blocksX) * FGS_BLOCK_SIZE);
             for (int region = 0; region < 16; ++region) {
                 const auto& evidence = metrics[i].sourceVarianceRegions[region];
+                // Exact nominal endpoints establish a source fact even though
+                // clipped regions cannot estimate the active image's noise.
+                // Keep this state separate from active-range chroma eligibility.
+                m_state->endpointCaps.observeLuma(evidence.minCode, evidence.maxCode,
+                    std::min(8, blockWidth - (region % 4) * 8),
+                    std::min(8, blockHeight - (region / 4) * 8));
                 const double mean = evidence.mean / depthScale;
                 const double sigma = evidence.sigma / depthScale;
                 const int first = clamp(static_cast<int>(std::floor(evidence.minCode / depthScale)) - 4, 0, 255);
@@ -3376,6 +3386,15 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         for (int plane = 0; plane < (prm->filmGrain.analyzeChroma ? 3 : 1); ++plane) {
             auto protectSource = [&](const auto& evidence, const int blockWidth, const int blockHeight, const double sigmaLimit) {
                 if (blockWidth < 8 || blockHeight < 8) return;
+                if (plane) {
+                    const int endpoint = m_state->endpointCaps.lumaCode(
+                        evidence.minCode, evidence.maxCode, blockWidth, blockHeight);
+                    // Direct zero colour variance, sufficient native samples
+                    // and an identity luma lookup are all independently required.
+                    m_state->endpointCaps.observeChroma(plane, endpoint,
+                        evidence.chromaMean[plane - 1], evidence.chromaSigma[plane - 1],
+                        blockWidth / 2, blockHeight / 2);
+                }
                 // Include actual source levels, not just a block mean. Chroma may
                 // be uniform while the luma indexing its grain spans many levels.
                 // Grain indexes reconstructed levels. Reserve a small code
@@ -3436,6 +3455,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         }
     }
     bool sourceCurveLimited = false;
+    bool endpointCurveLimited = false;
     if (modelValid && params.applyGrain) {
         params.numYPoints = m_state->sourceCaps.refitCurve(0, params.pointYValue, params.pointYScaling,
             params.numYPoints, 14, sourceCurveLimited);
@@ -3443,6 +3463,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             params.numCbPoints, 10, sourceCurveLimited);
         params.numCrPoints = m_state->sourceCaps.refitCurve(2, params.pointCrValue, params.pointCrScaling,
             params.numCrPoints, 10, sourceCurveLimited);
+        params.numYPoints = m_state->endpointCaps.refitCurve(0, params.pointYValue, params.pointYScaling,
+            params.numYPoints, 14, endpointCurveLimited);
+        params.numCbPoints = m_state->endpointCaps.refitCurve(1, params.pointCbValue, params.pointCbScaling,
+            params.numCbPoints, 10, endpointCurveLimited);
+        params.numCrPoints = m_state->endpointCaps.refitCurve(2, params.pointCrValue, params.pointCrScaling,
+            params.numCrPoints, 10, endpointCurveLimited);
+        sourceCurveLimited |= endpointCurveLimited;
     }
     bool nonzeroCurve = false;
     for (uint32_t i = 0; i < params.numYPoints; ++i) nonzeroCurve |= params.pointYScaling[i] != 0;
@@ -3666,6 +3693,14 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         }
     }
     if (m_pLog != nullptr && m_pLog->getLogLevel(RGY_LOGT_VPP) <= RGY_LOG_DEBUG) {
+        if (endpointCurveLimited || m_state->endpointCaps.observed(0)) {
+            AddMessage(RGY_LOG_DEBUG, _T("fgs-endpoints frame=%d observed=%llu/%llu/%llu limited=%d\n"),
+                source->inputFrameId,
+                static_cast<unsigned long long>(m_state->endpointCaps.observed(0)),
+                static_cast<unsigned long long>(m_state->endpointCaps.observed(1)),
+                static_cast<unsigned long long>(m_state->endpointCaps.observed(2)),
+                endpointCurveLimited ? 1 : 0);
+        }
         tstring pointsY, pointsCb, pointsCr;
         for (uint32_t i = 0; i < params.numYPoints; ++i) {
             pointsY += strsprintf(_T(" %d:%d"), params.pointYValue[i], params.pointYScaling[i]);
