@@ -1,6 +1,6 @@
 # FGS encoder: current work and handoff
 
-Updated September 28, 2026 during D85 qualification. This is the current entry
+Updated September 28, 2026 after D85 qualification. This is the current entry
 point; the [archived handoff](WORK-HISTORY-THROUGH-2026-09-28.md) preserves older
 checkpoints and the detailed repair/campaign evidence map. Dated findings are
 completed study records, not competing queues. Continue through checkpoints.
@@ -20,11 +20,11 @@ that by themselves. Lossy encoding is not a pixel-perfect source copy.
 | Production binary SHA256 | `06dd65fc00773536f76d09eaf49b1d18032808742e8e13d8037262475c73af7c` |
 | Tdarr node image | `nvenc-fidelity/tdarr-node:2.89.01-cb903a17-20260919` |
 | Image identity | `sha256:3ed97a8ac3411f32de346b3d6d50e1be98cd4fbb7d306b15098fae46e01fca6e` |
-| Latest qualified finite diagnostic | D81 core `3dd646b8`; later documentation/reference commits do not change that binary |
-| Diagnostic binary | `/tmp/downloads/fgs-retention-r1-r2-20260922/build-3dd646b8/nvencc` |
-| Diagnostic SHA256 | `19397de6e61ca4a3830eb6414bc8a6921b9953d095716d7fb116b49efd0f8ab0` |
+| Latest qualified finite diagnostic | D85 core `dc9498cb`; explicit mechanism only, no automatic source admission |
+| Diagnostic binary | `/tmp/downloads/fgs-retention-r1-r2-20260922/build-dc9498cb/nvencc` |
+| Diagnostic SHA256 | `f5b3d2099767ac48a1a2989ac8c5494b72c07b3887301115c6ec4fb4e94057df` |
 | Roadmap | R1/R2 complete; R3–R8 open |
-| Trial state | D85 manual qualification in progress; no automatic experiment/restart |
+| Trial state | D85 complete; both owned pauses released, no automatic experiment/restart |
 | Tdarr state at closeout | Node `3PtVplgma` unpaused; two GPU transcodes/two CPU healthchecks, other limits zero |
 
 Read actual service/node state and receipts before operational work; this is a
@@ -60,8 +60,11 @@ combining these same tests cannot fix that coverage problem.
 [D84 compression-only recovery](FINDINGS-2026-09-28-COMPRESSION-RECOVERY.md)
 passes two constructed 8-bit windows; both 10-bit windows retain independent
 colour rejections. D85 now implements the explicit guarded source-copy/model
-diagnostic; 287 Python / 56 C++ tests pass. Finish complete packet replay, GPU
-copy-proof controls and fresh encoder comparisons before accepting that mechanism.
+diagnostic; 287 Python / 56 C++ tests, GPU copy-proof controls, 160 decoded
+observations and the fresh accepted/rejected cases pass. Ordinary SDR/HDR stays
+exact. The complete 16-picture control rejects reuse of the frozen model at
+picture eight. Next test bounded shape refresh with continuous global seed phase
+and independent cross-boundary windows before longer actual encoder trials.
 This does not override ordinary fallback or grant real-source/runtime admission.
 Source-copy mechanics and reconstruction vetoes are qualified; useful real
 automatic partial retention is still open.
@@ -117,7 +120,8 @@ Evidence root:
 - `roadmap-r3-compression-recovery-20260928/`: D84 fixed-window feasibility
   and independent source/base/rendered measurements.
 - `roadmap-r3-modeled-source-20260928/`: D85 explicit source-copy model path,
-  current build/replay/CPU/GPU receipts; qualification is in progress.
+  complete report and build/replay/CPU/GPU receipts, retained rejections and
+  released pauses.
 - `roadmap-r1-r2-20260922/report.json`, `r1-completion.json`, `corpus-report.json`:
   measurement contract/collector and reserved corpus provenance. Do not inspect
   reserved grain results before a useful candidate is frozen.

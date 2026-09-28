@@ -32,8 +32,11 @@ with the complementary flat/noise hypothesis separates just four pixels in
 16.6 million; another fit of those supported patches cannot resolve coverage.
 [D84 compression-only recovery](FINDINGS-2026-09-28-COMPRESSION-RECOVERY.md)
 passes two constructed 8-bit windows and retains both 10-bit colour rejections.
-D85 implements a guarded full-source diagnostic; the CPU suite passes, and
-complete packet, GPU copy-proof and fresh encoder qualification are next.
+D85's guarded full-source diagnostic passes CPU, GPU copy-proof and fresh
+encoder qualification for its declared eight-picture development mechanism.
+The complete 16-picture control rejects frozen-model reuse at picture eight.
+Next test bounded shape refresh with continuous global seed phase and all
+cross-boundary windows before another longer encoder trial.
 This does not permit synthesis on ordinary fallback or admit unsupported sources.
 Missing evidence must preserve or reject, not admit. Keep the reserved corpus
 unopened until the candidate is useful and frozen.
