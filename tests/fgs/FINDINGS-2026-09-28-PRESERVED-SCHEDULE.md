@@ -1,7 +1,7 @@
 # Source-bound selection of preserved textured colour
 
 D73 extends the finite selector adapter to the source-copy mechanism qualified
-in D72. CPU checks pass; fresh encoder and decoder qualification is pending.
+in D72. CPU, fresh encoder and independent decoder qualification pass in `db5e388f`.
 This is not real-source admission, R3 completion or deployment.
 
 The explicit `pre_encode_preserved_chroma` option enables Cb, Cr or both. The
@@ -38,3 +38,14 @@ root, including `plan.json`, `adapter-build.json`, `full-cpu.json`,
 The live encoder is reused at qualified `524a98f6`: the new descriptor has no
 live call site, and the old range/equality function bodies are unchanged.
 No new GPU build, production configuration or reserved footage is implied.
+
+Four fresh source-bound modeled encodes match all 64 reference models, readiness
+and complete AV1 packet payloads. Twelve deliberate source association, clock,
+quality and preservation failures exit 1 without a completed model. Independent
+AOM/dav1d agree across 256 observations; source, rounded candidate and actual
+reconstruction each match 50,331,648 samples. The independent synthesis oracle
+checks another 50,331,648 samples; 10,485,760 copied candidate samples are exact.
+All 36 temporal windows pass. Tdarr is unpaused with current worker limits
+preserved. Read `phase2-comparison.json` and `report.json`. Completed D72/D73
+duplicate raw witnesses were retired with hashes in
+`completed-witness-cleanup.json`; encoded outputs and reusable references remain.
