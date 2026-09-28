@@ -15,6 +15,20 @@ only after the entire trial completes. Original source/base planes use unpacked
 native uint16 samples at both bit depths. Model readiness is separate from
 reconstruction availability, including delayed hidden/reference pictures.
 
+`pre_encode_modeled_source: true` is a separate finite compression-recovery
+diagnostic, supplied both in the pre-encode request and native engine config.
+It requires 8–16 all-one fraction rows, a bound original memory source,
+`full_picture_means`, and no source segments or copied/preserved-colour mask.
+The filter separately captures the actual pre-NVENC picture and compares every
+native Y/Cb/Cr sample to the original. All ordinary components must be active:
+missing base, limited support, inactive components and ordinary fallback reject
+before a model can be used. The private engine must explicitly acknowledge the
+mode, so an older library cannot silently ignore it. Existing fitting and
+compressed-output checks remain mandatory; a failed diagnostic cannot install
+an output or retry automatically. This does not alter the grain-off semantics
+of source segments or admit an unsupported real source. The ordinary path has
+no new capture or synchronization.
+
 Build against pinned AOM `18c52422b835`, with repository `NVEncCore`, `json`, AOM
 source/build includes, static `libaom.a`, `-lm -lpthread -ldl`. No new dependency
 or analysis runs in ordinary NVEnc. The latest exact local build command,

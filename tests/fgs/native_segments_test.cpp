@@ -29,6 +29,7 @@ struct FakeEngine {
             {"models",models},{"ready_at",ready},{"rows",rows},{"spatial_policy",config.at("spatial_policy")}};
         if(config.contains("copied_chroma_mask") && config.value("ack_copied",true))result["copied_chroma_mask"]=config.at("copied_chroma_mask");
         if(config.contains("preserved_chroma_mask") && config.value("ack_preserved",true))result["preserved_chroma_mask"]=config.at("preserved_chroma_mask");
+        if(config.contains("pre_encode_modeled_source") && config.value("ack_modeled_source",true))result["pre_encode_modeled_source"]=config.at("pre_encode_modeled_source");
         return result;
     }
 };
@@ -65,6 +66,24 @@ int main() {
         const unsigned w=c?64:128,h=c?32:64;data[c].assign(w*h,512);planes[c]={data[c].data(),data[c].size(),w};
     }
     using Sequence=NativeModelSegments<FakeEngine>;
+    {
+        const auto p=PreEncodeRetentionPlan::parse({{"pre_encode_retention",{1,1,1}},{"pre_encode_modeled_source",true}},16);
+        auto j=config();j["pre_encode_modeled_source"]=true;j["spatial_policy"]="full_picture_means";
+        Sequence s("unused",j,p);assert(s.report().at("pre_encode_modeled_source")==true);
+        for(unsigned i=0;i<16;++i)s.pushPair(i,i*50000,planes.data(),planes.data());
+        s.finish();assert(s.report().at("complete")==true && s.model(0).model.at("apply")==true);
+        for(unsigned failure=0;failure<6;++failure) {
+            auto bad=j;
+            if(failure==0)bad.erase("pre_encode_modeled_source");
+            if(failure==1)bad["pre_encode_modeled_source"]=false;
+            if(failure==2)bad["pre_encode_modeled_source"]=1;
+            if(failure==3)bad["ack_modeled_source"]=false;
+            if(failure==4)bad["source_mode"]="files";
+            if(failure==5)bad["spatial_policy"]="frame_window_means";
+            rejects([&]{Sequence rejected("unused",bad,p);});
+        }
+        rejects([&]{Sequence mismatched("unused",j,plan(65535));});
+    }
     for(const auto& value:{Json(2),Json(4),Json(6),Json(nullptr),Json(true)})for(unsigned mask:{0u,65535u}) {
         auto j=config();j["preserved_chroma_mask"]=value;const auto opened=FakeEngine::opened;
         rejects([&]{Sequence unsupported("unused",j,plan(mask));});

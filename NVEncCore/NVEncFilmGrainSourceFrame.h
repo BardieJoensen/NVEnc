@@ -43,6 +43,7 @@ public:
     // Published as part of the immutable shared source frame.
     fgsmodel::FilmGrainConstantChroma copiedChroma{};
     unsigned preservedChroma=0;
+    bool modeledSourceCopied=false;
 
     static uint64_t nativeBytes(unsigned w,unsigned h,unsigned d) {
         if(w<64 || h<64 || w>4096 || h>2160 || (w&1) || (h&1) || (d!=8 && d!=10))
@@ -64,6 +65,11 @@ public:
     NativeSourceFrame& operator=(const NativeSourceFrame&)=delete;
     uint64_t liveBytes() const {return m_memory->live.load();}
     uint64_t peakBytes() const {return m_memory->peak.load();}
+    void requireModeledSource() const {
+        if(!modeledSourceCopied || !retention || copiedChroma.mask || preservedChroma)
+            throw std::runtime_error("modeled source lacks exact original/pre-encode pixel proof");
+        requireModeledSourceRetention(*retention);
+    }
     void requireCopiedChroma(unsigned mask) const {
         struct Plane {const uint16_t* data;size_t samples,stride;};
         std::array<Plane,3> views{};

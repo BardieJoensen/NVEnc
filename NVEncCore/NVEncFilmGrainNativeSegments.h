@@ -55,6 +55,9 @@ template<class Engine> class NativeModelSegments {
         const auto preserved=config_.value("preserved_chroma_mask",0u);
         if(preserved && engine.report().value("preserved_chroma_mask",0u)!=preserved)
             throw std::runtime_error("native engine did not confirm preserved chroma policy");
+        if(config_.value("pre_encode_modeled_source",false)
+            && engine.report().value("pre_encode_modeled_source",false)!=true)
+            throw std::runtime_error("native engine did not confirm modeled source policy");
     }
     void sourcePlanes(const FgsNativePlane* planes) const {
         if(!planes)throw std::runtime_error("source segment has missing planes");
@@ -75,6 +78,13 @@ public:
         const auto preserved=config.contains("preserved_chroma_mask")?unsigned(integer(config,"preserved_chroma_mask",0,6)):0u;
         if(!fgsmodel::film_grain_copied_chroma_mask(preserved) || preserved!=plan.preservedChroma()
             || (copied && preserved))throw std::runtime_error("native fitter and pre-encode preserved chroma differ");
+        if(config.contains("pre_encode_modeled_source") && !config.at("pre_encode_modeled_source").is_boolean())
+            throw std::runtime_error("native modeled source must be boolean");
+        if(config.value("pre_encode_modeled_source",false)!=plan.modeledSource())
+            throw std::runtime_error("native fitter and pre-encode modeled source differ");
+        if(plan.modeledSource() && (config.value("source_mode",std::string())!="memory"
+            || config.value("spatial_policy",std::string())!="full_picture_means"))
+            throw std::runtime_error("modeled source requires memory sources and full picture means");
         if(!plan.sourceSegments()) {legacy_=std::make_unique<Engine>(path,config);confirm(*legacy_);return;}
         integer(config,"schema",1,1);
         count_=size_t(integer(config,"frame_count",8,16));

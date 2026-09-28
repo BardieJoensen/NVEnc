@@ -1,6 +1,6 @@
 # FGS encoder: current work and handoff
 
-Updated September 28, 2026 after D83 coverage analysis. This is the current entry
+Updated September 28, 2026 during D85 qualification. This is the current entry
 point; the [archived handoff](WORK-HISTORY-THROUGH-2026-09-28.md) preserves older
 checkpoints and the detailed repair/campaign evidence map. Dated findings are
 completed study records, not competing queues. Continue through checkpoints.
@@ -24,7 +24,7 @@ that by themselves. Lossy encoding is not a pixel-perfect source copy.
 | Diagnostic binary | `/tmp/downloads/fgs-retention-r1-r2-20260922/build-3dd646b8/nvencc` |
 | Diagnostic SHA256 | `19397de6e61ca4a3830eb6414bc8a6921b9953d095716d7fb116b49efd0f8ab0` |
 | Roadmap | R1/R2 complete; R3–R8 open |
-| Trial state | Completed; all owned pauses released, no automatic experiment/restart |
+| Trial state | D85 manual qualification in progress; no automatic experiment/restart |
 | Tdarr state at closeout | Node `3PtVplgma` unpaused; two GPU transcodes/two CPU healthchecks, other limits zero |
 
 Read actual service/node state and receipts before operational work; this is a
@@ -56,10 +56,13 @@ of the two HDR pictures, versus D74's roughly 5%; every occupied brightness
 lookup still also includes unsupported pixels. [D83's complementary-hypothesis
 union](FINDINGS-2026-09-28-POPULATION-UNION.md) separates only four pixels out of
 16.6 million even under optimistic assumptions. Refitting supported patches or
-combining these same tests cannot fix that coverage problem. Next check whether
-the existing native model can recover compression-removed grain from a fully
-retained source, using recorded actual NVENC pairs before adding a runtime path.
-This does not override ordinary fallback or grant source/runtime admission.
+combining these same tests cannot fix that coverage problem.
+[D84 compression-only recovery](FINDINGS-2026-09-28-COMPRESSION-RECOVERY.md)
+passes two constructed 8-bit windows; both 10-bit windows retain independent
+colour rejections. D85 now implements the explicit guarded source-copy/model
+diagnostic; 287 Python / 56 C++ tests pass. Finish complete packet replay, GPU
+copy-proof controls and fresh encoder comparisons before accepting that mechanism.
+This does not override ordinary fallback or grant real-source/runtime admission.
 Source-copy mechanics and reconstruction vetoes are qualified; useful real
 automatic partial retention is still open.
 
@@ -111,6 +114,10 @@ Evidence root:
   selection, rejected first version, independent prediction and complete census.
 - `roadmap-r3-population-union-20260928/report.json`: D83 complementary
   hypotheses and complete actual brightness-lookup conflicts.
+- `roadmap-r3-compression-recovery-20260928/`: D84 fixed-window feasibility
+  and independent source/base/rendered measurements.
+- `roadmap-r3-modeled-source-20260928/`: D85 explicit source-copy model path,
+  current build/replay/CPU/GPU receipts; qualification is in progress.
 - `roadmap-r1-r2-20260922/report.json`, `r1-completion.json`, `corpus-report.json`:
   measurement contract/collector and reserved corpus provenance. Do not inspect
   reserved grain results before a useful candidate is frozen.

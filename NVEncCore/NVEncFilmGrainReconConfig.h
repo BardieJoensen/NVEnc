@@ -64,6 +64,15 @@ struct NVEncFilmGrainReconConfig {
             throw std::runtime_error("source binding requires an explicit pre-encode retention plan");
         if(c.retention.sourceSegments() && !j.contains("native_model_output"))
             throw std::runtime_error("source segments require explicit native model output");
+        if(c.retention.modeledSource()) {
+            if(!j.contains("native_model_output") || !c.sourceBinding.enabled())
+                throw std::runtime_error("modeled source requires native model output and original source binding");
+            const auto& engine=j.at("native_model_output").at("engine");
+            if(!engine.contains("pre_encode_modeled_source") || !engine.at("pre_encode_modeled_source").is_boolean()
+                || !engine.at("pre_encode_modeled_source").get<bool>()
+                || engine.value("spatial_policy",std::string())!="full_picture_means")
+                throw std::runtime_error("modeled source requires explicit full-picture native engine policy");
+        }
         if(c.preEncodeRetention()) {
             if(!c.captureSource
                 || *c.frames.begin()!=0 || *c.frames.rbegin()+1!=c.frames.size())

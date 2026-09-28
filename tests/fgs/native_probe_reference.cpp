@@ -48,17 +48,19 @@ int main() {
                     auto& values=source->planes[c];require(std::filesystem::file_size(path)==values.size()*2,"memory source plane bytes differ");
                     std::ifstream file(path,std::ios::binary);file.read(reinterpret_cast<char*>(values.data()),values.size()*2);require(bool(file),"memory source read failed");
                 }
-                if(retention.sourceChroma() && !retention.sourceAt(i) && input.contains("pre_encode_planes")) {
+                if((retention.modeledSource() || (retention.sourceChroma() && !retention.sourceAt(i)))
+                    && input.contains("pre_encode_planes")) {
                     std::array<std::vector<uint16_t>,3> candidate;
                     std::array<FgsNativePlane,3> views{};
-                    for(unsigned c=1;c<3;++c)if(retention.sourceChroma()&(1u<<c)) {
+                    for(unsigned c=0;c<3;++c)if(retention.modeledSource() || (retention.sourceChroma()&(1u<<c))) {
                         const auto path=std::filesystem::u8path(input.at("pre_encode_planes").at(i).at(c).get<std::string>());
-                        auto& values=candidate[c];values.resize(size_t(w)*h/4);
+                        auto& values=candidate[c];values.resize(size_t(w)*h/(c?4:1));
                         require(std::filesystem::file_size(path)==values.size()*2,"pre-encode copied chroma plane bytes differ");
                         std::ifstream file(path,std::ios::binary);file.read(reinterpret_cast<char*>(values.data()),values.size()*2);
                         require(bool(file) && values==source->planes[c],"pre-encode copied chroma pixels differ");
-                        views[c]={values.data(),values.size(),w/2};
+                        views[c]={values.data(),values.size(),c?w/2:w};
                     }
+                    if(retention.modeledSource()) {source->modeledSourceCopied=true;source->requireModeledSource();}
                     if(retention.copiedChroma()) {
                         source->copiedChroma=fgsmodel::film_grain_measure_constant_chroma(views,w,h,depth,retention.copiedChroma());
                         source->requireCopiedChroma(retention.copiedChroma());

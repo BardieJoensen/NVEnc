@@ -2485,7 +2485,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                     const auto candidate = joint_probe_view(output);
                     result->originalSource = fgsdiagnostic::captureNativeSource(joint_probe_view(source), m_sourceMemory,
                         m_sourceOrdinal, m_tableTimebase.n(), m_tableTimebase.d(), stream, retentionDecision,
-                        copiedChroma, (copiedChroma || preservedChroma) ? &candidate : nullptr, preservedChroma);
+                        copiedChroma, (copiedChroma || preservedChroma || m_preEncodeFractions.modeledSource()) ? &candidate : nullptr,
+                        preservedChroma, m_preEncodeFractions.modeledSource());
 #if ENABLE_AVSW_READER
                     // Check the captured original before this frame can leave
                     // the filter and reach NVENC. No additional GPU transfer.

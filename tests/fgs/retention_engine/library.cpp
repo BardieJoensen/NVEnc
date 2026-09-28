@@ -31,6 +31,7 @@ struct Context {
     unsigned received=0;
     bool failed=false;
     bool memorySource=false;
+    bool modeledSource=false;
     std::string error,reportText,modelText;
     void fail(const std::exception& e){failed=true;if(error.empty())error=e.what();}
     void ready(){require(!failed,"native engine context failed");}
@@ -48,6 +49,12 @@ struct Context {
         config.spatialPolicy=spatial=="frame_window_means"?FilmGrainMomentSpatialPolicy::FrameWindowMeans
             :spatial=="full_picture_means"?FilmGrainMomentSpatialPolicy::FullPictureMeans
             :spatial=="full_picture"?FilmGrainMomentSpatialPolicy::FullPicture:FilmGrainMomentSpatialPolicy::FrameWindow;
+        if(j.contains("pre_encode_modeled_source")) {
+            require(j.at("pre_encode_modeled_source").is_boolean(),"native modeled source must be boolean");
+            modeledSource=j.at("pre_encode_modeled_source").get<bool>();
+        }
+        require(!modeledSource || (memorySource && spatial=="full_picture_means"
+            && !config.copiedChroma && !config.preservedChroma),"modeled source requires full-picture memory pairs without copied chroma");
         if(j.contains("max_native_bytes"))config.maxNativeBytes=integer(j,"max_native_bytes",1,512ull*1024*1024);
         const auto& seeds=j.at("training_seeds");require(seeds.is_array() && !seeds.empty() && seeds.size()<=32,"native engine training seed count");
         for(const auto& seed:seeds) {require(seed.is_number_integer() && seed>0 && seed<=65535,"native engine seed range");config.trainingSeeds.push_back(seed.get<uint16_t>());}
@@ -131,6 +138,7 @@ const char* fgs_native_engine_report(void* pointer) {
         report["failed"]=report.at("failed").get<bool>() || c.failed;report["context_error"]=c.error;
         report["source_mode"]=c.memorySource?"memory":"files";report["source_frames"]=c.received;
         report["verified_source_frames"]=c.memorySource?0:c.received;
+        if(c.modeledSource)report["pre_encode_modeled_source"]=true;
         c.reportText=report.dump();return c.reportText.c_str();
     }catch(...){c.failed=true;return nullptr;}
 }

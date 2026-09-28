@@ -41,6 +41,13 @@ struct NVEncFilmGrainNativeConfig {
             throw std::runtime_error("native spatial policy must be frame_window, full_picture, full_picture_means or frame_window_means");
         const auto mode=c.engine.value("source_mode",std::string("files"));
         if(mode!="files" && mode!="memory")throw std::runtime_error("native source mode must be files or memory");
+        if(c.engine.contains("pre_encode_modeled_source")) {
+            if(!c.engine.at("pre_encode_modeled_source").is_boolean())
+                throw std::runtime_error("native modeled source must be boolean");
+            if(c.engine.at("pre_encode_modeled_source").get<bool>() && (mode!="memory"
+                || c.spatialPolicy()!="full_picture_means" || c.copiedChroma() || c.preservedChroma()))
+                throw std::runtime_error("native modeled source requires full-picture memory pairs without copied chroma");
+        }
         if(!c.engine.is_object() || NVEncFilmGrainModelConfig::integer(c.engine,"frame_count",8,16)!=captured.size()
             || !c.engine.at("sources").is_array() || c.engine.at("sources").size()!=captured.size())
             throw std::runtime_error("native source/model packet count differs");
@@ -212,8 +219,11 @@ public:
                 if(!source)throw std::runtime_error("native model requires original memory source");
                 source->requireIdentity(ordinal,source->sourceId,pts,source->timebaseNum,source->timebaseDen,m_width,m_height,m_depth);
                 if(bool(source->retention)!=m_retention.enabled())throw std::runtime_error("native model retention decision is missing or unexpected");
+                if(source->modeledSourceCopied!=m_retention.modeledSource())
+                    throw std::runtime_error("native modeled source pixel proof is missing or unexpected");
                 if(m_retention.enabled()) {
-                    if(m_retention.sourceSegments() && m_retention.sourceAt(ordinal))
+                    if(m_retention.modeledSource())source->requireModeledSource();
+                    else if(m_retention.sourceSegments() && m_retention.sourceAt(ordinal))
                         fgsdiagnostic::requireSourceRetentionModel(*source->retention,m_retention.at(ordinal));
                     else {
                         fgsdiagnostic::requirePartialRetentionModel(*source->retention,m_retention.at(ordinal),m_retention.sourceChroma());

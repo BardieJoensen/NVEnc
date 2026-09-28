@@ -42,6 +42,21 @@ int main() {
             auto alias=frame;frame.reset();require(memory->live==bytes,"source released before consumer");
             bool failed=false;try{captureNativeSource(f,memory,8,1,24000,nullptr);}catch(...){failed=true;}require(failed,"source budget did not reject");++rejected;
             alias.reset();require(memory->live==0 && memory->peak==bytes,"source ownership leaked");
+            const auto decision=preEncodeRetentionDecision({{1,1,1}},true,true,false,0,false,7);
+            auto copied=captureNativeSource(f,memory,7,1,24000,nullptr,decision,0,&f,0,true);
+            require(copied->modeledSourceCopied && copied->planes==expected,"modeled source proof/pixels differ");
+            copied->requireModeledSource();copied.reset();samples+=w*h*3/2;++cases;
+            for(unsigned c=0;c<3;++c) {
+                const unsigned cols=c?w/2:w,rows=c?h/2:h,stride=f.plane[c].pixelStride;
+                const size_t span=(size_t(cols)-1)*stride*unit+unit;
+                Allocation changed;check(cudaMallocPitch(&changed.data,&changed.pitch,span,rows));
+                check(cudaMemcpy2D(changed.data,changed.pitch,f.plane[c].data,f.plane[c].pitchBytes,span,rows,cudaMemcpyDeviceToDevice));
+                const uint16_t word=uint16_t((expected[c][0]^1u)<<shift);
+                check(cudaMemcpy(changed.data,&word,unit,cudaMemcpyHostToDevice));
+                auto candidate=f;candidate.plane[c]={changed.data,changed.pitch,stride};
+                failed=false;try{captureNativeSource(f,memory,7,1,24000,nullptr,decision,0,&candidate,0,true);}catch(...){failed=true;}
+                require(failed && memory->live==0,"changed modeled source plane accepted or leaked");++rejected;
+            }
             if(depth==10) {
                 const uint16_t invalid=shift?1:1024;check(cudaMemcpy(allocations[0].data,&invalid,2,cudaMemcpyHostToDevice));
                 failed=false;try{captureNativeSource(f,memory,8,1,24000,nullptr);}catch(...){failed=true;}
