@@ -101,6 +101,68 @@ static void copiedSchedule() {
     std::cout<<"Copied-colour schedules: "<<positives<<" measured native controls, "<<negativePlans
         <<" preservation controls, both source boundaries and illegal masks passed\n";
 }
+static FilmGrainPreservedChroma measuredPreserved(const FilmGrainRetentionFrame& f,unsigned mask,
+    unsigned ordinal,bool badBorder=false) {
+    struct Plane {const uint16_t* data;size_t samples,stride;};
+    const size_t w=f.width/2,h=f.height/2,stride=w+5;
+    std::array<std::vector<uint16_t>,3> data;std::array<Plane,3> views{};
+    for(unsigned c=1;c<3;++c)if(mask&(1u<<c)) {
+        data[c].assign(stride*h,0xffff);
+        for(size_t y=0;y<h;++y)for(size_t x=0;x<w;++x)
+            data[c][y*stride+x]=uint16_t((16+(x+7*y+13*c+ordinal)%225)<<(f.bitDepth-8));
+        if(badBorder)data[c][(h-1)*stride+w-1]=uint16_t((240u<<(f.bitDepth-8))+1);
+        views[c]={data[c].data(),(h-1)*stride+w,stride};
+    }
+    return film_grain_measure_preserved_chroma(views,f.width,f.height,f.bitDepth,mask);
+}
+static void preservedSchedule() {
+    unsigned plans=0;
+    for(unsigned depth:{8u,10u})for(unsigned mask:{2u,4u,6u})for(unsigned variant=0;variant<15;++variant) {
+        auto f=frames();for(auto& a:f){a.bitDepth=depth;a.width=130;a.height=126;}
+        if(variant==14)for(unsigned i=8;i<f.size();++i)f[i].epoch=2;
+        FilmGrainRetentionSchedule s(f,0,mask);
+        for(unsigned i=0;i<f.size();++i) {
+            auto proof=measuredPreserved(f[i],mask,i,variant==1 || (variant==9 && i==8));
+            if(variant==2)proof={};
+            if(variant==3)proof.width+=2;
+            if(variant==4)proof.depth=depth==8?10:8;
+            if(variant==5)--proof.samples[mask&2?0:1];
+            if(variant==6)proof.mask=mask==6?2:6^mask;
+            unsigned calls[3]{},jointCalls=0;
+            const bool explicitSource=(variant==12 && i<8) || (variant==13 && i>=8);
+            s.push(f[i],explicitSource?1.f:0.f,[&](const auto& r){
+                ++calls[r.component];auto c=supported(r);
+                if((mask&(1u<<r.component)) && variant!=7)c.checks={};
+                if(variant==10 && !r.component)c.checks.passed&=~FGS_RETAIN_DETAIL;
+                return c;
+            },[&](const auto& combination){
+                ++jointCalls;auto j=joint(combination);
+                if(variant==8)j.checks.passed&=~FGS_RETAIN_Y_CB;
+                if(variant==11)j.checks.measured&=~FGS_RETAIN_CB_CR;
+                return j;
+            },{},proof);
+            require(calls[0]<=1 && calls[1]<=5 && calls[2]<=5 && jointCalls<=1,"preserved schedule exceeded search bound");
+        }
+        s.finish();for(unsigned i=0;i<f.size();++i) {
+            const auto& row=s.rows()[i];
+            const bool partial=variant==0 || ((variant==9 || variant==13 || variant==14) && i<8)
+                || (variant==12 && i>=8);
+            require(row.source()!=partial,"preserved colour admitted invalid evidence or lost valid changing colour");
+            if(partial)require(row.retain==std::array<float,3>{{0,mask&2?1.f:0.f,mask&4?1.f:0.f}}
+                && !row.reasons,"preserved colour changed bounded selection");
+            if(variant>=1 && variant<=6)require(row.reasons==FilmGrainRetentionSchedule::MissingPreservedChroma,
+                "missing source range proof not explained");
+            if(variant==7)require(row.reasons==FilmGrainRetentionSchedule::UnsupportedComponents,"requested mask forced source");
+            if(variant==8 || variant==10 || variant==11)require(row.reasons==FilmGrainRetentionSchedule::SelectedSource,
+                "preserved colour bypassed candidate or joint veto");
+        }
+        ++plans;
+    }
+    for(unsigned mask:{1u,3u,5u,7u,8u,UINT32_MAX})rejects([&]{FilmGrainRetentionSchedule s(frames(),0,mask);});
+    for(unsigned copied:{2u,4u,6u})for(unsigned preserved:{2u,4u,6u})
+        rejects([&]{FilmGrainRetentionSchedule s(frames(),copied,preserved);});
+    std::cout<<"Preserved-colour schedules: "<<plans<<" native plans with changing colour, border/range/identity vetoes, source epochs and joint/candidate failures passed\n";
+}
 int main() {try {
     const auto f=frames();unsigned partialRows=0;
     // Independent specification: a partial row survives iff it belongs to
@@ -187,5 +249,6 @@ int main() {try {
     FilmGrainRetentionSchedule broken(f);rejects([&]{broken.push(f[0],0,[](auto)->FilmGrainRetentionCandidate{throw std::runtime_error("measurement failure");},joint);});
     rejects([&]{broken.push(f[0],0,supported,joint);});
     copiedSchedule();
+    preservedSchedule();
     std::cout<<"Retention schedule: 65536 binary plans ("<<partialRows<<" surviving partial rows), 36 component searches, 15 epochs and terminal evidence/identity failures passed\n";
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

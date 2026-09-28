@@ -40,7 +40,9 @@ int main(){try {
     for(const auto& item:items)frames.push_back(frame(item.at("frame")));
     const unsigned copiedChroma=input.contains("pre_encode_copied_chroma")?
         unsigned(integer(input.at("pre_encode_copied_chroma"),0,6)):0;
-    FilmGrainRetentionSchedule schedule(frames,copiedChroma);
+    const unsigned preservedChroma=input.contains("pre_encode_preserved_chroma")?
+        unsigned(integer(input.at("pre_encode_preserved_chroma"),0,6)):0;
+    FilmGrainRetentionSchedule schedule(frames,copiedChroma,preservedChroma);
     const auto binding=PreEncodeSourceBinding::parse(input,items.size());require(binding.enabled(),"plan requires exact original-source binding");
     const auto& tb=input.at("pre_encode_source_binding").at("timebase");
     auto memory=std::make_shared<SourceMemory>(512ull*1024*1024);
@@ -61,11 +63,13 @@ int main(){try {
         // Candidate/reconstruction/output equality is still checked by the
         // actual encoder; planning cannot supply that downstream evidence.
         FilmGrainConstantChroma constant;
-        if(copiedChroma) {
+        FilmGrainPreservedChroma preserved;
+        if(copiedChroma || preservedChroma) {
             struct Plane {const uint16_t* data;size_t samples,stride;};
             std::array<Plane,3> views{};
             for(unsigned c=1;c<3;++c)views[c]={original.planes[c].data(),original.planes[c].size(),f.width/2};
-            constant=film_grain_measure_constant_chroma(views,f.width,f.height,f.bitDepth,copiedChroma);
+            if(copiedChroma)constant=film_grain_measure_constant_chroma(views,f.width,f.height,f.bitDepth,copiedChroma);
+            if(preservedChroma)preserved=film_grain_measure_preserved_chroma(views,f.width,f.height,f.bitDepth,preservedChroma);
         }
         const auto& candidates=item.at("candidates");require(candidates.is_array() && candidates.size()<=11,"candidate evidence exceeds bounded search");
         std::vector<FilmGrainRetentionRequest> keys;
@@ -100,7 +104,7 @@ int main(){try {
                 e.checks=checks(j.at("checks"));
             }else e.combination=combination;
             return e;
-        },constant);
+        },constant,preserved);
         trace.push_back(calls);
     }
     schedule.finish();Json rows=Json::array();
@@ -115,10 +119,15 @@ int main(){try {
         if(copiedChroma)rows.back()["copied_chroma_source"]={{"mask",row.copiedChroma.mask},
             {"code",row.copiedChroma.code},{"width",row.copiedChroma.width},
             {"height",row.copiedChroma.height},{"depth",row.copiedChroma.depth}};
+        if(preservedChroma)rows.back()["preserved_chroma_source"]={{"mask",row.preservedChroma.mask},
+            {"minimum",row.preservedChroma.minimum},{"maximum",row.preservedChroma.maximum},
+            {"samples",row.preservedChroma.samples},{"width",row.preservedChroma.width},
+            {"height",row.preservedChroma.height},{"depth",row.preservedChroma.depth}};
     }
     Json plan={{"pre_encode_retention_frames",schedule.fractions()},{"pre_encode_source_segments",true},
         {"pre_encode_source_binding",input.at("pre_encode_source_binding")}};
     if(copiedChroma)plan["pre_encode_copied_chroma"]=copiedChroma;
+    if(preservedChroma)plan["pre_encode_preserved_chroma"]=preservedChroma;
     PreEncodeRetentionPlan::parse(plan,items.size()).modelSegments();
     std::cout<<Json({{"complete",true},{"evidence_kind",kind},{"source_admission",false},{"plan",plan},{"decisions",rows},
         {"source_peak_bytes",memory->peak.load()}}).dump(2)<<'\n';

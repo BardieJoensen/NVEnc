@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <utility>
 #include "NVEncFilmGrainConstantChroma.h"
+#include "NVEncFilmGrainPreservedChroma.h"
 #include "NVEncFilmGrainNativeGrid.h"
 #include "NVEncFilmGrainRetentionSelect.h"
 
@@ -12,11 +13,12 @@ class FilmGrainRetentionSchedule {
 public:
     enum Reason : uint32_t {
         SelectedSource=1, UnsupportedComponents=2, EpochBoundary=4, ShortModelInterval=8,
-        MissingCopiedChroma=16, ChangedCopiedChroma=32
+        MissingCopiedChroma=16, ChangedCopiedChroma=32, MissingPreservedChroma=64
     };
     struct Row {
         FilmGrainRetentionDecision selection;
         FilmGrainConstantChroma copiedChroma;
+        FilmGrainPreservedChroma preservedChroma;
         std::array<float,3> retain{{1,1,1}};
         uint32_t reasons=0;
         bool source() const {return retain==std::array<float,3>{{1,1,1}};}
@@ -24,6 +26,7 @@ public:
 private:
     const std::vector<FilmGrainRetentionFrame> frames_;
     const unsigned copiedChroma_;
+    const unsigned preservedChroma_;
     std::vector<Row> rows_;
     bool failed_=false,finished_=false;
     void ready() const {
@@ -33,10 +36,13 @@ private:
         if(failed_ || !finished_)throw std::runtime_error("retention schedule is not complete");
     }
 public:
-    explicit FilmGrainRetentionSchedule(std::vector<FilmGrainRetentionFrame> frames,unsigned copiedChroma=0):
-        frames_(std::move(frames)),copiedChroma_(copiedChroma) {
+    explicit FilmGrainRetentionSchedule(std::vector<FilmGrainRetentionFrame> frames,unsigned copiedChroma=0,
+        unsigned preservedChroma=0):frames_(std::move(frames)),copiedChroma_(copiedChroma),preservedChroma_(preservedChroma) {
         if(!film_grain_copied_chroma_mask(copiedChroma_))
             throw std::runtime_error("retention schedule copied mask must contain only Cb/Cr");
+        if(!film_grain_copied_chroma_mask(preservedChroma_))
+            throw std::runtime_error("retention schedule preserved mask must contain only Cb/Cr");
+        if(copiedChroma_ && preservedChroma_)throw std::runtime_error("retention schedule colour proof modes cannot be combined");
         if(frames_.size()<8 || frames_.size()>16)throw std::runtime_error("retention schedule needs 8..16 complete inputs");
         for(size_t i=0;i<frames_.size();++i) {
             const auto& f=frames_[i];const auto grid=film_grain_native_grid(f.width,f.height);
@@ -54,22 +60,25 @@ public:
     // exact source identity and fraction; they cannot edit the resulting plan.
     template<class Evaluate,class Joint>
     void push(const FilmGrainRetentionFrame& frame,float lumaRetain,Evaluate evaluate,Joint joint,
-        const FilmGrainConstantChroma& copiedChroma={}) {
+        const FilmGrainConstantChroma& copiedChroma={},const FilmGrainPreservedChroma& preservedChroma={}) {
         try {
             ready();const auto ordinal=rows_.size();
             if(ordinal>=frames_.size() || !(frame==frames_[ordinal]))
                 throw std::runtime_error("retention schedule received stale or reordered source evidence");
             Row row;row.selection=film_grain_select_retention(frame,lumaRetain,evaluate,joint);
             row.copiedChroma=copiedChroma;
+            row.preservedChroma=preservedChroma;
             row.retain=row.selection.selected.retain;
             if(row.selection.sourceFrame)row.reasons|=SelectedSource;
             else {
                 // The request only enables a proved case. It cannot force a
                 // component copy, rescue failed joint checks or change any
                 // fractions chosen by the bounded selector.
-                if(row.selection.sourceMask!=copiedChroma_)row.reasons|=UnsupportedComponents;
+                if(row.selection.sourceMask!=(copiedChroma_|preservedChroma_))row.reasons|=UnsupportedComponents;
                 if(copiedChroma_ && !copiedChroma.covers(copiedChroma_,frame.width,frame.height,frame.bitDepth))
                     row.reasons|=MissingCopiedChroma;
+                if(preservedChroma_ && !preservedChroma.covers(preservedChroma_,frame.width,frame.height,frame.bitDepth))
+                    row.reasons|=MissingPreservedChroma;
             }
             if(ordinal && frames_[ordinal-1].epoch!=frame.epoch)row.reasons|=EpochBoundary;
             if(row.reasons)row.retain={{1,1,1}};
