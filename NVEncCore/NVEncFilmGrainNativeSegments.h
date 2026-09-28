@@ -6,6 +6,7 @@
 #include "NVEncFilmGrainNativeGrid.h"
 #include "NVEncFilmGrainModelBuffer.h"
 #include "NVEncFilmGrainPreEncodeRetention.h"
+#include "NVEncFilmGrainSourceOutputEnergy.h"
 
 namespace fgsdiagnostic {
 // Engine is the private native library adapter; tests can supply an independent
@@ -24,6 +25,9 @@ template<class Engine> class NativeModelSegments {
     size_t count_=0;
     unsigned width_=0,height_=0,depth_=0;
     bool finished_=false,failed_=false;
+    bool hasSource_=false;
+    std::array<bool,16> sourceEnergyPassed_{};
+    Json sourceEnergy_=Json::array();
     static uint64_t integer(const Json& j,const char* key,uint64_t low,uint64_t high) {
         const auto& v=j.at(key);
         if(!v.is_number_integer() || v<low || v>high)
@@ -91,6 +95,7 @@ public:
         }
         for(const auto& range:plan.modelSegments()) {
             Segment s{range,nullptr};
+            hasSource_|=range.source;
             if(!range.source) {
                 auto local=config;local["frame_count"]=range.count;local["sources"]=Json::array();
                 for(size_t i=0;i<range.count;++i) {
@@ -112,7 +117,22 @@ public:
                 || config_.at("sources").at(ordinal).at("pts")!=pts)
                 throw std::runtime_error("source segment reconstruction identity differs");
             auto& s=segment(ordinal);
-            if(s.range.source) {sourcePlanes(source);sourcePlanes(base);}
+            if(s.range.source) {
+                sourcePlanes(source);sourcePlanes(base);
+                std::array<fgsmodel::FilmGrainNativePlane,3> original{},reconstruction{};
+                for(unsigned c=0;c<3;++c) {
+                    original[c]={source[c].data,source[c].samples,source[c].stride};
+                    reconstruction[c]={base[c].data,base[c].samples,base[c].stride};
+                }
+                const auto e=fgsmodel::film_grain_source_output_energy(original,reconstruction,width_,height_,depth_);
+                sourceEnergy_.push_back({{"ordinal",ordinal},{"valid",e.valid},{"pass",e.pass},
+                    {"source_variance",e.source.variance},{"actual_variance",e.actual.variance},
+                    {"mean_error",e.meanError},{"fold_mean_error",e.foldMeanError},
+                    {"relative_variance_error",e.relativeVarianceError},{"quiet",e.quiet},
+                    {"variance_pass",e.variancePass}});
+                if(!e.valid || !e.pass)throw std::runtime_error("source-preserved reconstruction failed energy/mean checks");
+                sourceEnergyPassed_[ordinal]=true;
+            }
             else s.engine->pushPair(ordinal-s.range.begin,pts,source,base);
             ++received_;
         }catch(...){failed_=true;throw;}
@@ -123,7 +143,10 @@ public:
             if(failed_)throw std::runtime_error("native source/model segments failed");
             auto& s=segment(ordinal);
             if(ordinal>=received_)return {};
-            if(s.range.source)return {fgsmodel::FilmGrainModelReadiness::Replace,{{"apply",false}}};
+            if(s.range.source) {
+                if(!sourceEnergyPassed_[ordinal])throw std::runtime_error("source reconstruction energy was not verified");
+                return {fgsmodel::FilmGrainModelReadiness::Replace,{{"apply",false}}};
+            }
             return s.engine->model(ordinal-s.range.begin);
         }catch(...){failed_=true;throw;}
     }
@@ -172,6 +195,8 @@ public:
             {"segments",segments},{"models",models},{"ready_at",ready},{"rows",rows}};
         if(config_.value("copied_chroma_mask",0u))result["copied_chroma_mask"]=config_.at("copied_chroma_mask");
         if(config_.value("preserved_chroma_mask",0u))result["preserved_chroma_mask"]=config_.at("preserved_chroma_mask");
+        if(hasSource_)result["source_output_energy"]={{"policy","native_variance_means_v1"},
+            {"necessary_check_only",true},{"rows",sourceEnergy_}};
         return result;
     }
 };

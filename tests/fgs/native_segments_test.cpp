@@ -119,6 +119,28 @@ int main() {
         if(mask==255)for(unsigned i=8;i<16;++i)assert(report["ready_at"][i]==15);
     }
     // Full-source identity/range validation remains meaningful without a fitter.
+    // Its post-encode grain/mean check is also mandatory: a copied input that
+    // loses energy under lossy compression cannot publish a grain-off model.
+    for(unsigned depth:{8u,10u})for(unsigned failAt:{0u,8u,15u}) {
+        auto j=config();j["depth"]=depth;const unsigned scale=1u<<(depth-8);
+        std::array<std::vector<uint16_t>,3> original,actual;
+        std::array<FgsNativePlane,3> source{},base{};
+        for(unsigned c=0;c<3;++c) {
+            const unsigned w=c?64:128,h=c?32:64;
+            original[c].assign(w*h,128*scale);actual[c]=original[c];
+            source[c]={original[c].data(),original[c].size(),w};base[c]={actual[c].data(),actual[c].size(),w};
+        }
+        Sequence s("unused",j,plan(65535));
+        for(unsigned i=0;i<failAt;++i)s.pushPair(i,i*50000,source.data(),base.data());
+        for(size_t i=0;i<original[0].size();++i)original[0][i]=uint16_t((120+(i*7)%17)*scale);
+        rejects([&]{s.pushPair(failAt,failAt*50000,source.data(),base.data());});
+        rejects([&]{s.model(failAt);});rejects([&]{s.finish();});
+        const auto r=s.report();assert(r["failed"]==true && r["complete"]==false && r["received"]==failAt);
+        const auto& energy=r.at("source_output_energy");
+        assert(energy["necessary_check_only"]==true && energy.at("rows").size()==failAt+1
+            && energy.at("rows").back().at("pass")==false);
+        assert(r.at("models").at(failAt).is_null() && r.at("ready_at").at(failAt)==-1);
+    }
     for(unsigned kind=0;kind<8;++kind) {
         Sequence s("unused",config(),plan(65535));auto broken=planes;
         if(kind==0)broken[1].data=nullptr;
