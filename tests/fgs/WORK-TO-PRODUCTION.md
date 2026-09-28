@@ -1,6 +1,6 @@
 # FGS encoder: current work and handoff
 
-Updated September 28, 2026 after D82 qualification. This is the current entry
+Updated September 28, 2026 after D83 coverage analysis. This is the current entry
 point; the [archived handoff](WORK-HISTORY-THROUGH-2026-09-28.md) preserves older
 checkpoints and the detailed repair/campaign evidence map. Dated findings are
 completed study records, not competing queues. Continue through checkpoints.
@@ -53,9 +53,13 @@ adds visible border coverage and rejects a demonstrated slow-motion grain
 estimation error. It passes 1,344 known-source controls and the full CPU suite
 (287 Python / 39 suites, 55 C++). Necessary source evidence covers about 8–10%
 of the two HDR pictures, versus D74's roughly 5%; every occupied brightness
-lookup still also includes unsupported pixels. Next measure the complementary
-source hypotheses and their remaining lookup conflicts before another classifier
-or fit. This offline prerequisite grants no source admission or runtime approval.
+lookup still also includes unsupported pixels. [D83's complementary-hypothesis
+union](FINDINGS-2026-09-28-POPULATION-UNION.md) separates only four pixels out of
+16.6 million even under optimistic assumptions. Refitting supported patches or
+combining these same tests cannot fix that coverage problem. Next check whether
+the existing native model can recover compression-removed grain from a fully
+retained source, using recorded actual NVENC pairs before adding a runtime path.
+This does not override ordinary fallback or grant source/runtime admission.
 Source-copy mechanics and reconstruction vetoes are qualified; useful real
 automatic partial retention is still open.
 
@@ -105,6 +109,8 @@ Evidence root:
   causal controls, source/visual review, repeat evidence and reference decision.
 - `roadmap-r3-component-selection-20260928/report.json`: D82 source-only
   selection, rejected first version, independent prediction and complete census.
+- `roadmap-r3-population-union-20260928/report.json`: D83 complementary
+  hypotheses and complete actual brightness-lookup conflicts.
 - `roadmap-r1-r2-20260922/report.json`, `r1-completion.json`, `corpus-report.json`:
   measurement contract/collector and reserved corpus provenance. Do not inspect
   reserved grain results before a useful candidate is frozen.

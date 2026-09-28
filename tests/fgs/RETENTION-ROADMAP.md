@@ -27,8 +27,12 @@ with useful real whole-picture behaviour. [D82 source-only model selection](FIND
 fixes unnecessary stationary rejections and a measured slow-motion overestimate.
 Its 1,344 known-source controls, complete HDR census and 287 Python / 55 C++
 checks pass. Necessary evidence now covers 8–10% of those pictures, but every
-occupied lookup still overlaps unsupported pixels. Measure the complementary
-source hypotheses and remaining conflicts before another classifier or fit.
+occupied lookup still overlaps unsupported pixels. [D83's optimistic union](FINDINGS-2026-09-28-POPULATION-UNION.md)
+with the complementary flat/noise hypothesis separates just four pixels in
+16.6 million; another fit of those supported patches cannot resolve coverage.
+Next test compression-only grain recovery on already recorded full-source NVENC
+pairs before adding runtime code. This is a separate finite diagnostic question,
+not permission to synthesize on ordinary fallback or admit unsupported sources.
 Missing evidence must preserve or reject, not admit. Keep the reserved corpus
 unopened until the candidate is useful and frozen.
 
