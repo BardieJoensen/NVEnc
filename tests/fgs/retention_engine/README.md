@@ -105,3 +105,16 @@ nor source population eligibility. The experimental live path requires matching 
 actual pre-encode sample proof and explicit library acknowledgement. D72
 finite Linux qualification passes; this remains an experimental diagnostic. See
 [the qualification record](../FINDINGS-2026-09-27-PRESERVED-CHROMA.md).
+
+Explicit `pre_encode_source_segments` can interleave whole-source grain-off
+rows with separately fitted modeled intervals. Copying the input is not proof
+that NVENC preserves its grain. `NativeModelSegments` therefore measures every
+source row against its actual reconstruction before publishing a grain-off
+model. Both spatial halves must pass native/averaged luma and colour energy
+checks (8% relative variance) and complete native means (0.125 in eight-bit
+units); zero source energy must remain zero. Failure is terminal and the
+rejected row remains unpublished. The report names `native_variance_means_v1`
+and marks it as a necessary check only. It is not full local-detail, covariance
+or temporal qualification. Read [D75/D76](../FINDINGS-2026-09-28-SOURCE-ENERGY.md)
+for implementation and current qualification status. Ordinary encoding does
+not instantiate this diagnostic path.

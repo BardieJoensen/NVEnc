@@ -30,6 +30,13 @@ does not automatically preserve its correlation with another synthesized one.
 If those checks cannot establish compatibility, preserve the entire source
 frame and signal no grain. This is still followed by lossy NVENC compression.
 
+Consequently, "source preservation" describes the input/fraction decision,
+not a successful decoded-output guarantee. A compressed source fallback that
+loses required source grain/detail is rejected too. D76 adds a necessary
+reconstruction energy/mean veto to the finite whole-source diagnostic; complete
+quality qualification and the bounded file-level failure policy remain R5/R8.
+Do not install a rejected fallback or silently lower its quality settings.
+
 ## Decisions, in order
 
 | Condition | Action |

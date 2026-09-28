@@ -9,8 +9,9 @@ of source-preserved output. They must not be read as temporal quality approval.
 Independent decoding of six historical 8/10-bit controls finds 64 source rows
 with severe grain loss, alongside 32 modeled rows with approximately preserved
 energy. The source-to-synthesis boundary can therefore create a large energy
-jump despite correct grain headers. D75's comparison against the latest
-GPU-qualified diagnostic is still running. This is not evidence of new damage
+jump despite correct grain headers. [D75's current comparison](FINDINGS-2026-09-28-PRESERVED-TRANSITIONS.md)
+reproduces the loss on the latest GPU-qualified diagnostic at both depths and
+full 1080p/UHD geometry. This is not evidence of new damage
 in deployed ordinary `cb903a17`, which has automatic retention disabled.
 
 D76 adds a mandatory necessary veto to the finite native source-segment path.
@@ -45,6 +46,19 @@ subtraction error and correction are retained in the evidence.
 Local evidence: `roadmap-r3-preserved-transitions-20260928/` and
 `roadmap-r3-source-energy-20260928/` under the handoff root. D76's `plan.json`,
 `full-cpu.json`, `independent-report.json` and `replay-report.json` pin this CPU
-checkpoint. Full encoder build, current reproduction, clean-source positive
-controls, ordinary equivalence and GPU rejection checks remain pending.
+checkpoint. The full Linux encoder is built at `296068e8`, SHA
+`4005998b910b5713150c34b7d67922b845e87a403138518c3c0a8ad35cf13b0c`.
+Current reproduction is complete; actual GPU rejection/positive controls and
+ordinary equivalence are pending.
+
+Actual captured-base preflight adds two exactly preserved full-resolution quiet
+sources and one 10-bit modeled-to-quiet transition as positives. An 8-bit quiet
+transition rejects because 20 of 524,288 luma pixels differ by one native code;
+this is a strictness limitation of exact-zero acceptance, not established visible
+damage. Both quiet-to-modeled controls encounter the existing ordinary recovery
+hold, which the explicit native candidate must respect. These three failed
+positive expectations are retained and separately explained. Bounds, model
+search and the encoder are unchanged; they are not disguised as grain-loss
+defects or replaced with easier successful transitions. All eight D75 source
+plans now reject, and four earlier model-only responses remain exact.
 Production, library files, source protections and reserved footage are unchanged.
