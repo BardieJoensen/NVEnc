@@ -219,6 +219,8 @@ if want_stage amplitude_regression; then
 Prepare source-matched default-mode outputs for the selected binary, the retained
 bad encode and the same-settings no-FGS compression reference. See AMPLITUDE-GUARD-20260916.md."
     require_file "$AMPLITUDE_MANIFEST"
+    python3 "$HERE/amplitude_regression.py" --manifest "$AMPLITUDE_MANIFEST" --check-input-paths \
+        || die "amplitude media prerequisites are unavailable; no GPU stages were started"
 fi
 log "preflight"
 command -v docker  >/dev/null || die "docker is required"

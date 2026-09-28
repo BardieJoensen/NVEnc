@@ -1,8 +1,62 @@
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 
 import numpy as np
 
-from amplitude_regression import FRAMES, assess
+from amplitude_regression import FRAMES, assess, manifest_inputs
+
+
+class AmplitudeInputTest(unittest.TestCase):
+    def test_path_preflight_cannot_be_mistaken_for_identity_or_quality(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = {}
+            for name in ('source', 'negative', 'candidate', 'reference'):
+                path = root / (name + '.mkv')
+                path.write_bytes(name.encode())
+                # Deliberately wrong hashes: this mode checks availability only.
+                manifest[name] = dict(path=str(path), sha256='0' * 64)
+            path = root / 'manifest.json'
+            path.write_text(json.dumps(manifest))
+            script = Path(__file__).with_name('amplitude_regression.py')
+            result = subprocess.run([sys.executable, str(script), '--manifest', str(path),
+                                     '--check-input-paths'], capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout), dict(input_paths_available=True,
+                             media_identity_checked=False, quality_checked=False))
+            # The real regression still rejects the same wrong identity before
+            # touching a decoder; the fast preflight cannot replace that check.
+            result = subprocess.run([sys.executable, str(script), '--manifest', str(path),
+                                     '--output', str(root / 'output')], capture_output=True,
+                                    text=True, timeout=30)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('source identity changed', result.stderr)
+
+    def test_missing_hash_and_aliased_media_are_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = {}
+            for name in ('source', 'negative', 'candidate', 'reference'):
+                path = root / name
+                path.write_bytes(name.encode())
+                manifest[name] = dict(path=str(path), sha256=hashlib.sha256(name.encode()).hexdigest())
+            files, identities = manifest_inputs(manifest)
+            self.assertEqual(len(files), 4)
+            self.assertEqual(len(identities), 4)
+            manifest['reference'].pop('sha256')
+            with self.assertRaisesRegex(ValueError, 'reference requires'):
+                manifest_inputs(manifest)
+            manifest['reference']['sha256'] = '0' * 64
+            alias = root / 'hard-link'
+            alias.hardlink_to(root / 'source')
+            manifest['reference']['path'] = str(alias)
+            with self.assertRaisesRegex(ValueError, 'distinct files'):
+                manifest_inputs(manifest)
 
 
 class AmplitudeRegressionTest(unittest.TestCase):

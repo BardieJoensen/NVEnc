@@ -44,6 +44,30 @@ def signature(path):
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns)
 
 
+def manifest_inputs(manifest):
+    """Check all required paths before costly hashing, encoding or decoding.
+
+    Availability is not identity or quality clearance. The actual regression
+    still hashes every artifact and checks for changes during measurement.
+    """
+    files = {}
+    before = {}
+    for name in ("source", "negative", "candidate", "reference"):
+        item = manifest.get(name)
+        if (not isinstance(item, dict) or not isinstance(item.get("path"), str)
+                or not item["path"] or not isinstance(item.get("sha256"), str)
+                or re.fullmatch(r"[0-9a-f]{64}", item["sha256"]) is None):
+            raise ValueError(name + " requires a media path and SHA256")
+        path = Path(item["path"])
+        if not path.is_file():
+            raise ValueError(f"missing amplitude {name} media: {path}")
+        files[name] = path
+        before[name] = signature(path)
+    if len({value[:2] for value in before.values()}) != 4:
+        raise ValueError("source, negative, candidate and reference must be distinct files")
+    return files, before
+
+
 def decode(path, start, directory, name, grain=None):
     probe = json.loads(subprocess.check_output([
         "ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
@@ -178,18 +202,23 @@ def assess(source, on, off, reference):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--check-input-paths", action="store_true",
+                        help="Preflight required media availability only; no hashing, decoding or quality verdict")
     parser.add_argument("--candidate-nvencc", type=Path,
                         help="Release check: require the manifest's encoded candidate to name this binary SHA")
     args = parser.parse_args()
+    if not args.check_input_paths and args.output is None:
+        parser.error("--output is required unless --check-input-paths is selected")
     manifest = json.loads(args.manifest.read_text())
+    files, before = manifest_inputs(manifest)
+    if args.check_input_paths:
+        print(json.dumps(dict(input_paths_available=True, media_identity_checked=False,
+                              quality_checked=False)))
+        return 0
     encoder_sha = sha(args.candidate_nvencc) if args.candidate_nvencc else None
     if encoder_sha and manifest['candidate'].get('encoder_sha256') != encoder_sha:
         raise ValueError('candidate artifact was not recorded for the requested encoder')
-    files = {name: Path(manifest[name]["path"]) for name in ("source", "negative", "candidate", "reference")}
-    before = {name: signature(path) for name, path in files.items()}
-    if len(set(before.values())) != 4:
-        raise ValueError("source, negative, candidate and reference must be distinct files")
     for name, path in files.items():
         if sha(path) != manifest[name]["sha256"]:
             raise ValueError(name + " identity changed")

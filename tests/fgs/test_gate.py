@@ -87,6 +87,27 @@ class GateTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn('variance_support', result.stdout.splitlines())
 
+    def test_amplitude_media_preflight_runs_before_gpu_tools(self):
+        marker = self.root / 'gpu-called'
+        self.executable(self.fake_bin / 'nvidia-smi', '#!/bin/sh\ntouch "' + str(marker) + '"\n')
+        manifest = self.root / 'amplitude.json'
+        content = {}
+        for name in ('source', 'negative', 'candidate', 'reference'):
+            path = self.root / (name + '.mkv')
+            path.write_bytes(name.encode())
+            content[name] = dict(path=str(path), sha256=hashlib.sha256(name.encode()).hexdigest())
+        for problem in ('missing_reference', 'aliased_reference'):
+            with self.subTest(problem=problem):
+                content['reference']['path'] = str(self.root / ('missing.mkv' if problem == 'missing_reference' else 'source.mkv'))
+                manifest.write_text(json.dumps(content))
+                result = self.run_command(['bash', str(HERE / 'local_gate.sh'),
+                    '--stage', 'amplitude_regression', '--candidate-nvencc', str(self.root / 'candidate'),
+                    '--amplitude-manifest', str(manifest)])
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertIn('no GPU stages were started', result.stderr)
+                self.assertFalse(marker.exists())
+                self.assertNotIn('== preflight', result.stdout)
+
     def test_training_support_requires_the_exact_negative(self):
         self.env['FGS_GATE_TRAINING_SOURCE_NEGATIVE'] = str(self.root / 'negative')
         for present in (False, True):

@@ -81,6 +81,12 @@ binary. It does not silently create or substitute a candidate encode. Keep the
 encode command and source/build provenance with the manifest. Media remain
 private; the repository contains checks and hashes rather than film payloads.
 
+The gate checks all four media paths and rejects aliases before starting GPU
+work. `amplitude_regression.py --manifest PATH --check-input-paths` performs
+that cheap availability check alone. It does not verify media hashes or grant
+a quality pass; the actual stage still checks all identities, the candidate
+encoder and unchanged inputs through the complete measurement.
+
 ## Deliberate periodic-regression change
 
 The mandatory guard removes synthesis from 263 pictures in the pinned
