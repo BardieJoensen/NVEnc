@@ -34,7 +34,10 @@ git -C "$REPO" archive "$harness_commit" tests/fgs | tar -x -C "$snapshot/harnes
 for commit in "${commits[@]}"; do
     tree="$snapshot/$commit"
     mkdir "$tree"
-    git -C "$REPO" archive "$commit" tests/fgs NVEncCore NVEncSDK | tar -x -C "$tree"
+    # tools/ holds headers the CPU tests include on the FGS branches; master has none.
+    extra=()
+    git -C "$REPO" cat-file -e "$commit:tools" 2>/dev/null && extra=(tools)
+    git -C "$REPO" archive "$commit" tests/fgs "${extra[@]}" NVEncCore NVEncSDK | tar -x -C "$tree"
     printf '\n== pre-push: CPU tests for %s\n' "$commit"
     TMPDIR="$tree" bash "$tree/tests/fgs/run_cpu_tests.sh"
     if [ "$MODE" = "off" ]; then
