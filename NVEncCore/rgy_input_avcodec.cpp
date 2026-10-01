@@ -404,6 +404,82 @@ void RGYInputAvcodec::CloseVideoDecoder() {
     }
 }
 
+// MPEG-4 Part 2 の VOL ヘッダを解析し、GMC (sprite_enable == 2) が使用されているかを調べる
+// NVDEC は GMC を用いた S(GMC)-VOP を正しくデコードできず、以降の参照フレームが破綻し、出力フレーム数も不足する
+static bool mpeg4ExtradataUsesGMC(const uint8_t *data, const int size) {
+    if (data == nullptr || size <= 4) {
+        return false;
+    }
+    // VOL start code: 00 00 01 20-2F
+    int volPos = -1;
+    for (int i = 0; i + 4 <= size; i++) {
+        if (data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x01 && (data[i + 3] & 0xF0) == 0x20) {
+            volPos = i + 4;
+            break;
+        }
+    }
+    if (volPos < 0) {
+        return false;
+    }
+    struct BitReader {
+        const uint8_t *ptr;
+        int bytes;
+        int pos;
+        uint32_t get(int n) {
+            uint32_t v = 0;
+            for (int i = 0; i < n; i++, pos++) {
+                const int bit = ((pos >> 3) < bytes) ? ((ptr[pos >> 3] >> (7 - (pos & 7))) & 1) : 0;
+                v = (v << 1) | bit;
+            }
+            return v;
+        }
+        bool eof() const { return (pos >> 3) >= bytes; }
+    } br = { data + volPos, size - volPos, 0 };
+
+    br.get(1); // random_accessible_vol
+    br.get(8); // video_object_type_indication
+    int verId = 1;
+    if (br.get(1)) { // is_object_layer_identifier
+        verId = br.get(4); // video_object_layer_verid
+        br.get(3); // video_object_layer_priority
+    }
+    if (br.get(4) == 15) { // aspect_ratio_info == extended_PAR
+        br.get(8); // par_width
+        br.get(8); // par_height
+    }
+    if (br.get(1)) { // vol_control_parameters
+        br.get(2); // chroma_format
+        br.get(1); // low_delay
+        if (br.get(1)) { // vbv_parameters
+            br.get(15); br.get(1); br.get(15); br.get(1); // bit_rate
+            br.get(15); br.get(1); br.get(3);             // vbv_buffer_size
+            br.get(11); br.get(1); br.get(15); br.get(1); // vbv_occupancy
+        }
+    }
+    const int shape = br.get(2); // video_object_layer_shape
+    if (shape == 3 /*grayscale*/ && verId != 1) {
+        br.get(4); // video_object_layer_shape_extension
+    }
+    br.get(1); // marker
+    const int timeIncRes = br.get(16); // vop_time_increment_resolution
+    br.get(1); // marker
+    if (br.get(1)) { // fixed_vop_rate
+        int bits = 1;
+        while ((1 << bits) < timeIncRes) bits++;
+        br.get(bits); // fixed_vop_time_increment
+    }
+    if (shape == 0 /*rectangular*/) {
+        br.get(1); br.get(13); br.get(1); br.get(13); br.get(1); // width, height
+    }
+    br.get(1); // interlaced
+    br.get(1); // obmc_disable
+    const int spriteEnable = (verId == 1) ? br.get(1) : br.get(2); // sprite_enable
+    if (br.eof()) {
+        return false;
+    }
+    return spriteEnable == 2; // 2 = GMC
+}
+
 RGY_ERR RGYInputAvcodec::initVideoBsfs() {
     if (m_Demux.video.bsfcCtx != nullptr) {
         AddMessage(RGY_LOG_DEBUG, _T("initVideoBsfs: Free old bsf...\n"));
@@ -2076,6 +2152,17 @@ RGY_ERR RGYInputAvcodec::Init(const TCHAR *strFileName, VideoInfo *inputInfo, co
                     m_Demux.video.HWDecodeDeviceId.insert(devCodecCsp.first);
                     m_inputVideoInfo.codec = hwCodec;
                 }
+            }
+            //NVDECはGMC(global motion compensation)を使用したMPEG-4を正しくデコードできない
+            //(S(GMC)-VOPの絵が破綻し、フレームも欠落する)ため、swデコードに切り替える
+            if (ENCODER_NVENC
+                && m_inputVideoInfo.codec == RGY_CODEC_MPEG4
+                && mpeg4ExtradataUsesGMC(m_Demux.video.stream->codecpar->extradata, m_Demux.video.stream->codecpar->extradata_size)) {
+                AddMessage((m_inputVideoInfo.type == RGY_INPUT_FMT_AVHW) ? RGY_LOG_WARN : RGY_LOG_INFO,
+                    _T("MPEG-4 stream uses GMC (global motion compensation), which " DECODER_NAME " cannot decode correctly, switching to --avsw.\n"));
+                m_inputVideoInfo.codec = RGY_CODEC_UNKNOWN;
+                m_Demux.video.HWDecodeDeviceId.clear();
+                m_inputVideoInfo.type = RGY_INPUT_FMT_AVSW;
             }
             if (m_inputVideoInfo.codec == RGY_CODEC_UNKNOWN
                 //wmv3はAdvanced Profile (3)のみの対応
