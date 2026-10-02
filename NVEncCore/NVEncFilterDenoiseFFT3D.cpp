@@ -99,6 +99,7 @@ NVEncFilterDenoiseFFT3D::NVEncFilterDenoiseFFT3D() :
     m_windowBuf(),
     m_windowBufInverse(),
     m_sigmaBuf(),
+    m_sigmaUploadEvent(),
     m_wsharpenBuf(),
     m_gridBuf(),
     m_gridDC(0.0f),
@@ -332,44 +333,26 @@ RGY_ERR NVEncFilterDenoiseFFT3D::init(shared_ptr<NVEncFilterParam> pParam, share
         }
         m_noisePowerGain = (float)(sw2 * sw2); // 2D 分離窓のパワーゲイン
 
-        // (1) sigma table: 4つのアンカー(sigma = 最高周波数、sigma4 = 最低周波数)を
-        // 正規化した半径方向周波数で補間する。従来の scalar path と同じ /255 scaling を
-        // 組み込むため、sigma2/3/4 = sigma または未指定なら全要素が従来値と一致し、
-        // 出力もそのまま再現される。
+        // (1) sigma table: see buildSigmaTable(). The device buffer (and its
+        // pinned host mirror) is allocated once and reused across re-inits and
+        // updateSigma(), so reprogramming sigma never frees device memory.
         {
-            const float s1 = prm->fft3d.sigma;                                     // 最高周波数
-            const float s2 = (prm->fft3d.sigma2 > 0.0f) ? prm->fft3d.sigma2 : s1;  // 中高周波数
-            const float s3 = (prm->fft3d.sigma3 > 0.0f) ? prm->fft3d.sigma3 : s1;  // 中低周波数
-            const float s4 = (prm->fft3d.sigma4 > 0.0f) ? prm->fft3d.sigma4 : s1;  // 最低周波数
-            const float anchors[4] = { s4, s3, s2, s1 }; // 半径方向 0 -> 1
-            std::vector<float> sigmaTable((size_t)bs * bs);
-            for (int by = 0; by < bs; by++) {
-                const float fy = fnorm(by);
-                for (int bx = 0; bx < bs; bx++) {
-                    const float fx = fnorm(bx);
-                    float radial = std::sqrt(fx * fx + fy * fy) * 0.70710678f; // /sqrt(2) で [0,1] にする
-                    if (radial > 1.0f) radial = 1.0f;
-                    const float t = radial * 3.0f; // 4アンカー間の3つの線形区間
-                    int seg = (int)t; if (seg > 2) seg = 2;
-                    const float frac = t - (float)seg;
-                    const float sval = anchors[seg] * (1.0f - frac) + anchors[seg + 1] * frac;
-                    if (prm->fft3d.signorm) {
-                        // sigma を 8bit scale のノイズレベルとして扱い、そのノイズが実際に
-                        // 生む bin ごとのノイズパワーを閾値にする。
-                        // 順方向の時間 DFT は正規化していないため、独立同分布のフレームごとの
-                        // ノイズパワーは時間方向 bin で btFrames 倍になる。
-                        // 元の FFT3DFilter の btcur 係数相当に合わせる。
-                        // smin/smax は、1/N 正規化済み逆時間 DFT 後のフレーム単位 psd に使うので、
-                        // この係数を掛けない。
-                        const float snorm = sval * (1.0f / ((1 << 8) - 1));
-                        sigmaTable[(size_t)by * bs + bx] = snorm * snorm * m_noisePowerGain * (float)fft3d_bt_frames(prm->fft3d);
-                    } else {
-                        // 後方互換 scale。正規化していない bin power と比較する。
-                        sigmaTable[(size_t)by * bs + bx] = sval * (1.0f / ((1 << 8) - 1)); // scalar /255 に合わせる
-                    }
+            const size_t bytes = (size_t)bs * bs * sizeof(float);
+            if (!m_sigmaBuf || m_sigmaBuf->nSize != bytes) {
+                m_sigmaBuf = std::make_unique<CUMemBufPair>(bytes);
+                if ((sts = m_sigmaBuf->alloc()) != RGY_ERR_NONE) {
+                    AddMessage(RGY_LOG_ERROR, _T("failed to allocate memory for FFT3D sigma table: %s.\n"), get_err_mes(sts));
+                    return sts;
+                }
+            } else if (m_sigmaUploadEvent) {
+                // A previous updateSigma() may still be copying from the host mirror.
+                if ((sts = err_to_rgy(cudaEventSynchronize(*m_sigmaUploadEvent))) != RGY_ERR_NONE) {
+                    return sts;
                 }
             }
-            if ((sts = uploadTable(m_sigmaBuf, sigmaTable, _T("sigma"))) != RGY_ERR_NONE) {
+            buildSigmaTable(prm.get(), (float *)m_sigmaBuf->ptrHost);
+            if ((sts = m_sigmaBuf->copyHtoD()) != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("failed to copy memory for FFT3D sigma table: %s.\n"), get_err_mes(sts));
                 return sts;
             }
         }
@@ -440,6 +423,87 @@ RGY_ERR NVEncFilterDenoiseFFT3D::init(shared_ptr<NVEncFilterParam> pParam, share
     return sts;
 }
 
+// Per-frequency-bin sigma table. The four anchors (sigma = highest
+// frequency, sigma4 = lowest) are interpolated along the normalised radial
+// frequency. With signorm the entries are the per-bin noise power a real 8-bit
+// noise std of sigma produces after windowing; otherwise the legacy /255 scale.
+// Shared by init() and updateSigma() so both produce identical tables.
+void NVEncFilterDenoiseFFT3D::buildSigmaTable(const NVEncFilterParamDenoiseFFT3D *prm, float *table) const {
+    const int bs = prm->fft3d.block_size;
+    auto fnorm = [bs](int i) { const int f = (i < bs - i) ? i : (bs - i); return (float)f / (float)(bs / 2); };
+    const float s1 = prm->fft3d.sigma;                                     // 最高周波数
+    const float s2 = (prm->fft3d.sigma2 > 0.0f) ? prm->fft3d.sigma2 : s1;  // 中高周波数
+    const float s3 = (prm->fft3d.sigma3 > 0.0f) ? prm->fft3d.sigma3 : s1;  // 中低周波数
+    const float s4 = (prm->fft3d.sigma4 > 0.0f) ? prm->fft3d.sigma4 : s1;  // 最低周波数
+    const float anchors[4] = { s4, s3, s2, s1 }; // 半径方向 0 -> 1
+    for (int by = 0; by < bs; by++) {
+        const float fy = fnorm(by);
+        for (int bx = 0; bx < bs; bx++) {
+            const float fx = fnorm(bx);
+            float radial = std::sqrt(fx * fx + fy * fy) * 0.70710678f; // /sqrt(2) で [0,1] にする
+            if (radial > 1.0f) radial = 1.0f;
+            const float t = radial * 3.0f; // 4アンカー間の3つの線形区間
+            int seg = (int)t; if (seg > 2) seg = 2;
+            const float frac = t - (float)seg;
+            const float sval = anchors[seg] * (1.0f - frac) + anchors[seg + 1] * frac;
+            if (prm->fft3d.signorm) {
+                // sigma を 8bit scale のノイズレベルとして扱い、そのノイズが実際に
+                // 生む bin ごとのノイズパワーを閾値にする。
+                // 順方向の時間 DFT は正規化していないため、独立同分布のフレームごとの
+                // ノイズパワーは時間方向 bin で btFrames 倍になる。
+                // 元の FFT3DFilter の btcur 係数相当に合わせる。
+                // smin/smax は、1/N 正規化済み逆時間 DFT 後のフレーム単位 psd に使うので、
+                // この係数を掛けない。
+                const float snorm = sval * (1.0f / ((1 << 8) - 1));
+                table[(size_t)by * bs + bx] = snorm * snorm * m_noisePowerGain * (float)fft3d_bt_frames(prm->fft3d);
+            } else {
+                // 後方互換 scale。正規化していない bin power と比較する。
+                table[(size_t)by * bs + bx] = sval * (1.0f / ((1 << 8) - 1)); // scalar /255 に合わせる
+            }
+        }
+    }
+}
+
+RGY_ERR NVEncFilterDenoiseFFT3D::updateSigma(const float sigma, cudaStream_t stream) {
+    auto prm = std::dynamic_pointer_cast<NVEncFilterParamDenoiseFFT3D>(m_param);
+    if (!prm || !m_sigmaBuf || !m_sigmaBuf->ptrDevice) {
+        AddMessage(RGY_LOG_ERROR, _T("updateSigma called before init.\n"));
+        return RGY_ERR_INVALID_CALL;
+    }
+    if (sigma == prm->fft3d.sigma) {
+        return RGY_ERR_NONE;
+    }
+    if (!m_sigmaUploadEvent) {
+        m_sigmaUploadEvent = std::unique_ptr<cudaEvent_t, cudaevent_deleter>(new cudaEvent_t(), cudaevent_deleter());
+        auto cudaerr = cudaEventCreateWithFlags(m_sigmaUploadEvent.get(), cudaEventDisableTiming);
+        if (cudaerr != cudaSuccess) {
+            m_sigmaUploadEvent.reset();
+            AddMessage(RGY_LOG_ERROR, _T("failed to create event for FFT3D sigma update: %s.\n"), char_to_tstring(cudaGetErrorString(cudaerr)).c_str());
+            return err_to_rgy(cudaerr);
+        }
+    } else {
+        // The host mirror must not be rewritten while the previous upload is
+        // still queued. A whole frame has normally run since, so this returns immediately.
+        auto cudaerr = cudaEventSynchronize(*m_sigmaUploadEvent);
+        if (cudaerr != cudaSuccess) {
+            return err_to_rgy(cudaerr);
+        }
+    }
+    prm->fft3d.sigma = sigma;
+    buildSigmaTable(prm.get(), (float *)m_sigmaBuf->ptrHost);
+    auto sts = m_sigmaBuf->copyHtoDAsync(stream);
+    if (sts != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("failed to upload FFT3D sigma table: %s.\n"), get_err_mes(sts));
+        return sts;
+    }
+    auto cudaerr = cudaEventRecord(*m_sigmaUploadEvent, stream);
+    if (cudaerr != cudaSuccess) {
+        return err_to_rgy(cudaerr);
+    }
+    setFilterInfo(prm->print());
+    return RGY_ERR_NONE;
+}
+
 tstring NVEncFilterParamDenoiseFFT3D::print() const {
     return fft3d.print() + strsprintf(_T(", chroma %s"), processChroma ? _T("on") : _T("off"));
 }
@@ -493,7 +557,13 @@ RGY_ERR NVEncFilterDenoiseFFT3D::run_filter(const RGYFrameInfo *pInputFrame, RGY
             AddMessage(RGY_LOG_ERROR, _T("failed to get fft buffer.\n"));
             return RGY_ERR_NULL_PTR;
         }
-        if (!prm->processChroma) {
+        // Luma-only mode restores the untouched planes from the source after
+        // the luma merge.  Only bt=3/4 emit with a one-frame delay and must
+        // retain a copy of the source; bt<=2 output the current input frame,
+        // whose planes are still available, so the copy is skipped there.
+        const int btFramesIn = std::max(bt, 1);
+        const bool retainSource = (btFramesIn - 1) - btFramesIn / 2 > 0;
+        if (!prm->processChroma && retainSource) {
             auto srcBuf = m_srcBuf.get(curBufIdx);
             if (!srcBuf || !srcBuf->frame.ptr[0]) {
                 AddMessage(RGY_LOG_ERROR, _T("failed to get luma-only FFT3D source buffer.\n"));
@@ -546,8 +616,12 @@ RGY_ERR NVEncFilterDenoiseFFT3D::run_filter(const RGYFrameInfo *pInputFrame, RGY
         }
         auto fftCur = frames[curIdx];
         if (!prm->processChroma) {
-            auto srcCur = m_srcBuf.get(outFrameIdx);
-            srcCurFrame = srcCur ? &srcCur->frame : nullptr;
+            if (nFuture == 0) {
+                srcCurFrame = pInputFrame; // delay-free: the output frame is the current input
+            } else {
+                auto srcCur = m_srcBuf.get(outFrameIdx);
+                srcCurFrame = srcCur ? &srcCur->frame : nullptr;
+            }
         }
         auto func = denosieFunc->tfft_filter_ifft(curIdx, btFrames);
         if (!func) {
@@ -566,7 +640,7 @@ RGY_ERR NVEncFilterDenoiseFFT3D::run_filter(const RGYFrameInfo *pInputFrame, RGY
             frames[3] ? &frames[3]->frame : nullptr,
             (const float *)m_windowBufInverse->ptr,
             prm->frameOut.width, prm->frameOut.height, planeUV.width, planeUV.height, m_ov1, m_ov2,
-            (const float *)m_sigmaBuf->ptr, 1.0f - prm->fft3d.amount, (bt < 0) ? -1 : prm->fft3d.method,
+            (const float *)m_sigmaBuf->ptrDevice, 1.0f - prm->fft3d.amount, (bt < 0) ? -1 : prm->fft3d.method,
             (m_wsharpenBuf) ? (const float *)m_wsharpenBuf->ptr : nullptr, sminSq, smaxSq,
             (m_gridBuf) ? (const float *)m_gridBuf->ptr : nullptr, degridFactor,
             prm->processChroma, stream);
@@ -583,10 +657,16 @@ RGY_ERR NVEncFilterDenoiseFFT3D::run_filter(const RGYFrameInfo *pInputFrame, RGY
             AddMessage(RGY_LOG_ERROR, _T("missing luma-only FFT3D source frame.\n"));
             return RGY_ERR_INVALID_CALL;
         }
-        auto copyErr = copyFrameAsync(ppOutputFrames[0], srcCurFrame, stream);
-        if (copyErr != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to copy luma-only FFT3D output base frame: %s.\n"), get_err_mes(copyErr));
-            return copyErr;
+        // kernel_merge writes every luma pixel, so only the planes it does
+        // not touch need to come from the source.
+        for (int plane = 1; plane < RGY_CSP_PLANES[ppOutputFrames[0]->csp]; plane++) {
+            const auto srcPlane = getPlane(srcCurFrame, (RGY_PLANE)plane);
+            auto dstPlane = getPlane(ppOutputFrames[0], (RGY_PLANE)plane);
+            auto copyErr = copyPlaneAsync(&dstPlane, &srcPlane, stream);
+            if (copyErr != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("failed to copy luma-only FFT3D output base frame: %s.\n"), get_err_mes(copyErr));
+                return copyErr;
+            }
         }
     }
     sts = denosieFunc->merge()(ppOutputFrames[0], &m_filteredBlocks->frame, m_ov1, m_ov2, prm->processChroma, stream);
@@ -614,6 +694,7 @@ void NVEncFilterDenoiseFFT3D::close() {
     m_windowBuf.reset();
     m_windowBufInverse.reset();
     m_sigmaBuf.reset();
+    m_sigmaUploadEvent.reset();
     m_wsharpenBuf.reset();
     m_gridBuf.reset();
 }

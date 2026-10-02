@@ -90,10 +90,17 @@ public:
     virtual ~NVEncFilterDenoiseFFT3D();
     virtual RGY_ERR init(shared_ptr<NVEncFilterParam> pParam, shared_ptr<RGYLog> pPrintMes) override;
     virtual void resetTemporalState() override;
+    // Reprogram the noise level without re-running init(). The per-bin sigma
+    // table is rebuilt with the same arithmetic init() uses and uploaded with
+    // a stream-ordered copy into the existing device buffer, so no
+    // cudaMalloc/cudaFree (which synchronize the whole context, including the
+    // NVENC queue) occurs. Output is identical to init() with the same sigma.
+    RGY_ERR updateSigma(float sigma, cudaStream_t stream);
 protected:
     virtual RGY_ERR run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum, cudaStream_t stream) override;
     virtual void close() override;
     RGY_ERR checkParam(const NVEncFilterParamDenoiseFFT3D *prm);
+    void buildSigmaTable(const NVEncFilterParamDenoiseFFT3D *prm, float *table) const;
 
     int m_bufIdx;
     int m_ov1;
@@ -104,7 +111,8 @@ protected:
     std::unique_ptr<CUFrameBuf> m_filteredBlocks;
     std::unique_ptr<CUMemBuf> m_windowBuf;
     std::unique_ptr<CUMemBuf> m_windowBufInverse;
-    std::unique_ptr<CUMemBuf> m_sigmaBuf;    // per-frequency-bin sigma table (sigma/sigma2/3/4)
+    std::unique_ptr<CUMemBufPair> m_sigmaBuf; // per-frequency-bin sigma table (sigma/sigma2/3/4); pinned host mirror for async updates
+    std::unique_ptr<cudaEvent_t, cudaevent_deleter> m_sigmaUploadEvent; // last async table upload; guards the host mirror
     std::unique_ptr<CUMemBuf> m_wsharpenBuf; // per-frequency-bin sharpen weight (strength x gaussian high-pass)
     std::unique_ptr<CUMemBuf> m_gridBuf;     // gridsample spectrum (complex, for degrid)
     float m_gridDC;                          // DC of the gridsample spectrum

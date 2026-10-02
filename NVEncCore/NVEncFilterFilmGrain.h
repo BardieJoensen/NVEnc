@@ -146,8 +146,15 @@ protected:
 
 private:
     struct AnalyzerState;
+    struct PendingFrame;
 
     void recordTableEntry(int64_t timestamp, int64_t duration, const NV_ENC_FILM_GRAIN_PARAMS_AV1& params);
+    // One-frame delayed emission (see run_filter): stage 1 queues the block
+    // metrics, stage 2 selects blocks/denoises/queues the model statistics,
+    // stage 3 (on the next call) solves the model and renders the frame.
+    RGY_ERR beginAnalysis(const RGYFrameInfo *source, PendingFrame& next, cudaStream_t stream);
+    RGY_ERR completeAnalysis(const RGYFrameInfo *source, const RGYFrameInfo *cleanBase, PendingFrame& next, cudaStream_t stream);
+    RGY_ERR finishPending(const PendingFrame& pending, RGYFrameInfo *output, cudaStream_t stream);
 
     std::unique_ptr<CUFrameBuf> m_denoiseWork;
     std::unique_ptr<NVEncFilterDenoiseFFT3D> m_fft3d;
@@ -155,12 +162,18 @@ private:
     float m_fft3dSigma;
     std::unique_ptr<NVEncFilterDegrain> m_motionDegrain;
     std::shared_ptr<NVEncFilterParamDegrain> m_motionDegrainParam;
-    std::unique_ptr<CUMemBufPair> m_blockMetrics;
+    std::array<std::unique_ptr<CUMemBufPair>, 2> m_blockMetrics; // ping-pong: one frame's readback in flight while the previous is read
     std::unique_ptr<CUMemBufPair> m_blockMask;
     std::unique_ptr<CUMemBufPair> m_sigmaMap;
     std::unique_ptr<CUMemBufPair> m_strengthLut;
     std::unique_ptr<CUMemBufPair> m_sceneCounts;
     std::unique_ptr<CUMemBufPair> m_modelStats;
+    std::unique_ptr<CUFrameBuf> m_pendingSource;   // source of the frame awaiting emission
+    std::unique_ptr<CUFrameBuf> m_pendingBase;     // its denoised base
+    std::unique_ptr<cudaEvent_t, cudaevent_deleter> m_metricsEvent; // block metrics readback of the newest frame
+    std::unique_ptr<cudaEvent_t, cudaevent_deleter> m_statsEvent;   // model statistics readback of the pending frame
+    std::unique_ptr<PendingFrame> m_pending;
+    int m_metricsIndex;
     std::unique_ptr<AnalyzerState> m_state;
     tstring m_tableOutPath;
     rgy_rational<int> m_tableTimebase;

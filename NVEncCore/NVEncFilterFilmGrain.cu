@@ -117,33 +117,49 @@ __device__ inline void store_code(uint8_t *ptr, const int pitch, const int x, co
     row[x * components + component] = static_cast<Type>(value << shift);
 }
 
-template<typename Type, int shift>
-__global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const int pitch,
-    const int width, const int height, const int blocksX, const int bitDepth,
-    FilmGrainBlockMetric *__restrict__ metrics) {
-    const int blockIndex = blockIdx.x;
-    const int tid = threadIdx.x;
-    const int bx = blockIndex % blocksX;
-    const int by = blockIndex / blocksX;
-    const int x0 = bx * FGS_BLOCK_SIZE;
-    const int y0 = by * FGS_BLOCK_SIZE;
-    const int bw = min(FGS_BLOCK_SIZE, width - x0);
-    const int bh = min(FGS_BLOCK_SIZE, height - y0);
-    if (bw < 8 || bh < 8) {
-        if (tid == 0) metrics[blockIndex] = {};
-        return;
-    }
+// fullBlock: bw == bh == FGS_BLOCK_SIZE, so the per-pixel index math becomes
+// shifts and masks and the normalisation divides by exact powers of two.  The
+// arithmetic and reduction order are identical to the general path, so both
+// produce the same metrics; only edge blocks take the general path.
+struct FlatMetricsShared {
+    int tile[FGS_BLOCK_SIZE * FGS_BLOCK_SIZE];
+    float reduce[6][FGS_FLAT_THREADS];
+    int reduceCount[FGS_FLAT_THREADS];
+    float mean;
+    float planeX;
+    float planeY;
+};
 
+template<typename Type, int shift, bool fullBlock>
+__device__ inline void fgs_flat_metrics_block(FlatMetricsShared& sh, const uint8_t *__restrict__ src, const int pitch,
+    const int x0, const int y0, const int bwIn, const int bhIn, const int blockIndex, const int bitDepth,
+    FilmGrainBlockMetric *__restrict__ metrics) {
+    auto tile = sh.tile;
+    auto reduce0 = sh.reduce[0];
+    auto reduce1 = sh.reduce[1];
+    auto reduce2 = sh.reduce[2];
+    auto reduce3 = sh.reduce[3];
+    auto reduce4 = sh.reduce[4];
+    auto reduce5 = sh.reduce[5];
+    auto reduceCount = sh.reduceCount;
+    float& mean = sh.mean;
+    float& planeX = sh.planeX;
+    float& planeY = sh.planeY;
+    const int tid = threadIdx.x;
+    const int bw = fullBlock ? FGS_BLOCK_SIZE : bwIn;
+    const int bh = fullBlock ? FGS_BLOCK_SIZE : bhIn;
     const int count = bw * bh;
+    auto pixelX = [bw](const int index) { return fullBlock ? (index & (FGS_BLOCK_SIZE - 1)) : index % bw; };
+    auto pixelY = [bw](const int index) { return fullBlock ? (index >> 5) : index / bw; };
+    static_assert(FGS_BLOCK_SIZE == 32, "fullBlock index math assumes 32x32 blocks");
     // Both passes below walk the same block, and the gradient pass adds four
     // neighbour taps per pixel -- about six global loads per pixel in total.
     // Those taps are guarded to stay strictly inside the block, so the whole
     // working set is bw*bh with no halo.  Stage it in shared memory once and
     // read every later tap from there, preserving the sample values and the
     // arithmetic order used below.
-    __shared__ int tile[FGS_BLOCK_SIZE * FGS_BLOCK_SIZE];
     for (int index = tid; index < count; index += FGS_FLAT_THREADS) {
-        tile[index] = load_code<Type, shift>(src, pitch, x0 + index % bw, y0 + index / bw);
+        tile[index] = load_code<Type, shift>(src, pitch, x0 + pixelX(index), y0 + pixelY(index));
     }
     __syncthreads();
 
@@ -157,8 +173,8 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     float localNormX = 0.0f;
     float localNormY = 0.0f;
     for (int index = tid; index < count; index += FGS_FLAT_THREADS) {
-        const int x = index % bw;
-        const int y = index / bw;
+        const int x = pixelX(index);
+        const int y = pixelY(index);
         const float yn = (2.0f * y - (bh - 1)) / bh;
         const float xn = (2.0f * x - (bw - 1)) / bw;
         const float value = static_cast<float>(tile[index]);
@@ -168,16 +184,6 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
         localNormX += xn * xn;
         localNormY += yn * yn;
     }
-    __shared__ float reduce0[FGS_FLAT_THREADS];
-    __shared__ float reduce1[FGS_FLAT_THREADS];
-    __shared__ float reduce2[FGS_FLAT_THREADS];
-    __shared__ float reduce3[FGS_FLAT_THREADS];
-    __shared__ float reduce4[FGS_FLAT_THREADS];
-    __shared__ float reduce5[FGS_FLAT_THREADS];
-    __shared__ int reduceCount[FGS_FLAT_THREADS];
-    __shared__ float mean;
-    __shared__ float planeX;
-    __shared__ float planeY;
     reduce0[tid] = localSum;
     reduce1[tid] = localSumX;
     reduce2[tid] = localSumY;
@@ -209,8 +215,8 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     float localCorrelationEnergy = 0.0f;
     int localGradientCount = 0;
     for (int index = tid; index < count; index += FGS_FLAT_THREADS) {
-        const int x = index % bw;
-        const int y = index / bw;
+        const int x = pixelX(index);
+        const int y = pixelY(index);
         const float yn = (2.0f * y - (bh - 1)) / bh;
         const float xn = (2.0f * x - (bw - 1)) / bw;
         const float value = static_cast<float>(tile[index]);
@@ -302,6 +308,30 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     metrics[blockIndex] = out;
 }
 
+template<typename Type, int shift>
+__global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const int pitch,
+    const int width, const int height, const int blocksX, const int bitDepth,
+    FilmGrainBlockMetric *__restrict__ metrics) {
+    const int blockIndex = blockIdx.x;
+    const int bx = blockIndex % blocksX;
+    const int by = blockIndex / blocksX;
+    const int x0 = bx * FGS_BLOCK_SIZE;
+    const int y0 = by * FGS_BLOCK_SIZE;
+    const int bw = min(FGS_BLOCK_SIZE, width - x0);
+    const int bh = min(FGS_BLOCK_SIZE, height - y0);
+    if (bw < 8 || bh < 8) {
+        if (threadIdx.x == 0) metrics[blockIndex] = {};
+        return;
+    }
+    // Block-uniform choice: no divergence within the block.
+    __shared__ FlatMetricsShared sh;
+    if (bw == FGS_BLOCK_SIZE && bh == FGS_BLOCK_SIZE) {
+        fgs_flat_metrics_block<Type, shift, true>(sh, src, pitch, x0, y0, bw, bh, blockIndex, bitDepth, metrics);
+    } else {
+        fgs_flat_metrics_block<Type, shift, false>(sh, src, pitch, x0, y0, bw, bh, blockIndex, bitDepth, metrics);
+    }
+}
+
 __global__ void kernel_fgs_motion_confidence(uint8_t *__restrict__ flatMask,
     const int fgsBlocksX, const int fgsBlocksY,
     const RGYDegrainSAD *__restrict__ sad,
@@ -347,7 +377,9 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
     constexpr int tileHeight = FGS_BILATERAL_BLOCK_Y + FGS_BILATERAL_RADIUS * 2;
     constexpr int tilePixels = tileWidth * tileHeight;
     constexpr int blockThreads = FGS_BILATERAL_BLOCK_X * FGS_BILATERAL_BLOCK_Y;
-    __shared__ int tile[tilePixels * components];
+    // Stored as float: code values (<= 16 bit) convert exactly, and keeping
+    // them in float removes an int-to-float conversion per tap.
+    __shared__ float tile[tilePixels * components];
 
     // Neighbourhoods overlap heavily: the original implementation issued 25
     // global source loads per output component.  Cooperatively cache this
@@ -363,7 +395,7 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
             static_cast<int>(blockIdx.x) * FGS_BILATERAL_BLOCK_X + tx - FGS_BILATERAL_RADIUS));
         const int sy = min(height - 1, max(0,
             static_cast<int>(blockIdx.y) * FGS_BILATERAL_BLOCK_Y + ty - FGS_BILATERAL_RADIUS));
-        tile[index] = load_code<Type, shift>(src, srcPitch, sx, sy, component, components);
+        tile[index] = static_cast<float>(load_code<Type, shift>(src, srcPitch, sx, sy, component, components));
     }
     __syncthreads();
     if (x >= width || y >= height) return;
@@ -415,22 +447,29 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
         const int centerIndex = (
             (threadIdx.y + FGS_BILATERAL_RADIUS) * tileWidth
             + threadIdx.x + FGS_BILATERAL_RADIUS) * components + component;
-        const int center = tile[centerIndex];
+        const float center = tile[centerIndex];
         float weighted = 0.0f;
         float weightSum = 0.0f;
+        // Fully unrolled: the tap loop must not carry branches (the centre
+        // tap becomes a compile-time case) and the accumulation order is the
+        // fixed dy-major sequence below, so results are unchanged.
+#pragma unroll
         for (int dy = -2; dy <= 2; ++dy) {
+#pragma unroll
             for (int dx = -2; dx <= 2; ++dx) {
                 const int sampleIndex = (
                     (threadIdx.y + FGS_BILATERAL_RADIUS + dy) * tileWidth
                     + threadIdx.x + FGS_BILATERAL_RADIUS + dx) * components + component;
-                const int sample = tile[sampleIndex];
+                const float sample = tile[sampleIndex];
                 if (dx == 0 && dy == 0) {
                     constexpr float centerWeight = spatial[2] * spatial[2];
                     weighted += centerWeight * center;
                     weightSum += centerWeight;
                     continue;
                 }
-                const float difference = static_cast<float>(sample - center);
+                // Both operands are exactly representable, so this equals the
+                // former integer difference converted to float.
+                const float difference = sample - center;
                 const float rangeWeight = 1.0f / (1.0f + difference * difference * invRange2);
                 const float weight = spatial[dx + 2] * spatial[dy + 2] * rangeWeight;
                 weighted += weight * sample;
@@ -682,18 +721,23 @@ static RGY_ERR launch_scene_sad_count(uint32_t *counts, const RGYDegrainAnalyzeR
 // will add back so the played-out mean matches the source (measured on the
 // dark_luma fixture: +4.0/+2.2/+0.8 code values in the three darkest bands
 // before compensation).  Solved as v' = v - lift(v') by two fixed-point steps.
+// dst may equal src (in place).  Out of place, every pixel is written so the
+// destination becomes a complete copy of the compensated base.
 template<typename Type, int shift>
-__global__ void kernel_fgs_level_compensate(uint8_t *__restrict__ ptr, const int pitch,
+__global__ void kernel_fgs_level_compensate(uint8_t *dst, const int dstPitch,
+    const uint8_t *src, const int srcPitch,
     const int width, const int height, const int rangeMin, const int rangeMax,
     const int bitDepth, const float *__restrict__ strengthLut) {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= width || y >= height) return;
-    const int value = load_code<Type, shift>(ptr, pitch, x, y);
-    if (value <= rangeMin || value >= rangeMax) return; // leave out-of-range/boundary pixels alone
+    const bool inPlace = dst == src;
+    const int value = load_code<Type, shift>(src, srcPitch, x, y);
+    auto passThrough = [&]() { if (!inPlace) store_code<Type, shift>(dst, dstPitch, x, y, value); };
+    if (value <= rangeMin || value >= rangeMax) { passThrough(); return; } // leave out-of-range/boundary pixels alone
     const int lutIndex = min(FGS_STRENGTH_LUT_SIZE - 1, max(0, value >> (bitDepth - 8)));
     const float sigma = strengthLut[lutIndex];
-    if (sigma <= 0.01f) return;
+    if (sigma <= 0.01f) { passThrough(); return; }
     auto clipLift = [](const float d) {
         // E[clip(N(0,1), -d, inf)] = phi(d) - d * PHI(-d)
         return (d > 3.5f) ? 0.0f : 0.39894228f * __expf(-0.5f * d * d) - d * 0.5f * erfcf(d * 0.70710678f);
@@ -702,20 +746,21 @@ __global__ void kernel_fgs_level_compensate(uint8_t *__restrict__ ptr, const int
     for (int iter = 0; iter < 2; ++iter) {
         const float dLo = (compensated - rangeMin) / sigma;
         const float dHi = (rangeMax - compensated) / sigma;
-        if (dLo > 3.5f && dHi > 3.5f) return;
+        if (dLo > 3.5f && dHi > 3.5f) { passThrough(); return; }
         compensated = static_cast<float>(value) - sigma * (clipLift(dLo) - clipLift(dHi));
     }
     const int out = min(rangeMax, max(rangeMin, __float2int_rn(compensated)));
-    store_code<Type, shift>(ptr, pitch, x, y, out);
+    store_code<Type, shift>(dst, dstPitch, x, y, out);
 }
 
 template<typename Type, int shift>
-static RGY_ERR launch_level_compensate(const RGYFrameInfo& luma, const int rangeMin, const int rangeMax,
-    const int bitDepth, const float *strengthLut, cudaStream_t stream) {
+static RGY_ERR launch_level_compensate(const RGYFrameInfo& lumaDst, const RGYFrameInfo& lumaSrc,
+    const int rangeMin, const int rangeMax, const int bitDepth, const float *strengthLut, cudaStream_t stream) {
     const dim3 block(32, 8);
-    const dim3 grid(divCeil(luma.width, static_cast<int>(block.x)), divCeil(luma.height, static_cast<int>(block.y)));
+    const dim3 grid(divCeil(lumaDst.width, static_cast<int>(block.x)), divCeil(lumaDst.height, static_cast<int>(block.y)));
     kernel_fgs_level_compensate<Type, shift><<<grid, block, 0, stream>>>(
-        luma.ptr[0], luma.pitch[0], luma.width, luma.height, rangeMin, rangeMax, bitDepth, strengthLut);
+        lumaDst.ptr[0], lumaDst.pitch[0], lumaSrc.ptr[0], lumaSrc.pitch[0],
+        lumaDst.width, lumaDst.height, rangeMin, rangeMax, bitDepth, strengthLut);
     return err_to_rgy(cudaGetLastError());
 }
 
@@ -725,8 +770,10 @@ struct FilmGrainChromaScale {
     int offset;
 };
 
+// chroma (dst) may equal chromaSrc (in place); out of place every pixel is written.
 template<typename Type, int shift, int components>
-__global__ void kernel_fgs_chroma_level_compensate(uint8_t *__restrict__ chroma, const int pitch,
+__global__ void kernel_fgs_chroma_level_compensate(uint8_t *chroma, const int pitch,
+    const uint8_t *chromaSrc, const int srcPitch,
     const uint8_t *__restrict__ luma, const int lumaPitch, const int lumaWidth,
     const int width, const int height, const int rangeMin, const int rangeMax, const int bitDepth,
     const FilmGrainChromaScale scale0, const FilmGrainChromaScale scale1,
@@ -734,14 +781,16 @@ __global__ void kernel_fgs_chroma_level_compensate(uint8_t *__restrict__ chroma,
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= width || y >= height) return;
+    const bool inPlace = chroma == chromaSrc;
     const int depthShift = bitDepth - 8;
     // AV1's 4:2:0 chroma scaling index averages the horizontal pair on the
     // upper luma row, before luma synthesis (specification 7.18.3.5).
     const int averageLuma = (load_code<Type, shift>(luma, lumaPitch, x * 2, y * 2)
         + load_code<Type, shift>(luma, lumaPitch, min(x * 2 + 1, lumaWidth - 1), y * 2) + 1) >> 1;
     for (int component = 0; component < components; ++component) {
-        const int value = load_code<Type, shift>(chroma, pitch, x, y, component, components);
-        if (value <= rangeMin || value >= rangeMax) continue;
+        const int value = load_code<Type, shift>(chromaSrc, srcPitch, x, y, component, components);
+        auto passThrough = [&]() { if (!inPlace) store_code<Type, shift>(chroma, pitch, x, y, value, component, components); };
+        if (value <= rangeMin || value >= rangeMax) { passThrough(); continue; }
         const auto scale = component == 0 ? scale0 : scale1;
         const int merged = min((1 << bitDepth) - 1, max(0,
             ((averageLuma * scale.lumaMult + value * scale.mult) >> 6) + scale.offset));
@@ -749,7 +798,7 @@ __global__ void kernel_fgs_chroma_level_compensate(uint8_t *__restrict__ chroma,
         const auto lut = strengthLut + component * FGS_STRENGTH_LUT_SIZE;
         const float fraction = static_cast<float>(merged & ((1 << depthShift) - 1)) / (1 << depthShift);
         const float sigma = lut[index] + (lut[min(index + 1, 255)] - lut[index]) * fraction;
-        if (sigma <= 0.01f) continue;
+        if (sigma <= 0.01f) { passThrough(); continue; }
         auto clipLift = [](const float d) {
             return d > 3.5f ? 0.0f
                 : 0.39894228f * __expf(-0.5f * d * d) - d * 0.5f * erfcf(d * 0.70710678f);
@@ -765,9 +814,13 @@ __global__ void kernel_fgs_chroma_level_compensate(uint8_t *__restrict__ chroma,
     }
 }
 
+// `written` reports whether output's chroma was produced (false when no chroma
+// component is compensated; the caller then copies the base chroma itself).
 template<typename Type, int shift>
-static RGY_ERR launch_chroma_level_compensate(RGYFrameInfo *output,
-    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bitDepth, const float *lut, cudaStream_t stream) {
+static RGY_ERR launch_chroma_level_compensate(RGYFrameInfo *output, const RGYFrameInfo *base,
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, const int bitDepth, const float *lut, cudaStream_t stream,
+    bool& written) {
+    written = false;
     if (!params.numCbPoints && !params.numCrPoints && !params.chromaScalingFromLuma) return RGY_ERR_NONE;
     const int rangeMin = params.clipToRestrictedRange ? (16 << (bitDepth - 8)) : 0;
     const int rangeMax = params.clipToRestrictedRange ? (240 << (bitDepth - 8)) : ((1 << bitDepth) - 1);
@@ -782,16 +835,19 @@ static RGY_ERR launch_chroma_level_compensate(RGYFrameInfo *output,
     const auto luma = getPlane(output, RGY_PLANE_Y);
     const dim3 block(32, 8);
     const dim3 grid(divCeil(output->width / 2, 32), divCeil(output->height / 2, 8));
+    written = true;
     if (output->csp == RGY_CSP_NV12 || output->csp == RGY_CSP_P010) {
         const auto chroma = getPlane(output, RGY_PLANE_U);
+        const auto chromaSrc = getPlane(base, RGY_PLANE_U);
         kernel_fgs_chroma_level_compensate<Type, shift, 2><<<grid, block, 0, stream>>>(
-            chroma.ptr[0], chroma.pitch[0], luma.ptr[0], luma.pitch[0], luma.width,
+            chroma.ptr[0], chroma.pitch[0], chromaSrc.ptr[0], chromaSrc.pitch[0], luma.ptr[0], luma.pitch[0], luma.width,
             output->width / 2, output->height / 2, rangeMin, rangeMax, bitDepth, scale[0], scale[1], lut);
     } else {
         for (int c = 0; c < 2; ++c) {
             const auto chroma = getPlane(output, static_cast<RGY_PLANE>(RGY_PLANE_U + c));
+            const auto chromaSrc = getPlane(base, static_cast<RGY_PLANE>(RGY_PLANE_U + c));
             kernel_fgs_chroma_level_compensate<Type, shift, 1><<<grid, block, 0, stream>>>(
-                chroma.ptr[0], chroma.pitch[0], luma.ptr[0], luma.pitch[0], luma.width,
+                chroma.ptr[0], chroma.pitch[0], chromaSrc.ptr[0], chromaSrc.pitch[0], luma.ptr[0], luma.pitch[0], luma.width,
                 chroma.width, chroma.height, rangeMin, rangeMax, bitDepth, scale[c], scale[c],
                 lut + c * FGS_STRENGTH_LUT_SIZE);
             const auto sts = err_to_rgy(cudaGetLastError());
@@ -808,24 +864,25 @@ static RGY_ERR launch_chroma_level_compensate(RGYFrameInfo *output,
 // the measured one.
 template<typename Type, int shift>
 __global__ void kernel_fgs_residual_retain(uint8_t *__restrict__ dst, const int dstPitch,
+    const uint8_t *__restrict__ cleanPtr, const int cleanPitch,
     const uint8_t *__restrict__ src, const int srcPitch, const int width, const int height,
     const int maxVal, const float retain) {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= width || y >= height) return;
-    const float clean = static_cast<float>(load_code<Type, shift>(dst, dstPitch, x, y));
+    const float clean = static_cast<float>(load_code<Type, shift>(cleanPtr, cleanPitch, x, y));
     const float orig = static_cast<float>(load_code<Type, shift>(src, srcPitch, x, y));
     const int out = min(maxVal, max(0, __float2int_rn(clean + retain * (orig - clean))));
     store_code<Type, shift>(dst, dstPitch, x, y, out);
 }
 
 template<typename Type, int shift>
-static RGY_ERR launch_residual_retain(const RGYFrameInfo& lumaDst, const RGYFrameInfo& lumaSrc,
-    const int bitDepth, const float retain, cudaStream_t stream) {
+static RGY_ERR launch_residual_retain(const RGYFrameInfo& lumaDst, const RGYFrameInfo& lumaClean,
+    const RGYFrameInfo& lumaSrc, const int bitDepth, const float retain, cudaStream_t stream) {
     const dim3 block(32, 8);
     const dim3 grid(divCeil(lumaDst.width, static_cast<int>(block.x)), divCeil(lumaDst.height, static_cast<int>(block.y)));
     kernel_fgs_residual_retain<Type, shift><<<grid, block, 0, stream>>>(
-        lumaDst.ptr[0], lumaDst.pitch[0], lumaSrc.ptr[0], lumaSrc.pitch[0],
+        lumaDst.ptr[0], lumaDst.pitch[0], lumaClean.ptr[0], lumaClean.pitch[0], lumaSrc.ptr[0], lumaSrc.pitch[0],
         lumaDst.width, lumaDst.height, (1 << bitDepth) - 1, retain);
     return err_to_rgy(cudaGetLastError());
 }
@@ -902,6 +959,23 @@ struct NVEncFilterFilmGrain::AnalyzerState {
         framesSinceModelUpdate = 0;
         heldStreak = 0;
     }
+};
+
+// One frame of analysis in flight, waiting for the next call to be emitted.
+struct NVEncFilterFilmGrain::PendingFrame {
+    bool valid;
+    bool analyzed;                 // false: pass-through, emit the retained source with an "off" result
+    RGYFrameInfo props;            // source frame properties (its pointers are not used)
+    NVEncFilmGrainDiagnostics diagnostics;
+    int metricsIndex;              // which m_blockMetrics buffer holds this frame's block metrics
+    int bitDepth;
+    float measuredNoise;
+    float measuredGrainCorrelation;
+    uint64_t sceneCutBlockThreshold;
+    uint32_t sceneCutNearestDirection;
+
+    PendingFrame() : valid(false), analyzed(false), props(), diagnostics(), metricsIndex(0), bitDepth(8),
+        measuredNoise(0.0f), measuredGrainCorrelation(0.0f), sceneCutBlockThreshold(0), sceneCutNearestDirection(0) {}
 };
 
 NVEncFilmGrainAnalyzerConfig::NVEncFilmGrainAnalyzerConfig() :
@@ -985,8 +1059,10 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_denoiseWork(), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sceneCounts(), m_modelStats(),
+    m_pendingSource(), m_pendingBase(), m_metricsEvent(), m_statsEvent(), m_pending(), m_metricsIndex(0),
+    m_state(std::make_unique<AnalyzerState>()),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWriter(),
-    m_state(std::make_unique<AnalyzerState>()), m_blocksX(0), m_blocksY(0) {
+    m_blocksX(0), m_blocksY(0) {
     m_name = _T("film-grain");
     m_pathThrough = FILTER_PATHTHROUGH_NONE;
 }
@@ -997,6 +1073,12 @@ NVEncFilterFilmGrain::~NVEncFilterFilmGrain() {
 
 void NVEncFilterFilmGrain::resetTemporalState() {
     if (m_state) m_state->clear();
+    if (m_pending && m_pending->valid) {
+        // Called on a resolution change, after which the retained frame can no
+        // longer be emitted (the buffers are re-created).
+        AddMessage(RGY_LOG_DEBUG, _T("film-grain: dropping pending frame id=%d on temporal reset.\n"), m_pending->props.inputFrameId);
+        m_pending->valid = false;
+    }
     if (m_fft3d) m_fft3d->resetTemporalState();
     if (m_motionDegrain) m_motionDegrain->resetTemporalState();
 }
@@ -1153,15 +1235,39 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
 
     m_blocksX = divCeil(prm->frameIn.width, FGS_BLOCK_SIZE);
     m_blocksY = divCeil(prm->frameIn.height, FGS_BLOCK_SIZE);
-    m_blockMetrics = std::make_unique<CUMemBufPair>(
-        static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(FilmGrainBlockMetric));
+    // Two metrics buffers: frame N's readback is queued before frame N-1's
+    // host copy has been consumed (see run_filter).
+    for (auto& buf : m_blockMetrics) {
+        buf = std::make_unique<CUMemBufPair>(
+            static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(FilmGrainBlockMetric));
+        if ((sts = buf->alloc()) != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("Failed to allocate film-grain metrics buffers: %s.\n"), get_err_mes(sts));
+            return sts;
+        }
+    }
+    m_metricsIndex = 0;
+    m_pendingSource = std::make_unique<CUFrameBuf>(prm->frameOut);
+    m_pendingSource->releasePtr();
+    if ((sts = m_pendingSource->alloc()) != RGY_ERR_NONE) return sts;
+    m_pendingBase = std::make_unique<CUFrameBuf>(prm->frameOut);
+    m_pendingBase->releasePtr();
+    if ((sts = m_pendingBase->alloc()) != RGY_ERR_NONE) return sts;
+    for (auto *event : { &m_metricsEvent, &m_statsEvent }) {
+        *event = std::unique_ptr<cudaEvent_t, cudaevent_deleter>(new cudaEvent_t(), cudaevent_deleter());
+        const auto cudaerr = cudaEventCreateWithFlags(event->get(), cudaEventDisableTiming);
+        if (cudaerr != cudaSuccess) {
+            event->reset();
+            AddMessage(RGY_LOG_ERROR, _T("Failed to create film-grain events: %s.\n"), char_to_tstring(cudaGetErrorString(cudaerr)).c_str());
+            return err_to_rgy(cudaerr);
+        }
+    }
+    m_pending = std::make_unique<PendingFrame>();
     m_blockMask = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY);
     m_sigmaMap = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(float));
     m_strengthLut = std::make_unique<CUMemBufPair>(3 * FGS_STRENGTH_LUT_SIZE * sizeof(float));
     m_sceneCounts = std::make_unique<CUMemBufPair>(8 * sizeof(uint32_t));
     m_modelStats = std::make_unique<CUMemBufPair>(sizeof(FilmGrainGpuStats));
-    if ((sts = m_blockMetrics->alloc()) != RGY_ERR_NONE
-        || (sts = m_blockMask->alloc()) != RGY_ERR_NONE
+    if ((sts = m_blockMask->alloc()) != RGY_ERR_NONE
         || (sts = m_sigmaMap->alloc()) != RGY_ERR_NONE
         || (sts = m_strengthLut->alloc()) != RGY_ERR_NONE
         || (sts = m_sceneCounts->alloc()) != RGY_ERR_NONE
@@ -1312,10 +1418,26 @@ RGY_ERR NVEncFilterFilmGrain::finishTable() {
 }
 
 bool NVEncFilterFilmGrain::mayEmitOnDrain() const {
-    // Bilateral and FFT3D are frame-local at this layer. Motion degrain keeps
-    // temporal frames internally and can release them only after a null input.
-    return m_motionDegrain != nullptr;
+    // Emission is delayed by one input: a frame is completed when the next
+    // one arrives, so its model statistics are never waited for.  The final
+    // frame is therefore always released by a drain marker (motion degrain
+    // additionally keeps temporal frames internally).
+    return true;
 }
+
+namespace {
+
+static RGY_ERR copy_chroma_planes(RGYFrameInfo *dst, const RGYFrameInfo *src, cudaStream_t stream) {
+    for (int plane = 1; plane < RGY_CSP_PLANES[dst->csp]; ++plane) {
+        const auto srcPlane = getPlane(src, static_cast<RGY_PLANE>(plane));
+        auto dstPlane = getPlane(dst, static_cast<RGY_PLANE>(plane));
+        const auto sts = copyPlaneAsync(&dstPlane, &srcPlane, stream);
+        if (sts != RGY_ERR_NONE) return sts;
+    }
+    return RGY_ERR_NONE;
+}
+
+} // namespace
 
 RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames,
     int *pOutputFrameNum, cudaStream_t stream) {
@@ -1326,13 +1448,15 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     auto *requestedOutput = ppOutputFrames[0];
     *pOutputFrameNum = 0;
     ppOutputFrames[0] = nullptr;
+    const bool drain = !pInputFrame || !pInputFrame->ptr[0];
     const RGYFrameInfo *source = pInputFrame;
     const RGYFrameInfo *cleanBase = pInputFrame;
     RGYFrameInfo *motionOutput[1] = { nullptr };
     int motionOutputCount = 0;
     auto sts = RGY_ERR_NONE;
+    bool haveInput = false;
     if (prm->filmGrain.denoiser == FGS_DENOISE_MOTION) {
-        if (!m_motionDegrain) return RGY_ERR_INVALID_CALL;
+        if (!m_motionDegrain || !pInputFrame) return RGY_ERR_INVALID_CALL;
         if (m_state->stableNoise > 0.0f) {
             // Grain-only SAD is ~1.6*sigma*blockArea, so a useful scene-change
             // threshold must scale with the measured noise: high enough that
@@ -1346,74 +1470,124 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         }
         sts = m_motionDegrain->filter(const_cast<RGYFrameInfo *>(pInputFrame), motionOutput, &motionOutputCount, stream);
         if (sts != RGY_ERR_NONE) return sts;
-        if (motionOutputCount == 0) return RGY_ERR_NONE;
-        if (motionOutputCount != 1 || !motionOutput[0] || !motionOutput[0]->ptr[0]) {
-            AddMessage(RGY_LOG_ERROR, _T("Motion degrain returned an invalid film-grain base frame.\n"));
-            return RGY_ERR_INVALID_CALL;
+        if (motionOutputCount > 0) {
+            if (motionOutputCount != 1 || !motionOutput[0] || !motionOutput[0]->ptr[0]) {
+                AddMessage(RGY_LOG_ERROR, _T("Motion degrain returned an invalid film-grain base frame.\n"));
+                return RGY_ERR_INVALID_CALL;
+            }
+            cleanBase = motionOutput[0];
+            source = m_motionDegrain->cachedSourceFrame(cleanBase->inputFrameId, cleanBase->timestamp);
+            if (!source) {
+                AddMessage(RGY_LOG_ERROR, _T("Could not pair motion-degrained frame id=%d pts=%lld with its retained source.\n"),
+                    cleanBase->inputFrameId, static_cast<long long>(cleanBase->timestamp));
+                return RGY_ERR_INVALID_CALL;
+            }
+            haveInput = true;
         }
-        cleanBase = motionOutput[0];
-        source = m_motionDegrain->cachedSourceFrame(cleanBase->inputFrameId, cleanBase->timestamp);
-        if (!source) {
-            AddMessage(RGY_LOG_ERROR, _T("Could not pair motion-degrained frame id=%d pts=%lld with its retained source.\n"),
-                cleanBase->inputFrameId, static_cast<long long>(cleanBase->timestamp));
-            return RGY_ERR_INVALID_CALL;
+    } else {
+        haveInput = !drain;
+    }
+
+    // One-frame delayed emission.  The new frame's block metrics are queued
+    // first, so the GPU computes them while the host completes the previous
+    // frame, whose model statistics finished long ago and need no wait.  Only
+    // then does the host wait for the new metrics: about one small kernel
+    // instead of the whole denoise chain.  Every frame's result is identical
+    // to computing it synchronously; only the emission is one call later.
+    PendingFrame next;
+    if (haveInput && (sts = beginAnalysis(source, next, stream)) != RGY_ERR_NONE) return sts;
+    auto emitPending = [&]() {
+        RGYFrameInfo *output = requestedOutput;
+        if (!output) {
+            output = &m_frameBuf[m_nFrameIdx]->frame;
+            m_nFrameIdx = (m_nFrameIdx + 1) % m_frameBuf.size();
         }
-    } else if (!pInputFrame || !pInputFrame->ptr[0]) {
+        const auto err = finishPending(*m_pending, output, stream);
+        m_pending->valid = false;
+        if (err != RGY_ERR_NONE) return err;
+        ppOutputFrames[0] = output;
+        *pOutputFrameNum = 1;
         return RGY_ERR_NONE;
-    }
-
-    *pOutputFrameNum = 1;
-    ppOutputFrames[0] = requestedOutput;
-    if (!ppOutputFrames[0]) {
-        ppOutputFrames[0] = &m_frameBuf[m_nFrameIdx]->frame;
-        m_nFrameIdx = (m_nFrameIdx + 1) % m_frameBuf.size();
-    }
-    auto *output = ppOutputFrames[0];
-    sts = copyFrameAsync(output, cleanBase, stream);
-    if (sts != RGY_ERR_NONE) return sts;
-    copyFramePropWithoutRes(output, source);
-    nvenc_film_grain_erase_frame_data(output->dataList);
-
-    NVEncFilmGrainDiagnostics diagnostics;
-    diagnostics.totalBlocks = m_blocksX * m_blocksY;
-    NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
-    auto attachResult = [&]() {
-        output->dataList.push_back(std::make_shared<RGYFrameDataFilmGrain>(
-            params, diagnostics, source->timestamp, source->inputFrameId));
     };
+    const bool hadPending = m_pending->valid;
+    if (hadPending && (sts = emitPending()) != RGY_ERR_NONE) return sts;
+    if (haveInput) {
+        if ((sts = completeAnalysis(source, cleanBase, next, stream)) != RGY_ERR_NONE) return sts;
+        *m_pending = next;
+        if (drain && !hadPending) {
+            // A frame released by the motion flush with nothing ahead of it.
+            // The pipeline stops draining once a marker yields no output, so
+            // complete it now rather than on a later marker.
+            if ((sts = emitPending()) != RGY_ERR_NONE) return sts;
+        }
+    }
+    return RGY_ERR_NONE;
+}
+
+// Stage 1: queue the flat-block metrics and their readback.  Nothing here
+// waits on the GPU.
+RGY_ERR NVEncFilterFilmGrain::beginAnalysis(const RGYFrameInfo *source, PendingFrame& next, cudaStream_t stream) {
+    auto prm = std::dynamic_pointer_cast<NVEncFilterParamFilmGrain>(m_param);
+    if (!prm) return RGY_ERR_INVALID_PARAM;
+    next = PendingFrame();
+    next.valid = true;
+    next.props = *source;
+    next.diagnostics.totalBlocks = m_blocksX * m_blocksY;
+    next.bitDepth = (source->csp == RGY_CSP_NV12 || source->csp == RGY_CSP_YV12) ? 8 : 10;
     if (!prm->filmGrain.enable || interlaced(*source)
-        || getCudaMemcpyKind(source->mem_type, output->mem_type) != cudaMemcpyDeviceToDevice) {
-        if (cleanBase != source && (sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
-        attachResult();
+        || getCudaMemcpyKind(source->mem_type, m_pendingBase->frame.mem_type) != cudaMemcpyDeviceToDevice) {
+        next.analyzed = false; // emitted as the untouched source
         return RGY_ERR_NONE;
     }
-
-    const int bitDepth = (source->csp == RGY_CSP_NV12 || source->csp == RGY_CSP_YV12) ? 8 : 10;
-    const int depthScale = 1 << (bitDepth - 8);
+    next.metricsIndex = m_metricsIndex;
+    m_metricsIndex ^= 1;
+    auto& metricsBuf = *m_blockMetrics[next.metricsIndex];
+    auto metricsDev = static_cast<FilmGrainBlockMetric *>(metricsBuf.ptrDevice);
     const auto luma = getPlane(source, RGY_PLANE_Y);
+    auto sts = RGY_ERR_NONE;
     switch (source->csp) {
     case RGY_CSP_NV12:
     case RGY_CSP_YV12:
-        sts = launch_flat_metrics<uint8_t, 0>(luma,
-            static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream);
+        sts = launch_flat_metrics<uint8_t, 0>(luma, metricsDev, m_blocksX, m_blocksY, next.bitDepth, stream);
         break;
     case RGY_CSP_YV12_10:
-        sts = launch_flat_metrics<uint16_t, 0>(luma,
-            static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream);
+        sts = launch_flat_metrics<uint16_t, 0>(luma, metricsDev, m_blocksX, m_blocksY, next.bitDepth, stream);
         break;
     case RGY_CSP_P010:
-        sts = launch_flat_metrics<uint16_t, 6>(luma,
-            static_cast<FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice), m_blocksX, m_blocksY, bitDepth, stream);
+        sts = launch_flat_metrics<uint16_t, 6>(luma, metricsDev, m_blocksX, m_blocksY, next.bitDepth, stream);
         break;
     default:
         return RGY_ERR_UNSUPPORTED;
     }
-    if (sts != RGY_ERR_NONE || (sts = m_blockMetrics->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
-    auto cudaerr = cudaStreamSynchronize(stream);
+    if (sts != RGY_ERR_NONE || (sts = metricsBuf.copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
+    const auto cudaerr = cudaEventRecord(*m_metricsEvent, stream);
+    if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+    next.analyzed = true;
+    return RGY_ERR_NONE;
+}
+
+// Stage 2: select the flat blocks (the only host wait, for the metrics
+// kernel queued in stage 1), denoise into the pending base and queue the
+// model statistics.  The source is retained for stage 3.
+RGY_ERR NVEncFilterFilmGrain::completeAnalysis(const RGYFrameInfo *source, const RGYFrameInfo *cleanBase,
+    PendingFrame& next, cudaStream_t stream) {
+    auto prm = std::dynamic_pointer_cast<NVEncFilterParamFilmGrain>(m_param);
+    if (!prm) return RGY_ERR_INVALID_PARAM;
+    // Queued after the previous frame's emission, so stream order protects the
+    // retained source it was still reading.
+    auto sts = copyFrameAsync(&m_pendingSource->frame, source, stream);
+    if (sts != RGY_ERR_NONE) return sts;
+    if (!next.analyzed) return RGY_ERR_NONE;
+
+    const int bitDepth = next.bitDepth;
+    const int depthScale = 1 << (bitDepth - 8);
+    const bool fft3dPath = prm->filmGrain.denoiser == FGS_DENOISE_FFT3D && m_fft3d != nullptr;
+    auto *base = &m_pendingBase->frame;
+    auto cudaerr = cudaEventSynchronize(*m_metricsEvent);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
 
     const int blockCount = m_blocksX * m_blocksY;
-    const auto metrics = static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrHost);
+    const auto metrics = static_cast<const FilmGrainBlockMetric *>(m_blockMetrics[next.metricsIndex]->ptrHost);
     auto mask = static_cast<uint8_t *>(m_blockMask->ptrHost);
     std::memset(mask, 0, blockCount);
     std::vector<int> candidates;
@@ -1444,17 +1618,16 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if (!mask[index]) { mask[index] = 1; ++selected; }
         ++examined;
     }
-    diagnostics.flatBlocks = selected;
+    next.diagnostics.flatBlocks = selected;
     if (selected < requiredBlocks) {
         // Do not allow a model from before a low-confidence gap to reappear on
         // later frames.  The next reliable region must build a fresh window.
-        diagnostics.sceneReset = !m_state->history.empty();
+        next.diagnostics.sceneReset = !m_state->history.empty();
         m_state->clear();
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=0 reset=%d flat=%d/%d window=0\n"),
             source->inputFrameId, static_cast<long long>(source->timestamp),
-            diagnostics.sceneReset ? 1 : 0, diagnostics.flatBlocks, diagnostics.totalBlocks);
-        if (cleanBase != source && (sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
-        attachResult();
+            next.diagnostics.sceneReset ? 1 : 0, next.diagnostics.flatBlocks, next.diagnostics.totalBlocks);
+        next.analyzed = false; // emitted as the untouched source with applyGrain=0
         return RGY_ERR_NONE;
     }
     std::vector<float> noiseSamples;
@@ -1471,6 +1644,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     const auto correlationMiddle = grainCorrelationSamples.begin() + grainCorrelationSamples.size() / 2;
     std::nth_element(grainCorrelationSamples.begin(), correlationMiddle, grainCorrelationSamples.end());
     const float measuredGrainCorrelation = *correlationMiddle;
+    next.measuredNoise = measuredNoise;
+    next.measuredGrainCorrelation = measuredGrainCorrelation;
     const bool adaptiveSigma = prm->filmGrain.denoiseLevel <= 0.0f;
     const float denoiseSigma = adaptiveSigma
         ? measuredNoise : prm->filmGrain.denoiseLevel * depthScale;
@@ -1485,8 +1660,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if ((sts = m_sigmaMap->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
     }
     if ((sts = m_blockMask->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
-    uint64_t sceneCutBlockThreshold = 0;
-    uint32_t sceneCutNearestDirection = 0;
+    uint64_t& sceneCutBlockThreshold = next.sceneCutBlockThreshold;
+    uint32_t& sceneCutNearestDirection = next.sceneCutNearestDirection;
     if (prm->filmGrain.denoiser == FGS_DENOISE_MOTION) {
         const auto analysis = m_motionDegrain->analyzeResult();
         if (analysis.valid() && analysis.inputFrameId == source->inputFrameId) {
@@ -1525,7 +1700,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             }
         }
     }
-    if (prm->filmGrain.denoiser == FGS_DENOISE_FFT3D && m_fft3d) {
+    if (fft3dPath) {
         const float sigma8 = denoiseSigma / depthScale;
         if (m_fft3dSigma < 0.0f || std::abs(sigma8 - m_fft3dSigma) > std::max(0.3f, m_fft3dSigma * 0.10f)) {
             // A single-frame block Wiener filter with sigma matched 1:1 to the
@@ -1537,72 +1712,123 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             // calibrated above the measured noise level to drive removal
             // toward complete.
             constexpr float FFT3D_SIGMA_CALIBRATION = 2.0f;
-            m_fft3dParam->fft3d.sigma = clamp(sigma8 * FFT3D_SIGMA_CALIBRATION, 1.0f, 100.0f);
-            if ((sts = m_fft3d->init(m_fft3dParam, m_pLog)) != RGY_ERR_NONE) {
+            // Stream-ordered table update: re-running init() here allocated
+            // and freed device memory, and cudaFree drains the whole context
+            // (NVENC queue included) -- 28-86 ms per reprogram when measured.
+            sts = m_fft3d->updateSigma(clamp(sigma8 * FFT3D_SIGMA_CALIBRATION, 1.0f, 100.0f), stream);
+            if (sts != RGY_ERR_NONE) {
                 AddMessage(RGY_LOG_ERROR, _T("Failed to update FFT3D sigma for film-grain: %s.\n"), get_err_mes(sts));
                 return sts;
             }
             m_fft3dSigma = sigma8;
         }
-        RGYFrameInfo *fft3dOut[1] = { output };
+        // FFT3D renders the global luma clean base straight into the work
+        // buffer (its untouched chroma is the source chroma), so the local
+        // pass can read work and write output without an intermediate copy.
+        RGYFrameInfo *fft3dOut[1] = { &m_denoiseWork->frame };
         int fft3dOutNum = 0;
         sts = m_fft3d->filter(const_cast<RGYFrameInfo *>(source), fft3dOut, &fft3dOutNum, stream);
         if (sts != RGY_ERR_NONE) return sts;
-        if (fft3dOutNum != 1 || fft3dOut[0] != output) {
+        if (fft3dOutNum != 1 || fft3dOut[0] != &m_denoiseWork->frame) {
             AddMessage(RGY_LOG_ERROR, _T("FFT3D denoiser did not produce the expected 1-in-1-out frame.\n"));
             return RGY_ERR_UNKNOWN;
         }
-        // FFT3D supplies the global luma clean base; the local pass corrects
-        // brightness-dependent grain strength and handles the semi-planar
-        // chroma that FFT3D cannot process here.  Its luma correction is faded
-        // out in directionally coherent blocks so it does not erase structured
-        // texture which the Wiener filter preserved.
-        sts = copyFrameAsync(&m_denoiseWork->frame, output, stream);
-        if (sts != RGY_ERR_NONE) return sts;
-        sts = denoise_frame(output, &m_denoiseWork->frame, &m_denoiseWork->frame, prm->filmGrain.analyzeChroma, true,
+        // The local pass corrects brightness-dependent grain strength and
+        // handles the semi-planar chroma that FFT3D cannot process here.  Its
+        // luma correction is faded out in directionally coherent blocks so it
+        // does not erase structured texture which the Wiener filter preserved.
+        sts = denoise_frame(base, &m_denoiseWork->frame, &m_denoiseWork->frame, prm->filmGrain.analyzeChroma, true,
             1, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
-            static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
+            static_cast<const FilmGrainBlockMetric *>(m_blockMetrics[next.metricsIndex]->ptrDevice),
             m_blocksX, m_blocksY, stream);
         if (sts != RGY_ERR_NONE) return sts;
+        if (!prm->filmGrain.analyzeChroma) {
+            // Unfiltered chroma still has to reach the encoder surface.
+            for (int plane = 1; plane < RGY_CSP_PLANES[base->csp]; ++plane) {
+                const auto srcPlane = getPlane(&m_denoiseWork->frame, static_cast<RGY_PLANE>(plane));
+                auto dstPlane = getPlane(base, static_cast<RGY_PLANE>(plane));
+                if ((sts = copyPlaneAsync(&dstPlane, &srcPlane, stream)) != RGY_ERR_NONE) return sts;
+            }
+        }
     } else if (prm->filmGrain.denoiser == FGS_DENOISE_MOTION) {
         // Temporal averaging deliberately leaves some grain in a causal
         // three-frame window.  Finish the base with one local edge-aware pass:
         // it operates on the motion-cleaned luma instead of the original, and
         // also handles semi-planar chroma which the motion child leaves raw.
-        sts = copyFrameAsync(&m_denoiseWork->frame, output, stream);
+        sts = copyFrameAsync(&m_denoiseWork->frame, cleanBase, stream);
         if (sts != RGY_ERR_NONE) return sts;
-        sts = denoise_frame(output, &m_denoiseWork->frame, &m_denoiseWork->frame,
+        sts = denoise_frame(base, &m_denoiseWork->frame, &m_denoiseWork->frame,
             prm->filmGrain.analyzeChroma, true,
             1, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
             nullptr,
             m_blocksX, m_blocksY, stream);
         if (sts != RGY_ERR_NONE) return sts;
+        if (!prm->filmGrain.analyzeChroma
+            && (sts = copy_chroma_planes(base, &m_denoiseWork->frame, stream)) != RGY_ERR_NONE) return sts;
     } else {
-        sts = denoise_frame(output, &m_denoiseWork->frame, source, prm->filmGrain.analyzeChroma, true,
+        sts = denoise_frame(base, &m_denoiseWork->frame, source, prm->filmGrain.analyzeChroma, true,
             prm->filmGrain.denoisePasses, bitDepth, denoiseSigma,
             adaptiveSigma ? static_cast<const float *>(m_sigmaMap->ptrDevice) : nullptr,
             nullptr,
             m_blocksX, m_blocksY, stream);
         if (sts != RGY_ERR_NONE) return sts;
+        if (!prm->filmGrain.analyzeChroma
+            && (sts = copy_chroma_planes(base, source, stream)) != RGY_ERR_NONE) return sts;
     }
+
 
     cudaerr = cudaMemsetAsync(m_modelStats->ptrDevice, 0, m_modelStats->nSize, stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
-    sts = collect_model_stats(source, output, prm->filmGrain.analyzeChroma, m_blocksX, m_blocksY,
+    sts = collect_model_stats(source, base, prm->filmGrain.analyzeChroma, m_blocksX, m_blocksY,
         bitDepth, static_cast<const uint8_t *>(m_blockMask->ptrDevice),
-        static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
+        static_cast<const FilmGrainBlockMetric *>(m_blockMetrics[next.metricsIndex]->ptrDevice),
         static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice), stream);
     if (sts != RGY_ERR_NONE || (sts = m_modelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
-    cudaerr = cudaStreamSynchronize(stream);
+    // Not waited for here: the statistics are consumed when the next frame
+    // arrives (finishPending), by which time they have long completed.
+    cudaerr = cudaEventRecord(*m_statsEvent, stream);
+    if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+    return RGY_ERR_NONE;
+}
+
+// Stage 3: solve the model from the statistics queued one call earlier and
+// render the emitted frame onto the encoder surface.
+RGY_ERR NVEncFilterFilmGrain::finishPending(const PendingFrame& P, RGYFrameInfo *output, cudaStream_t stream) {
+    auto prm = std::dynamic_pointer_cast<NVEncFilterParamFilmGrain>(m_param);
+    if (!prm) return RGY_ERR_INVALID_PARAM;
+    auto sts = RGY_ERR_NONE;
+    copyFramePropWithoutRes(output, &P.props);
+    nvenc_film_grain_erase_frame_data(output->dataList);
+    NVEncFilmGrainDiagnostics diagnostics = P.diagnostics;
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 params = {};
+    auto attachResult = [&]() {
+        output->dataList.push_back(std::make_shared<RGYFrameDataFilmGrain>(
+            params, diagnostics, P.props.timestamp, P.props.inputFrameId));
+    };
+    if (!P.analyzed) {
+        if ((sts = copyFrameAsync(output, &m_pendingSource->frame, stream)) != RGY_ERR_NONE) return sts;
+        attachResult();
+        return RGY_ERR_NONE;
+    }
+    const int bitDepth = P.bitDepth;
+    const int depthScale = 1 << (bitDepth - 8);
+    const int blockCount = m_blocksX * m_blocksY;
+    const auto metrics = static_cast<const FilmGrainBlockMetric *>(m_blockMetrics[P.metricsIndex]->ptrHost);
+    const float measuredNoise = P.measuredNoise;
+    const float measuredGrainCorrelation = P.measuredGrainCorrelation;
+    bool lumaReady = false;   // output luma already holds the final base
+    bool chromaReady = false; // output chroma already holds the final base
+    // Queued a whole frame ago; in practice this returns immediately.
+    auto cudaerr = cudaEventSynchronize(*m_statsEvent);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
 
     bool sceneReset = false;
     bool motionSceneCut = false;
-    if (sceneCutNearestDirection && sceneCutBlockThreshold > 0) {
+    if (P.sceneCutNearestDirection && P.sceneCutBlockThreshold > 0) {
         const auto counts = static_cast<const uint32_t *>(m_sceneCounts->ptrHost);
-        motionSceneCut = counts[1] > sceneCutBlockThreshold;
+        motionSceneCut = counts[1] > P.sceneCutBlockThreshold;
     }
     bool spatialSceneCut = false;
     if (m_state->previousBlockMeans.size() == static_cast<size_t>(blockCount)) {
@@ -1620,7 +1846,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     if (!m_state->history.empty()) {
         const float ratio = measuredNoise / std::max(0.01f, m_state->stableNoise);
         if (motionSceneCut || spatialSceneCut || ratio < 0.55f || ratio > 1.80f
-            || source->timestamp <= m_state->lastTimestamp) {
+            || P.props.timestamp <= m_state->lastTimestamp) {
             m_state->clear();
             sceneReset = true;
         }
@@ -1668,7 +1894,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     } else {
         diagnostics.residualRetain = prm->filmGrain.residualRetain;
     }
-    m_state->lastTimestamp = source->timestamp;
+    m_state->lastTimestamp = P.props.timestamp;
     diagnostics.modelFrames = static_cast<int>(m_state->history.size());
     diagnostics.sceneReset = sceneReset;
 
@@ -1770,8 +1996,10 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         ++m_state->heldStreak;
     } else {
         std::memset(&params, 0, sizeof(params));
-        sts = copyFrameAsync(output, source, stream);
+        sts = copyFrameAsync(output, &m_pendingSource->frame, stream);
         if (sts != RGY_ERR_NONE) return sts;
+        lumaReady = true;
+        chromaReady = true;
     }
     diagnostics.reliable = modelValid;
     if (modelValid && params.applyGrain && diagnostics.residualRetain > 0.0f) {
@@ -1788,17 +2016,18 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 static_cast<int>(std::lround(params.pointYScaling[i] * synthScale)), 0, 255));
         }
         const auto lumaOut = getPlane(output, RGY_PLANE_Y);
-        const auto lumaSrc = getPlane(source, RGY_PLANE_Y);
+        const auto lumaClean = getPlane(&m_pendingBase->frame, RGY_PLANE_Y);
+        const auto lumaSrc = getPlane(&m_pendingSource->frame, RGY_PLANE_Y);
         switch (output->csp) {
         case RGY_CSP_NV12:
         case RGY_CSP_YV12:
-            sts = launch_residual_retain<uint8_t, 0>(lumaOut, lumaSrc, bitDepth, retain, stream);
+            sts = launch_residual_retain<uint8_t, 0>(lumaOut, lumaClean, lumaSrc, bitDepth, retain, stream);
             break;
         case RGY_CSP_YV12_10:
-            sts = launch_residual_retain<uint16_t, 0>(lumaOut, lumaSrc, bitDepth, retain, stream);
+            sts = launch_residual_retain<uint16_t, 0>(lumaOut, lumaClean, lumaSrc, bitDepth, retain, stream);
             break;
         case RGY_CSP_P010:
-            sts = launch_residual_retain<uint16_t, 6>(lumaOut, lumaSrc, bitDepth, retain, stream);
+            sts = launch_residual_retain<uint16_t, 6>(lumaOut, lumaClean, lumaSrc, bitDepth, retain, stream);
             break;
         default:
             sts = RGY_ERR_UNSUPPORTED;
@@ -1808,9 +2037,10 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             AddMessage(RGY_LOG_ERROR, _T("Failed to apply film-grain residual retention: %s.\n"), get_err_mes(sts));
             return sts;
         }
+        lumaReady = true;
     }
     if (modelValid && params.applyGrain && !m_tableOutPath.empty()) {
-        recordTableEntry(source->timestamp, source->duration, params);
+        recordTableEntry(P.props.timestamp, P.props.duration, params);
     }
     if (modelValid && params.applyGrain) {
         build_strength_lut(params, bitDepth, static_cast<float *>(m_strengthLut->ptrHost));
@@ -1822,24 +2052,29 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if ((sts = m_strengthLut->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
         const int rangeMin = prm->filmGrain.clipToRestrictedRange ? (16 << (bitDepth - 8)) : 0;
         const int rangeMax = prm->filmGrain.clipToRestrictedRange ? (235 << (bitDepth - 8)) : ((1 << bitDepth) - 1);
+        // Luma reads the retained blend already in output, or the clean base
+        // directly; chroma always reads the clean base.  Both kernels write
+        // every pixel when they run out of place, so no separate copy of the
+        // base into the encoder surface is needed.
         const auto lumaOut = getPlane(output, RGY_PLANE_Y);
+        const auto lumaIn = lumaReady ? lumaOut : getPlane(&m_pendingBase->frame, RGY_PLANE_Y);
         const auto lut = static_cast<const float *>(m_strengthLut->ptrDevice);
         switch (output->csp) {
         case RGY_CSP_NV12:
         case RGY_CSP_YV12:
-            sts = launch_level_compensate<uint8_t, 0>(lumaOut, rangeMin, rangeMax, bitDepth, lut, stream);
+            sts = launch_level_compensate<uint8_t, 0>(lumaOut, lumaIn, rangeMin, rangeMax, bitDepth, lut, stream);
             if (sts == RGY_ERR_NONE) sts = launch_chroma_level_compensate<uint8_t, 0>(
-                output, params, bitDepth, lut + FGS_STRENGTH_LUT_SIZE, stream);
+                output, &m_pendingBase->frame, params, bitDepth, lut + FGS_STRENGTH_LUT_SIZE, stream, chromaReady);
             break;
         case RGY_CSP_YV12_10:
-            sts = launch_level_compensate<uint16_t, 0>(lumaOut, rangeMin, rangeMax, bitDepth, lut, stream);
+            sts = launch_level_compensate<uint16_t, 0>(lumaOut, lumaIn, rangeMin, rangeMax, bitDepth, lut, stream);
             if (sts == RGY_ERR_NONE) sts = launch_chroma_level_compensate<uint16_t, 0>(
-                output, params, bitDepth, lut + FGS_STRENGTH_LUT_SIZE, stream);
+                output, &m_pendingBase->frame, params, bitDepth, lut + FGS_STRENGTH_LUT_SIZE, stream, chromaReady);
             break;
         case RGY_CSP_P010:
-            sts = launch_level_compensate<uint16_t, 6>(lumaOut, rangeMin, rangeMax, bitDepth, lut, stream);
+            sts = launch_level_compensate<uint16_t, 6>(lumaOut, lumaIn, rangeMin, rangeMax, bitDepth, lut, stream);
             if (sts == RGY_ERR_NONE) sts = launch_chroma_level_compensate<uint16_t, 6>(
-                output, params, bitDepth, lut + FGS_STRENGTH_LUT_SIZE, stream);
+                output, &m_pendingBase->frame, params, bitDepth, lut + FGS_STRENGTH_LUT_SIZE, stream, chromaReady);
             break;
         default:
             sts = RGY_ERR_UNSUPPORTED;
@@ -1849,7 +2084,14 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             AddMessage(RGY_LOG_ERROR, _T("Failed to apply film-grain level compensation: %s.\n"), get_err_mes(sts));
             return sts;
         }
+        lumaReady = true;
     }
+    if (!lumaReady) {
+        const auto srcPlane = getPlane(&m_pendingBase->frame, RGY_PLANE_Y);
+        auto dstPlane = getPlane(output, RGY_PLANE_Y);
+        if ((sts = copyPlaneAsync(&dstPlane, &srcPlane, stream)) != RGY_ERR_NONE) return sts;
+    }
+    if (!chromaReady && (sts = copy_chroma_planes(output, &m_pendingBase->frame, stream)) != RGY_ERR_NONE) return sts;
     if (m_pLog != nullptr && m_pLog->getLogLevel(RGY_LOGT_VPP) <= RGY_LOG_DEBUG) {
         tstring pointsY, pointsCb, pointsCr;
         for (uint32_t i = 0; i < params.numYPoints; ++i) {
@@ -1864,7 +2106,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         AddMessage(RGY_LOG_DEBUG, _T("fgs-model frame=%d pts=%lld reliable=%d reset=%d held=%d flat=%d/%d window=%d ")
             _T("noise=%.2f/%.2f/%.2f risk=%.3f retain=%.2f grainCorr=%.3f scaleShift=%d arShift=%d corrCb=%d corrCr=%d ")
             _T("y=[%s] cb=[%s] cr=[%s]\n"),
-            source->inputFrameId, static_cast<long long>(source->timestamp),
+            P.props.inputFrameId, static_cast<long long>(P.props.timestamp),
             modelValid ? 1 : 0, diagnostics.sceneReset ? 1 : 0, diagnostics.modelHeld ? 1 : 0,
             diagnostics.flatBlocks, diagnostics.totalBlocks, diagnostics.modelFrames,
             diagnostics.noiseStdDev[0], diagnostics.noiseStdDev[1], diagnostics.noiseStdDev[2],
@@ -1887,7 +2129,13 @@ void NVEncFilterFilmGrain::close() {
     m_fft3dSigma = -1.0f;
     m_frameBuf.clear();
     m_denoiseWork.reset();
-    m_blockMetrics.reset();
+    m_pendingSource.reset();
+    m_pendingBase.reset();
+    m_metricsEvent.reset();
+    m_statsEvent.reset();
+    m_pending.reset();
+    m_metricsIndex = 0;
+    for (auto& buf : m_blockMetrics) buf.reset();
     m_blockMask.reset();
     m_sigmaMap.reset();
     m_strengthLut.reset();
