@@ -1,3 +1,49 @@
+# Source-grain branch: qualified and deployed
+
+September 21: Tdarr 2.89.01 retains this qualified ordinary encoder. The broader
+branch's [manual retention pilot](/home/bardie/git-repos/NVEnc-fgs-fidelity/tests/fgs/FINDINGS-2026-09-21-RETENTION-PILOT.md)
+is complete, including a diagnostic-only correction and source-paired quality
+measurements. Production retention and FEL remain off; ordinary Tdarr was not
+paused by that work. Use the canonical handoff for its exact evidence and the
+remaining correlated-colour recovery and matched-size work.
+
+The ordinary `cb903a17` correction is qualified and deployed. Four selected
+source-backed episode repairs are installed and fully validated; ordinary Tdarr
+is resumed. FEL remains disabled, its original HEVC films remain restored and
+excluded, and optional automatic-retention studies remain off/manual.
+
+Use the canonical [current operational handoff](/home/bardie/git-repos/NVEnc-fgs-fidelity/tests/fgs/WORK-TO-PRODUCTION.md)
+for runtime identity, qualification, repairs, pause ownership, source dependencies
+and cleanup. [SOURCE-VARIANCE-20260916.md](SOURCE-VARIANCE-20260916.md) explains
+this branch's correction, rejected candidates, measured tradeoffs and test changes.
+The live receipt index is [closeout.json](/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/source-variance/training-v7/closeout.json).
+
+Completed cleanup freed 325,922,254,848 allocated bytes. Required originals,
+compact regressions, current full qualified trials and unfinished review evidence
+remain. Historical raw/timing outputs and retired backups are no longer present;
+consult the linked cleanup receipts before attempting a replay.
+
+The later release-harness review adds directional texture checks at three scales
+and fixes the status of a failed single-stage run. Both retained movie witnesses
+from the deployed encoder pass the stronger check; no runtime change was needed.
+See the canonical [review and evidence](/home/bardie/git-repos/NVEnc-fgs-fidelity/tests/fgs/ENCODER-REVIEW-20260916.md).
+
+## Earlier branch handoff, retained for history
+
+The runtime names, paused states and pending work below describe the earlier
+snapshot. They do not override the current operational handoff above.
+
+# Source-supported grain correction: current handoff
+
+September 16: isolated core `cb903a17` is being qualified for the excess-grain
+correction. Installed ordinary `2fa6cfd0` remains paused and drained; no candidate
+has replaced library media. FEL remains disabled. V6 `af37b958` is rejected for
+source-detail loss. See [SOURCE-VARIANCE-20260916.md](SOURCE-VARIANCE-20260916.md)
+and the canonical current handoff in
+`/home/bardie/git-repos/NVEnc-fgs-fidelity/tests/fgs/WORK-TO-PRODUCTION.md`.
+
+The following September 12/9 entries are historical.
+
 # Encoder work through production
 
 September 12 isolated hotfix: ordinary core **273723b7 is deployed**. See

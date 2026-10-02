@@ -49,6 +49,39 @@ def grain_concentration(on, off):
     return float(np.sort(power.ravel())[-41:].sum() / power.sum()) if power.sum() else 0.0
 
 
+def source_detail(source, reference, candidate, negative):
+    """Keep fine jacket detail independently of the current grain positive.
+
+    The reference is the earlier, source-reviewed amplitude build, never the
+    candidate being qualified. Decode without synthesis so regenerated noise
+    cannot conceal detail removed from the base picture. The retained V6
+    counterexample passes the periodic-texture checks but blurs this jacket.
+    These are fixture limits in 8-bit-equivalent codes, not a general metric.
+    """
+    rows = []
+    passed = {'candidate': True, 'negative': True}
+    for seconds in (66, 75.5):
+        original = frame(source, seconds)
+        base = frame(reference, seconds, 0)
+        outputs = {name: frame(path, seconds, 0)
+                   for name, path in [('candidate', candidate), ('negative', negative)]}
+        for plane in original:
+            src = original[plane].astype(float) / 4
+            reference_rms = float(np.sqrt(np.mean((base[plane] / 4 - src) ** 2)))
+            limit = reference_rms * 1.10 + 0.10
+            row = dict(seconds=seconds, plane=plane, reference_rms=reference_rms,
+                       maximum_rms=limit, outputs={})
+            for name, decoded in outputs.items():
+                rms = float(np.sqrt(np.mean((decoded[plane] / 4 - src) ** 2)))
+                ok = bool(np.isfinite(rms) and rms <= limit)
+                row['outputs'][name] = dict(source_rms=rms, passed=ok)
+                passed[name] = passed[name] and ok
+            rows.append(row)
+    return dict(passed=passed, samples=rows, units='8-bit-equivalent YUV codes',
+                reference_fixture='gentlemen_amplitude_guard_positive',
+                limits='reference base RMS * 1.10 + 0.10; synthesis disabled')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--nvencc', type=Path, required=True)
@@ -56,10 +89,14 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args(); args.output.mkdir(parents=True, exist_ok=True)
     pinned = fixtures.verify(args.root, json.loads(fixtures.MANIFEST.read_text()),
-                             ['gentlemen_clip', 'gentlemen_mesh_negative', 'gentlemen_amplitude_guard_positive'])
+                             ['gentlemen_clip', 'gentlemen_mesh_negative',
+                              'gentlemen_amplitude_guard_positive',
+                              'gentlemen_training_positive', 'gentlemen_detail_negative'])
     source = Path(pinned['gentlemen_clip']['path'])
     negative = Path(pinned['gentlemen_mesh_negative']['path'])
-    positive = Path(pinned['gentlemen_amplitude_guard_positive']['path'])
+    positive = Path(pinned['gentlemen_training_positive']['path'])
+    detail_reference = Path(pinned['gentlemen_amplitude_guard_positive']['path'])
+    detail_negative = Path(pinned['gentlemen_detail_negative']['path'])
     repo = Path(__file__).resolve().parents[2]
     scanner = args.output / 'scan'
     flags = shlex.split(subprocess.check_output(
@@ -89,6 +126,12 @@ def main():
         raise RuntimeError('Candidate did not pass the complete 3600-frame grain scan')
     run(['ffmpeg', '-v', 'error', '-xerror', '-threads', '4', '-c:v', 'libdav1d', '-i', str(output),
          '-map', '0:v:0', '-an', '-f', 'null', '-'], args.output / 'decode.log')
+    detail = source_detail(source, detail_reference, output, detail_negative)
+    (args.output / 'source-detail.json').write_text(json.dumps(detail, indent=2) + '\n')
+    if detail['passed']['negative']:
+        raise RuntimeError('Known jacket blur was not rejected by the independent source-detail check')
+    if not detail['passed']['candidate']:
+        raise RuntimeError('Candidate softened source jacket detail; see source-detail.json')
     sequences = {}; decoders = {}
     for name, path in [('positive', positive), ('negative', negative), ('candidate', output)]:
         measurements = args.output / (name + '-display.csv')
@@ -114,11 +157,13 @@ def main():
         # Rejecting a bad fit changes the temporal hold state: the earlier
         # 24-second shot can acquire a fresh, ordinary-grain fit. Check its
         # decoded texture rather than requiring every old bad shot to be silent.
-        # The two jacket fits must still preserve the source without synthesis.
+        # Reviewed corroborated training can retain tiny genuine grain at 66s;
+        # the independent base-detail check above guards the jacket there.
+        # The rejected 84.5s mesh fit must remain entirely synthesis-free.
         planes = {}
         for plane in reference:
             identical = np.array_equal(on[plane], off[plane])
-            if seconds in (66, 84.5) and not identical:
+            if seconds == 84.5 and not identical:
                 raise RuntimeError(f'Rejected scene still synthesizes {plane} grain at {seconds}s')
             mae = float(np.abs(on[plane].astype(float) - reference[plane]).mean())
             if mae > 8.0:
@@ -134,6 +179,7 @@ def main():
     report = {'candidate_sha256': hashlib.sha256(args.nvencc.read_bytes()).hexdigest(),
               'fixtures': pinned, 'negative_scan': negative_report, 'candidate_scan': scan,
               'source_preservation': samples, 'negative_decoded_grain_top_1pct_energy': negative_concentration,
+              'source_detail': detail,
               'decoded_sequence': whole_sequence, 'negative_decoded_sequence': negative_sequence,
               'inspector_sha256': hashlib.sha256(inspector.read_bytes()).hexdigest(),
               'encode_command': command}
