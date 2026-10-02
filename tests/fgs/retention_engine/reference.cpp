@@ -35,6 +35,11 @@ int main() {
         NativeSequenceEngine::Config config;
         config.width=input.at("width");config.height=input.at("height");config.depth=input.at("depth");config.matrix=input.at("matrix");config.frames=input.at("frame_count");
         config.shift=input.value("shift",6u);config.grainShift=input.value("grain_shift",0u);config.maxNativeBytes=input.value("max_native_bytes",512ull*1024*1024);
+        if(input.contains("seed_ordinal_offset")) {
+            const auto& offset=input.at("seed_ordinal_offset");
+            require(offset.is_number_integer() && offset>=0 && offset<=15,"invalid seed ordinal offset");
+            config.seedOrdinalOffset=offset.get<unsigned>();
+        }
         if(input.contains("copied_chroma_mask")) {
             const auto& m=input.at("copied_chroma_mask");
             require(m.is_number_integer() && m>=0 && m<=6,"invalid copied chroma mask");config.copiedChroma=m.get<unsigned>();

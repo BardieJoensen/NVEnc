@@ -31,6 +31,15 @@ Read actual service/node state and receipts before operational work; this is a
 point-in-time record. Production has not been replaced by the experimental
 branch. Do not infer permission to deploy from a passing development control.
 
+September 12 application maintenance updated the Tdarr server and node to
+2.87.01. The deployed node image is
+`nvenc-fidelity/tdarr-node:2.87.01-497caa64-20260912`. It retains the ordinary
+`497caa64` encoder, Opus 1.6, all four pinned custom tool binaries, the production
+flow and all 25 local plugin files. The repair service and its pause ownership
+were preserved. This application update does not qualify an experimental
+encoder or start the deferred quality studies. See the
+[upgrade and rollback record](/opt/docker-apps/logs/image-upgrades-2026-09-12.md).
+
 ## Completed evidence and remaining limits
 
 [D81 source reconstruction](FINDINGS-2026-09-28-LOCAL-SOURCE.md) rejects tile

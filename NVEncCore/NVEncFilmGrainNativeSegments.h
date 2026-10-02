@@ -58,6 +58,9 @@ template<class Engine> class NativeModelSegments {
         if(config_.value("pre_encode_modeled_source",false)
             && engine.report().value("pre_encode_modeled_source",false)!=true)
             throw std::runtime_error("native engine did not confirm modeled source policy");
+        const auto seedOffset=config_.value("seed_ordinal_offset",0u);
+        if(seedOffset && engine.report().value("seed_ordinal_offset",0u)!=seedOffset)
+            throw std::runtime_error("native engine did not confirm global seed phase");
     }
     void sourcePlanes(const FgsNativePlane* planes) const {
         if(!planes)throw std::runtime_error("source segment has missing planes");
@@ -85,6 +88,11 @@ public:
         if(plan.modeledSource() && (config.value("source_mode",std::string())!="memory"
             || config.value("spatial_policy",std::string())!="full_picture_means"))
             throw std::runtime_error("modeled source requires memory sources and full picture means");
+        if(config.contains("seed_ordinal_offset")) {
+            const auto offset=integer(config,"seed_ordinal_offset",0,15);
+            if(offset+integer(config,"frame_count",8,16)>16)
+                throw std::runtime_error("native seed interval outside finite sequence");
+        }
         if(!plan.sourceSegments()) {legacy_=std::make_unique<Engine>(path,config);confirm(*legacy_);return;}
         integer(config,"schema",1,1);
         count_=size_t(integer(config,"frame_count",8,16));

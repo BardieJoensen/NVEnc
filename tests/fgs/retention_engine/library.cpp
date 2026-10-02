@@ -42,6 +42,7 @@ struct Context {
         integer(j,"schema",1,1);config.width=integer(j,"width",64,4096);config.height=integer(j,"height",64,2160);
         config.depth=integer(j,"depth",8,10);config.matrix=integer(j,"matrix",1,9);config.frames=integer(j,"frame_count",8,16);
         config.shift=integer(j,"shift",6,9);config.grainShift=integer(j,"grain_shift",0,3);
+        if(j.contains("seed_ordinal_offset"))config.seedOrdinalOffset=integer(j,"seed_ordinal_offset",0,15);
         if(j.contains("copied_chroma_mask"))config.copiedChroma=integer(j,"copied_chroma_mask",0,6);
         if(j.contains("preserved_chroma_mask"))config.preservedChroma=integer(j,"preserved_chroma_mask",0,6);
         const auto spatial=j.value("spatial_policy",std::string("frame_window"));

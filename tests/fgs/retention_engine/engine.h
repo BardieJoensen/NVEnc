@@ -19,6 +19,7 @@ public:
     struct Config {
         unsigned width=0,height=0,depth=0,matrix=0,frames=0,shift=6,grainShift=0;
         unsigned copiedChroma=0,preservedChroma=0;
+        unsigned seedOrdinalOffset=0;
         uint64_t maxNativeBytes=512ull*1024*1024;
         std::vector<uint16_t> trainingSeeds;
         FilmGrainMomentSpatialPolicy spatialPolicy=FilmGrainMomentSpatialPolicy::FrameWindow;
@@ -135,7 +136,8 @@ private:
             }
         }
         std::array<unsigned,4> seeds{};
-        for(unsigned i=0;i<4;++i)seeds[i]=unsigned((27109+7919*(selected_*4+i))%65536);
+        // Independent shape intervals must not restart the displayed seed phase.
+        for(unsigned i=0;i<4;++i)seeds[i]=unsigned((27109+7919*((selected_+config_.seedOrdinalOffset)*4+i))%65536);
         Json candidates=Json::array();FilmGrainNativeMoments selectedMoments;
         const auto choice=film_grain_select_moment_seed(sourceMoments,seeds.data(),seeds.size(),[&](unsigned seed) {
             Json trace=Json::array();
@@ -184,6 +186,7 @@ public:
             && c.shift>=6 && c.shift<=9 && c.grainShift<=3,"unsupported sequence config");
         require(c.maxNativeBytes>0 && c.maxNativeBytes<=512ull*1024*1024 && pairBytes()*8<=c.maxNativeBytes,"native buffer budget");
         require(!c.trainingSeeds.empty() && c.trainingSeeds.size()<=32,"training seed budget");
+        require(c.seedOrdinalOffset<=15 && c.seedOrdinalOffset+c.frames<=16,"seed interval outside finite sequence");
         for(size_t i=0;i<c.trainingSeeds.size();++i) {
             const auto seed=c.trainingSeeds[i];require(seed!=0 && seed!=18904 && seed!=46372,"degenerate training seed");
             for(size_t j=0;j<i;++j)require(seed!=c.trainingSeeds[j],"duplicate training seed");
@@ -256,6 +259,7 @@ public:
             result["copied_chroma_codes"]=shape_.constants.code;
         }
         if(config_.preservedChroma)result["preserved_chroma_mask"]=config_.preservedChroma;
+        if(config_.seedOrdinalOffset)result["seed_ordinal_offset"]=config_.seedOrdinalOffset;
         return result;
     }
 };
