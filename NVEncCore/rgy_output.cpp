@@ -31,6 +31,7 @@
 #include "rgy_language.h"
 #include "convert_csp.h"
 #include "rgy_parallel_enc.h"
+#include <fcntl.h>
 #include <filesystem>
 #if defined(_M_IX86) || defined(_M_X64) || defined(__x86_64)
 #include <smmintrin.h>
@@ -43,7 +44,7 @@ static const uint8_t AUD_HEVC_PRIMARY[] = { 0x00, 0x00, 0x00, 0x01, 0x46, 0x01 }
 // P010は10bitの値を16bitコンテナのMSB側に詰めて保持するため、LSB詰め10bitに戻す際のシフト量
 static const int RGY_CSP_P010_SHIFT_TO_10BIT = 6;
 
-static RGY_ERR WriteY4MHeader(FILE *fp, const VideoInfo *info, const RGY_CSP csp) {
+static RGY_ERR WriteY4MHeader(FILE *fp, const VideoInfo *info, const RGY_CSP csp, const rgy_rational<int>& timebase = rgy_rational<int>(0, 0)) {
     char buffer[256] = { 0 };
     char *ptr = buffer;
     uint32_t len = 0;
@@ -60,6 +61,9 @@ static RGY_ERR WriteY4MHeader(FILE *fp, const VideoInfo *info, const RGY_CSP csp
     }
     strcpy_s(ptr+len, sizeof(buffer)-len, picstruct); len += 3;
     len += sprintf_s(ptr+len, sizeof(buffer)-len, "A%d:%d ", info->sar[0], info->sar[1]);
+    if (timebase.is_valid()) {
+        len += sprintf_s(ptr+len, sizeof(buffer)-len, "XTIMEBASE=%d:%d ", timebase.n(), timebase.d());
+    }
     const auto cspHeader = csp_rgy_to_y4mheader(csp);
     if (!cspHeader) return RGY_ERR_INVALID_COLOR_FORMAT;
 
@@ -247,6 +251,11 @@ RGY_ERR RGYOutput::InitVideoBsf(const VideoInfo *videoOutputInfo) {
         }
         AVDictionary *bsfPrm = nullptr;
         std::unique_ptr<AVDictionary*, decltype(&av_dict_free)> bsfPrmDictDeleter(&bsfPrm, av_dict_free);
+        if (ENCODER_VCEENC && videoOutputInfo->codec == RGY_CODEC_HEVC && videoOutputInfo->hevcConformanceWindow) {
+            // VA-APIが符号化ブロック境界まで拡張したSPSを、出力解像度に合わせてconformance windowで切り詰める。
+            av_dict_set_int(&bsfPrm, "width", videoOutputInfo->dstWidth, 0);
+            av_dict_set_int(&bsfPrm, "height", videoOutputInfo->dstHeight, 0);
+        }
         if (ENCODER_MPP) {
             const auto level_str = get_cx_desc(get_level_list(videoOutputInfo->codec), videoOutputInfo->codecLevel);
             av_dict_set(&bsfPrm, "level", tchar_to_string(level_str).c_str(), 0);
@@ -1086,6 +1095,12 @@ RGYOutFrame::~RGYOutFrame() {
 RGY_ERR RGYOutFrame::Init(const TCHAR *strFileName, const VideoInfo *pVideoOutputInfo, const void *prm) {
     UNREFERENCED_PARAMETER(pVideoOutputInfo);
     if (_tcscmp(strFileName, _T("-")) == 0) {
+#if defined(_WIN32) || defined(_WIN64)
+        if (_setmode(_fileno(stdout), _O_BINARY) < 0) {
+            AddMessage(RGY_LOG_ERROR, _T("failed to switch stdout to binary mode.\n"));
+            return RGY_ERR_UNDEFINED_BEHAVIOR;
+        }
+#endif //#if defined(_WIN32) || defined(_WIN64)
         m_fDest.reset(stdout);
         m_outputIsStdout = true;
         AddMessage(RGY_LOG_DEBUG, _T("using stdout\n"));
@@ -1137,7 +1152,7 @@ RGY_ERR RGYOutFrame::WriteNextFrame(RGYFrame *pSurface) {
             } else if (csp == RGY_CSP_P010) {
                 csp = RGY_CSP_YV12_10;
             }
-            WriteY4MHeader(m_fDest.get(), &m_VideoOutputInfo, csp);
+            WriteY4MHeader(m_fDest.get(), &m_VideoOutputInfo, csp, m_y4mTimestamp ? m_outputTimebase : rgy_rational<int>(0, 0));
             m_y4mHeaderWritten = true;
         }
         if (m_y4mTimestamp) {

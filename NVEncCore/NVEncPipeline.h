@@ -1476,6 +1476,7 @@ public:
     }
 
     void closeThread() {
+        m_state = RGY_STATE_ABORT;
         PrintMes(RGY_LOG_DEBUG, _T("Flushing Decoder\n"));
 #if THREAD_DEC_USE_FUTURE
         if (m_thDecoder.valid()) {
@@ -1514,6 +1515,8 @@ public:
             m_thDecoder.join();
 #endif
         }
+        //停止後の再呼び出しでは、先に破棄された下流タスクの解放キューを参照しない
+        m_frameReleaseData = nullptr;
     }
     RGY_ERR startThread() {
         m_state = RGY_STATE_RUNNING;

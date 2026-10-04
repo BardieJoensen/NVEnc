@@ -214,6 +214,48 @@ NVIDIA グラフィックドライバ 551.23
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【メモ】
+2026.10.03 (9.37)
+- TrueHDの--audio-copyで丸め誤差が累積し、音ズレする問題を修正。 ( #805 )
+- --audio-filterの再初期化時の競合を修正。
+- --vpp-debandで結果が不定になる問題を修正。
+- --vpp-kfmのucf=onで--trimを併用すると異常終了する問題を修正。
+- LinuxでのCPU使用率取得を改善。
+- エンコード終了時に異常終了する可能性があった問題を修正。
+- --parallelの初期化失敗時に異常終了する可能性があった問題を修正。
+
+2026.09.26 (9.36)
+- VFX SDK 1.3 に更新し、NGX/NVVFX系フィルタを整理。
+  - --vpp-resizeのngx-vsrを拡張。 ( #796 )
+    - VFX SDK 1.2のqualityモード8-19に対応。
+    - VFX SDK 1.3のstreamingモード21/23とvsr-strengthに対応。
+    - 旧nvvfx-superresをngx-vsrへ移行。
+  - フレーム補間フィルタを追加。(--vpp-nvvfx-framegen) ( #801 )
+  - VFX SDKから削除された--vpp-nvvfx-artifact-reductionを廃止。
+  - --vpp-nvvfx-denoiseもVFX SDK 1.3に更新。
+    - モジュールとモデルサイズが大きいので、別途下記追加パッケージが必要。
+      https://github.com/rigaya/NVEnc/releases/download/9.35/NVEncNVVFXDenoise_20260925_x64.7z
+- 同梱のNGX DLLをVFX SDK 1.3対応版に更新。
+- --framesと--trimを同時に指定したときに、初期化直後の空のtrimリストを参照していた問題を修正。
+- --vpp-tweakの行末越境書き込みを修正。
+- --vpp-afsの非決定性を修正。
+- 画素フォーマット変換の不具合を修正。
+- Kepler向けSASSも埋め込み、R470が扱えない新しいPTXのJITを回避。
+- 中国語のドキュメントの更新と日本語/英語ドキュメントの問題点を修正。( #803 )
+
+2026.09.11 (9.35)
+- --vpp-kfmのmode=24/60のRFF対応。
+- NVMLのバージョン付きAPIを優先してロードし、ロード対象を.so.1にも拡大。( #795 )
+- --vpp-onnxのout_res=のresizeにOpenCL系以外を指定できてしまう不具合を修正。
+- --vpp-afsのsubgroup集計で共有領域の読み書き競合を修正。
+- --vpp-descaleを高速化。
+- --vpp-hqdn3dを高速化。
+- --vpp-maaを高速化。
+- --vpp-softlightを高速化。
+
+2026.09.07 (9.34)
+- y4m入力を使用するとタイムスタンプがおかしくなっていた問題を修正。
+- --vpp-kfmのmode=24を高速化。
+
 2026.08.29 (9.33)
 - arm64ビルドに対応。
 - arm環境でのavhwの制限を解除。

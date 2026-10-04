@@ -151,7 +151,7 @@ void copy_nv12_to_nv12_avx2_internal(void **dst, const void **src, int width, in
     const int pixel_size = highbit_depth ? 2 : 1;
     for (int i = 0; i < 2; i++) {
         const auto y_range = thread_y_range(crop_up >> i, (height - crop_bottom) >> i, thread_id, thread_n);
-        const uint8_t *srcYLine = (const uint8_t *)src[i] + src_y_pitch_byte * y_range.start_src + crop_left;
+        const uint8_t *srcYLine = (const uint8_t *)src[i] + src_y_pitch_byte * y_range.start_src + crop_left * pixel_size;
         uint8_t *dstLine = (uint8_t *)dst[i] + dst_y_pitch_byte * y_range.start_dst;
         const int y_width = width - crop_right - crop_left;
         for (int y = 0; y < y_range.len; y++, srcYLine += src_y_pitch_byte, dstLine += dst_y_pitch_byte) {
@@ -200,7 +200,7 @@ void copy_p010_to_nv12_avx2(void **dst, const void **src, int width, int src_y_p
     const __m256i yrsftAdd = _mm256_set1_epi16((short)conv_bit_depth_rsft_add_<8, in_bit_depth, 0>());
     for (int i = 0; i < 2; i++) {
         const auto y_range = thread_y_range(crop_up >> i, (height - crop_bottom) >> i, thread_id, thread_n);
-        const uint8_t *srcYLine = (const uint8_t *)src[i] + src_y_pitch_byte * y_range.start_src + crop_left;
+        const uint8_t *srcYLine = (const uint8_t *)src[i] + src_y_pitch_byte * y_range.start_src + crop_left * sizeof(uint16_t);
         uint8_t *dstLine = (uint8_t *)dst[i] + dst_y_pitch_byte * y_range.start_dst;
         const int y_width = width - crop_right - crop_left;
         for (int y = 0; y < y_range.len; y++, srcYLine += src_y_pitch_byte, dstLine += dst_y_pitch_byte) {
@@ -559,8 +559,6 @@ static void convert_yv12_to_p010_avx2_base(void **dst, const void **src, int wid
                 y1 = _mm256_cvtepu8_epi16(_mm_loadu_si128((const __m128i *)(src_ptr + 16)));
                 y0 = _mm256_slli_epi16(y0, 8);
                 y1 = _mm256_slli_epi16(y1, 8);
-                y0 = _mm256_add_epi16(y0, _mm256_set1_epi16(2 << 6));
-                y1 = _mm256_add_epi16(y1, _mm256_set1_epi16(2 << 6));
                 _mm256_storeu_si256((__m256i *)(dst_ptr +  0), y0);
                 _mm256_storeu_si256((__m256i *)(dst_ptr + 16), y1);
             }
@@ -591,13 +589,9 @@ static void convert_yv12_to_p010_avx2_base(void **dst, const void **src, int wid
 
             y0 = _mm256_unpacklo_epi8(_mm256_setzero_si256(), y1);  //   7-4 |  3- 0
             y1 = _mm256_unpackhi_epi8(_mm256_setzero_si256(), y1);  // 15-12 | 11- 8
-            y0 = _mm256_add_epi16(y0, _mm256_set1_epi16(2 << 6));
-            y1 = _mm256_add_epi16(y1, _mm256_set1_epi16(2 << 6));
 
             y2 = _mm256_unpacklo_epi8(_mm256_setzero_si256(), y3);  // 23-20 | 19-16
             y3 = _mm256_unpackhi_epi8(_mm256_setzero_si256(), y3);  // 31-28 | 27-24
-            y2 = _mm256_add_epi16(y2, _mm256_set1_epi16(2 << 6));
-            y3 = _mm256_add_epi16(y3, _mm256_set1_epi16(2 << 6));
 
             _mm256_storeu_si256((__m256i *)(dst_ptr +  0), y0);
             _mm256_storeu_si256((__m256i *)(dst_ptr + 16), y1);
@@ -1267,10 +1261,10 @@ void copy_yuv444_to_ayuv444_avx2(void **dst, const void **src, int width, int sr
             __m256i pixAY1 = _mm256_unpackhi_epi8(pixY, _mm256_setzero_si256()); // 31 - 24 | 15 - 8
             __m256i pixUV0 = _mm256_unpacklo_epi8(pixV, pixU); // 23 - 16 |  7 - 0
             __m256i pixUV1 = _mm256_unpackhi_epi8(pixV, pixU); // 31 - 24 | 15 - 8
-            __m256i pixVUYA0 = _mm256_unpacklo_epi16(pixAY0, pixUV0); // 19 - 16 |  3 -  0
-            __m256i pixVUYA1 = _mm256_unpackhi_epi16(pixAY0, pixUV0); // 23 - 20 |  7 -  4
-            __m256i pixVUYA2 = _mm256_unpacklo_epi16(pixAY1, pixUV1); // 27 - 24 | 11 -  8
-            __m256i pixVUYA3 = _mm256_unpackhi_epi16(pixAY1, pixUV1); // 31 - 28 | 15 - 12
+            __m256i pixVUYA0 = _mm256_unpacklo_epi16(pixUV0, pixAY0); // 19 - 16 |  3 -  0
+            __m256i pixVUYA1 = _mm256_unpackhi_epi16(pixUV0, pixAY0); // 23 - 20 |  7 -  4
+            __m256i pixVUYA2 = _mm256_unpacklo_epi16(pixUV1, pixAY1); // 27 - 24 | 11 -  8
+            __m256i pixVUYA3 = _mm256_unpackhi_epi16(pixUV1, pixAY1); // 31 - 28 | 15 - 12
 
             _mm256_storeu_si256((__m256i *)(dst_ptr +  0), _mm256_permute2x128_si256(pixVUYA0, pixVUYA1, (2 << 4) + 0));
             _mm256_storeu_si256((__m256i *)(dst_ptr + 32), _mm256_permute2x128_si256(pixVUYA2, pixVUYA3, (2 << 4) + 0));
@@ -1304,9 +1298,9 @@ static void RGY_FORCEINLINE copy_yuv444_high_to_ayuv444_avx2(void **dst, const v
             __m256i pixY0 = _mm256_loadu_si256((const __m256i *)(src_y_ptr + 0)); // 15 -  0
             __m256i pixU0 = _mm256_loadu_si256((const __m256i *)(src_u_ptr + 0)); // 15 -  0
             __m256i pixV0 = _mm256_loadu_si256((const __m256i *)(src_v_ptr + 0)); // 15 -  0
-            __m256i pixY1 = _mm256_loadu_si256((const __m256i *)(src_y_ptr + 8)); // 31 - 16
-            __m256i pixU1 = _mm256_loadu_si256((const __m256i *)(src_u_ptr + 8)); // 31 - 16
-            __m256i pixV1 = _mm256_loadu_si256((const __m256i *)(src_v_ptr + 8)); // 31 - 16
+            __m256i pixY1 = _mm256_loadu_si256((const __m256i *)(src_y_ptr + 16)); // 後半16画素を読み込み、前半との重複を避ける。
+            __m256i pixU1 = _mm256_loadu_si256((const __m256i *)(src_u_ptr + 16)); // 後半16画素を読み込み、前半との重複を避ける。
+            __m256i pixV1 = _mm256_loadu_si256((const __m256i *)(src_v_ptr + 16)); // 後半16画素を読み込み、前半との重複を避ける。
             pixY0 = _mm256_adds_epu16(pixY0, xrsftAdd);
             pixU0 = _mm256_adds_epu16(pixU0, xrsftAdd);
             pixV0 = _mm256_adds_epu16(pixV0, xrsftAdd);
@@ -1330,10 +1324,10 @@ static void RGY_FORCEINLINE copy_yuv444_high_to_ayuv444_avx2(void **dst, const v
             __m256i pixAY1 = _mm256_unpackhi_epi8(pixY, _mm256_setzero_si256()); // 31 - 24 | 15 - 8
             __m256i pixUV0 = _mm256_unpacklo_epi8(pixV, pixU); // 23 - 16 |  7 - 0
             __m256i pixUV1 = _mm256_unpackhi_epi8(pixV, pixU); // 31 - 24 | 15 - 8
-            __m256i pixVUYA0 = _mm256_unpacklo_epi16(pixAY0, pixUV0); // 19 - 16 |  3 -  0
-            __m256i pixVUYA1 = _mm256_unpackhi_epi16(pixAY0, pixUV0); // 23 - 20 |  7 -  4
-            __m256i pixVUYA2 = _mm256_unpacklo_epi16(pixAY1, pixUV1); // 27 - 24 | 11 -  8
-            __m256i pixVUYA3 = _mm256_unpackhi_epi16(pixAY1, pixUV1); // 31 - 28 | 15 - 12
+            __m256i pixVUYA0 = _mm256_unpacklo_epi16(pixUV0, pixAY0); // 19 - 16 |  3 -  0
+            __m256i pixVUYA1 = _mm256_unpackhi_epi16(pixUV0, pixAY0); // 23 - 20 |  7 -  4
+            __m256i pixVUYA2 = _mm256_unpacklo_epi16(pixUV1, pixAY1); // 27 - 24 | 11 -  8
+            __m256i pixVUYA3 = _mm256_unpackhi_epi16(pixUV1, pixAY1); // 31 - 28 | 15 - 12
 
             _mm256_storeu_si256((__m256i*)(dst_ptr +  0), _mm256_permute2x128_si256(pixVUYA0, pixVUYA1, (2 << 4) + 0));
             _mm256_storeu_si256((__m256i*)(dst_ptr + 32), _mm256_permute2x128_si256(pixVUYA2, pixVUYA3, (2 << 4) + 0));
