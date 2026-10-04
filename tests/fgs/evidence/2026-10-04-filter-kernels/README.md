@@ -7,3 +7,5 @@ Qualification is pending. The CPU and KAT receipts are completed results; timing
 `index.json` records source paths and hashes for compact evidence copied from `/tmp/downloads/codex-work/fgs-improvement-20261004/`. Full logs, per-frame/packet hashes, preserved encodes and Nsight SQLite traces remain there. Raw diagnostic media was deleted only after its whole-file and per-frame MD5s were recorded; the original fixture media was never changed. Temporary storage is not a backup and must be retained through review or verified archive transfer.
 
 The helper scripts reproduce the bounded comparisons from pinned binaries and explicit source manifests. They are evidence tools, not production encoder changes. Run the encoder gates from the pinned clone using the recorded harness commit; never build a moving worktree.
+
+The exact temporary-path patch is stored as `scratch-path-only.diff.json`; its `diff` field decodes byte-for-byte to the original unified diff, including significant blank-line context prefixes.

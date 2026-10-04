@@ -141,12 +141,6 @@
       "sha256": "13a696c212dcc3d3085ccdb4e0c029b8367e3ac0db07f11c94cfadd8732258d4"
     },
     {
-      "file": "scratch-path-only.diff",
-      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/path-only.diff",
-      "bytes": 2320,
-      "sha256": "c9855a7a4930e2e60184a971995082c2b6f05a5d6253defbd62efb8e3b51e42c"
-    },
-    {
       "file": "scratch-path-proof.json",
       "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/receipt.json",
       "bytes": 4124,
@@ -193,6 +187,15 @@
       "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/plain-control-v2-review.json",
       "bytes": 1259,
       "sha256": "1c57d26f6aa8aeba4160ced516eba949a15bab6d1a49a28409b6bd8b1bd56f36"
+    }
+  ],
+  "lossless_encodings": [
+    {
+      "file": "scratch-path-only.diff.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/path-only.diff",
+      "original_sha256": "c9855a7a4930e2e60184a971995082c2b6f05a5d6253defbd62efb8e3b51e42c",
+      "encoded_sha256": "abd2106295709a10c47788d7a5340abb4ee85c6504effa82e9c339140a731597",
+      "decoded_field": "diff"
     }
   ]
 }
