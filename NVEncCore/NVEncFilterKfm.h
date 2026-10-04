@@ -283,6 +283,19 @@ protected:
 
         KfmSwitchTiming() : start60(0), start120(0), sourceIndex(0), frame24Index(-1), baseType(KFM_FRAME_60), sourceStart(0), numSourceFrames(1), duration60(1), duration120(2), isFrame24(false), isFrame60(false) {};
     };
+    struct KfmRffDirectOutput {
+        KfmSwitchTiming timing;
+        int sourceIndex;
+        int64_t inputPts;
+        int64_t inputDuration;
+        int64_t outputPts;
+        int64_t outputDuration;
+        int64_t anchorOutputPts;
+        int64_t runIndex;
+        RGY_FRAME_FLAGS inputFlags;
+
+        KfmRffDirectOutput() : timing(), sourceIndex(-1), inputPts(-1), inputDuration(0), outputPts(0), outputDuration(0), anchorOutputPts(0), runIndex(0), inputFlags(RGY_FRAME_FLAG_NONE) {};
+    };
     struct KfmContainsCombeReadback {
         uint32_t count;
         RGYCudaEvent event;
@@ -388,14 +401,21 @@ protected:
     int deint60CacheTrimFloor() const;
     bool lazyDeint60Enabled(const NVEncFilterParamKfm& prm) const;
     const RGYFrameInfo *findDeint60Frame(int n60, std::vector<RGYCudaEvent> *wait_events) const;
+    const KfmCachedSource *findSourceByFrame(const RGYFrameInfo *frame) const;
     const RGYFrameInfo *findSourceFrame(const RGYFrameInfo *frame, std::vector<RGYCudaEvent> *wait_events);
     const KfmCachedSource *findSourceByIndex(int sourceIndex) const;
     const KfmCachedSource *findSourceByIndexExact(int sourceIndex) const;
     bool isRffProgressiveCandidate(const KfmCachedSource *source) const;
     bool isRffProgressiveSource(int sourceIndex, bool drain) const;
     bool isRffTimestampContinuous(const KfmCachedSource *prev, const KfmCachedSource *current) const;
+    int64_t rffInputDuration(RGY_FRAME_FLAGS flags) const;
+    int64_t rffFieldOffset(int64_t fieldIndex) const;
     int64_t rffFilmOffset(int64_t frameIndex) const;
+    int64_t p24SlotAtInputPts(int64_t inputPts) const;
     void resetRffTiming();
+    RGY_ERR prepareRffDirect24(KfmRffDirectOutput& direct, RGYFrameInfo *output, int sourceIndex, int start60, int64_t nextOutputPts, bool useInputTimestamp,
+        cudaStream_t stream, const std::vector<RGYCudaEvent>& waitEvents, RGYCudaEvent *event);
+    void commitRffDirect24(const KfmRffDirectOutput& direct, int64_t nextOutputPts);
     const KfmCachedDeint60 *findCachedDeint60Frame(const KfmRtgmcLane& lane, int n60, std::vector<RGYCudaEvent> *wait_events) const;
     const KfmUcfNoiseDumpRecord *findUcfNoiseResult(int sourceIndex) const;
     RGY_ERR copyUcfFrame(const NVEncFilterParamKfm& prm, RGYFrameInfo *pOutputFrame, const RGYFrameInfo *pInputFrame,
@@ -434,6 +454,7 @@ protected:
     void appendAnalyzerResults(size_t resultCount, bool dump, bool mark60p);
     void logKfmProfileStats();
     bool deriveSwitchTimingAt(KfmSwitchTiming& timing, int n60, int total60) const;
+    bool deriveTelecine24TimingAt(KfmSwitchTiming& timing, int n60, int total60, bool afterRff) const;
     std::vector<KfmSwitchTiming> deriveSwitchTimings(int total60) const;
     int64_t sourceFrameDuration(const KfmCachedSource *source) const;
     struct KfmSourceSlot;
@@ -459,7 +480,7 @@ protected:
     int telecine24FrameCount(bool drain) const;
     RGY_ERR runNrFilter(RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrame,
         cudaStream_t stream, const std::vector<RGYCudaEvent> &wait_events, RGYCudaEvent *event);
-    RGY_ERR processMainRtgmcOutputs(const NVEncFilterParamKfm& prm, RGYFrameInfo **rtgmcOutFrames, int rtgmcOutNum,
+    RGY_ERR processMainRtgmcOutputs(const NVEncFilterParamKfm& prm, RGYFrameInfo **rtgmcOutFrames, int rtgmcOutNum, bool drain,
         RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum, cudaStream_t stream, const std::vector<RGYCudaEvent> &wait_events, RGYCudaEvent *event);
     RGY_ERR drainMainRtgmcBranch(const NVEncFilterParamKfm& prm, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
         cudaStream_t stream, RGYCudaEvent *event);
@@ -578,10 +599,14 @@ protected:
 
     struct KfmPendingFMCount {
         int cycle;
+        int countParity;
+        bool completeWindow;
+        bool reusePrevious;
+        std::array<int, 6> tailSourceIndices;
         std::unique_ptr<CUMemBufPair> countBuf;
         RGYCudaEvent event;
 
-        KfmPendingFMCount() : cycle(-1), countBuf(), event() {};
+        KfmPendingFMCount() : cycle(-1), countParity(0), completeWindow(false), reusePrevious(false), tailSourceIndices(), countBuf(), event() {};
     };
 
     struct KfmPendingVfrOutput {
@@ -667,6 +692,8 @@ protected:
     std::array<std::unique_ptr<CUFrameBuf>, 5> m_staticWorkFrames;
     std::array<std::unique_ptr<CUMemBuf>, 2> m_analyzeFlags;
     std::deque<KfmPendingFMCount> m_pendingFMCounts;
+    std::array<RGYKFM::FMCount, 18> m_previousFMCounts;
+    int m_previousFMCountCycle;
     std::deque<KfmPendingVfrOutput> m_pendingVfrOutputs;
     KfmVfrRunStats m_vfrRunStats;
     mutable KfmProfileStats m_kfmProfile;
@@ -717,6 +744,12 @@ protected:
     int64_t m_rffAnchorOutputPts;
     int64_t m_rffRunIndex;
     int64_t m_rffLastOutputPts;
+    int64_t m_p24InputOriginPts;
+    int64_t m_p24InputEndPts;
+    int m_p60LastProcessedSourceIndex;
+    int m_p60LastRffSourceIndex;
+    int m_p60LastRtgmcSourceIndex;
+    int m_p60RtgmcFieldInSource;
     bool m_hasLastSwitchTiming;
     int m_lastSwitchStart60;
     int m_lastSwitchDuration60;
@@ -728,6 +761,7 @@ protected:
     std::unordered_set<int> m_stageDumpTargetFrames;
     int m_nextTelecine24Frame;
     int64_t m_nextTelecine24Pts;
+    std::vector<int> m_telecine24OutputDurations;
     int m_telecineSuperBufferIndex;
     int m_maskBranchBufferIndex;
     int m_patchCombeBufferIndex;

@@ -138,7 +138,7 @@ static void RGY_FORCEINLINE copy_nv12_to_nv12(void **dst, const void **src, int 
     const int pixel_size = highbit_depth ? 2 : 1;
     for (int i = 0; i < 2; i++) {
         const auto y_range = thread_y_range(crop_up >> i, (height - crop_bottom) >> i, thread_id, thread_n);
-        uint8_t *srcYLine = (uint8_t *)src[i] + src_y_pitch_byte * y_range.start_src + crop_left;
+        uint8_t *srcYLine = (uint8_t *)src[i] + src_y_pitch_byte * y_range.start_src + crop_left * pixel_size;
         uint8_t *dstLine = (uint8_t *)dst[i] + dst_y_pitch_byte * y_range.start_dst;
         const int y_width = width - crop_right - crop_left;
         for (int y = 0; y < y_range.len; y++, srcYLine += src_y_pitch_byte, dstLine += dst_y_pitch_byte) {
@@ -946,8 +946,6 @@ static void convert_yv12_to_p010_simd(void **dst, const void **src, int width, i
                 x1 = _mm_loadu_si128((const __m128i *)src_ptr);
                 x0 = _mm_unpacklo_epi8(_mm_setzero_si128(), x1);
                 x1 = _mm_unpackhi_epi8(_mm_setzero_si128(), x1);
-                x0 = _mm_add_epi16(x0, _mm_set1_epi16(2 << 6));
-                x1 = _mm_add_epi16(x1, _mm_set1_epi16(2 << 6));
                 _mm_storeu_si128((__m128i *)(dst_ptr + 0), x0);
                 _mm_storeu_si128((__m128i *)(dst_ptr + 8), x1);
             }
@@ -973,13 +971,9 @@ static void convert_yv12_to_p010_simd(void **dst, const void **src, int width, i
 
             x0 = _mm_unpacklo_epi8(_mm_setzero_si128(), x1);
             x1 = _mm_unpackhi_epi8(_mm_setzero_si128(), x1);
-            x0 = _mm_add_epi16(x0, _mm_set1_epi16(2 << 6));
-            x1 = _mm_add_epi16(x1, _mm_set1_epi16(2 << 6));
 
             x2 = _mm_unpacklo_epi8(_mm_setzero_si128(), x3);
             x3 = _mm_unpackhi_epi8(_mm_setzero_si128(), x3);
-            x2 = _mm_add_epi16(x2, _mm_set1_epi16(2 << 6));
-            x3 = _mm_add_epi16(x3, _mm_set1_epi16(2 << 6));
 
             _mm_storeu_si128((__m128i *)(dst_ptr +  0), x0);
             _mm_storeu_si128((__m128i *)(dst_ptr +  8), x1);
@@ -1258,10 +1252,10 @@ static void RGY_FORCEINLINE copy_yuv444_to_ayuv444(void **dst, const void **src,
             __m128i pixAY1 = _mm_unpackhi_epi8(pixY, _mm_setzero_si128());
             __m128i pixUV0 = _mm_unpacklo_epi8(pixV, pixU);
             __m128i pixUV1 = _mm_unpackhi_epi8(pixV, pixU);
-            __m128i pixVUYA0 = _mm_unpacklo_epi16(pixAY0, pixUV0);
-            __m128i pixVUYA1 = _mm_unpackhi_epi16(pixAY0, pixUV0);
-            __m128i pixVUYA2 = _mm_unpacklo_epi16(pixAY1, pixUV1);
-            __m128i pixVUYA3 = _mm_unpackhi_epi16(pixAY1, pixUV1);
+            __m128i pixVUYA0 = _mm_unpacklo_epi16(pixUV0, pixAY0);
+            __m128i pixVUYA1 = _mm_unpackhi_epi16(pixUV0, pixAY0);
+            __m128i pixVUYA2 = _mm_unpacklo_epi16(pixUV1, pixAY1);
+            __m128i pixVUYA3 = _mm_unpackhi_epi16(pixUV1, pixAY1);
 
             _mm_storeu_si128((__m128i *)(dst_ptr +  0), pixVUYA0);
             _mm_storeu_si128((__m128i *)(dst_ptr + 16), pixVUYA1);
@@ -1318,10 +1312,10 @@ static void RGY_FORCEINLINE copy_yuv444_high_to_ayuv444(void **dst, const void *
             __m128i pixAY1 = _mm_unpackhi_epi8(pixY, _mm_setzero_si128());
             __m128i pixUV0 = _mm_unpacklo_epi8(pixV, pixU);
             __m128i pixUV1 = _mm_unpackhi_epi8(pixV, pixU);
-            __m128i pixVUYA0 = _mm_unpacklo_epi16(pixAY0, pixUV0);
-            __m128i pixVUYA1 = _mm_unpackhi_epi16(pixAY0, pixUV0);
-            __m128i pixVUYA2 = _mm_unpacklo_epi16(pixAY1, pixUV1);
-            __m128i pixVUYA3 = _mm_unpackhi_epi16(pixAY1, pixUV1);
+            __m128i pixVUYA0 = _mm_unpacklo_epi16(pixUV0, pixAY0);
+            __m128i pixVUYA1 = _mm_unpackhi_epi16(pixUV0, pixAY0);
+            __m128i pixVUYA2 = _mm_unpacklo_epi16(pixUV1, pixAY1);
+            __m128i pixVUYA3 = _mm_unpackhi_epi16(pixUV1, pixAY1);
 
             _mm_storeu_si128((__m128i *)(dst_ptr + 0), pixVUYA0);
             _mm_storeu_si128((__m128i *)(dst_ptr + 16), pixVUYA1);

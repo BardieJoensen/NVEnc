@@ -1,5 +1,50 @@
 # NVEnc Release Notes
 
+## 9.37
+
+- Fix accumulated rounding error in TrueHD [--audio-copy](./NVEncC_Options.en.md#--audio-copy-intstringintstring) that caused audio desync. ( #805 )
+- Fix a race when reinitializing [--audio-filter](./NVEncC_Options.en.md#--audio-filter-intstringstring).
+- Fix non-deterministic results in [--vpp-deband](./NVEncC_Options.en.md#--vpp-deband-param1value1param2value2).
+- Fix a crash when [--vpp-kfm](./NVEncC_Options.en.md#--vpp-kfm-param1value1param2value2) `ucf=on` is used with [--trim](./NVEncC_Options.en.md#--trim-intintintintintint).
+- Improve CPU usage acquisition on Linux.
+- Fix a possible crash at the end of encode.
+- Fix a possible crash when [--parallel](./NVEncC_Options.en.md#--parallel-int-or-string) initialization fails.
+
+## 9.36
+
+- Update to VFX SDK 1.3, and rearrange NVVFX / NGX related filters.
+  - Extend `ngx-vsr` in [--vpp-resize](./NVEncC_Options.en.md#--vpp-resize-string-or-param1value1param2value2). ( #796 ) by @cyj98
+    - Add VFX SDK 1.2 quality modes 8-19.
+    - Add VFX SDK 1.3 streaming modes 21/23 and `vsr-strength`.
+    - Map the former `nvvfx-superres` to `ngx-vsr`.
+  - Add frame interpolation filter [--vpp-nvvfx-framegen](./NVEncC_Options.en.md#--vpp-nvvfx-framegen-param1value1param2value2). ( #801 ) by @cyj98
+  - Remove `--vpp-nvvfx-artifact-reduction`, which is removed from VFX SDK.
+  - Update [--vpp-nvvfx-denoise](./NVEncC_Options.en.md#--vpp-nvvfx-denoise-param1value1param2value2) to VFX SDK 1.3, new additional modules and models are required.
+    - As the module and model size is quite large, they are in seperate archive [NVEncNVVFXDenoise_20260925_x64.7z](https://github.com/rigaya/NVEnc/releases/download/9.35/NVEncNVVFXDenoise_20260925_x64.7z).
+  - Update the bundled NGX DLL to the VFX SDK 1.3 build.
+- Fix [--frames](./NVEncC_Options.en.md#--frames-int) with [--trim](./NVEncC_Options.en.md#--trim-intintintintintint) reading an empty trim list just after initialization.
+- Fix out-of-bounds write at the row end in [--vpp-tweak](./NVEncC_Options.en.md#--vpp-tweak-param1value1param2value2).
+- Fix non-determinism in [--vpp-afs](./NVEncC_Options.en.md#--vpp-afs-param1value1param2value2).
+- Embed Kepler SASS as well, avoiding JIT of newer PTX that R470 cannot handle.
+- Fix pixel format conversion.
+- Update zh-cn.md docs and fix incorrect ja/en.md docs. ( #803 ) by @cyj98
+
+## 9.35
+
+- Add RFF support to [--vpp-kfm](./NVEncC_Options.en.md#--vpp-kfm-param1value1param2value2) `mode=24/60`.
+- Prefer versioned NVML APIs and also load `libnvidia-ml.so.1`. ( #795 )
+- Fix [--vpp-onnx](./NVEncC_Options.en.md#--vpp-onnx-param1value1param2value2) `out_res=` accepting non-OpenCL resize algorithms.
+- Fix shared-memory race in [--vpp-afs](./NVEncC_Options.en.md#--vpp-afs-param1value1param2value2) subgroup reduction.
+- Speed up [--vpp-descale](./NVEncC_Options.en.md#--vpp-descale-param1value1param2value2).
+- Speed up [--vpp-hqdn3d](./NVEncC_Options.en.md#--vpp-hqdn3d-param1value1param2value2).
+- Speed up [--vpp-maa](./NVEncC_Options.en.md#--vpp-maa-param1value1param2value2).
+- Speed up [--vpp-softlight](./NVEncC_Options.en.md#--vpp-softlight-param1value1param2value2).
+
+## 9.34
+
+- Fix issues with timestamp when using y4m reader.
+- Speed up [--vpp-kfm](./NVEncC_Options.en.md#--vpp-kfm-param1value1param2value2) `mode=24`.
+
 ## 9.33
 
 - Add ARM64 build support.

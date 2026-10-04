@@ -1,5 +1,5 @@
 project('nvencc', ['cpp', 'cuda'],
-  version: run_command('git', 'describe', '--tags', '--abbrev=0', check: true).stdout().strip(),
+  version: run_command('sh', 'scripts/get-version.sh', check: true).stdout().strip(),
   license: 'MIT',
   meson_version: '>=0.61.0',
   default_options: [
@@ -110,6 +110,12 @@ else
   # CUDA 10以下: compute_30も追加
   if cuda_ver_major <= 10
     gpu_code_gen += ['--generate-code', 'arch=compute_30,code=[compute_30,sm_30]']
+  endif
+
+  # Keplerの最終ドライバR470では新しいPTXをJITできないため、SASSも埋め込む。
+  # CUDA 12以降ではKepler向けコード生成が削除されている。
+  if cuda_ver_major <= 11
+    gpu_code_gen += ['--generate-code', 'arch=compute_35,code=[compute_35,sm_35]']
   endif
 
   # CUDA 12以下: compute_50, compute_61追加
