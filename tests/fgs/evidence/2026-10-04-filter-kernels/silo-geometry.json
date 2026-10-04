@@ -1,0 +1,137 @@
+{
+  "purpose": "Extra partial-width and tiny-border regression input for the full-block flat-metric specialization.",
+  "metadata_only": true,
+  "source_media_opened_copied_hashed_or_modified_by_this_task": false,
+  "fixture_key": "silo_clip",
+  "manifest": "/home/bardie/git-repos/NVEnc-merge937/tests/fgs/fixtures.json",
+  "manifest_sha256": "d3879d44bac80ee439f70825c12fc104a3919032a6c7e3caece57754db19ed7e",
+  "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/silo-fine-24f.mkv",
+  "expected_bytes": 14893385,
+  "expected_sha256_not_rehashed": "040468f686dc66c753c2a2899261b3434fda6f33e257d5047bfda14bd241607b",
+  "source_provenance": {
+    "original": "/media/merged-storage/media/downloads/long-term-seeding/cross-seed-links/BroadcasTheNet/Silo.S03E01.Who.Are.You.1080p.ATVP.WEB-DL.DDP5.1.H.264-NTb.mkv",
+    "seek_seconds": 1200,
+    "frames": 24,
+    "clip": "/tmp/nvenc-933-validation-20260904/fixtures/silo_fine.mkv",
+    "command": [
+      "ffmpeg",
+      "-nostdin",
+      "-v",
+      "error",
+      "-ss",
+      "1200",
+      "-threads",
+      "4",
+      "-i",
+      "/media/merged-storage/media/downloads/long-term-seeding/cross-seed-links/BroadcasTheNet/Silo.S03E01.Who.Are.You.1080p.ATVP.WEB-DL.DDP5.1.H.264-NTb.mkv",
+      "-map",
+      "0:v:0",
+      "-frames:v",
+      "24",
+      "-an",
+      "-sn",
+      "-c:v",
+      "ffv1",
+      "-threads",
+      "4",
+      "-pix_fmt",
+      "yuv420p10le",
+      "/tmp/nvenc-933-validation-20260904/fixtures/silo_fine.mkv"
+    ],
+    "returncode": 0,
+    "error": ""
+  },
+  "previous_probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "ffv1",
+        "width": 1918,
+        "height": 802,
+        "pix_fmt": "yuv420p10le",
+        "color_space": "bt709",
+        "color_transfer": "bt709",
+        "color_primaries": "bt709",
+        "r_frame_rate": "24000/1001"
+      }
+    ],
+    "format": {
+      "duration": "1.043000"
+    }
+  },
+  "previous_probe_report": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/development-input-probes.json",
+  "previous_probe_report_sha256": "116330f621bb493a64a8833fdb3ed6c2578505f391d973a56454f78cb1a92bce",
+  "existing_preflight_report": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/full-gate-preflight.json",
+  "fixture_decode": "FFV1 requires the software decode arm (--avsw), not the production H.264 --avhw decode arm. It supplements the real 1080p production decoder profiles.",
+  "luma_flat_block_coverage": {
+    "image": [
+      1918,
+      802
+    ],
+    "block": [
+      32,
+      32
+    ],
+    "grid": [
+      60,
+      26
+    ],
+    "full_blocks": 1475,
+    "usable_partial_width_blocks": 25,
+    "partial_width": 30,
+    "tiny_bottom_row_blocks": 60,
+    "tiny_bottom_height": 2,
+    "tiny_block_behavior": "Original bw < 8 || bh < 8 early zero/return unchanged."
+  },
+  "kat_source": "/home/bardie/git-repos/NVEnc-merge937/tests/fgs/fgs_kat.py",
+  "kat_source_sha256": "afe309569f3894fd99e1055f36ea89da7c4fc1d3d41f28abd403e6bbe9272cbf",
+  "kat_groups": [
+    {
+      "width": 1920,
+      "height": 1080,
+      "width_mod_32": 0,
+      "height_mod_32": 24,
+      "names": [
+        "const_luma",
+        "warmup_luma",
+        "ramp_luma",
+        "chroma_corr",
+        "chroma_ind",
+        "clean",
+        "cut",
+        "const_10bit",
+        "const_hlg",
+        "coarse_luma",
+        "detail_luma",
+        "auto_retain_flat",
+        "auto_retain_detail",
+        "dark_luma",
+        "retain_luma",
+        "retain_10bit",
+        "cut_grainy"
+      ]
+    },
+    {
+      "width": 3840,
+      "height": 2160,
+      "width_mod_32": 0,
+      "height_mod_32": 16,
+      "names": [
+        "const_4k10_pq"
+      ]
+    },
+    {
+      "width": 768,
+      "height": 432,
+      "width_mod_32": 0,
+      "height_mod_32": 16,
+      "names": [
+        "clipped_chroma_10bit",
+        "clipped_chroma_corr",
+        "clipped_chroma_8bit"
+      ]
+    }
+  ],
+  "kat_gap": "All KAT widths are divisible by 32; residual heights are 24 or 16, so no KAT exercises a partial-width block or a below-eight-pixel luma edge."
+}

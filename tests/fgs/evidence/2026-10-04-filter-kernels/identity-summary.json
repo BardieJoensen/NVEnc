@@ -1,0 +1,6241 @@
+{
+  "status": "pending",
+  "identity_pass": false,
+  "requirements": {
+    "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-requirements.json",
+    "sha256": "4c16ebb69a7db3c2471f09d8a1a68332f0ef64a877923d56589d071a993e1aaa",
+    "bytes": 63738
+  },
+  "script_sha256": "279d3af13c934459c297592a60a77cac3a89fdd6764179a16b458cb61070c188",
+  "reference": {
+    "name": "deployed",
+    "sha256": "c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b",
+    "core": "aeb14263"
+  },
+  "candidate": {
+    "name": "kernels",
+    "sha256": "be7a50a1681fc5aa9a7133533f081d4e3253b2c74bc639605358f69d591ababe",
+    "core": "6e8fa1fb1a2b06e64b8c4a19af392bc5adfe5c5e"
+  },
+  "reports": [
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-identity/report.json",
+      "sha256": "afbe2e58dd5d9493865dcec82ecbbd0c9fcddd7dc784f8988794c3ff09a33896",
+      "bytes": 301142,
+      "complete": false,
+      "identity_pass": false,
+      "manifest_sha256": "9410366f2cecb98b694845fd4290177360f61217b474edfe564d4f4c6bf381b0",
+      "harness_sha256": "930ea8633c3e1931f8bab635fc5429364d4a80188880d5a50d802c6d28851a22",
+      "kat_module_sha256": "afe309569f3894fd99e1055f36ea89da7c4fc1d3d41f28abd403e6bbe9272cbf",
+      "filmgrn_module_sha256": "e030e9466002ef7edd56bac97dcdc6f1a840f2e9b4509a8728a1176abf7017bb",
+      "pins": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed",
+          "sha256": "c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b",
+          "stat": [
+            66310,
+            42215035,
+            402772848,
+            1791103146000000000,
+            1791141240994129818
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-baseline": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-baseline",
+          "sha256": "0134fef194357ba5f37a94ac6a45626ab967b7fb9de900ee0ed4e0562860bb57",
+          "stat": [
+            66310,
+            42236368,
+            402772848,
+            1791142473724932538,
+            1791142473724932538
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/const_luma.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/const_luma.y4m",
+          "sha256": "70b0f8d0f94a494e340f77baf7b3260224e73a4f0d113b3b12d9c2b9de457699",
+          "stat": [
+            66310,
+            42236275,
+            99533038,
+            1791141924317999922,
+            1791141924317999922
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/const_10bit.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/const_10bit.y4m",
+          "sha256": "8a4b86f60b65076f081f97a204b1a5403586f15d023655dd05385840dd6f13c5",
+          "stat": [
+            66310,
+            42236283,
+            199065836,
+            1791141938123199268,
+            1791141938123199268
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/coarse_luma.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/coarse_luma.y4m",
+          "sha256": "8ff90a58265fe456558c2c9ccd6976f2cbf72d0e8c6c2b742bc136e83d58275f",
+          "stat": [
+            66310,
+            42236287,
+            99533038,
+            1791141952319404260,
+            1791141952319404260
+          ]
+        },
+        "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/losttapes-recovery-source.mkv": {
+          "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/losttapes-recovery-source.mkv",
+          "sha256": "49be25bf53de5dff4592b9d41165fb719d448045cb08665550317bb8fd13d26c",
+          "stat": [
+            36,
+            10706358903250765016,
+            445436004,
+            1788212798483528446,
+            1790794821017772250
+          ]
+        },
+        "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/amphibia-flicker-e10-source.mkv": {
+          "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/amphibia-flicker-e10-source.mkv",
+          "sha256": "842b5ee22fa8691a586ad1fd053e479529f237a3d5fbb6e37e3ddfbc977bd3c3",
+          "stat": [
+            36,
+            10090748843075140387,
+            525696362,
+            1788506266495518923,
+            1790996426106107183
+          ]
+        },
+        "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/taxi-coarse-24f.mkv": {
+          "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/taxi-coarse-24f.mkv",
+          "sha256": "ccda916bd8585c2daacff6db9d7329f99e1e2f0260c4316d8e8036b09e39d30f",
+          "stat": [
+            36,
+            43084023403730372,
+            139421830,
+            1788590254865753004,
+            1789070660212387473
+          ]
+        },
+        "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/gentlemen-source-33m-150s.mkv": {
+          "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/gentlemen-source-33m-150s.mkv",
+          "sha256": "e41e63a94dd19bb3c6ff584d1872008fb84c196e5d1b33689869e33a5d5f9e5a",
+          "stat": [
+            36,
+            2345967495757887586,
+            1824998502,
+            1788730271202798700,
+            1789070660213387486
+          ]
+        }
+      },
+      "ffmpeg": {
+        "path": "/usr/local/bin/ffmpeg",
+        "sha256": "a9621baa19be96b6cf880e388fc9cdaf1fb23ac5e5daad9672412e1c32c6a0c2"
+      },
+      "failure": "RuntimeError: Encoder failed: /tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-identity/losttapes/deployed/raw-01",
+      "require_complete": false
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-real-identity/report.json",
+      "sha256": "444f59eee2114778828b3db6127d684cd6896f2d8f4d352dcce9d00099dd0840",
+      "bytes": 1647528,
+      "complete": true,
+      "identity_pass": false,
+      "manifest_sha256": "de2c7ff503b44a6391eaafa185d0468d2c7f42777f44b9b55c2346c6938812d8",
+      "harness_sha256": "6bbe9c681be59bda776915af28df4c9e23683583573785e16ccfef5ac9a967ad",
+      "kat_module_sha256": "afe309569f3894fd99e1055f36ea89da7c4fc1d3d41f28abd403e6bbe9272cbf",
+      "filmgrn_module_sha256": "e030e9466002ef7edd56bac97dcdc6f1a840f2e9b4509a8728a1176abf7017bb",
+      "pins": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed",
+          "sha256": "c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b",
+          "stat": [
+            66310,
+            42215035,
+            402772848,
+            1791103146000000000,
+            1791141240994129818
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-baseline": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-baseline",
+          "sha256": "0134fef194357ba5f37a94ac6a45626ab967b7fb9de900ee0ed4e0562860bb57",
+          "stat": [
+            66310,
+            42236368,
+            402772848,
+            1791142473724932538,
+            1791142473724932538
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/losttapes-recovery-source.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/losttapes-recovery-source.mkv",
+          "sha256": "49be25bf53de5dff4592b9d41165fb719d448045cb08665550317bb8fd13d26c",
+          "stat": [
+            66310,
+            42236766,
+            445436004,
+            1791143036230559450,
+            1791143036589563517
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/amphibia-flicker-e10-source.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/amphibia-flicker-e10-source.mkv",
+          "sha256": "842b5ee22fa8691a586ad1fd053e479529f237a3d5fbb6e37e3ddfbc977bd3c3",
+          "stat": [
+            66310,
+            42236767,
+            525696362,
+            1791143040381606514,
+            1791143040786611110
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/taxi-coarse-24f.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/taxi-coarse-24f.mkv",
+          "sha256": "ccda916bd8585c2daacff6db9d7329f99e1e2f0260c4316d8e8036b09e39d30f",
+          "stat": [
+            66310,
+            42236768,
+            139421830,
+            1791143057901806016,
+            1791143058008807239
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/gentlemen-source-33m-150s.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/gentlemen-source-33m-150s.mkv",
+          "sha256": "e41e63a94dd19bb3c6ff584d1872008fb84c196e5d1b33689869e33a5d5f9e5a",
+          "stat": [
+            66310,
+            42236769,
+            1824998502,
+            1791143170859122994,
+            1791143172187138768
+          ]
+        }
+      },
+      "ffmpeg": {
+        "path": "/usr/local/bin/ffmpeg",
+        "sha256": "a9621baa19be96b6cf880e388fc9cdaf1fb23ac5e5daad9672412e1c32c6a0c2"
+      },
+      "failure": "Observed state sets differ; new/missing states are rejected, not waived as repeat variability",
+      "require_complete": true
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-losttapes-extension/report.json",
+      "sha256": "a822df393c9511822737ac9df2e8a491b7dfa56bf00980182c4a862480f23b45",
+      "bytes": 776939,
+      "complete": true,
+      "identity_pass": true,
+      "manifest_sha256": "402ac343de28b0300fb559faa0b0fe02673bf3b90dcfe7352fc2cbf4d1c83cdd",
+      "harness_sha256": "6bbe9c681be59bda776915af28df4c9e23683583573785e16ccfef5ac9a967ad",
+      "kat_module_sha256": "afe309569f3894fd99e1055f36ea89da7c4fc1d3d41f28abd403e6bbe9272cbf",
+      "filmgrn_module_sha256": "e030e9466002ef7edd56bac97dcdc6f1a840f2e9b4509a8728a1176abf7017bb",
+      "pins": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed",
+          "sha256": "c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b",
+          "stat": [
+            66310,
+            42215035,
+            402772848,
+            1791103146000000000,
+            1791141240994129818
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-baseline": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-baseline",
+          "sha256": "0134fef194357ba5f37a94ac6a45626ab967b7fb9de900ee0ed4e0562860bb57",
+          "stat": [
+            66310,
+            42236368,
+            402772848,
+            1791142473724932538,
+            1791142473724932538
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/losttapes-recovery-source.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/losttapes-recovery-source.mkv",
+          "sha256": "49be25bf53de5dff4592b9d41165fb719d448045cb08665550317bb8fd13d26c",
+          "stat": [
+            66310,
+            42236766,
+            445436004,
+            1791143036230559450,
+            1791143036589563517
+          ]
+        }
+      },
+      "ffmpeg": {
+        "path": "/usr/local/bin/ffmpeg",
+        "sha256": "a9621baa19be96b6cf880e388fc9cdaf1fb23ac5e5daad9672412e1c32c6a0c2"
+      },
+      "require_complete": true
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/candidate-paired-profiles/report.json",
+      "sha256": "edfa2fc07ce7623e8cd5eb3655567bb1516c80d338a2b81cfae0dfa592cdb1f5",
+      "bytes": 653763,
+      "complete": true,
+      "observed_state_sets_equal": true,
+      "manifest_sha256": "9e8bea5d967b9cc737aae43b51593cff8aaf5ee13bb72b90df84c216969d2806",
+      "helper_sha256": {
+        "paired_profile.py": "45d43613e8e7977d6601e71fc4b35396c7e7a2435d79d96d14ce3c73610f6d5d",
+        "repeat_identity.py": "6bbe9c681be59bda776915af28df4c9e23683583573785e16ccfef5ac9a967ad",
+        "profile_summary.py": "4008b7b6e856d7c80e38d4b413090fdb586da6d2f36c3c39f91e18881fe355a5",
+        "filmgrn.py": "e030e9466002ef7edd56bac97dcdc6f1a840f2e9b4509a8728a1176abf7017bb"
+      },
+      "pins": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed",
+          "sha256": "c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b",
+          "stat": [
+            66310,
+            42215035,
+            402772848,
+            1791103146000000000,
+            1791141240994129818
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-candidate": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-candidate",
+          "sha256": "54ccad2b403a833521201a62da95306da305cb290a9b9bee8c9826ffee757d89",
+          "stat": [
+            66310,
+            42238835,
+            402756464,
+            1791144492557361169,
+            1791144555244211427
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/losttapes-recovery-source.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/losttapes-recovery-source.mkv",
+          "sha256": "49be25bf53de5dff4592b9d41165fb719d448045cb08665550317bb8fd13d26c",
+          "stat": [
+            66310,
+            42236766,
+            445436004,
+            1791143036230559450,
+            1791143036589563517
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/amphibia-flicker-e10-source.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/amphibia-flicker-e10-source.mkv",
+          "sha256": "842b5ee22fa8691a586ad1fd053e479529f237a3d5fbb6e37e3ddfbc977bd3c3",
+          "stat": [
+            66310,
+            42236767,
+            525696362,
+            1791143040381606514,
+            1791143040786611110
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/taxi-coarse-24f.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/taxi-coarse-24f.mkv",
+          "sha256": "ccda916bd8585c2daacff6db9d7329f99e1e2f0260c4316d8e8036b09e39d30f",
+          "stat": [
+            66310,
+            42236768,
+            139421830,
+            1791143057901806016,
+            1791143058008807239
+          ]
+        }
+      },
+      "require_complete": true
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-paired-profiles/report.json",
+      "sha256": "d014fe3f894435c6eba27f080e6487c11df7fa782ae991ee0af370f54fe0a3f8",
+      "bytes": 653559,
+      "complete": true,
+      "observed_state_sets_equal": false,
+      "manifest_sha256": "a35547dc5df56dfc80b9cc233131b6bf47ff31df57757f7c6a195da691a3adfe",
+      "helper_sha256": {
+        "paired_profile.py": "45d43613e8e7977d6601e71fc4b35396c7e7a2435d79d96d14ce3c73610f6d5d",
+        "repeat_identity.py": "6bbe9c681be59bda776915af28df4c9e23683583573785e16ccfef5ac9a967ad",
+        "profile_summary.py": "4008b7b6e856d7c80e38d4b413090fdb586da6d2f36c3c39f91e18881fe355a5",
+        "filmgrn.py": "e030e9466002ef7edd56bac97dcdc6f1a840f2e9b4509a8728a1176abf7017bb"
+      },
+      "pins": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed",
+          "sha256": "c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b",
+          "stat": [
+            66310,
+            42215035,
+            402772848,
+            1791103146000000000,
+            1791141240994129818
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels",
+          "sha256": "be7a50a1681fc5aa9a7133533f081d4e3253b2c74bc639605358f69d591ababe",
+          "stat": [
+            66310,
+            42238850,
+            403075952,
+            1791145184022577654,
+            1791145254488619300
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/losttapes-recovery-source.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/losttapes-recovery-source.mkv",
+          "sha256": "49be25bf53de5dff4592b9d41165fb719d448045cb08665550317bb8fd13d26c",
+          "stat": [
+            66310,
+            42236766,
+            445436004,
+            1791143036230559450,
+            1791143036589563517
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/amphibia-flicker-e10-source.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/amphibia-flicker-e10-source.mkv",
+          "sha256": "842b5ee22fa8691a586ad1fd053e479529f237a3d5fbb6e37e3ddfbc977bd3c3",
+          "stat": [
+            66310,
+            42236767,
+            525696362,
+            1791143040381606514,
+            1791143040786611110
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/taxi-coarse-24f.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/taxi-coarse-24f.mkv",
+          "sha256": "ccda916bd8585c2daacff6db9d7329f99e1e2f0260c4316d8e8036b09e39d30f",
+          "stat": [
+            66310,
+            42236768,
+            139421830,
+            1791143057901806016,
+            1791143058008807239
+          ]
+        }
+      },
+      "require_complete": true
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json",
+      "sha256": "52572083f29e37fef57d0b5030c5d8d7a9a34dd49c79499ee2ef749f9bc0758b",
+      "bytes": 2162693,
+      "complete": true,
+      "identity_pass": true,
+      "manifest_sha256": "a1a88346b5ac7f231e7b0b9a68afea87bdae6e1366e6f20b539df9b565079281",
+      "harness_sha256": "6bbe9c681be59bda776915af28df4c9e23683583573785e16ccfef5ac9a967ad",
+      "kat_module_sha256": "afe309569f3894fd99e1055f36ea89da7c4fc1d3d41f28abd403e6bbe9272cbf",
+      "filmgrn_module_sha256": "e030e9466002ef7edd56bac97dcdc6f1a840f2e9b4509a8728a1176abf7017bb",
+      "pins": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed",
+          "sha256": "c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b",
+          "stat": [
+            66310,
+            42215035,
+            402772848,
+            1791103146000000000,
+            1791141240994129818
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels",
+          "sha256": "be7a50a1681fc5aa9a7133533f081d4e3253b2c74bc639605358f69d591ababe",
+          "stat": [
+            66310,
+            42238850,
+            403075952,
+            1791145184022577654,
+            1791145254488619300
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/const_luma.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/const_luma.y4m",
+          "sha256": "70b0f8d0f94a494e340f77baf7b3260224e73a4f0d113b3b12d9c2b9de457699",
+          "stat": [
+            66310,
+            42236275,
+            99533038,
+            1791141924317999922,
+            1791141924317999922
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/warmup_luma.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/warmup_luma.y4m",
+          "sha256": "1756c5da45ae79337888ac7a776b16cf897bb75d87b7932bd2848c036f76fd25",
+          "stat": [
+            66310,
+            42236274,
+            99533038,
+            1791141926004024268,
+            1791141926004024268
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/ramp_luma.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/ramp_luma.y4m",
+          "sha256": "5d51a010c97f9b14d7be3360a2f4023b499eb67523e5d436e1e7f9ccd4eab6ef",
+          "stat": [
+            66310,
+            42236276,
+            99533038,
+            1791141927986052888,
+            1791141927986052888
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/chroma_corr.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/chroma_corr.y4m",
+          "sha256": "653bc8c44c7458d4b83e9e00c0617f7c642f7ffb7fe60093f83c67abb0f13c96",
+          "stat": [
+            66310,
+            42236277,
+            99533038,
+            1791141931237099833,
+            1791141931237099833
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/chroma_ind.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/chroma_ind.y4m",
+          "sha256": "20b947ea2d890cc9d27935ecf77de8cf43462d3f3bd2ddcdd4a068a4efa369e2",
+          "stat": [
+            66310,
+            42236278,
+            99533038,
+            1791141933145127385,
+            1791141933145127385
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/clean.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/clean.y4m",
+          "sha256": "832108e9c7641b890251fdf45ca52e3bbfa7a82bb7699d8772f3d3328200b49d",
+          "stat": [
+            66310,
+            42236280,
+            99533038,
+            1791141933835137349,
+            1791141933835137349
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/cut.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/cut.y4m",
+          "sha256": "8330823a5efe34915722b18b7301977e8ee05ad52a4044ef8c693b65c9a4f90f",
+          "stat": [
+            66310,
+            42236281,
+            199066030,
+            1791141936170171067,
+            1791141936170171067
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/const_10bit.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/const_10bit.y4m",
+          "sha256": "8a4b86f60b65076f081f97a204b1a5403586f15d023655dd05385840dd6f13c5",
+          "stat": [
+            66310,
+            42236283,
+            199065836,
+            1791141938123199268,
+            1791141938123199268
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/const_hlg.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/const_hlg.y4m",
+          "sha256": "8a4b86f60b65076f081f97a204b1a5403586f15d023655dd05385840dd6f13c5",
+          "stat": [
+            66310,
+            42236284,
+            199065836,
+            1791141940080227528,
+            1791141940080227528
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/const_4k10_pq.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/const_4k10_pq.y4m",
+          "sha256": "e01c88cb6939dec8e46def47db65fd39bd015c93545e1a67e2e74dc4ff2ef4f2",
+          "stat": [
+            66310,
+            42236285,
+            597196988,
+            1791141947665337056,
+            1791141947665337056
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/coarse_luma.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/coarse_luma.y4m",
+          "sha256": "8ff90a58265fe456558c2c9ccd6976f2cbf72d0e8c6c2b742bc136e83d58275f",
+          "stat": [
+            66310,
+            42236287,
+            99533038,
+            1791141952319404260,
+            1791141952319404260
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/detail_luma.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/detail_luma.y4m",
+          "sha256": "9dac11b62ee12756f11749d8031053cd3cb3228130ef6d79ff5720c970509778",
+          "stat": [
+            66310,
+            42236288,
+            99533038,
+            1791141956264461225,
+            1791141956264461225
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/auto_retain_flat.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/auto_retain_flat.y4m",
+          "sha256": "70b0f8d0f94a494e340f77baf7b3260224e73a4f0d113b3b12d9c2b9de457699",
+          "stat": [
+            66310,
+            42236290,
+            99533038,
+            1791141958405492141,
+            1791141958405492141
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/auto_retain_detail.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/auto_retain_detail.y4m",
+          "sha256": "9dac11b62ee12756f11749d8031053cd3cb3228130ef6d79ff5720c970509778",
+          "stat": [
+            66310,
+            42236293,
+            99533038,
+            1791141962199546926,
+            1791141962199546926
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/dark_luma.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/dark_luma.y4m",
+          "sha256": "f66e11c5ea688c552efe6808603c4844732fb4d8299ffbdc2c466add951c4127",
+          "stat": [
+            66310,
+            42236295,
+            199065836,
+            1791141964053573698,
+            1791141964053573698
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/clipped_chroma_10bit.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/clipped_chroma_10bit.y4m",
+          "sha256": "3034a54abe03a1dd23a48ca9de86debd5c0200bce4175452de302726f818598d",
+          "stat": [
+            66310,
+            42236296,
+            31850730,
+            1791141964537580687,
+            1791141964537580687
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/clipped_chroma_corr.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/clipped_chroma_corr.y4m",
+          "sha256": "37cbd024169ffaaa8f537482370d3d7e558e4b6c49602dbc75b54789d3a16997",
+          "stat": [
+            66310,
+            42236297,
+            31850730,
+            1791141964971586954,
+            1791141964971586954
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/clipped_chroma_8bit.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/clipped_chroma_8bit.y4m",
+          "sha256": "810208c8b0fb78fc255e9b7f6150e129ee405843bf9c41fdce080efa5d57a716",
+          "stat": [
+            66310,
+            42236298,
+            15925484,
+            1791141965259591113,
+            1791141965259591113
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/retain_luma.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/retain_luma.y4m",
+          "sha256": "70b0f8d0f94a494e340f77baf7b3260224e73a4f0d113b3b12d9c2b9de457699",
+          "stat": [
+            66310,
+            42236299,
+            99533038,
+            1791141966768612902,
+            1791141966768612902
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/retain_10bit.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/retain_10bit.y4m",
+          "sha256": "8a4b86f60b65076f081f97a204b1a5403586f15d023655dd05385840dd6f13c5",
+          "stat": [
+            66310,
+            42236300,
+            199065836,
+            1791141968566638865,
+            1791141968566638865
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/cut_grainy.y4m": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-sources/cut_grainy.y4m",
+          "sha256": "f196107594a94ed2db1109f591cc982d17b480d5181ac6874958b2863817cbe5",
+          "stat": [
+            66310,
+            42236302,
+            398131628,
+            1791141971742684726,
+            1791141971742684726
+          ]
+        }
+      },
+      "ffmpeg": {
+        "path": "/usr/local/bin/ffmpeg",
+        "sha256": "a9621baa19be96b6cf880e388fc9cdaf1fb23ac5e5daad9672412e1c32c6a0c2"
+      },
+      "require_complete": true
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-real-identity/report.json",
+      "sha256": "06c83ff1ae5bd1f58436de51994b5b5839a45d5ce42ef2484983e92f9f961abf",
+      "bytes": 1882447,
+      "complete": true,
+      "identity_pass": true,
+      "manifest_sha256": "a35547dc5df56dfc80b9cc233131b6bf47ff31df57757f7c6a195da691a3adfe",
+      "harness_sha256": "6bbe9c681be59bda776915af28df4c9e23683583573785e16ccfef5ac9a967ad",
+      "kat_module_sha256": "afe309569f3894fd99e1055f36ea89da7c4fc1d3d41f28abd403e6bbe9272cbf",
+      "filmgrn_module_sha256": "e030e9466002ef7edd56bac97dcdc6f1a840f2e9b4509a8728a1176abf7017bb",
+      "pins": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed",
+          "sha256": "c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b",
+          "stat": [
+            66310,
+            42215035,
+            402772848,
+            1791103146000000000,
+            1791141240994129818
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels",
+          "sha256": "be7a50a1681fc5aa9a7133533f081d4e3253b2c74bc639605358f69d591ababe",
+          "stat": [
+            66310,
+            42238850,
+            403075952,
+            1791145184022577654,
+            1791145254488619300
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/losttapes-recovery-source.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/losttapes-recovery-source.mkv",
+          "sha256": "49be25bf53de5dff4592b9d41165fb719d448045cb08665550317bb8fd13d26c",
+          "stat": [
+            66310,
+            42236766,
+            445436004,
+            1791143036230559450,
+            1791143036589563517
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/amphibia-flicker-e10-source.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/amphibia-flicker-e10-source.mkv",
+          "sha256": "842b5ee22fa8691a586ad1fd053e479529f237a3d5fbb6e37e3ddfbc977bd3c3",
+          "stat": [
+            66310,
+            42236767,
+            525696362,
+            1791143040381606514,
+            1791143040786611110
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/taxi-coarse-24f.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/taxi-coarse-24f.mkv",
+          "sha256": "ccda916bd8585c2daacff6db9d7329f99e1e2f0260c4316d8e8036b09e39d30f",
+          "stat": [
+            66310,
+            42236768,
+            139421830,
+            1791143057901806016,
+            1791143058008807239
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/gentlemen-source-33m-150s.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/gentlemen-source-33m-150s.mkv",
+          "sha256": "e41e63a94dd19bb3c6ff584d1872008fb84c196e5d1b33689869e33a5d5f9e5a",
+          "stat": [
+            66310,
+            42236769,
+            1824998502,
+            1791143170859122994,
+            1791143172187138768
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/silo-fine-24f.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/silo-fine-24f.mkv",
+          "sha256": "040468f686dc66c753c2a2899261b3434fda6f33e257d5047bfda14bd241607b",
+          "stat": [
+            66310,
+            42238851,
+            14893385,
+            1791145219774107136,
+            1791145219790107373
+          ]
+        }
+      },
+      "ffmpeg": {
+        "path": "/usr/local/bin/ffmpeg",
+        "sha256": "a9621baa19be96b6cf880e388fc9cdaf1fb23ac5e5daad9672412e1c32c6a0c2"
+      },
+      "require_complete": true
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-state-extension/report.json",
+      "sha256": "f42ec77e197e28091629f14bb42a5e22c2be87ed2ed35692a4de8d97e83ab31b",
+      "bytes": 714142,
+      "complete": true,
+      "identity_pass": true,
+      "manifest_sha256": "6aa1a770bda83d0034b6e4ace3fdb56ba264d66121c1198972b42908d2e28e4c",
+      "harness_sha256": "6bbe9c681be59bda776915af28df4c9e23683583573785e16ccfef5ac9a967ad",
+      "kat_module_sha256": "afe309569f3894fd99e1055f36ea89da7c4fc1d3d41f28abd403e6bbe9272cbf",
+      "filmgrn_module_sha256": "e030e9466002ef7edd56bac97dcdc6f1a840f2e9b4509a8728a1176abf7017bb",
+      "pins": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed",
+          "sha256": "c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b",
+          "stat": [
+            66310,
+            42215035,
+            402772848,
+            1791103146000000000,
+            1791141240994129818
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels",
+          "sha256": "be7a50a1681fc5aa9a7133533f081d4e3253b2c74bc639605358f69d591ababe",
+          "stat": [
+            66310,
+            42238850,
+            403075952,
+            1791145184022577654,
+            1791145254488619300
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/taxi-coarse-24f.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/taxi-coarse-24f.mkv",
+          "sha256": "ccda916bd8585c2daacff6db9d7329f99e1e2f0260c4316d8e8036b09e39d30f",
+          "stat": [
+            66310,
+            42236768,
+            139421830,
+            1791143057901806016,
+            1791143058008807239
+          ]
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/gentlemen-source-33m-150s.mkv": {
+          "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/gentlemen-source-33m-150s.mkv",
+          "sha256": "e41e63a94dd19bb3c6ff584d1872008fb84c196e5d1b33689869e33a5d5f9e5a",
+          "stat": [
+            66310,
+            42236769,
+            1824998502,
+            1791143170859122994,
+            1791143172187138768
+          ]
+        }
+      },
+      "ffmpeg": {
+        "path": "/usr/local/bin/ffmpeg",
+        "sha256": "a9621baa19be96b6cf880e388fc9cdaf1fb23ac5e5daad9672412e1c32c6a0c2"
+      },
+      "require_complete": true
+    }
+  ],
+  "decode_reports": [
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/profile-grain-off-decodes/report.json",
+      "sha256": "788724da916ffb3cb1b72786625ac46efc4505203013b8c74a261c009531d31e",
+      "bytes": 255749,
+      "complete": true,
+      "decoder": {
+        "path": "/usr/local/bin/ffmpeg",
+        "sha256": "a9621baa19be96b6cf880e388fc9cdaf1fb23ac5e5daad9672412e1c32c6a0c2"
+      }
+    }
+  ],
+  "errors": [],
+  "pending": [
+    "taxi_hdr av1: candidate is missing 1 known production state(s)",
+    "taxi_hdr decoded_grain_off: candidate is missing 1 known production state(s)",
+    "gentlemen av1: candidate is missing 1 known production state(s)",
+    "gentlemen decoded_grain_off: candidate is missing 1 known production state(s)"
+  ],
+  "comparisons": {
+    "const_luma": {
+      "source_sha256": "70b0f8d0f94a494e340f77baf7b3260224e73a4f0d113b3b12d9c2b9de457699",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 10,
+          "av1": 10
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "9fa3961f412fd3e7fbc972c4f20efc08",
+                "pixel_md5": "22d5fe99e76e311b2ae6d233cb079560",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              },
+              "runs": 10
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "9fa3961f412fd3e7fbc972c4f20efc08",
+                "pixel_md5": "22d5fe99e76e311b2ae6d233cb079560",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "7d6b0c30ccd4044b6b1ec855a817f442",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              },
+              "runs": 10
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "7d6b0c30ccd4044b6b1ec855a817f442",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "92d12c01154279ef20213af320c259fe",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 10
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "92d12c01154279ef20213af320c259fe",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "9fa3961f412fd3e7fbc972c4f20efc08",
+                    "pixel_md5": "22d5fe99e76e311b2ae6d233cb079560",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "9fa3961f412fd3e7fbc972c4f20efc08",
+                "pixel_md5": "22d5fe99e76e311b2ae6d233cb079560",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              }
+            ],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "7d6b0c30ccd4044b6b1ec855a817f442",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "7d6b0c30ccd4044b6b1ec855a817f442",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              }
+            ],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "9fa3961f412fd3e7fbc972c4f20efc08",
+                    "pixel_md5": "22d5fe99e76e311b2ae6d233cb079560",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "9fa3961f412fd3e7fbc972c4f20efc08",
+                    "pixel_md5": "22d5fe99e76e311b2ae6d233cb079560",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "7d6b0c30ccd4044b6b1ec855a817f442",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "7d6b0c30ccd4044b6b1ec855a817f442",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "warmup_luma": {
+      "source_sha256": "1756c5da45ae79337888ac7a776b16cf897bb75d87b7932bd2848c036f76fd25",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "a61b3045c5a3d8affc396cc58f7db445",
+                "pixel_md5": "22fa1b7da9f8bfa5b64b78b1caaa3be2",
+                "table_md5": "c941b67066a289b2d13784f9d968120c"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "a61b3045c5a3d8affc396cc58f7db445",
+                "pixel_md5": "22fa1b7da9f8bfa5b64b78b1caaa3be2",
+                "table_md5": "c941b67066a289b2d13784f9d968120c"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "49c261be797b3e9d15cbd57c89ff3561",
+                "table_md5": "c941b67066a289b2d13784f9d968120c"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "49c261be797b3e9d15cbd57c89ff3561",
+                "table_md5": "c941b67066a289b2d13784f9d968120c"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "39bfaee5fafc7ca3527d99c5c1371568",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "39bfaee5fafc7ca3527d99c5c1371568",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "a61b3045c5a3d8affc396cc58f7db445",
+                    "pixel_md5": "22fa1b7da9f8bfa5b64b78b1caaa3be2",
+                    "table_md5": "c941b67066a289b2d13784f9d968120c"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "a61b3045c5a3d8affc396cc58f7db445",
+                    "pixel_md5": "22fa1b7da9f8bfa5b64b78b1caaa3be2",
+                    "table_md5": "c941b67066a289b2d13784f9d968120c"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "49c261be797b3e9d15cbd57c89ff3561",
+                    "table_md5": "c941b67066a289b2d13784f9d968120c"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "49c261be797b3e9d15cbd57c89ff3561",
+                    "table_md5": "c941b67066a289b2d13784f9d968120c"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "ramp_luma": {
+      "source_sha256": "5d51a010c97f9b14d7be3360a2f4023b499eb67523e5d436e1e7f9ccd4eab6ef",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "2f5513976d84613ea71d6178549b7534",
+                "pixel_md5": "7a32263672159c752b8636c51cafcc9c",
+                "table_md5": "444517936bb198ce5dc840ecdf82d454"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "2f5513976d84613ea71d6178549b7534",
+                "pixel_md5": "7a32263672159c752b8636c51cafcc9c",
+                "table_md5": "444517936bb198ce5dc840ecdf82d454"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "621e08bf688dd8353c3b807eee64f395",
+                "table_md5": "444517936bb198ce5dc840ecdf82d454"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "621e08bf688dd8353c3b807eee64f395",
+                "table_md5": "444517936bb198ce5dc840ecdf82d454"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "9b17851a83d1009121123bc6f8cb5978",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "9b17851a83d1009121123bc6f8cb5978",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "2f5513976d84613ea71d6178549b7534",
+                    "pixel_md5": "7a32263672159c752b8636c51cafcc9c",
+                    "table_md5": "444517936bb198ce5dc840ecdf82d454"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "2f5513976d84613ea71d6178549b7534",
+                    "pixel_md5": "7a32263672159c752b8636c51cafcc9c",
+                    "table_md5": "444517936bb198ce5dc840ecdf82d454"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "621e08bf688dd8353c3b807eee64f395",
+                    "table_md5": "444517936bb198ce5dc840ecdf82d454"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "621e08bf688dd8353c3b807eee64f395",
+                    "table_md5": "444517936bb198ce5dc840ecdf82d454"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "chroma_corr": {
+      "source_sha256": "653bc8c44c7458d4b83e9e00c0617f7c642f7ffb7fe60093f83c67abb0f13c96",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "8f79f2fa1a2bf9a846aa196b04503566",
+                "pixel_md5": "ba8be321a8361c86a8d08c342533aaed",
+                "table_md5": "eaaede4a43cc7db9adf3314e5bb3330a"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "8f79f2fa1a2bf9a846aa196b04503566",
+                "pixel_md5": "ba8be321a8361c86a8d08c342533aaed",
+                "table_md5": "eaaede4a43cc7db9adf3314e5bb3330a"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "16c77fcaf5dc54c7bf92c9d2f8cd7e05",
+                "table_md5": "eaaede4a43cc7db9adf3314e5bb3330a"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "16c77fcaf5dc54c7bf92c9d2f8cd7e05",
+                "table_md5": "eaaede4a43cc7db9adf3314e5bb3330a"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "1c14856089bcbeec3f1109ae4cccc2db",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "1c14856089bcbeec3f1109ae4cccc2db",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "8f79f2fa1a2bf9a846aa196b04503566",
+                    "pixel_md5": "ba8be321a8361c86a8d08c342533aaed",
+                    "table_md5": "eaaede4a43cc7db9adf3314e5bb3330a"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "8f79f2fa1a2bf9a846aa196b04503566",
+                    "pixel_md5": "ba8be321a8361c86a8d08c342533aaed",
+                    "table_md5": "eaaede4a43cc7db9adf3314e5bb3330a"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "16c77fcaf5dc54c7bf92c9d2f8cd7e05",
+                    "table_md5": "eaaede4a43cc7db9adf3314e5bb3330a"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "16c77fcaf5dc54c7bf92c9d2f8cd7e05",
+                    "table_md5": "eaaede4a43cc7db9adf3314e5bb3330a"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "chroma_ind": {
+      "source_sha256": "20b947ea2d890cc9d27935ecf77de8cf43462d3f3bd2ddcdd4a068a4efa369e2",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "89b69ee7eae1084ffed9340169864095",
+                "pixel_md5": "3cfecaa0ea3e4f82eda948c6f02af543",
+                "table_md5": "c0a868a3424a9bdb12410e33401d787c"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "89b69ee7eae1084ffed9340169864095",
+                "pixel_md5": "3cfecaa0ea3e4f82eda948c6f02af543",
+                "table_md5": "c0a868a3424a9bdb12410e33401d787c"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "af0d6c989042480deb5762b085e82cf3",
+                "table_md5": "c0a868a3424a9bdb12410e33401d787c"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "af0d6c989042480deb5762b085e82cf3",
+                "table_md5": "c0a868a3424a9bdb12410e33401d787c"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "708db080405e9d67f69d22541f8ee332",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "708db080405e9d67f69d22541f8ee332",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "89b69ee7eae1084ffed9340169864095",
+                    "pixel_md5": "3cfecaa0ea3e4f82eda948c6f02af543",
+                    "table_md5": "c0a868a3424a9bdb12410e33401d787c"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "89b69ee7eae1084ffed9340169864095",
+                    "pixel_md5": "3cfecaa0ea3e4f82eda948c6f02af543",
+                    "table_md5": "c0a868a3424a9bdb12410e33401d787c"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "af0d6c989042480deb5762b085e82cf3",
+                    "table_md5": "c0a868a3424a9bdb12410e33401d787c"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "af0d6c989042480deb5762b085e82cf3",
+                    "table_md5": "c0a868a3424a9bdb12410e33401d787c"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "clean": {
+      "source_sha256": "832108e9c7641b890251fdf45ca52e3bbfa7a82bb7699d8772f3d3328200b49d",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "7265022f250e1bacee5aa713fc52d37c",
+                "pixel_md5": "110daada498db4321e45133edc48a34b",
+                "table_md5": "5bb2135d3b4b715cf62c7737282445e8"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "7265022f250e1bacee5aa713fc52d37c",
+                "pixel_md5": "110daada498db4321e45133edc48a34b",
+                "table_md5": "5bb2135d3b4b715cf62c7737282445e8"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "43293cfb1f370a08c71547c8c51c34c9",
+                "table_md5": "5bb2135d3b4b715cf62c7737282445e8"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "43293cfb1f370a08c71547c8c51c34c9",
+                "table_md5": "5bb2135d3b4b715cf62c7737282445e8"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "110daada498db4321e45133edc48a34b",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "110daada498db4321e45133edc48a34b",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "7265022f250e1bacee5aa713fc52d37c",
+                    "pixel_md5": "110daada498db4321e45133edc48a34b",
+                    "table_md5": "5bb2135d3b4b715cf62c7737282445e8"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "7265022f250e1bacee5aa713fc52d37c",
+                    "pixel_md5": "110daada498db4321e45133edc48a34b",
+                    "table_md5": "5bb2135d3b4b715cf62c7737282445e8"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "43293cfb1f370a08c71547c8c51c34c9",
+                    "table_md5": "5bb2135d3b4b715cf62c7737282445e8"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "43293cfb1f370a08c71547c8c51c34c9",
+                    "table_md5": "5bb2135d3b4b715cf62c7737282445e8"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "cut": {
+      "source_sha256": "8330823a5efe34915722b18b7301977e8ee05ad52a4044ef8c693b65c9a4f90f",
+      "frames_per_run": 64,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "5479f60c62c10633c250281376802934",
+                "pixel_md5": "6f9e5f7bd9ec3d00004e01a32f4c8a71",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "5479f60c62c10633c250281376802934",
+                "pixel_md5": "6f9e5f7bd9ec3d00004e01a32f4c8a71",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "92c02349a76308f3c7407bb96d5d237a",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "92c02349a76308f3c7407bb96d5d237a",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "370761e6d28db56e3b8b08cba8fd8d57",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "370761e6d28db56e3b8b08cba8fd8d57",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "5479f60c62c10633c250281376802934",
+                    "pixel_md5": "6f9e5f7bd9ec3d00004e01a32f4c8a71",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "5479f60c62c10633c250281376802934",
+                    "pixel_md5": "6f9e5f7bd9ec3d00004e01a32f4c8a71",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "92c02349a76308f3c7407bb96d5d237a",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "92c02349a76308f3c7407bb96d5d237a",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "const_10bit": {
+      "source_sha256": "8a4b86f60b65076f081f97a204b1a5403586f15d023655dd05385840dd6f13c5",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 10,
+          "av1": 10
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "3ca10c41d62ce4b4d86224066f5e1dc3",
+                "pixel_md5": "31433edee892d96f064f341b9d43cfea",
+                "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+              },
+              "runs": 10
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "3ca10c41d62ce4b4d86224066f5e1dc3",
+                "pixel_md5": "31433edee892d96f064f341b9d43cfea",
+                "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "9243fcb8a9197640fabb64670f17e875",
+                "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+              },
+              "runs": 10
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "9243fcb8a9197640fabb64670f17e875",
+                "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "8f3bdefc5d9146ff39d4864da8eb0455",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 10
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "8f3bdefc5d9146ff39d4864da8eb0455",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "3ca10c41d62ce4b4d86224066f5e1dc3",
+                    "pixel_md5": "31433edee892d96f064f341b9d43cfea",
+                    "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "3ca10c41d62ce4b4d86224066f5e1dc3",
+                "pixel_md5": "31433edee892d96f064f341b9d43cfea",
+                "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+              }
+            ],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "9243fcb8a9197640fabb64670f17e875",
+                    "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "9243fcb8a9197640fabb64670f17e875",
+                "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+              }
+            ],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "3ca10c41d62ce4b4d86224066f5e1dc3",
+                    "pixel_md5": "31433edee892d96f064f341b9d43cfea",
+                    "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "3ca10c41d62ce4b4d86224066f5e1dc3",
+                    "pixel_md5": "31433edee892d96f064f341b9d43cfea",
+                    "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "9243fcb8a9197640fabb64670f17e875",
+                    "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "9243fcb8a9197640fabb64670f17e875",
+                    "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "const_hlg": {
+      "source_sha256": "8a4b86f60b65076f081f97a204b1a5403586f15d023655dd05385840dd6f13c5",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "3ca10c41d62ce4b4d86224066f5e1dc3",
+                "pixel_md5": "31433edee892d96f064f341b9d43cfea",
+                "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "3ca10c41d62ce4b4d86224066f5e1dc3",
+                "pixel_md5": "31433edee892d96f064f341b9d43cfea",
+                "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "46a3133d7de1e02f5ae4dbf00916bd03",
+                "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "46a3133d7de1e02f5ae4dbf00916bd03",
+                "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "8f3bdefc5d9146ff39d4864da8eb0455",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "8f3bdefc5d9146ff39d4864da8eb0455",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "3ca10c41d62ce4b4d86224066f5e1dc3",
+                    "pixel_md5": "31433edee892d96f064f341b9d43cfea",
+                    "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "3ca10c41d62ce4b4d86224066f5e1dc3",
+                    "pixel_md5": "31433edee892d96f064f341b9d43cfea",
+                    "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "46a3133d7de1e02f5ae4dbf00916bd03",
+                    "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "46a3133d7de1e02f5ae4dbf00916bd03",
+                    "table_md5": "79690d5cf3221532c624a7eb7ca8e9af"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "const_4k10_pq": {
+      "source_sha256": "e01c88cb6939dec8e46def47db65fd39bd015c93545e1a67e2e74dc4ff2ef4f2",
+      "frames_per_run": 24,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "22b3f1d5c6d4f5e0ed04ef9095ac055e",
+                "pixel_md5": "be6fabb86d57d622defff8328a4e1364",
+                "table_md5": "50638f9c4305cbd6791b914f303ee1df"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "22b3f1d5c6d4f5e0ed04ef9095ac055e",
+                "pixel_md5": "be6fabb86d57d622defff8328a4e1364",
+                "table_md5": "50638f9c4305cbd6791b914f303ee1df"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "7a1ae8fe820c43ce37a381d1467562b1",
+                "table_md5": "50638f9c4305cbd6791b914f303ee1df"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "7a1ae8fe820c43ce37a381d1467562b1",
+                "table_md5": "50638f9c4305cbd6791b914f303ee1df"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "234f1c4f148e5efc05aa163080b8dd54",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "234f1c4f148e5efc05aa163080b8dd54",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "22b3f1d5c6d4f5e0ed04ef9095ac055e",
+                    "pixel_md5": "be6fabb86d57d622defff8328a4e1364",
+                    "table_md5": "50638f9c4305cbd6791b914f303ee1df"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "22b3f1d5c6d4f5e0ed04ef9095ac055e",
+                    "pixel_md5": "be6fabb86d57d622defff8328a4e1364",
+                    "table_md5": "50638f9c4305cbd6791b914f303ee1df"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "7a1ae8fe820c43ce37a381d1467562b1",
+                    "table_md5": "50638f9c4305cbd6791b914f303ee1df"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "7a1ae8fe820c43ce37a381d1467562b1",
+                    "table_md5": "50638f9c4305cbd6791b914f303ee1df"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "coarse_luma": {
+      "source_sha256": "8ff90a58265fe456558c2c9ccd6976f2cbf72d0e8c6c2b742bc136e83d58275f",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 10,
+          "av1": 10
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "06245c8da5672372e52afd3f159a0011",
+                "pixel_md5": "9a400f65a65e3ea29ff46f9d0f022c4c",
+                "table_md5": "2b497ef85819f801852b0d480d1b8a9b"
+              },
+              "runs": 10
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "06245c8da5672372e52afd3f159a0011",
+                "pixel_md5": "9a400f65a65e3ea29ff46f9d0f022c4c",
+                "table_md5": "2b497ef85819f801852b0d480d1b8a9b"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "a5aedf748b57286b4a9e2193b4f380e3",
+                "table_md5": "2b497ef85819f801852b0d480d1b8a9b"
+              },
+              "runs": 10
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "a5aedf748b57286b4a9e2193b4f380e3",
+                "table_md5": "2b497ef85819f801852b0d480d1b8a9b"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "634392f80139fbfb5278a0ecc409ea8f",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 10
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "634392f80139fbfb5278a0ecc409ea8f",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "06245c8da5672372e52afd3f159a0011",
+                    "pixel_md5": "9a400f65a65e3ea29ff46f9d0f022c4c",
+                    "table_md5": "2b497ef85819f801852b0d480d1b8a9b"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "06245c8da5672372e52afd3f159a0011",
+                "pixel_md5": "9a400f65a65e3ea29ff46f9d0f022c4c",
+                "table_md5": "2b497ef85819f801852b0d480d1b8a9b"
+              }
+            ],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "a5aedf748b57286b4a9e2193b4f380e3",
+                    "table_md5": "2b497ef85819f801852b0d480d1b8a9b"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "a5aedf748b57286b4a9e2193b4f380e3",
+                "table_md5": "2b497ef85819f801852b0d480d1b8a9b"
+              }
+            ],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "06245c8da5672372e52afd3f159a0011",
+                    "pixel_md5": "9a400f65a65e3ea29ff46f9d0f022c4c",
+                    "table_md5": "2b497ef85819f801852b0d480d1b8a9b"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "06245c8da5672372e52afd3f159a0011",
+                    "pixel_md5": "9a400f65a65e3ea29ff46f9d0f022c4c",
+                    "table_md5": "2b497ef85819f801852b0d480d1b8a9b"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "a5aedf748b57286b4a9e2193b4f380e3",
+                    "table_md5": "2b497ef85819f801852b0d480d1b8a9b"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "a5aedf748b57286b4a9e2193b4f380e3",
+                    "table_md5": "2b497ef85819f801852b0d480d1b8a9b"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "detail_luma": {
+      "source_sha256": "9dac11b62ee12756f11749d8031053cd3cb3228130ef6d79ff5720c970509778",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "ef8e3702edb5914db5b21a4976f0b17b",
+                "pixel_md5": "8b7ebb9763a91407e6d89726b3e080ba",
+                "table_md5": "8636262369f3a324bc281e38a8c0513d"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "ef8e3702edb5914db5b21a4976f0b17b",
+                "pixel_md5": "8b7ebb9763a91407e6d89726b3e080ba",
+                "table_md5": "8636262369f3a324bc281e38a8c0513d"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "391b45af9bfc5bccff045cc9079ed842",
+                "table_md5": "8636262369f3a324bc281e38a8c0513d"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "391b45af9bfc5bccff045cc9079ed842",
+                "table_md5": "8636262369f3a324bc281e38a8c0513d"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "9665c6abfb89b8ca9fe4c40928fe3dd3",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "9665c6abfb89b8ca9fe4c40928fe3dd3",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "ef8e3702edb5914db5b21a4976f0b17b",
+                    "pixel_md5": "8b7ebb9763a91407e6d89726b3e080ba",
+                    "table_md5": "8636262369f3a324bc281e38a8c0513d"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "ef8e3702edb5914db5b21a4976f0b17b",
+                    "pixel_md5": "8b7ebb9763a91407e6d89726b3e080ba",
+                    "table_md5": "8636262369f3a324bc281e38a8c0513d"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "391b45af9bfc5bccff045cc9079ed842",
+                    "table_md5": "8636262369f3a324bc281e38a8c0513d"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "391b45af9bfc5bccff045cc9079ed842",
+                    "table_md5": "8636262369f3a324bc281e38a8c0513d"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "auto_retain_flat": {
+      "source_sha256": "70b0f8d0f94a494e340f77baf7b3260224e73a4f0d113b3b12d9c2b9de457699",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "416812761de762549dc4f42f092fa85a",
+                "pixel_md5": "a9c1139cc64f09e34643bdff3b94f450",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "416812761de762549dc4f42f092fa85a",
+                "pixel_md5": "a9c1139cc64f09e34643bdff3b94f450",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "64333e9638907a255ad13b8c322b4190",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "64333e9638907a255ad13b8c322b4190",
+                "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "d8ee661ab07a05677ababce94c863c9f",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "d8ee661ab07a05677ababce94c863c9f",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "416812761de762549dc4f42f092fa85a",
+                    "pixel_md5": "a9c1139cc64f09e34643bdff3b94f450",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "416812761de762549dc4f42f092fa85a",
+                    "pixel_md5": "a9c1139cc64f09e34643bdff3b94f450",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "64333e9638907a255ad13b8c322b4190",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "64333e9638907a255ad13b8c322b4190",
+                    "table_md5": "93268d083a2f252b23ee2641b1f280e6"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "auto_retain_detail": {
+      "source_sha256": "9dac11b62ee12756f11749d8031053cd3cb3228130ef6d79ff5720c970509778",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "550be085dd6b17632ee1819c8b386a9a",
+                "pixel_md5": "941e0f58a14709819d33ded0e7027420",
+                "table_md5": "9cc0dad324c90c9b4367328feb16338b"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "550be085dd6b17632ee1819c8b386a9a",
+                "pixel_md5": "941e0f58a14709819d33ded0e7027420",
+                "table_md5": "9cc0dad324c90c9b4367328feb16338b"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "fc0616ffbc9793e60a70d8f2a34cae8f",
+                "table_md5": "9cc0dad324c90c9b4367328feb16338b"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "fc0616ffbc9793e60a70d8f2a34cae8f",
+                "table_md5": "9cc0dad324c90c9b4367328feb16338b"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "24ebc21aad11ae7d35f3cadb87ef16f9",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "24ebc21aad11ae7d35f3cadb87ef16f9",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "550be085dd6b17632ee1819c8b386a9a",
+                    "pixel_md5": "941e0f58a14709819d33ded0e7027420",
+                    "table_md5": "9cc0dad324c90c9b4367328feb16338b"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "550be085dd6b17632ee1819c8b386a9a",
+                    "pixel_md5": "941e0f58a14709819d33ded0e7027420",
+                    "table_md5": "9cc0dad324c90c9b4367328feb16338b"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "fc0616ffbc9793e60a70d8f2a34cae8f",
+                    "table_md5": "9cc0dad324c90c9b4367328feb16338b"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "fc0616ffbc9793e60a70d8f2a34cae8f",
+                    "table_md5": "9cc0dad324c90c9b4367328feb16338b"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "dark_luma": {
+      "source_sha256": "f66e11c5ea688c552efe6808603c4844732fb4d8299ffbdc2c466add951c4127",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "9555e02f369b526ae6b26b59756e5213",
+                "pixel_md5": "4e679c5a84281a68f7dac1f53d00ba0a",
+                "table_md5": "715e0c79896348e1eb3e2aedad8df986"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "9555e02f369b526ae6b26b59756e5213",
+                "pixel_md5": "4e679c5a84281a68f7dac1f53d00ba0a",
+                "table_md5": "715e0c79896348e1eb3e2aedad8df986"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "566d9eb4fd253251196452ad2ddfbcf1",
+                "table_md5": "715e0c79896348e1eb3e2aedad8df986"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "566d9eb4fd253251196452ad2ddfbcf1",
+                "table_md5": "715e0c79896348e1eb3e2aedad8df986"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "fa94e66d0e0d08d3f330ca310358d26b",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "fa94e66d0e0d08d3f330ca310358d26b",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "9555e02f369b526ae6b26b59756e5213",
+                    "pixel_md5": "4e679c5a84281a68f7dac1f53d00ba0a",
+                    "table_md5": "715e0c79896348e1eb3e2aedad8df986"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "9555e02f369b526ae6b26b59756e5213",
+                    "pixel_md5": "4e679c5a84281a68f7dac1f53d00ba0a",
+                    "table_md5": "715e0c79896348e1eb3e2aedad8df986"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "566d9eb4fd253251196452ad2ddfbcf1",
+                    "table_md5": "715e0c79896348e1eb3e2aedad8df986"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "566d9eb4fd253251196452ad2ddfbcf1",
+                    "table_md5": "715e0c79896348e1eb3e2aedad8df986"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "clipped_chroma_10bit": {
+      "source_sha256": "3034a54abe03a1dd23a48ca9de86debd5c0200bce4175452de302726f818598d",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "2471caf55071851fbf91a0441564e619",
+                "pixel_md5": "d7caf4cd12dcc8afca4e52756e8b0a1f",
+                "table_md5": "c4d9b339299c6e8dca8b07f0657bba48"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "2471caf55071851fbf91a0441564e619",
+                "pixel_md5": "d7caf4cd12dcc8afca4e52756e8b0a1f",
+                "table_md5": "c4d9b339299c6e8dca8b07f0657bba48"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "697deb0b74926a618df5555b2bef1c88",
+                "table_md5": "c4d9b339299c6e8dca8b07f0657bba48"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "697deb0b74926a618df5555b2bef1c88",
+                "table_md5": "c4d9b339299c6e8dca8b07f0657bba48"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "3f2a8d1220916416d0605375680a429c",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "3f2a8d1220916416d0605375680a429c",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "2471caf55071851fbf91a0441564e619",
+                    "pixel_md5": "d7caf4cd12dcc8afca4e52756e8b0a1f",
+                    "table_md5": "c4d9b339299c6e8dca8b07f0657bba48"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "2471caf55071851fbf91a0441564e619",
+                    "pixel_md5": "d7caf4cd12dcc8afca4e52756e8b0a1f",
+                    "table_md5": "c4d9b339299c6e8dca8b07f0657bba48"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "697deb0b74926a618df5555b2bef1c88",
+                    "table_md5": "c4d9b339299c6e8dca8b07f0657bba48"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "697deb0b74926a618df5555b2bef1c88",
+                    "table_md5": "c4d9b339299c6e8dca8b07f0657bba48"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "clipped_chroma_corr": {
+      "source_sha256": "37cbd024169ffaaa8f537482370d3d7e558e4b6c49602dbc75b54789d3a16997",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "1aaac7e8a7567113026e78df14790a05",
+                "pixel_md5": "4d2ebb1765f0d8c5e5b1a9a0b3c8acc2",
+                "table_md5": "fb4ee64ef0954e590c47602c838f1c25"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "1aaac7e8a7567113026e78df14790a05",
+                "pixel_md5": "4d2ebb1765f0d8c5e5b1a9a0b3c8acc2",
+                "table_md5": "fb4ee64ef0954e590c47602c838f1c25"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "5b7bb9e89dcb90132ff22b0be2c34e8e",
+                "table_md5": "fb4ee64ef0954e590c47602c838f1c25"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "5b7bb9e89dcb90132ff22b0be2c34e8e",
+                "table_md5": "fb4ee64ef0954e590c47602c838f1c25"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "3f753662ff1ccdd4ff11c7fa3b653d33",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "3f753662ff1ccdd4ff11c7fa3b653d33",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "1aaac7e8a7567113026e78df14790a05",
+                    "pixel_md5": "4d2ebb1765f0d8c5e5b1a9a0b3c8acc2",
+                    "table_md5": "fb4ee64ef0954e590c47602c838f1c25"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "1aaac7e8a7567113026e78df14790a05",
+                    "pixel_md5": "4d2ebb1765f0d8c5e5b1a9a0b3c8acc2",
+                    "table_md5": "fb4ee64ef0954e590c47602c838f1c25"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "5b7bb9e89dcb90132ff22b0be2c34e8e",
+                    "table_md5": "fb4ee64ef0954e590c47602c838f1c25"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "5b7bb9e89dcb90132ff22b0be2c34e8e",
+                    "table_md5": "fb4ee64ef0954e590c47602c838f1c25"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "clipped_chroma_8bit": {
+      "source_sha256": "810208c8b0fb78fc255e9b7f6150e129ee405843bf9c41fdce080efa5d57a716",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "e8a964fc12f948c2eff3d6fb473c0595",
+                "pixel_md5": "3a168bd11cd9b601a16b1896508f79ca",
+                "table_md5": "302a99deb32711e13c988c360f993cca"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "e8a964fc12f948c2eff3d6fb473c0595",
+                "pixel_md5": "3a168bd11cd9b601a16b1896508f79ca",
+                "table_md5": "302a99deb32711e13c988c360f993cca"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "6cc3e9c67d4973f4754ae7d86a4963c6",
+                "table_md5": "302a99deb32711e13c988c360f993cca"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "6cc3e9c67d4973f4754ae7d86a4963c6",
+                "table_md5": "302a99deb32711e13c988c360f993cca"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "9b9c33e64e25d4137d2b4b0fd6b13619",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "9b9c33e64e25d4137d2b4b0fd6b13619",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "e8a964fc12f948c2eff3d6fb473c0595",
+                    "pixel_md5": "3a168bd11cd9b601a16b1896508f79ca",
+                    "table_md5": "302a99deb32711e13c988c360f993cca"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "e8a964fc12f948c2eff3d6fb473c0595",
+                    "pixel_md5": "3a168bd11cd9b601a16b1896508f79ca",
+                    "table_md5": "302a99deb32711e13c988c360f993cca"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "6cc3e9c67d4973f4754ae7d86a4963c6",
+                    "table_md5": "302a99deb32711e13c988c360f993cca"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "6cc3e9c67d4973f4754ae7d86a4963c6",
+                    "table_md5": "302a99deb32711e13c988c360f993cca"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "retain_luma": {
+      "source_sha256": "70b0f8d0f94a494e340f77baf7b3260224e73a4f0d113b3b12d9c2b9de457699",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "5a496a69a85495c2619116239146cbfb",
+                "pixel_md5": "1f4f4a33f33d17ac708efddd801b27e1",
+                "table_md5": "808138c4ca95541c1a8f2d0752b36d7d"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "5a496a69a85495c2619116239146cbfb",
+                "pixel_md5": "1f4f4a33f33d17ac708efddd801b27e1",
+                "table_md5": "808138c4ca95541c1a8f2d0752b36d7d"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "f9be852d37d6b8a628177f4499363690",
+                "table_md5": "808138c4ca95541c1a8f2d0752b36d7d"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "f9be852d37d6b8a628177f4499363690",
+                "table_md5": "808138c4ca95541c1a8f2d0752b36d7d"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "675b62f6448a8074cdb06d5aa14ac63e",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "675b62f6448a8074cdb06d5aa14ac63e",
+                "decoded_pix_fmt": "yuv420p"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "5a496a69a85495c2619116239146cbfb",
+                    "pixel_md5": "1f4f4a33f33d17ac708efddd801b27e1",
+                    "table_md5": "808138c4ca95541c1a8f2d0752b36d7d"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "5a496a69a85495c2619116239146cbfb",
+                    "pixel_md5": "1f4f4a33f33d17ac708efddd801b27e1",
+                    "table_md5": "808138c4ca95541c1a8f2d0752b36d7d"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "f9be852d37d6b8a628177f4499363690",
+                    "table_md5": "808138c4ca95541c1a8f2d0752b36d7d"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "f9be852d37d6b8a628177f4499363690",
+                    "table_md5": "808138c4ca95541c1a8f2d0752b36d7d"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "retain_10bit": {
+      "source_sha256": "8a4b86f60b65076f081f97a204b1a5403586f15d023655dd05385840dd6f13c5",
+      "frames_per_run": 32,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "7953dc76c25d699bf32837a540b56ff9",
+                "pixel_md5": "b4a76e2a4e2c3142277aa3b2ecdad4da",
+                "table_md5": "282c6ea88257ae53a945015856f99e6b"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "7953dc76c25d699bf32837a540b56ff9",
+                "pixel_md5": "b4a76e2a4e2c3142277aa3b2ecdad4da",
+                "table_md5": "282c6ea88257ae53a945015856f99e6b"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "2d64f21359b5ae4845006515013f421f",
+                "table_md5": "282c6ea88257ae53a945015856f99e6b"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "2d64f21359b5ae4845006515013f421f",
+                "table_md5": "282c6ea88257ae53a945015856f99e6b"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "daafdd83acee9257f5af9fec1e35c7a8",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "daafdd83acee9257f5af9fec1e35c7a8",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "7953dc76c25d699bf32837a540b56ff9",
+                    "pixel_md5": "b4a76e2a4e2c3142277aa3b2ecdad4da",
+                    "table_md5": "282c6ea88257ae53a945015856f99e6b"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "7953dc76c25d699bf32837a540b56ff9",
+                    "pixel_md5": "b4a76e2a4e2c3142277aa3b2ecdad4da",
+                    "table_md5": "282c6ea88257ae53a945015856f99e6b"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "2d64f21359b5ae4845006515013f421f",
+                    "table_md5": "282c6ea88257ae53a945015856f99e6b"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "2d64f21359b5ae4845006515013f421f",
+                    "table_md5": "282c6ea88257ae53a945015856f99e6b"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "cut_grainy": {
+      "source_sha256": "f196107594a94ed2db1109f591cc982d17b480d5181ac6874958b2863817cbe5",
+      "frames_per_run": 64,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "ecbb411eb9ee6f8e5f48d6858134e539",
+                "pixel_md5": "865f02fe7e1355b12cfc9ac969ca59be",
+                "table_md5": "f7bd8cb770c8b53d373cf607feee829b"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "ecbb411eb9ee6f8e5f48d6858134e539",
+                "pixel_md5": "865f02fe7e1355b12cfc9ac969ca59be",
+                "table_md5": "f7bd8cb770c8b53d373cf607feee829b"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "7616260eeec17fe01c88b129b23ae508",
+                "table_md5": "f7bd8cb770c8b53d373cf607feee829b"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "7616260eeec17fe01c88b129b23ae508",
+                "table_md5": "f7bd8cb770c8b53d373cf607feee829b"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "490ea0e35ea946cd3d0b015adc7f9d07",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "490ea0e35ea946cd3d0b015adc7f9d07",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "ecbb411eb9ee6f8e5f48d6858134e539",
+                    "pixel_md5": "865f02fe7e1355b12cfc9ac969ca59be",
+                    "table_md5": "f7bd8cb770c8b53d373cf607feee829b"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "ecbb411eb9ee6f8e5f48d6858134e539",
+                    "pixel_md5": "865f02fe7e1355b12cfc9ac969ca59be",
+                    "table_md5": "f7bd8cb770c8b53d373cf607feee829b"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "7616260eeec17fe01c88b129b23ae508",
+                    "table_md5": "f7bd8cb770c8b53d373cf607feee829b"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "7616260eeec17fe01c88b129b23ae508",
+                    "table_md5": "f7bd8cb770c8b53d373cf607feee829b"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "losttapes": {
+      "source_sha256": "49be25bf53de5dff4592b9d41165fb719d448045cb08665550317bb8fd13d26c",
+      "frames_per_run": 240,
+      "counts": {
+        "reference": {
+          "raw": 17,
+          "av1": 17
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "5b5da9029c9d5ab45e4329bbf1d65c3d",
+                "pixel_md5": "5bab36f1c415640f8b78ade8f7a668a0",
+                "table_md5": "cdeceddf325f6701d124f593fccbd872"
+              },
+              "runs": 17
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "5b5da9029c9d5ab45e4329bbf1d65c3d",
+                "pixel_md5": "5bab36f1c415640f8b78ade8f7a668a0",
+                "table_md5": "cdeceddf325f6701d124f593fccbd872"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "234dbaecbf54c26b0b361abae33abfbb",
+                "table_md5": "cdeceddf325f6701d124f593fccbd872"
+              },
+              "runs": 12
+            },
+            {
+              "state": {
+                "file_md5": "ce0413d0300f5a9775d6352c56d76aa6",
+                "table_md5": "cdeceddf325f6701d124f593fccbd872"
+              },
+              "runs": 11
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "234dbaecbf54c26b0b361abae33abfbb",
+                "table_md5": "cdeceddf325f6701d124f593fccbd872"
+              },
+              "runs": 5
+            },
+            {
+              "state": {
+                "file_md5": "ce0413d0300f5a9775d6352c56d76aa6",
+                "table_md5": "cdeceddf325f6701d124f593fccbd872"
+              },
+              "runs": 3
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "a0af3be3237f0395e31d6f6496266d80",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 11
+            },
+            {
+              "state": {
+                "decoded_pixel_md5": "d0246b24d4fbbdebdfc416d5fb9fdefe",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 12
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "a0af3be3237f0395e31d6f6496266d80",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 3
+            },
+            {
+              "state": {
+                "decoded_pixel_md5": "d0246b24d4fbbdebdfc416d5fb9fdefe",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-losttapes-extension/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "5b5da9029c9d5ab45e4329bbf1d65c3d",
+                    "pixel_md5": "5bab36f1c415640f8b78ade8f7a668a0",
+                    "table_md5": "cdeceddf325f6701d124f593fccbd872"
+                  },
+                  "runs": 7
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "5b5da9029c9d5ab45e4329bbf1d65c3d",
+                "pixel_md5": "5bab36f1c415640f8b78ade8f7a668a0",
+                "table_md5": "cdeceddf325f6701d124f593fccbd872"
+              }
+            ],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "234dbaecbf54c26b0b361abae33abfbb",
+                    "table_md5": "cdeceddf325f6701d124f593fccbd872"
+                  },
+                  "runs": 4
+                },
+                {
+                  "state": {
+                    "file_md5": "ce0413d0300f5a9775d6352c56d76aa6",
+                    "table_md5": "cdeceddf325f6701d124f593fccbd872"
+                  },
+                  "runs": 3
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "234dbaecbf54c26b0b361abae33abfbb",
+                "table_md5": "cdeceddf325f6701d124f593fccbd872"
+              },
+              {
+                "file_md5": "ce0413d0300f5a9775d6352c56d76aa6",
+                "table_md5": "cdeceddf325f6701d124f593fccbd872"
+              }
+            ],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-real-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "5b5da9029c9d5ab45e4329bbf1d65c3d",
+                    "pixel_md5": "5bab36f1c415640f8b78ade8f7a668a0",
+                    "table_md5": "cdeceddf325f6701d124f593fccbd872"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "5b5da9029c9d5ab45e4329bbf1d65c3d",
+                "pixel_md5": "5bab36f1c415640f8b78ade8f7a668a0",
+                "table_md5": "cdeceddf325f6701d124f593fccbd872"
+              }
+            ],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "ce0413d0300f5a9775d6352c56d76aa6",
+                    "table_md5": "cdeceddf325f6701d124f593fccbd872"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "ce0413d0300f5a9775d6352c56d76aa6",
+                "table_md5": "cdeceddf325f6701d124f593fccbd872"
+              }
+            ],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/candidate-paired-profiles/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [],
+              "candidate": []
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "234dbaecbf54c26b0b361abae33abfbb",
+                    "table_md5": "cdeceddf325f6701d124f593fccbd872"
+                  },
+                  "runs": 3
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "234dbaecbf54c26b0b361abae33abfbb",
+                "table_md5": "cdeceddf325f6701d124f593fccbd872"
+              }
+            ],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-paired-profiles/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [],
+              "candidate": []
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "ce0413d0300f5a9775d6352c56d76aa6",
+                    "table_md5": "cdeceddf325f6701d124f593fccbd872"
+                  },
+                  "runs": 3
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "ce0413d0300f5a9775d6352c56d76aa6",
+                    "table_md5": "cdeceddf325f6701d124f593fccbd872"
+                  },
+                  "runs": 3
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-real-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "5b5da9029c9d5ab45e4329bbf1d65c3d",
+                    "pixel_md5": "5bab36f1c415640f8b78ade8f7a668a0",
+                    "table_md5": "cdeceddf325f6701d124f593fccbd872"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "5b5da9029c9d5ab45e4329bbf1d65c3d",
+                    "pixel_md5": "5bab36f1c415640f8b78ade8f7a668a0",
+                    "table_md5": "cdeceddf325f6701d124f593fccbd872"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "234dbaecbf54c26b0b361abae33abfbb",
+                    "table_md5": "cdeceddf325f6701d124f593fccbd872"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "234dbaecbf54c26b0b361abae33abfbb",
+                    "table_md5": "cdeceddf325f6701d124f593fccbd872"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "amphibia": {
+      "source_sha256": "842b5ee22fa8691a586ad1fd053e479529f237a3d5fbb6e37e3ddfbc977bd3c3",
+      "frames_per_run": 240,
+      "counts": {
+        "reference": {
+          "raw": 10,
+          "av1": 10
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "3721a4e8e7eedd7cf75902022662d3e1",
+                "pixel_md5": "8966a9277cd488bef92e2e253fbdc1d1",
+                "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+              },
+              "runs": 10
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "3721a4e8e7eedd7cf75902022662d3e1",
+                "pixel_md5": "8966a9277cd488bef92e2e253fbdc1d1",
+                "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "a45de9b2d0825ffc4e0ae9167e360d56",
+                "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+              },
+              "runs": 16
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "a45de9b2d0825ffc4e0ae9167e360d56",
+                "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+              },
+              "runs": 8
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "2769dfc24cdd7192007a9df4a4b6553c",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 16
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "2769dfc24cdd7192007a9df4a4b6553c",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 8
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-real-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "3721a4e8e7eedd7cf75902022662d3e1",
+                    "pixel_md5": "8966a9277cd488bef92e2e253fbdc1d1",
+                    "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "3721a4e8e7eedd7cf75902022662d3e1",
+                "pixel_md5": "8966a9277cd488bef92e2e253fbdc1d1",
+                "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+              }
+            ],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "a45de9b2d0825ffc4e0ae9167e360d56",
+                    "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "a45de9b2d0825ffc4e0ae9167e360d56",
+                "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+              }
+            ],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/candidate-paired-profiles/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [],
+              "candidate": []
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "a45de9b2d0825ffc4e0ae9167e360d56",
+                    "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+                  },
+                  "runs": 3
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "a45de9b2d0825ffc4e0ae9167e360d56",
+                "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+              }
+            ],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-paired-profiles/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [],
+              "candidate": []
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "a45de9b2d0825ffc4e0ae9167e360d56",
+                    "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+                  },
+                  "runs": 3
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "a45de9b2d0825ffc4e0ae9167e360d56",
+                    "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+                  },
+                  "runs": 3
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-real-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "3721a4e8e7eedd7cf75902022662d3e1",
+                    "pixel_md5": "8966a9277cd488bef92e2e253fbdc1d1",
+                    "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "3721a4e8e7eedd7cf75902022662d3e1",
+                    "pixel_md5": "8966a9277cd488bef92e2e253fbdc1d1",
+                    "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "a45de9b2d0825ffc4e0ae9167e360d56",
+                    "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "a45de9b2d0825ffc4e0ae9167e360d56",
+                    "table_md5": "ae9930cf3696c86171444f08b35c9c2e"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "taxi_hdr": {
+      "source_sha256": "ccda916bd8585c2daacff6db9d7329f99e1e2f0260c4316d8e8036b09e39d30f",
+      "frames_per_run": 24,
+      "counts": {
+        "reference": {
+          "raw": 17,
+          "av1": 17
+        },
+        "candidate": {
+          "raw": 12,
+          "av1": 12
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "af2442393324ae46054bb2bc41d4ce62",
+                "pixel_md5": "2ec74408d0eaffdfb609250289c91fd7",
+                "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+              },
+              "runs": 17
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "af2442393324ae46054bb2bc41d4ce62",
+                "pixel_md5": "2ec74408d0eaffdfb609250289c91fd7",
+                "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+              },
+              "runs": 12
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": false,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+                "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+              },
+              "runs": 22
+            },
+            {
+              "state": {
+                "file_md5": "d3cf4137a98a02a37a478c5c08ce9cdd",
+                "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+              },
+              "runs": 1
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+                "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+              },
+              "runs": 15
+            }
+          ]
+        },
+        "missing_candidate": [
+          {
+            "file_md5": "d3cf4137a98a02a37a478c5c08ce9cdd",
+            "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+          }
+        ],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": false,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "43f9a8d94fb72cdb911098a49e628f40",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 1
+            },
+            {
+              "state": {
+                "decoded_pixel_md5": "b8d8c365a002b4c8a0163ebac88a0782",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 22
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "b8d8c365a002b4c8a0163ebac88a0782",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 15
+            }
+          ]
+        },
+        "missing_candidate": [
+          {
+            "decoded_pixel_md5": "43f9a8d94fb72cdb911098a49e628f40",
+            "decoded_pix_fmt": "yuv420p10le"
+          }
+        ],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-real-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "af2442393324ae46054bb2bc41d4ce62",
+                    "pixel_md5": "2ec74408d0eaffdfb609250289c91fd7",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "af2442393324ae46054bb2bc41d4ce62",
+                "pixel_md5": "2ec74408d0eaffdfb609250289c91fd7",
+                "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+              }
+            ],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+                "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+              }
+            ],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/candidate-paired-profiles/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [],
+              "candidate": []
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 3
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+                "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+              }
+            ],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-paired-profiles/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [],
+              "candidate": []
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 2
+                },
+                {
+                  "state": {
+                    "file_md5": "d3cf4137a98a02a37a478c5c08ce9cdd",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 1
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 3
+                }
+              ]
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "d3cf4137a98a02a37a478c5c08ce9cdd",
+                "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+              }
+            ],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-real-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "af2442393324ae46054bb2bc41d4ce62",
+                    "pixel_md5": "2ec74408d0eaffdfb609250289c91fd7",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "af2442393324ae46054bb2bc41d4ce62",
+                    "pixel_md5": "2ec74408d0eaffdfb609250289c91fd7",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-state-extension/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "af2442393324ae46054bb2bc41d4ce62",
+                    "pixel_md5": "2ec74408d0eaffdfb609250289c91fd7",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 7
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "af2442393324ae46054bb2bc41d4ce62",
+                    "pixel_md5": "2ec74408d0eaffdfb609250289c91fd7",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 7
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 7
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+                    "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+                  },
+                  "runs": 7
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "gentlemen": {
+      "source_sha256": "e41e63a94dd19bb3c6ff584d1872008fb84c196e5d1b33689869e33a5d5f9e5a",
+      "frames_per_run": 240,
+      "counts": {
+        "reference": {
+          "raw": 17,
+          "av1": 17
+        },
+        "candidate": {
+          "raw": 12,
+          "av1": 12
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "56eb27dab214aa68ad42ff9a2699f158",
+                "pixel_md5": "297bc06b21cb67a2df8c16bfdfa259a0",
+                "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+              },
+              "runs": 17
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "56eb27dab214aa68ad42ff9a2699f158",
+                "pixel_md5": "297bc06b21cb67a2df8c16bfdfa259a0",
+                "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+              },
+              "runs": 12
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": false,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "0ff816e738aeee78e653e3de98c82190",
+                "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+              },
+              "runs": 5
+            },
+            {
+              "state": {
+                "file_md5": "73707cd1a62130e48db6bd2a95a3dcda",
+                "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+              },
+              "runs": 12
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "73707cd1a62130e48db6bd2a95a3dcda",
+                "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+              },
+              "runs": 12
+            }
+          ]
+        },
+        "missing_candidate": [
+          {
+            "file_md5": "0ff816e738aeee78e653e3de98c82190",
+            "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+          }
+        ],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": false,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "14cf59b4e74dbb53574d681241684757",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 12
+            },
+            {
+              "state": {
+                "decoded_pixel_md5": "754196392f71717440acabecc4f83cd6",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "14cf59b4e74dbb53574d681241684757",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 12
+            }
+          ]
+        },
+        "missing_candidate": [
+          {
+            "decoded_pixel_md5": "754196392f71717440acabecc4f83cd6",
+            "decoded_pix_fmt": "yuv420p10le"
+          }
+        ],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-real-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "56eb27dab214aa68ad42ff9a2699f158",
+                    "pixel_md5": "297bc06b21cb67a2df8c16bfdfa259a0",
+                    "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "56eb27dab214aa68ad42ff9a2699f158",
+                "pixel_md5": "297bc06b21cb67a2df8c16bfdfa259a0",
+                "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+              }
+            ],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": false,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "0ff816e738aeee78e653e3de98c82190",
+                    "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": []
+            },
+            "missing_candidate": [
+              {
+                "file_md5": "0ff816e738aeee78e653e3de98c82190",
+                "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+              }
+            ],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-real-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "56eb27dab214aa68ad42ff9a2699f158",
+                    "pixel_md5": "297bc06b21cb67a2df8c16bfdfa259a0",
+                    "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "56eb27dab214aa68ad42ff9a2699f158",
+                    "pixel_md5": "297bc06b21cb67a2df8c16bfdfa259a0",
+                    "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "73707cd1a62130e48db6bd2a95a3dcda",
+                    "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "73707cd1a62130e48db6bd2a95a3dcda",
+                    "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        },
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-state-extension/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "56eb27dab214aa68ad42ff9a2699f158",
+                    "pixel_md5": "297bc06b21cb67a2df8c16bfdfa259a0",
+                    "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+                  },
+                  "runs": 7
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "56eb27dab214aa68ad42ff9a2699f158",
+                    "pixel_md5": "297bc06b21cb67a2df8c16bfdfa259a0",
+                    "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+                  },
+                  "runs": 7
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "73707cd1a62130e48db6bd2a95a3dcda",
+                    "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+                  },
+                  "runs": 7
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "73707cd1a62130e48db6bd2a95a3dcda",
+                    "table_md5": "ea9c13025fd09017351cefb1f824f5ae"
+                  },
+                  "runs": 7
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    },
+    "silo_partial": {
+      "source_sha256": "040468f686dc66c753c2a2899261b3434fda6f33e257d5047bfda14bd241607b",
+      "frames_per_run": 24,
+      "counts": {
+        "reference": {
+          "raw": 5,
+          "av1": 5
+        },
+        "candidate": {
+          "raw": 5,
+          "av1": 5
+        }
+      },
+      "raw": {
+        "keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "13bb971b1076f02b89b55caad6129eba",
+                "pixel_md5": "63a20fc6e83cae1dec49d51fe7a011f1",
+                "table_md5": "d7afc3849f36c714ef4322dc9871e9bf"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "13bb971b1076f02b89b55caad6129eba",
+                "pixel_md5": "63a20fc6e83cae1dec49d51fe7a011f1",
+                "table_md5": "d7afc3849f36c714ef4322dc9871e9bf"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "file_md5": "f32fd10a4e9fde21567d44d9e3c0a362",
+                "table_md5": "d7afc3849f36c714ef4322dc9871e9bf"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "file_md5": "f32fd10a4e9fde21567d44d9e3c0a362",
+                "table_md5": "d7afc3849f36c714ef4322dc9871e9bf"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5",
+          "decoded_pix_fmt"
+        ],
+        "equal": true,
+        "states": {
+          "reference": [
+            {
+              "state": {
+                "decoded_pixel_md5": "d58a50a559679820e49150dc1ac50157",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ],
+          "candidate": [
+            {
+              "state": {
+                "decoded_pixel_md5": "d58a50a559679820e49150dc1ac50157",
+                "decoded_pix_fmt": "yuv420p10le"
+              },
+              "runs": 5
+            }
+          ]
+        },
+        "missing_candidate": [],
+        "new_candidate": []
+      },
+      "profile_runs_without_decode": 0,
+      "campaigns": {
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-real-identity/report.json": {
+          "raw": {
+            "keys": [
+              "file_md5",
+              "pixel_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "13bb971b1076f02b89b55caad6129eba",
+                    "pixel_md5": "63a20fc6e83cae1dec49d51fe7a011f1",
+                    "table_md5": "d7afc3849f36c714ef4322dc9871e9bf"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "13bb971b1076f02b89b55caad6129eba",
+                    "pixel_md5": "63a20fc6e83cae1dec49d51fe7a011f1",
+                    "table_md5": "d7afc3849f36c714ef4322dc9871e9bf"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          },
+          "av1": {
+            "keys": [
+              "file_md5",
+              "table_md5"
+            ],
+            "equal": true,
+            "states": {
+              "reference": [
+                {
+                  "state": {
+                    "file_md5": "f32fd10a4e9fde21567d44d9e3c0a362",
+                    "table_md5": "d7afc3849f36c714ef4322dc9871e9bf"
+                  },
+                  "runs": 5
+                }
+              ],
+              "candidate": [
+                {
+                  "state": {
+                    "file_md5": "f32fd10a4e9fde21567d44d9e3c0a362",
+                    "table_md5": "d7afc3849f36c714ef4322dc9871e9bf"
+                  },
+                  "runs": 5
+                }
+              ]
+            },
+            "missing_candidate": [],
+            "new_candidate": []
+          }
+        }
+      }
+    }
+  },
+  "notes": [
+    "Raw whole-file/pixel/table hashes belong to separate raw diagnostic runs; they are not captures of the surfaces submitted during AV1 runs.",
+    "Production state union includes every compatible deployed-binary row in all required historical and supplied extension reports.",
+    "Profile rows contribute known states but never satisfy minimum unprofiled repeat counts. No state frequency equality is claimed.",
+    "Raw media deleted by the original harness is represented by its pinned report receipt; retained IVF/table artifacts are rehashed here."
+  ],
+  "source_report": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/aggregate-identity-final.json",
+  "admitted_runs": 687,
+  "excluded_rows": 136,
+  "source_report_sha256": "d624ccc65363d4c027a16b7be5651036348b2139ae585a34d16ade3758c8fdf6"
+}

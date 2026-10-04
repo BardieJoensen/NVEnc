@@ -1,0 +1,90 @@
+{
+  "arms": [
+    {
+      "name": "deployed",
+      "binary": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed",
+      "sha256": "c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b"
+    },
+    {
+      "name": "kernels",
+      "binary": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels",
+      "sha256": "be7a50a1681fc5aa9a7133533f081d4e3253b2c74bc639605358f69d591ababe"
+    }
+  ],
+  "inputs": [
+    {
+      "name": "losttapes",
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/losttapes-recovery-source.mkv",
+      "sha256": "49be25bf53de5dff4592b9d41165fb719d448045cb08665550317bb8fd13d26c",
+      "original_source": true,
+      "frames": 240,
+      "qvbr": 30,
+      "seek": 120,
+      "input_args": [
+        "--avhw",
+        "--timestamp-passthrough",
+        "--video-track",
+        "1"
+      ]
+    },
+    {
+      "name": "amphibia",
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/amphibia-flicker-e10-source.mkv",
+      "sha256": "842b5ee22fa8691a586ad1fd053e479529f237a3d5fbb6e37e3ddfbc977bd3c3",
+      "original_source": true,
+      "frames": 240,
+      "qvbr": 34,
+      "seek": 350,
+      "input_args": [
+        "--avhw",
+        "--timestamp-passthrough",
+        "--video-track",
+        "1"
+      ]
+    },
+    {
+      "name": "taxi_hdr",
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/taxi-coarse-24f.mkv",
+      "sha256": "ccda916bd8585c2daacff6db9d7329f99e1e2f0260c4316d8e8036b09e39d30f",
+      "original_source": true,
+      "frames": 24,
+      "qvbr": 29,
+      "seek": 0,
+      "input_args": [
+        "--avsw",
+        "--timestamp-passthrough",
+        "--video-track",
+        "1"
+      ]
+    },
+    {
+      "name": "gentlemen",
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/gentlemen-source-33m-150s.mkv",
+      "sha256": "e41e63a94dd19bb3c6ff584d1872008fb84c196e5d1b33689869e33a5d5f9e5a",
+      "original_source": true,
+      "frames": 240,
+      "qvbr": 30,
+      "seek": 60,
+      "input_args": [
+        "--avsw",
+        "--timestamp-passthrough",
+        "--video-track",
+        "1"
+      ]
+    },
+    {
+      "name": "silo_partial",
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/silo-fine-24f.mkv",
+      "sha256": "040468f686dc66c753c2a2899261b3434fda6f33e257d5047bfda14bd241607b",
+      "original_source": true,
+      "frames": 24,
+      "qvbr": 30,
+      "input_args": [
+        "--avsw",
+        "--timestamp-passthrough",
+        "--video-track",
+        "1"
+      ]
+    }
+  ]
+}

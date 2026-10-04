@@ -1,0 +1,14 @@
+{
+  "reviewed_core": "6e8fa1fb1a2b06e64b8c4a19af392bc5adfe5c5e",
+  "files": {
+    "aggregate_identity.py": "279d3af13c934459c297592a60a77cac3a89fdd6764179a16b458cb61070c188",
+    "identity-requirements.json": "4c16ebb69a7db3c2471f09d8a1a68332f0ef64a877923d56589d071a993e1aaa",
+    "aggregate_identity_checks.py": "e5c5f40232b1d169a07c462456d235e2aae856d334a72d9e13e5321492a65582",
+    "decode_profile_identity.py": "fc3b3c3c588e857b5ed58d390f213acb9578ac77393c1a873948f5e5ddf1eecc",
+    "reports/profile-grain-off-decodes/report.json": "788724da916ffb3cb1b72786625ac46efc4505203013b8c74a261c009531d31e",
+    "reports/aggregate-identity-offline-checks.json": "a844e23c90d7a1e18999cfde3ab24f121fad663eb62b62adab67b6a57f0fdcb0"
+  },
+  "checks": "13 offline receipt checks passed; --help and py_compile passed",
+  "no_gpu_jobs": true,
+  "no_running_harness_changes": true
+}

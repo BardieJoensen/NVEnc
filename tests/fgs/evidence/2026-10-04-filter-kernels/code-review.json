@@ -1,0 +1,29 @@
+{
+  "review_commit": "6e8fa1fb1a2b06e64b8c4a19af392bc5adfe5c5e",
+  "comparison_commit": "3f4d52902163181d86267ca9e9181860de94b45b",
+  "source_sha256": "2de02e359a8b9f1fb73847cf24ff0bf04945290671239dd44d04aa14c0256a67",
+  "matches_proposed_static_receipt": true,
+  "findings": [],
+  "conclusion": "No new indexing, partial-edge, shared-memory initialization, or block-barrier defect found in the flat-metrics specialization diff.",
+  "checks": [
+    "Wrapper retains original per-block geometry and uniform bw<8/bh<8 rejection; only exact 32x32 blocks select full specialization (lines 545-563).",
+    "For nonnegative tile indices, &31 and >>5 equal remainder/division by32; all partial blocks retain runtime division/remainder (lines 328-344).",
+    "All shared fields retain original sizes/types and distinct storage; every consumed tile, region, reduction, and scalar is initialized before the unchanged protecting barrier.",
+    "Specialization selection depends only on block-uniform geometry; all 128 threads take the same branch. All original seven barrier sites remain, including reduction-loop barriers.",
+    "Thread-specific return at line490 occurs after the last barrier; wrapper adds no later barrier, so it does not create divergent barrier participation.",
+    "Neighborhood reads retain the original interior guard, and zero-area quiet regions retain their existing no-read path.",
+    "Calculation expressions and thread/sample/reduction order are unchanged at source level; full-block constant denominators32 and1024 are powers of2."
+  ],
+  "integer_geometry_audit": {
+    "accepted_shapes_8_to_32": 625,
+    "pixel_coordinates_checked": 250000,
+    "gradient_neighbor_reads_checked": 810000,
+    "quiet_region_reads_checked": 500000
+  },
+  "limits": [
+    "CPU suite does not execute CUDA kernels.",
+    "Source review and integer geometry audit do not prove generated floating-point instruction equivalence or runtime bit identity.",
+    "Repeated raw/table/IVF/decoded output comparisons and partial-edge fixtures remain required before claiming bit-identical behavior.",
+    "Shared-memory/register resource changes and throughput require the separately scheduled GPU profile."
+  ]
+}

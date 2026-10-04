@@ -1,0 +1,77 @@
+{
+  "created_at_utc": "2026-10-04T20:21:01.053453+00:00",
+  "status": "prepared_not_activated_pending_parent_review",
+  "view_root": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps",
+  "temp_root": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/tmp",
+  "gate_changed": false,
+  "global_files_changed": false,
+  "gpu_jobs_or_containers_started": false,
+  "symlinks": [
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/logs",
+      "target": "/opt/docker-apps/logs",
+      "purpose": "Resolve retained negative executable defaults; view only, no writes performed."
+    }
+  ],
+  "scripts": [
+    {
+      "name": "grain-base-canary.sh",
+      "source": "/opt/docker-apps/scripts/grain-base-canary.sh",
+      "view_path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/scripts/grain-base-canary.sh",
+      "source_sha256": "14d7f08a86bce25e07f0764917d230198951332ac16b122b6ec68bfe5caf0d87",
+      "view_sha256": "14d7f08a86bce25e07f0764917d230198951332ac16b122b6ec68bfe5caf0d87",
+      "byte_identical": true
+    },
+    {
+      "name": "grain-base-canary.py",
+      "source": "/opt/docker-apps/scripts/grain-base-canary.py",
+      "view_path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/scripts/grain-base-canary.py",
+      "source_sha256": "78ea36a5cb960b93da2b6bb4694a1021c9d1caeaffd671446c21258a3ed592b5",
+      "view_sha256": "78ea36a5cb960b93da2b6bb4694a1021c9d1caeaffd671446c21258a3ed592b5",
+      "byte_identical": true
+    },
+    {
+      "name": "grain-base-fidelity.py",
+      "source": "/opt/docker-apps/scripts/grain-base-fidelity.py",
+      "view_path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/scripts/grain-base-fidelity.py",
+      "source_sha256": "10be227729c22871991953dab761f18de7e197006188e8f93efca0074678858a",
+      "view_sha256": "daec27542f223d9391d0cfce7bba18c502333b0473766ec6fdc9e210ecdab761",
+      "byte_identical_after_reversing_four_path_replacements": true,
+      "ast_identical_after_normalizing_four_dir_literal_values": true,
+      "changed_lines": [
+        80,
+        95,
+        311,
+        366
+      ]
+    }
+  ],
+  "proofs": [
+    "Two launcher scripts copied byte-for-byte. Canary Python must be copied because __file__.resolve() would follow a symlink back to /opt and bypass copied fidelity script.",
+    "Only four dir=\"/tmp\" literals changed in fidelity helper, lines 80,95,311,366.",
+    "Reversing those literal substitutions reproduces the original fidelity script exactly.",
+    "Parsed Python ASTs are equal after normalizing only those four temporary-directory constants.",
+    "Canary shell bash -n passes. No functional metric execution performed."
+  ],
+  "environment_for_parent_review": {
+    "DOCKER_APPS": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps",
+    "TMPDIR": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/tmp",
+    "FGS_GATE_CACHE": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-cache",
+    "FGS_GATE_REPORTS": "<new directory below /tmp/downloads/codex-work/fgs-improvement-20261004/reports>",
+    "FGS_GATE_HARNESS_COMMIT": "<unchanged selected production harness commit>"
+  },
+  "not_changed": [
+    "local_gate.sh and all repository test scripts",
+    "metric algorithms, coefficients, thresholds and verdict logic",
+    "fixture paths, source identities, frame counts and timestamps",
+    "encoder flags and binary selection rules",
+    "reference/negative image selectors and expected hashes",
+    "Docker GPU selection and runtime parameters",
+    "file mode latest metrics image versus binary mode pinned image behavior"
+  ],
+  "notes": [
+    "Temp folder absolute path remains visible to host Docker daemon and is bind-mounted at /data exactly as before.",
+    "Global scripts retain original bytes and paths. Actual qualification must retain this receipt/diff and identify the scratch helper.",
+    "No environment file is auto-sourced and no gate or helper was executed."
+  ]
+}

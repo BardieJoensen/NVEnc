@@ -1,0 +1,198 @@
+{
+  "status": "Not qualified: known-state admission unmet; controls and partial gate in progress; full gate missing Play Dirty source/history.",
+  "core": "6e8fa1fb1a2b06e64b8c4a19af392bc5adfe5c5e",
+  "copies": [
+    {
+      "file": "build-pins.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-build-pins.json",
+      "bytes": 1051,
+      "sha256": "b335b7e3e2b40cc9654273edf0baa2ea40a44ecc3d2e8e491b41ade1e26bf93f"
+    },
+    {
+      "file": "cpu.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-cpu.json",
+      "bytes": 2023,
+      "sha256": "596f0a520704c9073f81f4f33d5962518f4f2e3fe427fcc91eecba49e0deda5a"
+    },
+    {
+      "file": "profiles.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-profile-summary.json",
+      "bytes": 31295,
+      "sha256": "563059714805e960a023de7229f3233fb96e6352edfdcb593b43f44112626a64"
+    },
+    {
+      "file": "bilateral-profiles.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/bilateral-profile-summary.json",
+      "bytes": 31188,
+      "sha256": "38c9da0c17a1cda121a7c63fbef766f10f00d534f4bc02041ba575b29706cb62"
+    },
+    {
+      "file": "profile-review.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-doc-review-numbers.json",
+      "bytes": 2449,
+      "sha256": "990184529db27a43635717145c5a36fb649b7fcdb21b24c5231257dcde71d946"
+    },
+    {
+      "file": "code-review.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-independent-review.json",
+      "bytes": 2207,
+      "sha256": "de2abbb11dd72cb52000552aa8f4627cc322ff7cc68d7d76cff09b336373d730"
+    },
+    {
+      "file": "geometry-check.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/flat-metrics-proposal-static-check.json",
+      "bytes": 920,
+      "sha256": "5410bd22c7fe1bc7f03d52e650fc27814d467fb1076699477b36cfbcd1b4727b"
+    },
+    {
+      "file": "silo-copy.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/silo-copy-receipt.json",
+      "bytes": 602,
+      "sha256": "ca80bc2ae45a8af55490eb5f8a2467858d4fc42399f460cd9ab9169a84251a23"
+    },
+    {
+      "file": "silo-geometry.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/silo-partial-block-metadata.json",
+      "bytes": 4114,
+      "sha256": "f4278c6779a62995e2e85e32d36793ae78783764670a9f5da222f03a2ffa4a1b"
+    },
+    {
+      "file": "kat-manifest.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/kernels-kat-manifest.json",
+      "bytes": 38484,
+      "sha256": "a1a88346b5ac7f231e7b0b9a68afea87bdae6e1366e6f20b539df9b565079281"
+    },
+    {
+      "file": "real-manifest.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/kernels-real-manifest.json",
+      "bytes": 2661,
+      "sha256": "a35547dc5df56dfc80b9cc233131b6bf47ff31df57757f7c6a195da691a3adfe"
+    },
+    {
+      "file": "repeat_identity.py",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/repeat_identity.py",
+      "bytes": 23258,
+      "sha256": "6bbe9c681be59bda776915af28df4c9e23683583573785e16ccfef5ac9a967ad"
+    },
+    {
+      "file": "paired_profile.py",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/paired_profile.py",
+      "bytes": 12447,
+      "sha256": "45d43613e8e7977d6601e71fc4b35396c7e7a2435d79d96d14ce3c73610f6d5d"
+    },
+    {
+      "file": "profile_summary.py",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/profile_summary.py",
+      "bytes": 7084,
+      "sha256": "4008b7b6e856d7c80e38d4b413090fdb586da6d2f36c3c39f91e18881fe355a5"
+    },
+    {
+      "file": "generate_identity_sources.py",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/generate_identity_sources.py",
+      "bytes": 3934,
+      "sha256": "1b0214cb3b1c9bbe273269523a6de90d78699c64a9f9cdc9d3d8a98c1bfb616c"
+    },
+    {
+      "file": "identity-summary.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/aggregate-identity-summary.json",
+      "bytes": 190107,
+      "sha256": "d609def22754b9ef031b175d6d83bc071c3b5f4a07adbd16d602d6e28305a237"
+    },
+    {
+      "file": "identity-audit-freeze.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/aggregate-identity-freeze.json",
+      "bytes": 870,
+      "sha256": "992312acf606fb46db651495d7fd9da3112e70daf855e2972a4d6a00cb3ccbaa"
+    },
+    {
+      "file": "gentlemen-plain-variability.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/gentlemen-plain-variability.json",
+      "bytes": 18760,
+      "sha256": "bc4303355e24a35d5287e439b816dc49d3d1c4fb552826fce1f324133dbf2c11"
+    },
+    {
+      "file": "gentlemen-plain-variability.md",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/gentlemen-plain-variability.md",
+      "bytes": 2021,
+      "sha256": "643176aa9cfbb79244ab58dcc77d5b5fb3dc47bf90791e5c7f7dd4c3e538729d"
+    },
+    {
+      "file": "gentlemen-states.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/gentlemen-first-new-state.json",
+      "bytes": 3799,
+      "sha256": "e2fa6fb00f600e23fa87dfd13ca0246ce24871e8050a0d6cab389f15aa2bb878"
+    },
+    {
+      "file": "handoff-audit.md",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernel-branch-handoff-audit.md",
+      "bytes": 3537,
+      "sha256": "fc13b096b05879f020ee3deb64ac4769bc3bf51de19ef2b7220a1b1f399700be"
+    },
+    {
+      "file": "full-gate-preparation.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/amplitude-and-gate-final-audit.json",
+      "bytes": 14248,
+      "sha256": "0a1487b12db004cbba813af5244d24884a6aa1d48e258e37f77634daa1c647b0"
+    },
+    {
+      "file": "full-gate-preparation.md",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/amplitude-and-gate-final-audit.md",
+      "bytes": 2771,
+      "sha256": "13a696c212dcc3d3085ccdb4e0c029b8367e3ac0db07f11c94cfadd8732258d4"
+    },
+    {
+      "file": "scratch-path-only.diff",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/path-only.diff",
+      "bytes": 2320,
+      "sha256": "c9855a7a4930e2e60184a971995082c2b6f05a5d6253defbd62efb8e3b51e42c"
+    },
+    {
+      "file": "scratch-path-proof.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/receipt.json",
+      "bytes": 4124,
+      "sha256": "d127787c077e20e2e4366bd057d6c7822d820cd04d2c3f387411b4362d482b8b"
+    },
+    {
+      "file": "aggregate_identity.py",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/aggregate_identity.py",
+      "bytes": 18496,
+      "sha256": "279d3af13c934459c297592a60a77cac3a89fdd6764179a16b458cb61070c188"
+    },
+    {
+      "file": "identity-requirements.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-requirements.json",
+      "bytes": 63738,
+      "sha256": "4c16ebb69a7db3c2471f09d8a1a68332f0ef64a877923d56589d071a993e1aaa"
+    },
+    {
+      "file": "match_plain_controls.py",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/match_plain_controls.py",
+      "bytes": 14039,
+      "sha256": "86da8fa74732df1a25cd70f8ce5b4a5fdfc3e24c7810c4c851c20c98a88c83f0"
+    },
+    {
+      "file": "match_plain_controls_v2.py",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/match_plain_controls_v2.py",
+      "bytes": 20198,
+      "sha256": "9a3e6b4ce395b1e2801494325a5c6a982c7dbe8ffab0d94dc29174cc10eb3777"
+    },
+    {
+      "file": "regenerate_amplitude.py",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/regenerate_amplitude.py",
+      "bytes": 16754,
+      "sha256": "d1f555cbe38c3a5379a9e70a92ba77a2f5dae3709ee0e5543ca0ee4799b552fa"
+    },
+    {
+      "file": "plain-control-calibration-review.md",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/plain-control-v2-review.md",
+      "bytes": 4320,
+      "sha256": "3cab210bd176866df26d6b1abbc508ae30c3c299e57eb699e5747c0adbd3e18d"
+    },
+    {
+      "file": "plain-control-calibration-review.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/plain-control-v2-review.json",
+      "bytes": 1259,
+      "sha256": "1c57d26f6aa8aeba4160ced516eba949a15bab6d1a49a28409b6bd8b1bd56f36"
+    }
+  ]
+}

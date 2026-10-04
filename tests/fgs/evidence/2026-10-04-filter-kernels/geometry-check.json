@@ -1,0 +1,31 @@
+{
+  "base_commit": "3f4d52902163181d86267ca9e9181860de94b45b",
+  "path": "NVEncCore/NVEncFilterFilmGrain.cu",
+  "base_source_sha256": "9516225200386b828e06504064b1e4b6f4dcc4b5fecdf95f73347f69a8d0f4ae",
+  "proposed_source_sha256": "2de02e359a8b9f1fb73847cf24ff0bf04945290671239dd44d04aa14c0256a67",
+  "patch_sha256": "00b3975d0e545d41b8b3c520f99a171b92c1d0385277619653ec636d5ccf7f41",
+  "shared_fields": [
+    "tile",
+    "sourceRegions",
+    "sourceVarianceRegions",
+    "reduce0",
+    "reduce1",
+    "reduce2",
+    "reduce3",
+    "reduce4",
+    "reduce5",
+    "reduceCount",
+    "reduceMin",
+    "reduceMax",
+    "minimum",
+    "maximum",
+    "mean",
+    "planeX",
+    "planeY"
+  ],
+  "calculation_body_restores_byte_exactly": true,
+  "output_assignment_tail_unchanged": true,
+  "original_barriers": 7,
+  "proposed_barriers": 7,
+  "scope": "one luma flat-metric kernel; launch/grid and all other functions unchanged"
+}

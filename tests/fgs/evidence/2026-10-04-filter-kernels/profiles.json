@@ -1,0 +1,971 @@
+{
+  "complete": true,
+  "manifest_sha256": "a35547dc5df56dfc80b9cc233131b6bf47ff31df57757f7c6a195da691a3adfe",
+  "binary_pins": [
+    {
+      "name": "deployed",
+      "binary": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed",
+      "sha256": "c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b",
+      "prefix": []
+    },
+    {
+      "name": "kernels",
+      "binary": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels",
+      "sha256": "be7a50a1681fc5aa9a7133533f081d4e3253b2c74bc639605358f69d591ababe",
+      "prefix": []
+    }
+  ],
+  "repeats": 3,
+  "inputs": {
+    "losttapes": {
+      "metrics": {
+        "fgs_kernel_total.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.95419835,
+              "median": 0.9553584791666666,
+              "max": 0.9612419875
+            },
+            "kernels": {
+              "min": 0.8365320416666666,
+              "median": 0.8385069541666667,
+              "max": 0.8422975458333333
+            }
+          },
+          "median_ratio_second_to_first": 0.8776882944484604,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.8723161962030572,
+            "median": 0.8756210992091167,
+            "max": 0.8827279420817834
+          }
+        },
+        "host_synchronization.cudaDeviceSynchronize.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "kernels": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "median_ratio_second_to_first": null,
+          "paired_round_ratio_second_to_first": null
+        },
+        "host_synchronization.cudaEventSynchronize.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.005220695833333333,
+              "median": 0.0065054625,
+              "max": 0.0065344
+            },
+            "kernels": {
+              "min": 0.0056580499999999995,
+              "median": 0.006815970833333334,
+              "max": 0.008179275
+            }
+          },
+          "median_ratio_second_to_first": 1.0477304009258888,
+          "paired_round_ratio_second_to_first": {
+            "min": 1.0430905413401894,
+            "median": 1.0837731560368309,
+            "max": 1.2572933899780376
+          }
+        },
+        "host_synchronization.cudaStreamSynchronize.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 1.6178444875,
+              "median": 1.6273943791666667,
+              "max": 1.8786307833333333
+            },
+            "kernels": {
+              "min": 1.3735643541666667,
+              "median": 1.3944511625,
+              "max": 1.4743954208333332
+            }
+          },
+          "median_ratio_second_to_first": 0.8568612380325726,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.7422699419551546,
+            "median": 0.8440267287085151,
+            "max": 0.9113332166503013
+          }
+        },
+        "kernel_groups.bilateral.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.5000062333333334,
+              "median": 0.5002197833333333,
+              "max": 0.5040381375
+            },
+            "kernels": {
+              "min": 0.46923282499999996,
+              "median": 0.469403625,
+              "max": 0.46947188333333334
+            }
+          },
+          "median_ratio_second_to_first": 0.9383947629420362,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9312859287358984,
+            "median": 0.9380533130320349,
+            "max": 0.9389320613136355
+          }
+        },
+        "kernel_groups.flat_metrics.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.2529580708333333,
+              "median": 0.25303474583333335,
+              "max": 0.25401027083333333
+            },
+            "kernels": {
+              "min": 0.1670273458333333,
+              "median": 0.16818410416666665,
+              "max": 0.17074077916666666
+            }
+          },
+          "median_ratio_second_to_first": 0.6646680226179081,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.6600964831262714,
+            "median": 0.6621153688585263,
+            "max": 0.6749766022652931
+          }
+        },
+        "kernel_groups.model_stats.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.057394287499999995,
+              "median": 0.057447125,
+              "max": 0.05752968333333333
+            },
+            "kernels": {
+              "min": 0.0573273625,
+              "median": 0.05741512916666667,
+              "max": 0.0575874875
+            }
+          },
+          "median_ratio_second_to_first": 0.9994430385622721,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9980087815536386,
+            "median": 0.9988339431864192,
+            "max": 1.002443333761263
+          }
+        },
+        "kernel_groups.other.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.21342355,
+              "median": 0.21411349999999998,
+              "max": 0.21931989166666668
+            },
+            "kernels": {
+              "min": 0.2113932,
+              "median": 0.21467574583333335,
+              "max": 0.21484660833333333
+            }
+          },
+          "median_ratio_second_to_first": 1.0026259242566833,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9788247851207599,
+            "median": 0.9904867574360937,
+            "max": 1.0034239239157425
+          }
+        },
+        "kernel_groups.temporal_detail_metrics.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.05486880833333333,
+              "median": 0.05489922083333333,
+              "max": 0.05577468333333333
+            },
+            "kernels": {
+              "min": 0.05477163333333333,
+              "median": 0.05487190833333333,
+              "max": 0.055705962500000004
+            }
+          },
+          "median_ratio_second_to_first": 0.9995024974929441,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9838138928623829,
+            "median": 0.9976759688377485,
+            "max": 1.0152573783192242
+          }
+        },
+        "kernel_total.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 1.0800825083333334,
+              "median": 1.080246775,
+              "max": 1.0887087083333333
+            },
+            "kernels": {
+              "min": 0.9609968916666667,
+              "median": 0.9644001666666667,
+              "max": 0.9672585416666667
+            }
+          },
+          "median_ratio_second_to_first": 0.8927591259568136,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.8858202008350183,
+            "median": 0.8897439633103338,
+            "max": 0.8954051648676912
+          }
+        },
+        "memcpy.directions.D2D.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.05515514166666667,
+              "median": 0.055492554166666666,
+              "max": 0.055768174999999996
+            },
+            "kernels": {
+              "min": 0.05526092083333333,
+              "median": 0.0553856,
+              "max": 0.05569099166666667
+            }
+          },
+          "median_ratio_second_to_first": 0.9980726393248104,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9931399046140564,
+            "median": 1.0019178477920687,
+            "max": 1.0035759301942386
+          }
+        },
+        "memcpy.directions.D2H.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.12629646249999998,
+              "median": 0.12775658750000002,
+              "max": 0.1322578
+            },
+            "kernels": {
+              "min": 0.12701700833333335,
+              "median": 0.1285346125,
+              "max": 0.129746075
+            }
+          },
+          "median_ratio_second_to_first": 1.0060899012350342,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9810088705543263,
+            "median": 0.9942110291051202,
+            "max": 1.017721398966341
+          }
+        },
+        "memcpy.directions.H2D.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.006073804166666667,
+              "median": 0.006316970833333334,
+              "max": 0.006422691666666667
+            },
+            "kernels": {
+              "min": 0.005549254166666667,
+              "median": 0.006040837499999999,
+              "max": 0.00618805
+            }
+          },
+          "median_ratio_second_to_first": 0.9562870653326059,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9136373209266844,
+            "median": 0.9405460846503866,
+            "max": 0.9795913521314605
+          }
+        },
+        "memcpy.directions.other.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "kernels": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "median_ratio_second_to_first": null,
+          "paired_round_ratio_second_to_first": null
+        },
+        "memcpy.total.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.18752540833333334,
+              "median": 0.18967183333333332,
+              "max": 0.19434294583333334
+            },
+            "kernels": {
+              "min": 0.1887488375,
+              "median": 0.1893447875,
+              "max": 0.191319725
+            }
+          },
+          "median_ratio_second_to_first": 0.9982757279898352,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9844438869629669,
+            "median": 0.9951337221921019,
+            "max": 1.0097020408212238
+          }
+        }
+      },
+      "observed_av1_table_states": {
+        "equal": true,
+        "arms": {
+          "deployed": [
+            {
+              "ivf_md5": "ce0413d0300f5a9775d6352c56d76aa6",
+              "table_md5": "cdeceddf325f6701d124f593fccbd872",
+              "runs": 3
+            }
+          ],
+          "kernels": [
+            {
+              "ivf_md5": "ce0413d0300f5a9775d6352c56d76aa6",
+              "table_md5": "cdeceddf325f6701d124f593fccbd872",
+              "runs": 3
+            }
+          ]
+        }
+      }
+    },
+    "amphibia": {
+      "metrics": {
+        "fgs_kernel_total.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.8686369500000001,
+              "median": 0.8738521125,
+              "max": 0.8871702041666667
+            },
+            "kernels": {
+              "min": 0.7534688791666666,
+              "median": 0.7537022666666666,
+              "max": 0.7619828333333333
+            }
+          },
+          "median_ratio_second_to_first": 0.8625055153902448,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.8492946174566492,
+            "median": 0.8676838657009313,
+            "max": 0.8719814513618096
+          }
+        },
+        "host_synchronization.cudaDeviceSynchronize.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "kernels": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "median_ratio_second_to_first": null,
+          "paired_round_ratio_second_to_first": null
+        },
+        "host_synchronization.cudaEventSynchronize.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.0053171625,
+              "median": 0.006274,
+              "max": 0.006318654166666667
+            },
+            "kernels": {
+              "min": 0.005753175,
+              "median": 0.010025641666666666,
+              "max": 0.014915933333333332
+            }
+          },
+          "median_ratio_second_to_first": 1.5979664754011262,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9105063907992009,
+            "median": 1.5979664754011262,
+            "max": 2.8052430846966465
+          }
+        },
+        "host_synchronization.cudaStreamSynchronize.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 2.012494079166667,
+              "median": 3.0156411333333333,
+              "max": 3.1671297458333334
+            },
+            "kernels": {
+              "min": 3.1938085291666667,
+              "median": 3.2349561249999996,
+              "max": 3.356427345833333
+            }
+          },
+          "median_ratio_second_to_first": 1.0727258257763075,
+          "paired_round_ratio_second_to_first": {
+            "min": 1.021415724839154,
+            "median": 1.059081100156104,
+            "max": 1.667794892208161
+          }
+        },
+        "kernel_groups.bilateral.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.5001280458333334,
+              "median": 0.5001815916666666,
+              "max": 0.5004870583333333
+            },
+            "kernels": {
+              "min": 0.4693486,
+              "median": 0.46984068749999996,
+              "max": 0.4701704625
+            }
+          },
+          "median_ratio_second_to_first": 0.9393402222869357,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9384568690163188,
+            "median": 0.9393402222869357,
+            "max": 0.9394258146568459
+          }
+        },
+        "kernel_groups.flat_metrics.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.25015400416666667,
+              "median": 0.25404818333333334,
+              "max": 0.26090586666666665
+            },
+            "kernels": {
+              "min": 0.16385403333333332,
+              "median": 0.1645732666666667,
+              "max": 0.17228759583333333
+            }
+          },
+          "median_ratio_second_to_first": 0.6478033596120316,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.6280197353426062,
+            "median": 0.6578877968190296,
+            "max": 0.6781689739826913
+          }
+        },
+        "kernel_groups.model_stats.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.04284664583333333,
+              "median": 0.043033825,
+              "max": 0.043189816666666665
+            },
+            "kernels": {
+              "min": 0.04301726666666667,
+              "median": 0.04314945,
+              "max": 0.04316165
+            }
+          },
+          "median_ratio_second_to_first": 1.0026868399450897,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9960048452779573,
+            "median": 1.0029703378679447,
+            "max": 1.0070671615193527
+          }
+        },
+        "kernel_groups.other.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.14936787083333333,
+              "median": 0.15495904166666669,
+              "max": 0.159897825
+            },
+            "kernels": {
+              "min": 0.14993642499999998,
+              "median": 0.14997777916666666,
+              "max": 0.15882712083333334
+            }
+          },
+          "median_ratio_second_to_first": 0.9678543281732779,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9379600952462404,
+            "median": 0.9675874565779073,
+            "max": 1.063328545471166
+          }
+        },
+        "kernel_groups.temporal_detail_metrics.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.05348183333333333,
+              "median": 0.053648416666666664,
+              "max": 0.059463370833333334
+            },
+            "kernels": {
+              "min": 0.05352461666666666,
+              "median": 0.05353468333333333,
+              "max": 0.05547415
+            }
+          },
+          "median_ratio_second_to_first": 0.9978800244182416,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9329129718442214,
+            "median": 0.9978800244182416,
+            "max": 1.0007999601110658
+          }
+        },
+        "kernel_total.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.9965039958333333,
+              "median": 1.0057044750000002,
+              "max": 1.023584925
+            },
+            "kernels": {
+              "min": 0.8816718291666666,
+              "median": 0.888750975,
+              "max": 0.8902549833333333
+            }
+          },
+          "median_ratio_second_to_first": 0.8837098741158528,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.8613567937869607,
+            "median": 0.8837098741158528,
+            "max": 0.8933782373736008
+          }
+        },
+        "memcpy.directions.D2D.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.06991589583333332,
+              "median": 0.07074135833333334,
+              "max": 0.07079600416666666
+            },
+            "kernels": {
+              "min": 0.06912483333333334,
+              "median": 0.07434146250000001,
+              "max": 0.07582622083333333
+            }
+          },
+          "median_ratio_second_to_first": 1.0508910805713254,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9886855129213287,
+            "median": 1.0508910805713254,
+            "max": 1.0710522680746872
+          }
+        },
+        "memcpy.directions.D2H.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.12143291666666665,
+              "median": 0.12378053333333333,
+              "max": 0.12728922083333333
+            },
+            "kernels": {
+              "min": 0.1218404,
+              "median": 0.1222854375,
+              "max": 0.12615321666666668
+            }
+          },
+          "median_ratio_second_to_first": 0.9879213977103561,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9606896538404847,
+            "median": 1.003355625019301,
+            "max": 1.019168469140005
+          }
+        },
+        "memcpy.directions.H2D.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.0040679,
+              "median": 0.004574029166666666,
+              "max": 0.00482725
+            },
+            "kernels": {
+              "min": 0.004277108333333333,
+              "median": 0.004729504166666666,
+              "max": 0.004730854166666667
+            }
+          },
+          "median_ratio_second_to_first": 1.0339908195454957,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.8860341464256737,
+            "median": 1.0342859641435753,
+            "max": 1.162640223866532
+          }
+        },
+        "memcpy.directions.other.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "kernels": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "median_ratio_second_to_first": null,
+          "paired_round_ratio_second_to_first": null
+        },
+        "memcpy.total.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.196242175,
+              "median": 0.19915056666666667,
+              "max": 0.20203236666666669
+            },
+            "kernels": {
+              "min": 0.19568737916666665,
+              "median": 0.20091136666666667,
+              "max": 0.20671029166666666
+            }
+          },
+          "median_ratio_second_to_first": 1.0088415515429952,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9685942029750677,
+            "median": 1.023793008137352,
+            "max": 1.0379598467959836
+          }
+        }
+      },
+      "observed_av1_table_states": {
+        "equal": true,
+        "arms": {
+          "deployed": [
+            {
+              "ivf_md5": "a45de9b2d0825ffc4e0ae9167e360d56",
+              "table_md5": "ae9930cf3696c86171444f08b35c9c2e",
+              "runs": 3
+            }
+          ],
+          "kernels": [
+            {
+              "ivf_md5": "a45de9b2d0825ffc4e0ae9167e360d56",
+              "table_md5": "ae9930cf3696c86171444f08b35c9c2e",
+              "runs": 3
+            }
+          ]
+        }
+      }
+    },
+    "taxi_hdr": {
+      "metrics": {
+        "fgs_kernel_total.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 4.449054875,
+              "median": 4.483886541666666,
+              "max": 4.539824916666666
+            },
+            "kernels": {
+              "min": 4.034792708333334,
+              "median": 4.1480845833333335,
+              "max": 4.155445375
+            }
+          },
+          "median_ratio_second_to_first": 0.925109175887284,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9068876023547212,
+            "median": 0.9137102552357976,
+            "max": 0.9267507855931199
+          }
+        },
+        "host_synchronization.cudaDeviceSynchronize.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "kernels": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "median_ratio_second_to_first": null,
+          "paired_round_ratio_second_to_first": null
+        },
+        "host_synchronization.cudaEventSynchronize.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.033189,
+              "median": 0.03517633333333333,
+              "max": 0.20319079166666668
+            },
+            "kernels": {
+              "min": 0.046811624999999996,
+              "median": 0.13846225,
+              "max": 0.2805856666666667
+            }
+          },
+          "median_ratio_second_to_first": 3.9362331681338785,
+          "paired_round_ratio_second_to_first": {
+            "min": 1.3808975513367054,
+            "median": 1.410456024586459,
+            "max": 3.9362331681338785
+          }
+        },
+        "host_synchronization.cudaStreamSynchronize.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 5.614174916666666,
+              "median": 5.878711125,
+              "max": 6.312947583333333
+            },
+            "kernels": {
+              "min": 5.328987916666667,
+              "median": 5.416152749999999,
+              "max": 5.721277333333333
+            }
+          },
+          "median_ratio_second_to_first": 0.9213163625215552,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.857943564159959,
+            "median": 0.9064891612048155,
+            "max": 1.0190771428137577
+          }
+        },
+        "kernel_groups.bilateral.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 1.9832509583333333,
+              "median": 1.9835760416666668,
+              "max": 1.9856989166666665
+            },
+            "kernels": {
+              "min": 1.8662764583333333,
+              "median": 1.8678685833333333,
+              "max": 1.8682419583333332
+            }
+          },
+          "median_ratio_second_to_first": 0.9416672434518254,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.94084855596814,
+            "median": 0.9408645895749101,
+            "max": 0.9418215962457096
+          }
+        },
+        "kernel_groups.flat_metrics.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 1.1059764166666668,
+              "median": 1.1060575833333333,
+              "max": 1.1074054583333333
+            },
+            "kernels": {
+              "min": 0.8816597916666667,
+              "median": 0.8831386666666666,
+              "max": 0.8832080000000001
+            }
+          },
+          "median_ratio_second_to_first": 0.7984563190689816,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.7971192503464446,
+            "median": 0.7975470893282802,
+            "max": 0.798514917097765
+          }
+        },
+        "kernel_groups.model_stats.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.8088460833333334,
+              "median": 0.8377756666666666,
+              "max": 0.8905026666666668
+            },
+            "kernels": {
+              "min": 0.7215466250000001,
+              "median": 0.839654375,
+              "max": 0.8493956666666667
+            }
+          },
+          "median_ratio_second_to_first": 1.0022424957039018,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.8920691338782729,
+            "median": 0.942899338126631,
+            "max": 1.0138700614762823
+          }
+        },
+        "kernel_groups.other.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.6524394583333334,
+              "median": 0.664067375,
+              "max": 0.6691171666666667
+            },
+            "kernels": {
+              "min": 0.6602463333333334,
+              "median": 0.6681900833333333,
+              "max": 0.6702195833333334
+            }
+          },
+          "median_ratio_second_to_first": 1.0062082681494982,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9867424813242724,
+            "median": 1.0062082681494982,
+            "max": 1.0272517622484385
+          }
+        },
+        "kernel_groups.temporal_detail_metrics.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.22863770833333333,
+              "median": 0.22868554166666666,
+              "max": 0.22931120833333332
+            },
+            "kernels": {
+              "min": 0.22953766666666667,
+              "median": 0.229959,
+              "max": 0.23020454166666668
+            }
+          },
+          "median_ratio_second_to_first": 1.0055686001137296,
+          "paired_round_ratio_second_to_first": {
+            "min": 1.0028249455025549,
+            "median": 1.0039361763197052,
+            "max": 1.006642308861896
+          }
+        },
+        "kernel_total.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 4.783701124999999,
+              "median": 4.820114375,
+              "max": 4.877532749999999
+            },
+            "kernels": {
+              "min": 4.373175166666667,
+              "median": 4.4811125,
+              "max": 4.495059666666667
+            }
+          },
+          "median_ratio_second_to_first": 0.9296693296826593,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9141823563792706,
+            "median": 0.9187252509990836,
+            "max": 0.9325628640641265
+          }
+        },
+        "memcpy.directions.D2D.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.41136429166666666,
+              "median": 0.416631,
+              "max": 0.4202910833333333
+            },
+            "kernels": {
+              "min": 0.41612316666666666,
+              "median": 0.41685883333333335,
+              "max": 0.4201777916666667
+            }
+          },
+          "median_ratio_second_to_first": 1.000546846810087,
+          "paired_round_ratio_second_to_first": {
+            "min": 0.9900832617394334,
+            "median": 1.0085130287152582,
+            "max": 1.0133568755917175
+          }
+        },
+        "memcpy.directions.D2H.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.573187,
+              "median": 0.5737668333333333,
+              "max": 0.58200575
+            },
+            "kernels": {
+              "min": 0.589361625,
+              "median": 0.635154125,
+              "max": 0.6615503333333334
+            }
+          },
+          "median_ratio_second_to_first": 1.1069899619502812,
+          "paired_round_ratio_second_to_first": {
+            "min": 1.0282187575782424,
+            "median": 1.1069899619502812,
+            "max": 1.1366731915162924
+          }
+        },
+        "memcpy.directions.H2D.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 2.05056475,
+              "median": 2.0534179583333336,
+              "max": 2.09126075
+            },
+            "kernels": {
+              "min": 2.0824421666666666,
+              "median": 2.321668125,
+              "max": 2.3477403333333333
+            }
+          },
+          "median_ratio_second_to_first": 1.1306359309745166,
+          "paired_round_ratio_second_to_first": {
+            "min": 1.0155456767052427,
+            "median": 1.1226435217766761,
+            "max": 1.1306359309745166
+          }
+        },
+        "memcpy.directions.other.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            },
+            "kernels": {
+              "min": 0.0,
+              "median": 0.0,
+              "max": 0.0
+            }
+          },
+          "median_ratio_second_to_first": null,
+          "paired_round_ratio_second_to_first": null
+        },
+        "memcpy.total.ms_per_declared_frame": {
+          "arms": {
+            "deployed": {
+              "min": 3.0403827499999996,
+              "median": 3.047475875,
+              "max": 3.0846307916666666
+            },
+            "kernels": {
+              "min": 3.0919815833333337,
+              "median": 3.3729454166666666,
+              "max": 3.4261494999999997
+            }
+          },
+          "median_ratio_second_to_first": 1.1067997106512506,
+          "paired_round_ratio_second_to_first": {
+            "min": 1.0169711636909313,
+            "median": 1.1067997106512506,
+            "max": 1.1107162352317719
+          }
+        }
+      },
+      "observed_av1_table_states": {
+        "equal": false,
+        "arms": {
+          "deployed": [
+            {
+              "ivf_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+              "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9",
+              "runs": 2
+            },
+            {
+              "ivf_md5": "d3cf4137a98a02a37a478c5c08ce9cdd",
+              "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9",
+              "runs": 1
+            }
+          ],
+          "kernels": [
+            {
+              "ivf_md5": "3fbd02014b8bac6da53d77e3e2195f95",
+              "table_md5": "83c169e521a6f7a0c8aa8d7eb2bf77e9",
+              "runs": 3
+            }
+          ]
+        }
+      }
+    }
+  }
+}

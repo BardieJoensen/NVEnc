@@ -1,0 +1,291 @@
+{
+  "checked_at_utc": "2026-10-04T20:48:45.380291+00:00",
+  "scope": "Final read-only audit: source/outputs absent and user-managed reacquisition pending. No media opened/probed/hashed, no binary hashes, no container create/start or GPU jobs. Small script/manifest contents and filesystem metadata only.",
+  "blockers": [
+    {
+      "known_blocker": "Exact source reacquisition and completed source verification pending; fresh full-history artifacts/manifest do not yet exist."
+    }
+  ],
+  "runner": {
+    "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/regenerate_amplitude.py",
+    "sha256": "d1f555cbe38c3a5379a9e70a92ba77a2f5dae3709ee0e5543ca0ee4799b552fa",
+    "core": "6e8fa1fb1a2b06e64b8c4a19af392bc5adfe5c5e",
+    "encoder_sha256": "be7a50a1681fc5aa9a7133533f081d4e3253b2c74bc639605358f69d591ababe",
+    "build_receipt_core_matches": true,
+    "build_receipt_binary_matches": true,
+    "build_receipt_sha_matches": true,
+    "help_returncode": 0,
+    "historical_argv_checks": [
+      {
+        "arm": "negative",
+        "historical_receipt": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/city-trial/31f295cbb640d53811d6/report.json",
+        "historical_receipt_sha256": "e850fe551483e9dd981c21c16547ab275f61cb82da5a64872f16667f3ebedb4d",
+        "argv_except_binary_and_paths_identical": true
+      },
+      {
+        "arm": "reference",
+        "historical_receipt": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/city-plain-reference/report.json",
+        "historical_receipt_sha256": "0ff448395f578c5f0bc26404efdcbe7d4046131bab2ad123a7af0b21a819329f",
+        "argv_except_binary_and_paths_identical": true
+      },
+      {
+        "arm": "candidate",
+        "historical_receipt": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/source-variance/training-v7/extended/full/play-dirty/report.json",
+        "historical_receipt_sha256": "d83383bf28864f3402e58812bd93dc96834bd1356df9eefd2f463eb75548ca46",
+        "argv_except_binary_and_paths_identical": true
+      }
+    ]
+  },
+  "gate": {
+    "harness_files": [
+      {
+        "file": "tests/fgs/local_gate.sh",
+        "final_sha256": "e0703778a2e1ceb02607a332b5cd3b7c64290e5df56c8924006919db365426a6",
+        "unchanged_from_production_pin": true
+      },
+      {
+        "file": "tests/fgs/amplitude_regression.py",
+        "final_sha256": "91219acafc8b0660cd0152050ac3eaa8b524e71915da5853bd946c3fdcf54b93",
+        "unchanged_from_production_pin": true
+      },
+      {
+        "file": "tests/fgs/fixtures.json",
+        "final_sha256": "d3879d44bac80ee439f70825c12fc104a3919032a6c7e3caece57754db19ed7e",
+        "unchanged_from_production_pin": true
+      }
+    ],
+    "manifest_contract": {
+      "required_artifacts": [
+        "source",
+        "negative",
+        "candidate",
+        "reference"
+      ],
+      "required_fields_each": [
+        "path",
+        "sha256"
+      ],
+      "required_candidate_field": "encoder_sha256 equals actual selected candidate binary SHA",
+      "extra_provenance_keys_accepted": true,
+      "four_distinct_inode_signatures_required": true,
+      "generated_paths_are_four_distinct_files": true,
+      "witnesses": {
+        "city": {
+          "seconds": 856.333,
+          "frames": 12
+        },
+        "dialogue": {
+          "seconds": 5727.583,
+          "frames": 12
+        }
+      },
+      "fresh_negative_requirement": "Both regenerated negatives must fail the existing synthesis checks; generation alone does not establish this.",
+      "history_check": "Driver encodes from start without seek/trim/frame limit; requires183661 encoder-log and ffprobe-counted decoded frames."
+    },
+    "grain-base-canary.sh_identical_to_global": true,
+    "grain-base-canary.py_identical_to_global": true,
+    "fidelity_path_only_equivalence": true,
+    "aom_source_revision_metadata": {
+      "argv": [
+        "git",
+        "-C",
+        "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-cache/aom-18c52422b835/src",
+        "rev-parse",
+        "HEAD"
+      ],
+      "returncode": 0,
+      "revision": "18c52422b835ba6cdde1b2342d760c6037a7fd86",
+      "expected": "18c52422b835ba6cdde1b2342d760c6037a7fd86",
+      "matches": true,
+      "note": "build_aom_reference.sh puts the pinned checkout under src/; parent cache directory itself is not a Git repository."
+    }
+  },
+  "host_path_visibility": [
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/scripts/grain-base-canary.sh",
+      "resolved_path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/scripts/grain-base-canary.sh",
+      "exists": true,
+      "readable": true,
+      "executable_or_searchable": true,
+      "bytes": 376
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/scripts/grain-base-canary.py",
+      "resolved_path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/scripts/grain-base-canary.py",
+      "exists": true,
+      "readable": true,
+      "executable_or_searchable": false,
+      "bytes": 4928
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/scripts/grain-base-fidelity.py",
+      "resolved_path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/scripts/grain-base-fidelity.py",
+      "exists": true,
+      "readable": true,
+      "executable_or_searchable": true,
+      "bytes": 21959
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/tmp",
+      "resolved_path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/tmp",
+      "exists": true,
+      "readable": true,
+      "executable_or_searchable": true,
+      "bytes": 4096
+    },
+    {
+      "path": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/bin/nvencc-ef5c61fe",
+      "resolved_path": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/bin/nvencc-ef5c61fe",
+      "exists": true,
+      "readable": true,
+      "executable_or_searchable": true,
+      "bytes": 402378944
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels",
+      "resolved_path": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels",
+      "exists": true,
+      "readable": true,
+      "executable_or_searchable": true,
+      "bytes": 403075952
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/logs/fgs-ripple-repair-20260906/bin/nvencc-f588b7b8",
+      "resolved_path": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/bin/nvencc-f588b7b8",
+      "exists": true,
+      "readable": true,
+      "executable_or_searchable": true,
+      "bytes": 402486632
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/logs/fgs-ripple-repair-20260906/bin/nvencc-2fa6cfd0",
+      "resolved_path": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/bin/nvencc-2fa6cfd0",
+      "exists": true,
+      "readable": true,
+      "executable_or_searchable": true,
+      "bytes": 402378944
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/logs/fgs-ripple-repair-20260906/bin/nvencc-3778447e",
+      "resolved_path": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/bin/nvencc-3778447e",
+      "exists": true,
+      "readable": true,
+      "executable_or_searchable": true,
+      "bytes": 401697944
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps/logs/fgs-ripple-repair-20260906/bin/nvencc-273723b7",
+      "resolved_path": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/bin/nvencc-273723b7",
+      "exists": true,
+      "readable": true,
+      "executable_or_searchable": true,
+      "bytes": 402260296
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-cache/bin/nvencc-r4050",
+      "resolved_path": "/home/bardie/.cache/fgs-gate/bin/nvencc-r4050",
+      "exists": true,
+      "readable": true,
+      "executable_or_searchable": true,
+      "bytes": 376663456
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-cache/bin/nvencc-r4047",
+      "resolved_path": "/home/bardie/.cache/fgs-gate/bin/nvencc-r4047",
+      "exists": true,
+      "readable": true,
+      "executable_or_searchable": true,
+      "bytes": 376671720
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-cache/aom-18c52422b835/build/noise_model",
+      "resolved_path": "/home/bardie/.cache/fgs-gate/aom-18c52422b835/build/noise_model",
+      "exists": true,
+      "readable": true,
+      "executable_or_searchable": true,
+      "bytes": 9259416
+    }
+  ],
+  "container_path_reasoning": {
+    "execution_required": "Run full gate and amplitude driver natively on home-server, not inside an under-mounted wrapper container.",
+    "hostname": "home-server",
+    "dockerenv_exists": false,
+    "docker_host_env": null,
+    "docker_context_env": null,
+    "docker_context": [
+      {
+        "Name": "default",
+        "Metadata": {},
+        "Endpoints": {
+          "docker": {
+            "Host": "unix:///var/run/docker.sock",
+            "SkipTLSVerify": false
+          }
+        },
+        "TLSMaterial": {},
+        "Storage": {
+          "MetadataPath": "<IN MEMORY>",
+          "TLSPath": "<IN MEMORY>"
+        }
+      }
+    ],
+    "docker_daemon_name": "home-server",
+    "same_host_name": true,
+    "temp_path_resolves_to_itself": true,
+    "native_negative_resolution": "Full-gate retained binaries are opened/executed on host via DOCKER_APPS/logs -> /opt/docker-apps/logs. These symlinks are not required inside metrics containers.",
+    "canary_binary_resolution": "docker create/cp extracts /usr/bin/nvencc from historical image into host scratch; extracted encoder then runs natively. Images are not started for binary extraction.",
+    "metrics_container_resolution": "Only fresh actual host work directory below gate-path-view/tmp is bound directly as /data; FFVship receives /data/basenames. It needs neither /opt nor the DOCKER_APPS logs symlink inside container.",
+    "candidate_commit_build_avoided": "Invocation must select --candidate-nvencc at exact final bin path; no need to enter build container."
+  },
+  "archive_and_release_receipts": {
+    "historical_source_identity_pinned": {
+      "bytes": 8667928469,
+      "sha256": "d4a348ec7afc3dd22a66a492f2c804a49392ba8de1afc5aa244c548f4e15934d"
+    },
+    "historical_negative_encoder_pinned": "d8127dfa63011160dc222a41516452c269c2438269866b3da74f95e5ba4fd47b",
+    "final_candidate_identity_from_build_receipt_matches": true,
+    "independent_source_copy_survives_original_36h_move": true,
+    "copies_are_not_hardlinks": true,
+    "regenerated_output_hashes_measured_not_copied_from_archive": true,
+    "historical_missing_archives_are_not_claimed_recovered": true,
+    "complete_means": "All three newly generated outputs verified; amplitude_gate_passed/local_full_gate_passed explicitly remain false.",
+    "manifest_last": true,
+    "production_release_not_authorized_by_runner": true,
+    "evidence_retention": "Archive candidate exact binary, generated source/copy/command/hash receipts, fresh manifest, full-gate stage logs, and path-only helper receipt/diff before disposing scratch; no archive action performed.",
+    "relocation_caveat": "Fresh manifest paths name independent scratch files. Any later authorized archive move needs a new location receipt and matching manifest paths/content hashes or preserved readable paths; no silent relocation is performed.",
+    "source_arrival_caveat": "Runner deliberately requires a completed source resolving under /tmp/downloads. If user-managed move already occurred before execution it fails; do not silently switch to a library file.",
+    "administrative_receipt_caveat": "gate-path-view/receipt.json records its preparation-time pending-review state; parent subsequently approved placement fix. This does not imply it was executed or passed."
+  },
+  "limits": [
+    "Native negative/reference runtime is viable but not proven byte-identical to historical container libraries; only actual negative witness rejection qualifies controls.",
+    "Static visibility cannot establish runtime GPU/FFVship success; no containers started in this audit.",
+    "Content hashes for media/encoders are deliberately deferred to runner and unchanged gate.",
+    "Current gate same-settings plain control is not the separate matched-bitrate comparison required for the performance findings.",
+    "Full gate cannot be called passing from partial stages or generation receipts."
+  ],
+  "space": {
+    "scratch_free_bytes": 286240743424,
+    "required_runner_free_bytes": 42949672960
+  },
+  "recommended_gate_invocation": {
+    "environment": {
+      "DOCKER_APPS": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/docker-apps",
+      "TMPDIR": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-path-view/tmp",
+      "FGS_GATE_CACHE": "/tmp/downloads/codex-work/fgs-improvement-20261004/gate-cache",
+      "FGS_GATE_REPORTS": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-full-final",
+      "FGS_GATE_REPO": "/tmp/downloads/codex-work/fgs-improvement-20261004/kernels-pin",
+      "FGS_GATE_HARNESS_COMMIT": "6e8fa1fb1a2b06e64b8c4a19af392bc5adfe5c5e"
+    },
+    "argv": [
+      "bash",
+      "/tmp/downloads/codex-work/fgs-improvement-20261004/kernels-pin/tests/fgs/local_gate.sh",
+      "--full",
+      "--candidate-nvencc",
+      "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels",
+      "--amplitude-manifest",
+      "<complete new run>/amplitude-manifest.json"
+    ],
+    "status": "Example only; not executed. REPORTS must be fresh; manifest must be produced by successful runner."
+  },
+  "conclusion": "No additional static runtime blocker identified. Exact source reacquisition/verification and actual regenerated witnesses/gate runs remain outstanding. Native-host execution is the audited configuration."
+}

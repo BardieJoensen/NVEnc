@@ -1,0 +1,21 @@
+{
+  "source": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/silo-fine-24f.mkv",
+  "destination": "/tmp/downloads/codex-work/fgs-improvement-20261004/original-fixtures/silo-fine-24f.mkv",
+  "source_stat_before_after": [
+    36,
+    2923314166208525521,
+    14893385,
+    1788558269908788529,
+    1789070660212387473
+  ],
+  "destination_stat": [
+    66310,
+    42238851,
+    14893385,
+    1791145219774107136,
+    1791145219790107373
+  ],
+  "sha256": "040468f686dc66c753c2a2899261b3434fda6f33e257d5047bfda14bd241607b",
+  "source_unchanged": true,
+  "destination_independently_verified": true
+}

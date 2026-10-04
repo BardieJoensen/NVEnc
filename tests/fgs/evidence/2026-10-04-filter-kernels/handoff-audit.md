@@ -1,0 +1,17 @@
+# Independent kernel-branch handoff audit
+
+At 2026-10-04T21:16:59.176633+00:00, branch `perf/fgs-prod-filter-kernels-20261004` was at documentation head `76434e97`. Proven ancestry is `aeb14263 → 6cfb28a5 → 3f4d5290 → 6e8fa1fb → HEAD`. Runtime changes are exactly one CU file, +87/−42 lines. The subsequent commits contain documentation and evidence helpers only. Working CU, pinned build CU and core-commit CU all hash to `2de02e359a8b9f1fb73847cf24ff0bf04945290671239dd44d04aa14c0256a67`.
+
+The actual scratch candidate binary was rehashed without execution: `be7a50a1681fc5aa9a7133533f081d4e3253b2c74bc639605358f69d591ababe`; metadata stayed stable. It agrees with `kernels-build-pins.json`, the driver and aggregate identity receipt. The core is `6e8fa1fb`; the later documentation HEAD is not a substitute binary identity. All 15 indexed compact evidence copies match their recorded sizes/hashes and current scratch originals.
+
+The strict aggregate contains **687 admitted runs, zero evidence/scope errors, 26/26 raw-base/table state matches, 26/26 encoded-table matches, and 24/26 IVF/grain-off decoded-state matches**. Taxi lacks production IVF `d3cf4137a98a02a37a478c5c08ce9cdd`; Gentlemen lacks `0ff816e738aeee78e653e3de98c82190`. Both reached twelve unprofiled candidate runs. No candidate-only state is reported. This fails the declared bounded admission requirement; successful KATs and a matching first real-source campaign cannot override it.
+
+The current worktree findings correctly state this failure and avoid an end-to-end throughput claim. Remaining handoff wording/work:
+
+- The release paragraph should explicitly require **state-set admission, matched plain controls and the unchanged full gate**; passing the later gate alone cannot clear missing known states. Rephrase the final risk sentence's “bounded by the recorded state-set tests” to reflect unresolved compiled-output identity.
+- `kernels-findings-draft.md` in scratch is stale (identity and quick/full still described generically as pending); the updated worktree findings are the current version. At audit, those findings and their filter-kernel evidence directory were still untracked, and the plan had uncommitted edits. Include final admission/control/gate receipts in the branch before handoff; the current compact index does not yet include the aggregate admission failure.
+- Label the running 15-stage gate **partial** regardless of its result. It excludes mandatory amplitude and cannot satisfy `--full`. Generation reports explicitly leave amplitude/full-gate passes false, correctly.
+
+The existing Dockerfile's post-copy check and `fgs.encoder.sha256` label are `c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b`, with core `aeb14263`; these must later be changed to the exact qualified candidate's hash/core and a new version/tag when the user authorizes release. Keep the older base-image tool checks distinct. Current image labels also contain inherited stale `local.nvencc.sha256` and OCI revision fields, so verify the actual packaged binary and authoritative `fgs.encoder.*` labels rather than trusting inherited labels.
+
+Rollback target is correct: `nvenc-fidelity/tdarr-node:2.94.02-aeb14263-20261004`, image ID `sha256:3bf0fe28f70cda3305b9476e4f87ca013c37e1467f4b2d27e73482fb56107773`, binary `c6cbd528…`. Read-only inspection confirms the live node still names that image. No draft claims deployment occurred. No Git/worktree edits, media access, GPU work, deployment or push was performed by this audit.

@@ -1,0 +1,9 @@
+{
+  "core_commit": "6e8fa1fb1a2b06e64b8c4a19af392bc5adfe5c5e",
+  "binary": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels",
+  "binary_sha256": "be7a50a1681fc5aa9a7133533f081d4e3253b2c74bc639605358f69d591ababe",
+  "source_sha256": "2de02e359a8b9f1fb73847cf24ff0bf04945290671239dd44d04aa14c0256a67",
+  "config_sha256": "430cc2aeb56df5378dc36856b3413b68439ba1f463610945ef8310b3aeacd242",
+  "version": "NVEnc (x64) 9.37 (r4366) by rigaya, Oct  4 2026 20:19:21 (gcc 13.3.0/Linux)\n  [NVENC API v13.1, CUDA 13.3]\n reader: raw, y4m, avs, vpy, avsw, avhw [H.264/AVC, H.265/HEVC, MPEG2, VP8, VP9, VC-1, MPEG1, MPEG4, AV1]\n others\n  nvml       : yes\n  nvrtc      : yes\n  nvvfx      : no\n  ngx        : no\n  nvof fruc  : no\n  libass     : yes\n  libdovi    : yes\n  vulkan     : yes\n  libplacebo : yes\n  vmaf       : no\n",
+  "method": "Copied immutable candidate-pin, local-only fetch/detached checkout, same /work/pinned image/packages, Meson reconfigure and CU-only incremental rebuild. Config and dependencies unchanged."
+}

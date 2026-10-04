@@ -1,0 +1,41 @@
+{
+  "v2_sha256": "9a3e6b4ce395b1e2801494325a5c6a982c7dbe8ffab0d94dc29174cc10eb3777",
+  "v1_sha256_unchanged": "86da8fa74732df1a25cd70f8ce5b4a5fdfc3e24c7810c4c851c20c98a88c83f0",
+  "gpu_processes_launched": 0,
+  "validated_kat_cases": 21,
+  "validated_real_cases": [
+    "silo_partial"
+  ],
+  "checks": [
+    {
+      "case": "one-sided ratio",
+      "result": {
+        "next_vbr_kbps": 125,
+        "strategy": "payload ratio; no two-sided bracket yet"
+      }
+    },
+    {
+      "case": "tight two-sided bracket",
+      "result": {
+        "next_vbr_kbps": 2123,
+        "strategy": "integer bracket midpoint",
+        "below_band_requested_kbps": 2092,
+        "above_band_requested_kbps": 2155
+      }
+    },
+    {
+      "case": "adjacent bracket",
+      "rejected": "Adjacent integer VBR targets bracket the band without an accepted rate"
+    },
+    {
+      "case": "nonmonotonic bracket",
+      "rejected": "Out-of-band observations do not form a monotonic VBR bracket"
+    }
+  ],
+  "preserved_real_max_bitrate": 50000,
+  "clean_first_probe": "CQP20, exact original argument order except removal of FGS/table/output",
+  "fixed_tolerance": 0.03,
+  "max_vbr_trials_per_case": 8,
+  "requested_vbr_bound_kbps": 500000,
+  "max_kat_peak_bound_kbps": 1000000
+}

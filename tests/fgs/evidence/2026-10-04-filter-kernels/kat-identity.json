@@ -1,0 +1,2230 @@
+{
+  "complete": true,
+  "identity_pass": true,
+  "manifest_sha256": "a1a88346b5ac7f231e7b0b9a68afea87bdae6e1366e6f20b539df9b565079281",
+  "harness_sha256": "6bbe9c681be59bda776915af28df4c9e23683583573785e16ccfef5ac9a967ad",
+  "kat_module_sha256": "afe309569f3894fd99e1055f36ea89da7c4fc1d3d41f28abd403e6bbe9272cbf",
+  "filmgrn_module_sha256": "e030e9466002ef7edd56bac97dcdc6f1a840f2e9b4509a8728a1176abf7017bb",
+  "ffmpeg": {
+    "path": "/usr/local/bin/ffmpeg",
+    "sha256": "a9621baa19be96b6cf880e388fc9cdaf1fb23ac5e5daad9672412e1c32c6a0c2"
+  },
+  "note": "Raw/table and AV1/table are independent runs. Raw pixels are not a capture of the corresponding encoder submission. State equality is finite-sample evidence, not universal determinism.",
+  "raw_metadata_note": "Raw diagnostics preserve color/range arguments but omit encoded HDR/container metadata: master-display, max-cll, video-metadata and explicitly supplied encoded-only metadata. Raw cannot carry these; NVEncC rejects master-display/max-cll with codec raw. Each raw run lists its exact omitted arguments. AV1 keeps production metadata flags. Real runs use default production logging; KAT runs keep canonical debug logging.",
+  "comparisons": {
+    "const_luma": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "22d5fe99e76e311b2ae6d233cb079560",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "22d5fe99e76e311b2ae6d233cb079560",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "7d6b0c30ccd4044b6b1ec855a817f442",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "7d6b0c30ccd4044b6b1ec855a817f442",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "92d12c01154279ef20213af320c259fe"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "92d12c01154279ef20213af320c259fe"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "warmup_luma": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "22fa1b7da9f8bfa5b64b78b1caaa3be2",
+                "c941b67066a289b2d13784f9d968120c"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "22fa1b7da9f8bfa5b64b78b1caaa3be2",
+                "c941b67066a289b2d13784f9d968120c"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "49c261be797b3e9d15cbd57c89ff3561",
+                "c941b67066a289b2d13784f9d968120c"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "49c261be797b3e9d15cbd57c89ff3561",
+                "c941b67066a289b2d13784f9d968120c"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "39bfaee5fafc7ca3527d99c5c1371568"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "39bfaee5fafc7ca3527d99c5c1371568"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "ramp_luma": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "7a32263672159c752b8636c51cafcc9c",
+                "444517936bb198ce5dc840ecdf82d454"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "7a32263672159c752b8636c51cafcc9c",
+                "444517936bb198ce5dc840ecdf82d454"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "621e08bf688dd8353c3b807eee64f395",
+                "444517936bb198ce5dc840ecdf82d454"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "621e08bf688dd8353c3b807eee64f395",
+                "444517936bb198ce5dc840ecdf82d454"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "9b17851a83d1009121123bc6f8cb5978"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "9b17851a83d1009121123bc6f8cb5978"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "chroma_corr": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "ba8be321a8361c86a8d08c342533aaed",
+                "eaaede4a43cc7db9adf3314e5bb3330a"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "ba8be321a8361c86a8d08c342533aaed",
+                "eaaede4a43cc7db9adf3314e5bb3330a"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "16c77fcaf5dc54c7bf92c9d2f8cd7e05",
+                "eaaede4a43cc7db9adf3314e5bb3330a"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "16c77fcaf5dc54c7bf92c9d2f8cd7e05",
+                "eaaede4a43cc7db9adf3314e5bb3330a"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "1c14856089bcbeec3f1109ae4cccc2db"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "1c14856089bcbeec3f1109ae4cccc2db"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "chroma_ind": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "3cfecaa0ea3e4f82eda948c6f02af543",
+                "c0a868a3424a9bdb12410e33401d787c"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "3cfecaa0ea3e4f82eda948c6f02af543",
+                "c0a868a3424a9bdb12410e33401d787c"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "af0d6c989042480deb5762b085e82cf3",
+                "c0a868a3424a9bdb12410e33401d787c"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "af0d6c989042480deb5762b085e82cf3",
+                "c0a868a3424a9bdb12410e33401d787c"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "708db080405e9d67f69d22541f8ee332"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "708db080405e9d67f69d22541f8ee332"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "clean": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "110daada498db4321e45133edc48a34b",
+                "5bb2135d3b4b715cf62c7737282445e8"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "110daada498db4321e45133edc48a34b",
+                "5bb2135d3b4b715cf62c7737282445e8"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "43293cfb1f370a08c71547c8c51c34c9",
+                "5bb2135d3b4b715cf62c7737282445e8"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "43293cfb1f370a08c71547c8c51c34c9",
+                "5bb2135d3b4b715cf62c7737282445e8"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "110daada498db4321e45133edc48a34b"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "110daada498db4321e45133edc48a34b"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "cut": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "6f9e5f7bd9ec3d00004e01a32f4c8a71",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "6f9e5f7bd9ec3d00004e01a32f4c8a71",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "92c02349a76308f3c7407bb96d5d237a",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "92c02349a76308f3c7407bb96d5d237a",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "370761e6d28db56e3b8b08cba8fd8d57"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "370761e6d28db56e3b8b08cba8fd8d57"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "const_10bit": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "31433edee892d96f064f341b9d43cfea",
+                "79690d5cf3221532c624a7eb7ca8e9af"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "31433edee892d96f064f341b9d43cfea",
+                "79690d5cf3221532c624a7eb7ca8e9af"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "9243fcb8a9197640fabb64670f17e875",
+                "79690d5cf3221532c624a7eb7ca8e9af"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "9243fcb8a9197640fabb64670f17e875",
+                "79690d5cf3221532c624a7eb7ca8e9af"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "8f3bdefc5d9146ff39d4864da8eb0455"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "8f3bdefc5d9146ff39d4864da8eb0455"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "const_hlg": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "31433edee892d96f064f341b9d43cfea",
+                "79690d5cf3221532c624a7eb7ca8e9af"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "31433edee892d96f064f341b9d43cfea",
+                "79690d5cf3221532c624a7eb7ca8e9af"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "46a3133d7de1e02f5ae4dbf00916bd03",
+                "79690d5cf3221532c624a7eb7ca8e9af"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "46a3133d7de1e02f5ae4dbf00916bd03",
+                "79690d5cf3221532c624a7eb7ca8e9af"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "8f3bdefc5d9146ff39d4864da8eb0455"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "8f3bdefc5d9146ff39d4864da8eb0455"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "const_4k10_pq": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "be6fabb86d57d622defff8328a4e1364",
+                "50638f9c4305cbd6791b914f303ee1df"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "be6fabb86d57d622defff8328a4e1364",
+                "50638f9c4305cbd6791b914f303ee1df"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "7a1ae8fe820c43ce37a381d1467562b1",
+                "50638f9c4305cbd6791b914f303ee1df"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "7a1ae8fe820c43ce37a381d1467562b1",
+                "50638f9c4305cbd6791b914f303ee1df"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "234f1c4f148e5efc05aa163080b8dd54"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "234f1c4f148e5efc05aa163080b8dd54"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "coarse_luma": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "9a400f65a65e3ea29ff46f9d0f022c4c",
+                "2b497ef85819f801852b0d480d1b8a9b"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "9a400f65a65e3ea29ff46f9d0f022c4c",
+                "2b497ef85819f801852b0d480d1b8a9b"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "a5aedf748b57286b4a9e2193b4f380e3",
+                "2b497ef85819f801852b0d480d1b8a9b"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "a5aedf748b57286b4a9e2193b4f380e3",
+                "2b497ef85819f801852b0d480d1b8a9b"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "634392f80139fbfb5278a0ecc409ea8f"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "634392f80139fbfb5278a0ecc409ea8f"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "detail_luma": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "8b7ebb9763a91407e6d89726b3e080ba",
+                "8636262369f3a324bc281e38a8c0513d"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "8b7ebb9763a91407e6d89726b3e080ba",
+                "8636262369f3a324bc281e38a8c0513d"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "391b45af9bfc5bccff045cc9079ed842",
+                "8636262369f3a324bc281e38a8c0513d"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "391b45af9bfc5bccff045cc9079ed842",
+                "8636262369f3a324bc281e38a8c0513d"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "9665c6abfb89b8ca9fe4c40928fe3dd3"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "9665c6abfb89b8ca9fe4c40928fe3dd3"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "auto_retain_flat": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "a9c1139cc64f09e34643bdff3b94f450",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "a9c1139cc64f09e34643bdff3b94f450",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "64333e9638907a255ad13b8c322b4190",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "64333e9638907a255ad13b8c322b4190",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "d8ee661ab07a05677ababce94c863c9f"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "d8ee661ab07a05677ababce94c863c9f"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "auto_retain_detail": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "941e0f58a14709819d33ded0e7027420",
+                "9cc0dad324c90c9b4367328feb16338b"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "941e0f58a14709819d33ded0e7027420",
+                "9cc0dad324c90c9b4367328feb16338b"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "fc0616ffbc9793e60a70d8f2a34cae8f",
+                "9cc0dad324c90c9b4367328feb16338b"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "fc0616ffbc9793e60a70d8f2a34cae8f",
+                "9cc0dad324c90c9b4367328feb16338b"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "24ebc21aad11ae7d35f3cadb87ef16f9"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "24ebc21aad11ae7d35f3cadb87ef16f9"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "dark_luma": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "4e679c5a84281a68f7dac1f53d00ba0a",
+                "715e0c79896348e1eb3e2aedad8df986"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "4e679c5a84281a68f7dac1f53d00ba0a",
+                "715e0c79896348e1eb3e2aedad8df986"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "566d9eb4fd253251196452ad2ddfbcf1",
+                "715e0c79896348e1eb3e2aedad8df986"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "566d9eb4fd253251196452ad2ddfbcf1",
+                "715e0c79896348e1eb3e2aedad8df986"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "fa94e66d0e0d08d3f330ca310358d26b"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "fa94e66d0e0d08d3f330ca310358d26b"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "clipped_chroma_10bit": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "d7caf4cd12dcc8afca4e52756e8b0a1f",
+                "c4d9b339299c6e8dca8b07f0657bba48"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "d7caf4cd12dcc8afca4e52756e8b0a1f",
+                "c4d9b339299c6e8dca8b07f0657bba48"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "697deb0b74926a618df5555b2bef1c88",
+                "c4d9b339299c6e8dca8b07f0657bba48"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "697deb0b74926a618df5555b2bef1c88",
+                "c4d9b339299c6e8dca8b07f0657bba48"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "3f2a8d1220916416d0605375680a429c"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "3f2a8d1220916416d0605375680a429c"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "clipped_chroma_corr": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "4d2ebb1765f0d8c5e5b1a9a0b3c8acc2",
+                "fb4ee64ef0954e590c47602c838f1c25"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "4d2ebb1765f0d8c5e5b1a9a0b3c8acc2",
+                "fb4ee64ef0954e590c47602c838f1c25"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "5b7bb9e89dcb90132ff22b0be2c34e8e",
+                "fb4ee64ef0954e590c47602c838f1c25"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "5b7bb9e89dcb90132ff22b0be2c34e8e",
+                "fb4ee64ef0954e590c47602c838f1c25"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "3f753662ff1ccdd4ff11c7fa3b653d33"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "3f753662ff1ccdd4ff11c7fa3b653d33"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "clipped_chroma_8bit": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "3a168bd11cd9b601a16b1896508f79ca",
+                "302a99deb32711e13c988c360f993cca"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "3a168bd11cd9b601a16b1896508f79ca",
+                "302a99deb32711e13c988c360f993cca"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "6cc3e9c67d4973f4754ae7d86a4963c6",
+                "302a99deb32711e13c988c360f993cca"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "6cc3e9c67d4973f4754ae7d86a4963c6",
+                "302a99deb32711e13c988c360f993cca"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "9b9c33e64e25d4137d2b4b0fd6b13619"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "9b9c33e64e25d4137d2b4b0fd6b13619"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "retain_luma": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "1f4f4a33f33d17ac708efddd801b27e1",
+                "808138c4ca95541c1a8f2d0752b36d7d"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "1f4f4a33f33d17ac708efddd801b27e1",
+                "808138c4ca95541c1a8f2d0752b36d7d"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "f9be852d37d6b8a628177f4499363690",
+                "808138c4ca95541c1a8f2d0752b36d7d"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "f9be852d37d6b8a628177f4499363690",
+                "808138c4ca95541c1a8f2d0752b36d7d"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "675b62f6448a8074cdb06d5aa14ac63e"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "675b62f6448a8074cdb06d5aa14ac63e"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "retain_10bit": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "b4a76e2a4e2c3142277aa3b2ecdad4da",
+                "282c6ea88257ae53a945015856f99e6b"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "b4a76e2a4e2c3142277aa3b2ecdad4da",
+                "282c6ea88257ae53a945015856f99e6b"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "2d64f21359b5ae4845006515013f421f",
+                "282c6ea88257ae53a945015856f99e6b"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "2d64f21359b5ae4845006515013f421f",
+                "282c6ea88257ae53a945015856f99e6b"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "daafdd83acee9257f5af9fec1e35c7a8"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "daafdd83acee9257f5af9fec1e35c7a8"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    },
+    "cut_grainy": {
+      "raw": {
+        "keys": [
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "865f02fe7e1355b12cfc9ac969ca59be",
+                "f7bd8cb770c8b53d373cf607feee829b"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "865f02fe7e1355b12cfc9ac969ca59be",
+                "f7bd8cb770c8b53d373cf607feee829b"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "keys": [
+          "file_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "7616260eeec17fe01c88b129b23ae508",
+                "f7bd8cb770c8b53d373cf607feee829b"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "7616260eeec17fe01c88b129b23ae508",
+                "f7bd8cb770c8b53d373cf607feee829b"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "decoded_grain_off": {
+        "keys": [
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "490ea0e35ea946cd3d0b015adc7f9d07"
+              ],
+              "runs": 5
+            }
+          ],
+          "kernels": [
+            {
+              "md5": [
+                "490ea0e35ea946cd3d0b015adc7f9d07"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      }
+    }
+  },
+  "plain_controls": {
+    "const_luma": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 13488.474,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "warmup_luma": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 13297.734,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "ramp_luma": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 36677.19,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "chroma_corr": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 14948.472,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "chroma_ind": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 15598.086,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "clean": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 6.762,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "cut": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 6707.403,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "const_10bit": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 20397.798,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "const_hlg": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 20397.816,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "const_4k10_pq": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 79148.352,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "coarse_luma": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 25166.994,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "detail_luma": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 15616.734,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "auto_retain_flat": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 13493.118,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "auto_retain_detail": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 105507.906,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "dark_luma": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 19624.926,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "clipped_chroma_10bit": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 4875.732,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "clipped_chroma_corr": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 4460.862,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "clipped_chroma_8bit": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 3273.06,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "retain_luma": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 110517.45,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "retain_10bit": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 144049.998,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    },
+    "cut_grainy": {
+      "supplied": false,
+      "target_kbps": null,
+      "fgs_median_payload_kbps": 8883.114,
+      "plain_payload_kbps": [],
+      "matched": false,
+      "relative_tolerance": 0.03
+    }
+  },
+  "all_inputs_have_matched_plain_control": false,
+  "source_report": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-identity/report.json",
+  "source_report_sha256": "52572083f29e37fef57d0b5030c5d8d7a9a34dd49c79499ee2ef749f9bc0758b",
+  "whole_raw_file_states": {
+    "const_luma": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "9fa3961f412fd3e7fbc972c4f20efc08"
+        ],
+        "kernels": [
+          "9fa3961f412fd3e7fbc972c4f20efc08"
+        ]
+      }
+    },
+    "warmup_luma": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "a61b3045c5a3d8affc396cc58f7db445"
+        ],
+        "kernels": [
+          "a61b3045c5a3d8affc396cc58f7db445"
+        ]
+      }
+    },
+    "ramp_luma": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "2f5513976d84613ea71d6178549b7534"
+        ],
+        "kernels": [
+          "2f5513976d84613ea71d6178549b7534"
+        ]
+      }
+    },
+    "chroma_corr": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "8f79f2fa1a2bf9a846aa196b04503566"
+        ],
+        "kernels": [
+          "8f79f2fa1a2bf9a846aa196b04503566"
+        ]
+      }
+    },
+    "chroma_ind": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "89b69ee7eae1084ffed9340169864095"
+        ],
+        "kernels": [
+          "89b69ee7eae1084ffed9340169864095"
+        ]
+      }
+    },
+    "clean": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "7265022f250e1bacee5aa713fc52d37c"
+        ],
+        "kernels": [
+          "7265022f250e1bacee5aa713fc52d37c"
+        ]
+      }
+    },
+    "cut": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "5479f60c62c10633c250281376802934"
+        ],
+        "kernels": [
+          "5479f60c62c10633c250281376802934"
+        ]
+      }
+    },
+    "const_10bit": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "3ca10c41d62ce4b4d86224066f5e1dc3"
+        ],
+        "kernels": [
+          "3ca10c41d62ce4b4d86224066f5e1dc3"
+        ]
+      }
+    },
+    "const_hlg": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "3ca10c41d62ce4b4d86224066f5e1dc3"
+        ],
+        "kernels": [
+          "3ca10c41d62ce4b4d86224066f5e1dc3"
+        ]
+      }
+    },
+    "const_4k10_pq": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "22b3f1d5c6d4f5e0ed04ef9095ac055e"
+        ],
+        "kernels": [
+          "22b3f1d5c6d4f5e0ed04ef9095ac055e"
+        ]
+      }
+    },
+    "coarse_luma": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "06245c8da5672372e52afd3f159a0011"
+        ],
+        "kernels": [
+          "06245c8da5672372e52afd3f159a0011"
+        ]
+      }
+    },
+    "detail_luma": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "ef8e3702edb5914db5b21a4976f0b17b"
+        ],
+        "kernels": [
+          "ef8e3702edb5914db5b21a4976f0b17b"
+        ]
+      }
+    },
+    "auto_retain_flat": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "416812761de762549dc4f42f092fa85a"
+        ],
+        "kernels": [
+          "416812761de762549dc4f42f092fa85a"
+        ]
+      }
+    },
+    "auto_retain_detail": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "550be085dd6b17632ee1819c8b386a9a"
+        ],
+        "kernels": [
+          "550be085dd6b17632ee1819c8b386a9a"
+        ]
+      }
+    },
+    "dark_luma": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "9555e02f369b526ae6b26b59756e5213"
+        ],
+        "kernels": [
+          "9555e02f369b526ae6b26b59756e5213"
+        ]
+      }
+    },
+    "clipped_chroma_10bit": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "2471caf55071851fbf91a0441564e619"
+        ],
+        "kernels": [
+          "2471caf55071851fbf91a0441564e619"
+        ]
+      }
+    },
+    "clipped_chroma_corr": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "1aaac7e8a7567113026e78df14790a05"
+        ],
+        "kernels": [
+          "1aaac7e8a7567113026e78df14790a05"
+        ]
+      }
+    },
+    "clipped_chroma_8bit": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "e8a964fc12f948c2eff3d6fb473c0595"
+        ],
+        "kernels": [
+          "e8a964fc12f948c2eff3d6fb473c0595"
+        ]
+      }
+    },
+    "retain_luma": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "5a496a69a85495c2619116239146cbfb"
+        ],
+        "kernels": [
+          "5a496a69a85495c2619116239146cbfb"
+        ]
+      }
+    },
+    "retain_10bit": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "7953dc76c25d699bf32837a540b56ff9"
+        ],
+        "kernels": [
+          "7953dc76c25d699bf32837a540b56ff9"
+        ]
+      }
+    },
+    "cut_grainy": {
+      "equal": true,
+      "states": {
+        "deployed": [
+          "ecbb411eb9ee6f8e5f48d6858134e539"
+        ],
+        "kernels": [
+          "ecbb411eb9ee6f8e5f48d6858134e539"
+        ]
+      }
+    }
+  },
+  "active_grain_entries": {
+    "const_luma": [
+      [
+        1,
+        1
+      ]
+    ],
+    "warmup_luma": [
+      [
+        2,
+        2
+      ]
+    ],
+    "ramp_luma": [
+      [
+        1,
+        1
+      ]
+    ],
+    "chroma_corr": [
+      [
+        1,
+        1
+      ]
+    ],
+    "chroma_ind": [
+      [
+        1,
+        1
+      ]
+    ],
+    "clean": [
+      [
+        0,
+        1
+      ]
+    ],
+    "cut": [
+      [
+        1,
+        1
+      ]
+    ],
+    "const_10bit": [
+      [
+        1,
+        1
+      ]
+    ],
+    "const_hlg": [
+      [
+        1,
+        1
+      ]
+    ],
+    "const_4k10_pq": [
+      [
+        1,
+        1
+      ]
+    ],
+    "coarse_luma": [
+      [
+        1,
+        1
+      ]
+    ],
+    "detail_luma": [
+      [
+        1,
+        1
+      ]
+    ],
+    "auto_retain_flat": [
+      [
+        1,
+        1
+      ]
+    ],
+    "auto_retain_detail": [
+      [
+        1,
+        1
+      ]
+    ],
+    "dark_luma": [
+      [
+        1,
+        1
+      ]
+    ],
+    "clipped_chroma_10bit": [
+      [
+        2,
+        2
+      ]
+    ],
+    "clipped_chroma_corr": [
+      [
+        2,
+        2
+      ]
+    ],
+    "clipped_chroma_8bit": [
+      [
+        2,
+        2
+      ]
+    ],
+    "retain_luma": [
+      [
+        1,
+        1
+      ]
+    ],
+    "retain_10bit": [
+      [
+        1,
+        1
+      ]
+    ],
+    "cut_grainy": [
+      [
+        2,
+        2
+      ]
+    ]
+  }
+}
