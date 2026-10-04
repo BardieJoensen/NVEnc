@@ -1,0 +1,194 @@
+{
+  "schema": 1,
+  "written_at_utc": "2026-10-04T20:01:20.466212+00:00",
+  "task": "Locate pinned full-history Play Dirty amplitude-gate inputs in documented HDD archives",
+  "scope": "Metadata and existing JSON/Markdown inventories only; no source/media read, hash, probe, decode, extraction, mutation, relocation or deletion; no torrent/application action; reserved qualification footage remained unopened",
+  "result": "No recovery candidate identified in the searched scope; prerequisite remains unresolved. This is not proof of global absence.",
+  "artifact_expected_identities": [
+    {
+      "role": "source",
+      "name": "Play.Dirty.2025.REPACK.1080p.AMZN.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv",
+      "expected_sha256": "d4a348ec7afc3dd22a66a492f2c804a49392ba8de1afc5aa244c548f4e15934d",
+      "expected_bytes": 8667928469,
+      "canonical_path": "/media/merged-storage/media/downloads/long-term-seeding/cross-seed-links/TorrentLeech/Play.Dirty.2025.REPACK.1080p.AMZN.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv",
+      "status": "previously missing; no matching name or size found in the completed archive searches; no live-library/torrent inspection in this search"
+    },
+    {
+      "role": "negative",
+      "name": "city-trial/31f295cbb640d53811d6/video.mkv",
+      "expected_sha256": "6ce321ee4f2f5c5a746fb1fa58f8abcc4e9636eb60e921a31a33be8b3483819d",
+      "expected_bytes": 2172225990,
+      "canonical_path": "/tmp/downloads/fgs-full-temporal-audit-20260912/followup-20260916/city-trial/31f295cbb640d53811d6/video.mkv",
+      "resolved_offload_path": "/media/merged-storage/work-archive/nvme-offload-20261004/fgs-full-temporal-audit-20260912/followup-20260916/city-trial/31f295cbb640d53811d6/video.mkv",
+      "documented_evidence_path": "/media/storage1/tdarr-audit-evidence/full-temporal-audit-20260912/followup-20260916/city-trial/31f295cbb640d53811d6/video.mkv",
+      "offload_media_exists": false,
+      "evidence_media_exists": false,
+      "status": "exact media absent; containing directories remain"
+    },
+    {
+      "role": "reference",
+      "name": "city-plain-reference/video.mkv",
+      "expected_sha256": "f52864a2b19de2b221babf465c2a5437437552066c408a208f7e17d07b965a6b",
+      "expected_bytes": 2431217088,
+      "canonical_path": "/tmp/downloads/fgs-full-temporal-audit-20260912/followup-20260916/city-plain-reference/video.mkv",
+      "resolved_offload_path": "/media/merged-storage/work-archive/nvme-offload-20261004/fgs-full-temporal-audit-20260912/followup-20260916/city-plain-reference/video.mkv",
+      "documented_evidence_path": "/media/storage1/tdarr-audit-evidence/full-temporal-audit-20260912/followup-20260916/city-plain-reference/video.mkv",
+      "offload_media_exists": false,
+      "evidence_media_exists": false,
+      "status": "exact media absent; containing directories remain"
+    },
+    {
+      "role": "historical_candidate",
+      "name": "source-variance/training-v7/extended/full/play-dirty/video.mkv",
+      "expected_sha256": "2a7c1f11efb27f387dcda4593de1d830f2e9bfdb86abfcbb16c8ffc7890b3802",
+      "expected_bytes": 2182221927,
+      "canonical_path": "/tmp/downloads/fgs-full-temporal-audit-20260912/followup-20260916/source-variance/training-v7/extended/full/play-dirty/video.mkv",
+      "resolved_offload_path": "/media/merged-storage/work-archive/nvme-offload-20261004/fgs-full-temporal-audit-20260912/followup-20260916/source-variance/training-v7/extended/full/play-dirty/video.mkv",
+      "documented_evidence_path": "/media/storage1/tdarr-audit-evidence/full-temporal-audit-20260912/followup-20260916/source-variance/training-v7/extended/full/play-dirty/video.mkv",
+      "offload_media_exists": false,
+      "evidence_media_exists": false,
+      "status": "exact media absent; containing directories remain"
+    }
+  ],
+  "identity_evidence": [
+    "/media/storage1/tdarr-audit-evidence/full-temporal-audit-20260912/followup-20260916/source-variance/training-v7/extended/amplitude-manifest.json",
+    "/media/storage1/tdarr-audit-evidence/full-temporal-audit-20260912/followup-20260916/city-trial/31f295cbb640d53811d6/report.json",
+    "/media/storage1/tdarr-audit-evidence/full-temporal-audit-20260912/followup-20260916/city-plain-reference/report.json",
+    "/media/storage1/tdarr-audit-evidence/full-temporal-audit-20260912/followup-20260916/source-variance/training-v7/extended/full/play-dirty/report.json",
+    "/opt/docker-apps/logs/fgs-ripple-repair-20260906/retention-prep-20260910/colour-recovery-20260922/roadmap-r4-constant-endpoints-20260928/legacy-amplitude-prerequisites.json"
+  ],
+  "storage_documents": [
+    "/home/bardie/Documents/storage-review-2026-09-28.md",
+    "/home/bardie/Documents/home-archive-2026-09-28.md",
+    "/opt/docker-apps/logs/disk-archive-20260928T191344Z/review.md",
+    "/opt/docker-apps/logs/disk-archive-20260928T191344Z/README.md"
+  ],
+  "resolved_paths": [
+    {
+      "path": "/media/merged-storage",
+      "type": "mounted fuse.mergerfs pool",
+      "source": "/media/storage:/media/storage1"
+    },
+    {
+      "path": "/tmp/downloads/fgs-full-temporal-audit-20260912",
+      "type": "symlink",
+      "target": "/media/merged-storage/work-archive/nvme-offload-20261004/fgs-full-temporal-audit-20260912",
+      "target_exists": true,
+      "physical_directory": "/media/storage1/work-archive/nvme-offload-20261004/fgs-full-temporal-audit-20260912"
+    },
+    {
+      "path": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912",
+      "type": "symlink",
+      "target": "/media/merged-storage/logs/cold-storage/docker-apps/fgs-ripple-repair-20260906/full-temporal-audit-20260912",
+      "target_exists": true
+    },
+    {
+      "path": "/media/merged-storage/logs/cold-storage/docker-apps/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/{city-trial,city-plain-reference,source-variance}",
+      "type": "three existing directory symlinks",
+      "target_pattern": "/media/storage1/tdarr-audit-evidence/full-temporal-audit-20260912/followup-20260916/{city-trial,city-plain-reference,source-variance}",
+      "note": "September 28 archive preserved these links, not a second copy of their targets"
+    },
+    {
+      "path": "/media/storage/tdarr-audit-evidence",
+      "exists": false
+    },
+    {
+      "path": "/media/storage1/tdarr-audit-evidence",
+      "exists": true
+    }
+  ],
+  "archive_format": "The reviewed September 28 migrations and October 4 offload are directory trees, not compressed media archives. No archive file larger than 1 GiB appeared in the completed October 4 offload metadata scan.",
+  "searches": [
+    {
+      "name": "September 28 docker-apps migration inventories",
+      "root": "/opt/docker-apps/logs/disk-archive-20260928T191344Z",
+      "inputs": "plan.json and 00-source-before.json through 10-source-before.json",
+      "complete": true,
+      "search": "Parse recorded names and exact known byte sizes",
+      "media_matches": [],
+      "note": "Relevant name matches are metadata or symlinks; none identifies a retained video"
+    },
+    {
+      "name": "September 28 home migration inventories",
+      "root": "/media/merged-storage/logs/cold-storage/home-bardie/20260928T215235Z/_migration",
+      "inputs": "plan.json and seven numbered source-before.json inventories",
+      "complete": true,
+      "recorded_entries": 154978,
+      "search": "Parse recorded names and exact known byte sizes",
+      "media_matches": []
+    },
+    {
+      "name": "Formal cold-storage filename enumeration",
+      "roots": [
+        "/media/merged-storage/logs/cold-storage/docker-apps/fgs-ripple-repair-20260906",
+        "/media/merged-storage/logs/cold-storage/home-bardie/20260928T215235Z/.cache/fgs-gate/reports"
+      ],
+      "complete": true,
+      "method": "rg --files --hidden, without following symlinks; filter exact source/title/key and city-trial/city-plain-reference names",
+      "entry_count_not_recorded": true,
+      "media_matches": [],
+      "note": "Matched logs/reports and historical still-image filenames, not the pinned full-history media; no images opened"
+    },
+    {
+      "name": "Physical evidence/cold-storage bounded filename search",
+      "planned_roots": [
+        "/media/storage1/tdarr-audit-evidence",
+        "/media/storage/logs/cold-storage",
+        "/media/storage1/logs/cold-storage",
+        "/media/storage/backups/cold-storage",
+        "/media/storage1/backups/cold-storage"
+      ],
+      "complete": false,
+      "root_reached": "/media/storage1/tdarr-audit-evidence",
+      "directories_visited": 34566,
+      "file_entries_visited": 175459,
+      "time_bound_seconds": 180,
+      "exit_code": 3,
+      "errors": [],
+      "media_matches": [],
+      "limitation": "Stopped at the time bound in the first root; remaining roots were not traversed by this command. Their documented inventory checks are recorded separately. Source/title and city directory matches lacked the required video.mkv files.",
+      "exclusions": [
+        "directory names containing reserved (also conservatively excluded preserved names)",
+        "qualification-corpus",
+        "roadmap-r1-r2-20260922",
+        "snapshots",
+        "node_modules",
+        ".git"
+      ]
+    },
+    {
+      "name": "October 4 offload exact-size metadata scan (final corrected exclusion pass)",
+      "root": "/media/merged-storage/work-archive/nvme-offload-20261004",
+      "complete": true,
+      "directories_visited": 19100,
+      "file_entries_statted": 244557,
+      "elapsed_seconds": 13.854494730003353,
+      "exit_code": 0,
+      "errors": [],
+      "size_matches": [],
+      "archive_files_over_1GiB": [],
+      "method": "os.walk without following directory symlinks; lstat regular-file lengths; no content reads",
+      "exclusion_policy": [
+        "directory name starts with reserved",
+        "exact .git or .github",
+        "exact corpus or roadmap-r1-r2-20260922",
+        "qualification-corpus in directory name",
+        "llm-models"
+      ],
+      "excluded_directories_count": 265,
+      "excluded_non_git_paths": [
+        "/media/merged-storage/work-archive/nvme-offload-20261004/llm-models"
+      ],
+      "reserved_or_corpus_directories_encountered": false,
+      "note": "This pass includes preserved-* experiment directories excluded by the earlier conservative pass; no media candidate was found"
+    }
+  ],
+  "candidate_paths": [],
+  "command_log_provenance": {
+    "standalone_raw_command_logs_available": false,
+    "source": "Command outputs were returned in this conversation; this receipt preserves their search methods, counts, exit statuses and limits, not invented raw logs."
+  },
+  "no_global_absence_claim": true,
+  "no_large_read_or_extraction_started": true,
+  "no_production_change": true
+}

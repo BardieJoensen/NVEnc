@@ -1,0 +1,16 @@
+{
+  "exit_code": 0,
+  "python_suites": 16,
+  "python_tests": 119,
+  "cpp_results": [
+    "synthesis recovery tests passed",
+    "quiet source guard and curve protection tests passed",
+    "source training history tests passed",
+    "all film grain solver tests passed",
+    "all filmgrn1 parser and atomic writer behavior tests passed",
+    "Film-grain feedback stability regression tests passed",
+    "AV1 grain point order and chroma syntax checks passed",
+    "Reference-display mapping and complete spatial coverage checks passed"
+  ],
+  "commit": "aeb14263c94bde5e3434920ce6281aa3285852fb"
+}

@@ -1,0 +1,530 @@
+{
+  "evidence": [
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-identity/report.json",
+      "sha256": "afbe2e58dd5d9493865dcec82ecbbd0c9fcddd7dc784f8988794c3ff09a33896",
+      "complete": false,
+      "failure": "RuntimeError: Encoder failed: /tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-identity/losttapes/deployed/raw-01",
+      "harness_sha256": "930ea8633c3e1931f8bab635fc5429364d4a80188880d5a50d802c6d28851a22"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-real-identity/report.json",
+      "sha256": "444f59eee2114778828b3db6127d684cd6896f2d8f4d352dcce9d00099dd0840",
+      "complete": true,
+      "failure": "Observed state sets differ; new/missing states are rejected, not waived as repeat variability",
+      "harness_sha256": "6bbe9c681be59bda776915af28df4c9e23683583573785e16ccfef5ac9a967ad"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-losttapes-extension/report.json",
+      "sha256": "a822df393c9511822737ac9df2e8a491b7dfa56bf00980182c4a862480f23b45",
+      "complete": true,
+      "failure": null,
+      "harness_sha256": "6bbe9c681be59bda776915af28df4c9e23683583573785e16ccfef5ac9a967ad"
+    }
+  ],
+  "arms": [
+    {
+      "name": "deployed",
+      "binary": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-deployed",
+      "sha256": "c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b"
+    },
+    {
+      "name": "baseline",
+      "binary": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-baseline",
+      "sha256": "0134fef194357ba5f37a94ac6a45626ab967b7fb9de900ee0ed4e0562860bb57"
+    }
+  ],
+  "inputs": {
+    "amphibia": {
+      "raw": {
+        "md5_keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "3721a4e8e7eedd7cf75902022662d3e1",
+                "8966a9277cd488bef92e2e253fbdc1d1",
+                "ae9930cf3696c86171444f08b35c9c2e"
+              ],
+              "runs": 5
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "3721a4e8e7eedd7cf75902022662d3e1",
+                "8966a9277cd488bef92e2e253fbdc1d1",
+                "ae9930cf3696c86171444f08b35c9c2e"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "md5_keys": [
+          "file_md5",
+          "table_md5",
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "a45de9b2d0825ffc4e0ae9167e360d56",
+                "ae9930cf3696c86171444f08b35c9c2e",
+                "2769dfc24cdd7192007a9df4a4b6553c"
+              ],
+              "runs": 5
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "a45de9b2d0825ffc4e0ae9167e360d56",
+                "ae9930cf3696c86171444f08b35c9c2e",
+                "2769dfc24cdd7192007a9df4a4b6553c"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "active_entries_range": [
+        34,
+        34
+      ],
+      "frames_per_run": 240
+    },
+    "coarse_luma": {
+      "raw": {
+        "md5_keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "06245c8da5672372e52afd3f159a0011",
+                "9a400f65a65e3ea29ff46f9d0f022c4c",
+                "2b497ef85819f801852b0d480d1b8a9b"
+              ],
+              "runs": 5
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "06245c8da5672372e52afd3f159a0011",
+                "9a400f65a65e3ea29ff46f9d0f022c4c",
+                "2b497ef85819f801852b0d480d1b8a9b"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "md5_keys": [
+          "file_md5",
+          "table_md5",
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "a5aedf748b57286b4a9e2193b4f380e3",
+                "2b497ef85819f801852b0d480d1b8a9b",
+                "634392f80139fbfb5278a0ecc409ea8f"
+              ],
+              "runs": 5
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "a5aedf748b57286b4a9e2193b4f380e3",
+                "2b497ef85819f801852b0d480d1b8a9b",
+                "634392f80139fbfb5278a0ecc409ea8f"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "active_entries_range": [
+        1,
+        1
+      ],
+      "frames_per_run": 32
+    },
+    "const_10bit": {
+      "raw": {
+        "md5_keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "3ca10c41d62ce4b4d86224066f5e1dc3",
+                "31433edee892d96f064f341b9d43cfea",
+                "79690d5cf3221532c624a7eb7ca8e9af"
+              ],
+              "runs": 5
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "3ca10c41d62ce4b4d86224066f5e1dc3",
+                "31433edee892d96f064f341b9d43cfea",
+                "79690d5cf3221532c624a7eb7ca8e9af"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "md5_keys": [
+          "file_md5",
+          "table_md5",
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "9243fcb8a9197640fabb64670f17e875",
+                "79690d5cf3221532c624a7eb7ca8e9af",
+                "8f3bdefc5d9146ff39d4864da8eb0455"
+              ],
+              "runs": 5
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "9243fcb8a9197640fabb64670f17e875",
+                "79690d5cf3221532c624a7eb7ca8e9af",
+                "8f3bdefc5d9146ff39d4864da8eb0455"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "active_entries_range": [
+        1,
+        1
+      ],
+      "frames_per_run": 32
+    },
+    "const_luma": {
+      "raw": {
+        "md5_keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "9fa3961f412fd3e7fbc972c4f20efc08",
+                "22d5fe99e76e311b2ae6d233cb079560",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "9fa3961f412fd3e7fbc972c4f20efc08",
+                "22d5fe99e76e311b2ae6d233cb079560",
+                "93268d083a2f252b23ee2641b1f280e6"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "md5_keys": [
+          "file_md5",
+          "table_md5",
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "7d6b0c30ccd4044b6b1ec855a817f442",
+                "93268d083a2f252b23ee2641b1f280e6",
+                "92d12c01154279ef20213af320c259fe"
+              ],
+              "runs": 5
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "7d6b0c30ccd4044b6b1ec855a817f442",
+                "93268d083a2f252b23ee2641b1f280e6",
+                "92d12c01154279ef20213af320c259fe"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "active_entries_range": [
+        1,
+        1
+      ],
+      "frames_per_run": 32
+    },
+    "gentlemen": {
+      "raw": {
+        "md5_keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "56eb27dab214aa68ad42ff9a2699f158",
+                "297bc06b21cb67a2df8c16bfdfa259a0",
+                "ea9c13025fd09017351cefb1f824f5ae"
+              ],
+              "runs": 5
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "56eb27dab214aa68ad42ff9a2699f158",
+                "297bc06b21cb67a2df8c16bfdfa259a0",
+                "ea9c13025fd09017351cefb1f824f5ae"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "md5_keys": [
+          "file_md5",
+          "table_md5",
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "0ff816e738aeee78e653e3de98c82190",
+                "ea9c13025fd09017351cefb1f824f5ae",
+                "754196392f71717440acabecc4f83cd6"
+              ],
+              "runs": 5
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "0ff816e738aeee78e653e3de98c82190",
+                "ea9c13025fd09017351cefb1f824f5ae",
+                "754196392f71717440acabecc4f83cd6"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "active_entries_range": [
+        199,
+        199
+      ],
+      "frames_per_run": 240
+    },
+    "losttapes": {
+      "raw": {
+        "md5_keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "5b5da9029c9d5ab45e4329bbf1d65c3d",
+                "5bab36f1c415640f8b78ade8f7a668a0",
+                "cdeceddf325f6701d124f593fccbd872"
+              ],
+              "runs": 12
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "5b5da9029c9d5ab45e4329bbf1d65c3d",
+                "5bab36f1c415640f8b78ade8f7a668a0",
+                "cdeceddf325f6701d124f593fccbd872"
+              ],
+              "runs": 12
+            }
+          ]
+        }
+      },
+      "av1": {
+        "md5_keys": [
+          "file_md5",
+          "table_md5",
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "ce0413d0300f5a9775d6352c56d76aa6",
+                "cdeceddf325f6701d124f593fccbd872",
+                "a0af3be3237f0395e31d6f6496266d80"
+              ],
+              "runs": 8
+            },
+            {
+              "md5": [
+                "234dbaecbf54c26b0b361abae33abfbb",
+                "cdeceddf325f6701d124f593fccbd872",
+                "d0246b24d4fbbdebdfc416d5fb9fdefe"
+              ],
+              "runs": 4
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "ce0413d0300f5a9775d6352c56d76aa6",
+                "cdeceddf325f6701d124f593fccbd872",
+                "a0af3be3237f0395e31d6f6496266d80"
+              ],
+              "runs": 9
+            },
+            {
+              "md5": [
+                "234dbaecbf54c26b0b361abae33abfbb",
+                "cdeceddf325f6701d124f593fccbd872",
+                "d0246b24d4fbbdebdfc416d5fb9fdefe"
+              ],
+              "runs": 3
+            }
+          ]
+        }
+      },
+      "active_entries_range": [
+        182,
+        182
+      ],
+      "frames_per_run": 240
+    },
+    "taxi_hdr": {
+      "raw": {
+        "md5_keys": [
+          "file_md5",
+          "pixel_md5",
+          "table_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "af2442393324ae46054bb2bc41d4ce62",
+                "2ec74408d0eaffdfb609250289c91fd7",
+                "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+              ],
+              "runs": 5
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "af2442393324ae46054bb2bc41d4ce62",
+                "2ec74408d0eaffdfb609250289c91fd7",
+                "83c169e521a6f7a0c8aa8d7eb2bf77e9"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "av1": {
+        "md5_keys": [
+          "file_md5",
+          "table_md5",
+          "decoded_pixel_md5"
+        ],
+        "equal": true,
+        "states": {
+          "deployed": [
+            {
+              "md5": [
+                "3fbd02014b8bac6da53d77e3e2195f95",
+                "83c169e521a6f7a0c8aa8d7eb2bf77e9",
+                "b8d8c365a002b4c8a0163ebac88a0782"
+              ],
+              "runs": 5
+            }
+          ],
+          "baseline": [
+            {
+              "md5": [
+                "3fbd02014b8bac6da53d77e3e2195f95",
+                "83c169e521a6f7a0c8aa8d7eb2bf77e9",
+                "b8d8c365a002b4c8a0163ebac88a0782"
+              ],
+              "runs": 5
+            }
+          ]
+        }
+      },
+      "active_entries_range": [
+        15,
+        15
+      ],
+      "frames_per_run": 24
+    }
+  },
+  "pass": true,
+  "limits": [
+    "Finite observed-set equality; not universal determinism or equal probabilities.",
+    "Raw output is a separate invocation, not captured encoder input.",
+    "IVF video only; no mux/nonvideo qualification."
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "source": {
+    "path": "/media/merged-storage/media/downloads/long-term-seeding/cross-seed-links/TorrentLeech/Play.Dirty.2025.REPACK.1080p.AMZN.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv",
+    "exists": false,
+    "sha256": "d4a348ec7afc3dd22a66a492f2c804a49392ba8de1afc5aa244c548f4e15934d"
+  },
+  "candidate": {
+    "path": "/tmp/downloads/fgs-full-temporal-audit-20260912/followup-20260916/source-variance/training-v7/extended/full/play-dirty/video.mkv",
+    "exists": false,
+    "sha256": "2a7c1f11efb27f387dcda4593de1d830f2e9bfdb86abfcbb16c8ffc7890b3802"
+  },
+  "negative": {
+    "path": "/tmp/downloads/fgs-full-temporal-audit-20260912/followup-20260916/city-trial/31f295cbb640d53811d6/video.mkv",
+    "exists": false,
+    "sha256": "6ce321ee4f2f5c5a746fb1fa58f8abcc4e9636eb60e921a31a33be8b3483819d"
+  },
+  "reference": {
+    "path": "/tmp/downloads/fgs-full-temporal-audit-20260912/followup-20260916/city-plain-reference/video.mkv",
+    "exists": false,
+    "sha256": "f52864a2b19de2b221babf465c2a5437437552066c408a208f7e17d07b965a6b"
+  }
+}

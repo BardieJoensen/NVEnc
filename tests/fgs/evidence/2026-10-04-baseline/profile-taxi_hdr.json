@@ -1,0 +1,142 @@
+{
+  "sqlite": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/deployed-taxi_hdr-profile.sqlite",
+  "declared_frames": 24,
+  "kernel_total": {
+    "count": 588,
+    "total_ms": 112.145055,
+    "ms_per_declared_frame": 4.672710625
+  },
+  "fgs_kernel_total": {
+    "count": 355,
+    "total_ms": 104.213923,
+    "ms_per_declared_frame": 4.342246791666667
+  },
+  "kernel_groups": {
+    "bilateral": {
+      "count": 96,
+      "total_ms": 47.497211,
+      "ms_per_declared_frame": 1.9790504583333333
+    },
+    "flat_metrics": {
+      "count": 75,
+      "total_ms": 26.4987,
+      "ms_per_declared_frame": 1.1041125
+    },
+    "temporal_detail_metrics": {
+      "count": 26,
+      "total_ms": 5.48989,
+      "ms_per_declared_frame": 0.22874541666666667
+    },
+    "model_stats": {
+      "count": 72,
+      "total_ms": 16.945631,
+      "ms_per_declared_frame": 0.7060679583333332
+    },
+    "other": {
+      "count": 319,
+      "total_ms": 15.713623,
+      "ms_per_declared_frame": 0.6547342916666666
+    }
+  },
+  "warnings": [],
+  "notes": [
+    "Durations are sums of CUDA activities divided by the supplied frame count; startup/drain are included.",
+    "Kernel/copy activities may overlap; totals are not elapsed time or an fps prediction.",
+    "Host synchronization API durations include overhead and waiting; do not add them to GPU work as independent latency.",
+    "A shared GPU can change individual kernel durations; compare repeated alternating traces."
+  ],
+  "globalPids": [
+    307311839019008
+  ],
+  "deviceIds": [
+    0
+  ],
+  "host_synchronization": {
+    "available": true,
+    "cudaStreamSynchronize": {
+      "count": 55,
+      "total_ms": 133.313563,
+      "ms_per_declared_frame": 5.554731791666666
+    },
+    "cudaEventSynchronize": {
+      "count": 72,
+      "total_ms": 1.605747,
+      "ms_per_declared_frame": 0.066906125
+    },
+    "cudaDeviceSynchronize": {
+      "count": 0,
+      "total_ms": 0.0,
+      "ms_per_declared_frame": 0.0
+    }
+  },
+  "memcpy": {
+    "available": true,
+    "direction_labels_available": true,
+    "total": {
+      "count": 361,
+      "total_ms": 79.342435,
+      "ms_per_declared_frame": 3.3059347916666666,
+      "bytes": 2954883264,
+      "bytes_per_declared_frame": 123120136.0
+    },
+    "directions": {
+      "H2D": {
+        "count": 139,
+        "total_ms": 54.45781,
+        "ms_per_declared_frame": 2.269075416666667,
+        "bytes": 598308096,
+        "bytes_per_declared_frame": 24929504.0
+      },
+      "D2H": {
+        "count": 53,
+        "total_ms": 14.914157,
+        "ms_per_declared_frame": 0.6214232083333333,
+        "bytes": 166820928,
+        "bytes_per_declared_frame": 6950872.0
+      },
+      "D2D": {
+        "count": 169,
+        "total_ms": 9.970468,
+        "ms_per_declared_frame": 0.41543616666666666,
+        "bytes": 2189754240,
+        "bytes_per_declared_frame": 91239760.0
+      },
+      "other": {
+        "count": 0,
+        "total_ms": 0.0,
+        "ms_per_declared_frame": 0.0,
+        "bytes": 0,
+        "bytes_per_declared_frame": 0.0
+      }
+    },
+    "kinds": [
+      {
+        "copy_kind": 1,
+        "label": "Host-to-Device",
+        "count": 139,
+        "total_ms": 54.45781,
+        "ms_per_declared_frame": 2.269075416666667,
+        "bytes": 598308096,
+        "bytes_per_declared_frame": 24929504.0
+      },
+      {
+        "copy_kind": 2,
+        "label": "Device-to-Host",
+        "count": 53,
+        "total_ms": 14.914157,
+        "ms_per_declared_frame": 0.6214232083333333,
+        "bytes": 166820928,
+        "bytes_per_declared_frame": 6950872.0
+      },
+      {
+        "copy_kind": 8,
+        "label": "Device-to-Device",
+        "count": 169,
+        "total_ms": 9.970468,
+        "ms_per_declared_frame": 0.41543616666666666,
+        "bytes": 2189754240,
+        "bytes_per_declared_frame": 91239760.0
+      }
+    ]
+  }
+}

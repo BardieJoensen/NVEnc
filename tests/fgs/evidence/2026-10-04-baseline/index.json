@@ -1,0 +1,53 @@
+{
+  "pins.json": {
+    "source": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/pins-corrected.json",
+    "sha256": "ab682dac3e4e80e1f508c7f0ae1ff10d9f645c453c5e3d23ae439845f362b5a9"
+  },
+  "cpu.json": {
+    "source": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-cpu-summary.json",
+    "sha256": "fefb374789bb06e1f785434be72601b830f5c99fc565515fb657a3958244231a"
+  },
+  "identity.json": {
+    "source": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-identity-summary.json",
+    "sha256": "1d00d8f9ea9dd061657188c0838baa029338ba8e8d55bd40f387b0db36c5ca1e"
+  },
+  "production-flow.json": {
+    "source": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/production-flow.json",
+    "sha256": "66c292c9c646cf013f34194add57b4655ead5d7a0e21b365406722773083b3a9"
+  },
+  "fixtures.json": {
+    "source": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/development-fixture-verification.json",
+    "sha256": "6d320fea562a1cf606e4c9a08feb6dbf87100db8fc2fe1376725075f48c0fd56"
+  },
+  "amplitude-prerequisites.json": {
+    "source": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/amplitude-prerequisites.json",
+    "sha256": "aac47bce3928a25ef9d887e590a06302548e0ec105c1a4bbac55cc98ac3951a3"
+  },
+  "cold-storage-search.json": {
+    "source": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/cold-storage-amplitude-search.json",
+    "sha256": "973e4bc13347bbb51fccf5fab383bb5b92d148594edeb88b2a6675d9006dbd85"
+  },
+  "profile-losttapes.json": {
+    "source": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/deployed-losttapes-profile.json",
+    "source_sha256": "ee7675d1494b4cbb85cef37cd0d699208562f551463f35685c65c3526a90e426",
+    "transform": "Drop verbose SQLite schema and per-kernel names; grouped totals, copies and syncs retained."
+  },
+  "profile-amphibia.json": {
+    "source": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/deployed-amphibia-profile.json",
+    "source_sha256": "6dfa8c37f6d887c844f5f60f64b9638fd2e7c567404febdc2878804c061675ce",
+    "transform": "Drop verbose SQLite schema and per-kernel names; grouped totals, copies and syncs retained."
+  },
+  "profile-taxi_hdr.json": {
+    "source": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/deployed-taxi_hdr-profile.json",
+    "source_sha256": "4d0e0e3a6caf980f02ce6ea14d8bce25ae6610cc42e21f768f0933b260f1066e",
+    "transform": "Drop verbose SQLite schema and per-kernel names; grouped totals, copies and syncs retained."
+  },
+  "repeat_identity.py": {
+    "source": "/tmp/downloads/codex-work/fgs-improvement-20261004/repeat_identity.py",
+    "sha256": "6bbe9c681be59bda776915af28df4c9e23683583573785e16ccfef5ac9a967ad"
+  },
+  "profile_summary.py": {
+    "source": "/tmp/downloads/codex-work/fgs-improvement-20261004/profile_summary.py",
+    "sha256": "4008b7b6e856d7c80e38d4b413090fdb586da6d2f36c3c39f91e18881fe355a5"
+  }
+}

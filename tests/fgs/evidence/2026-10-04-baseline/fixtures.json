@@ -1,0 +1,21 @@
+{
+  "root": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1",
+  "verified": {
+    "losttapes_recovery_source": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/losttapes-recovery-source.mkv",
+      "sha256": "49be25bf53de5dff4592b9d41165fb719d448045cb08665550317bb8fd13d26c"
+    },
+    "amphibia_flicker_source": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/amphibia-flicker-e10-source.mkv",
+      "sha256": "842b5ee22fa8691a586ad1fd053e479529f237a3d5fbb6e37e3ddfbc977bd3c3"
+    },
+    "taxi_clip": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/taxi-coarse-24f.mkv",
+      "sha256": "ccda916bd8585c2daacff6db9d7329f99e1e2f0260c4316d8e8036b09e39d30f"
+    },
+    "gentlemen_clip": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/gentlemen-source-33m-150s.mkv",
+      "sha256": "e41e63a94dd19bb3c6ff584d1872008fb84c196e5d1b33689869e33a5d5f9e5a"
+    }
+  }
+}

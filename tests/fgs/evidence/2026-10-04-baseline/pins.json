@@ -1,0 +1,26 @@
+{
+  "utc": "2026-10-04T19:12:56.909815+00:00",
+  "baseline_commit": "aeb14263c94bde5e3434920ce6281aa3285852fb",
+  "build_image": "sha256:031ff1820c81f1c8888deff7bd1654a17e4885bfac3d04105ad55da9e34fd9ff",
+  "submodules": " ce605b448dd6bb233b8e58c0128e12292b5e0e7b build_pkg (heads/master)\n bd6ddf95129e769b50ef63e0f558fa21364f3f65 cppcodec (v0.2-7-gbd6ddf9)\n 32567bb9ec704f09040fb1ed7431a3d967e3df03 dtl (v1.21)\n",
+  "baseline_binary_sha256": "0134fef194357ba5f37a94ac6a45626ab967b7fb9de900ee0ed4e0562860bb57",
+  "deployed_binary_sha256": "c6cbd5280440c62b51c3b43ced4570dad40295748d42f562a867ac6a525be72b",
+  "cpu_result": {
+    "exit_code": 0,
+    "python_suites": 16,
+    "python_tests": 119,
+    "cpp_programs": 9
+  },
+  "dependency_revisions": {
+    "dovi_tool": "4fd2b2235c9f93582dd4a00e65ee34a07800afd7",
+    "hdr10plus_tool": "ec9613eb257bd92130a446e2ce155685a243bd1d",
+    "cppcodec/test/catch": "15cf3caaceb21172ea42a24e595a2eb58c3ec960"
+  },
+  "production_head": "6cfb28a5de02a54be1ee0edffb680120f168dfec",
+  "harness_commit": "aeb14263c94bde5e3434920ce6281aa3285852fb",
+  "build_packages": {
+    "libass-dev": "1:0.17.1-2build1",
+    "libx11-dev": "2:1.8.7-1build1",
+    "libplacebo-dev": "6.338.2-2build1"
+  }
+}

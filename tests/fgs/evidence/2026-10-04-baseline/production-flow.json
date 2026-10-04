@@ -1,0 +1,19 @@
+{
+  "flow": "/opt/docker-apps/configs/tdarr-flow/flows/AV1NVENCflow1.json",
+  "sha256": "4768b2c0959530935f79b91201800ce7e460bd79d90658ce5d193cbae00e5958",
+  "encoder_templates": [
+    {
+      "id": "nvenccEncode_001",
+      "key": "cliArguments",
+      "value": "{{{args.variables.user.nvenccDecode}}} {{{args.variables.user.nvenccTimestamp}}} --allow-other-negative-pts {{{args.variables.user.nvenccVideoTrack}}} {{{args.variables.user.nvenccSar}}} -i \"{{{args.inputFileObj._id}}}\" {{{args.variables.user.nvenccFps}}} {{{args.variables.user.nvenccVpp}}} --codec av1 --output-depth 10 --qvbr {{{args.variables.user.qvbr}}} --max-bitrate 50000 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --colormatrix auto --colorprim auto --transfer auto --colorrange auto --chromaloc auto --master-display copy --max-cll copy {{{args.variables.user.nvenccHdrFlags}}} --video-metadata copy --audio-copy --sub-copy --chapter-copy -o \"${outputFilePath}\""
+    },
+    {
+      "id": "videoSample_001",
+      "key": "encoderArguments",
+      "value": "{{{args.variables.user.nvenccDecode}}} {{{args.variables.user.nvenccTimestamp}}} --allow-other-negative-pts {{{args.variables.user.nvenccVideoTrack}}} {{{args.variables.user.nvenccSar}}} -i \"{{{args.inputFileObj._id}}}\" {{{args.variables.user.nvenccFps}}} {{{args.variables.user.nvenccVpp}}} --codec av1 --output-depth 10 --qvbr {{{args.variables.user.qvbr}}} --max-bitrate 50000 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --colormatrix auto --colorprim auto --transfer auto --colorrange auto --chromaloc auto --master-display copy --max-cll copy {{{args.variables.user.nvenccHdrFlags}}} --video-metadata copy --audio-copy --sub-copy --chapter-copy -o \"${outputFilePath}\""
+    }
+  ],
+  "qvbr_rules": [
+    "module.exports = async (args) => {\n  args.variables.user = args.variables.user || {};\n  const cq = args.variables.user.cq || '30';\n  const map = { '29': '29', '30': '30', '34': '34', '38': '37' };\n  args.variables.user.qvbr = map[cq] || '30';\n  args.jobLog('[map-qvbr] bucket cq' + cq + ' -> nvencc qvbr' + args.variables.user.qvbr);\n  return { outputFileObj: args.inputFileObj, outputNumber: 1, variables: args.variables };\n};"
+  ]
+}
