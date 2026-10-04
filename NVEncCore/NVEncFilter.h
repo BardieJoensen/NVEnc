@@ -152,7 +152,6 @@ protected:
     std::vector<std::unique_ptr<NVEncFilterCspCrop>> m_cropChain;
 };
 
-class NVEncFilterParamNvvfxSuperRes;
 class NVEncFilterParamNGXVSR;
 class NVEncFilterParamLibplaceboResample;
 class DeviceDX11;
@@ -160,12 +159,10 @@ class DeviceDX11;
 class NVEncFilterParamResize : public NVEncFilterParam {
 public:
     RGY_VPP_RESIZE_ALGO interp;
-    RGY_VPP_RESIZE_ALGO nvvfxSubAlgo;
     VppResizeFsr1 fsr1;
     VppResizeDpid dpid;
     VppResizeNis nis;
     VppResizeBicubic bicubic;
-    std::shared_ptr<NVEncFilterParamNvvfxSuperRes> nvvfxSuperRes;
     std::shared_ptr<NVEncFilterParamNGXVSR> ngxvsr;
     std::shared_ptr<NVEncFilterParamLibplaceboResample> libplaceboResample;
     NVEncFilterParamResize();
@@ -173,7 +170,6 @@ public:
     virtual tstring print() const override;
 };
 
-class NVEncFilterNvvfxSuperRes;
 class NVEncFilterNGXVSR;
 class NVEncFilterLibplaceboResample;
 
@@ -186,8 +182,6 @@ protected:
     virtual RGY_ERR run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum, cudaStream_t stream) override;
     RGY_ERR resizeNppi(RGYFrameInfo *pOutputFrame, const RGYFrameInfo *pInputFrame, cudaStream_t stream);
     RGY_ERR resizeNppiYUV444(RGYFrameInfo *pOutputFrame, const RGYFrameInfo *pInputFrame, cudaStream_t stream);
-    RGY_ERR initNvvfxFilter(NVEncFilterParamResize *param);
-    RGY_ERR resizeNvvfxSuperRes(RGYFrameInfo *pOutputFrame, const RGYFrameInfo *pInputFrame);
     virtual void close() override;
 
     bool m_bInterlacedWarn;
@@ -200,7 +194,6 @@ protected:
     std::unique_ptr<CUMemBuf> m_nisCoefUsm;        // NIS coef_usm LUT (64x8 floats), uploaded once
     int m_nisStages;                               // NIS cascade stage count (1 for <=2x, N for larger ratios)
     std::vector<std::unique_ptr<CUFrameBuf>> m_nisCascadeInter; // NIS cascade intermediate frames (stages-1)
-    std::unique_ptr<NVEncFilterNvvfxSuperRes> m_nvvfxSuperRes;
     std::unique_ptr<NVEncFilterNGXVSR> m_ngxVSR;
     std::unique_ptr<NVEncFilterLibplaceboResample> m_libplaceboResample;
 };
