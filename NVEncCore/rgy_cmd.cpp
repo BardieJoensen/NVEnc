@@ -12785,7 +12785,7 @@ int parse_one_common_option(const TCHAR *option_name, const TCHAR *strInput[], i
     }
     if (IS_OPTION("vmaf")) {
         common->metric.vmaf.enable = true;
-        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('\0') || strInput[i + 1][0] == _T('-')) {
             return 0;
         }
         i++;
@@ -12879,18 +12879,28 @@ int parse_one_common_option(const TCHAR *option_name, const TCHAR *strInput[], i
     }
     if (IS_OPTION("vship-butteraugli")) {
         common->metric.vshipButteraugli.enable = true;
-        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('\0') || strInput[i + 1][0] == _T('-')) {
             return 0;
         }
         i++;
 
-        const auto paramList = std::vector<std::string>{ "Qnorm", "intensity_multiplier" };
+        const auto paramList = std::vector<std::string>{ "enable", "Qnorm", "intensity_multiplier" };
 
         for (const auto &param : split(strInput[i], _T(","))) {
             auto pos = param.find_first_of(_T("="));
             if (pos != std::string::npos) {
                 auto param_arg = param.substr(0, pos);
                 auto param_val = param.substr(pos + 1);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        common->metric.vshipButteraugli.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
                 if (param_arg == _T("Qnorm")) {
                     try {
                         common->metric.vshipButteraugli.Qnorm = std::stoi(param_val);
@@ -12924,18 +12934,28 @@ int parse_one_common_option(const TCHAR *option_name, const TCHAR *strInput[], i
     }
     if (IS_OPTION("vship-cvvdp")) {
         common->metric.vshipCvvdp.enable = true;
-        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('\0') || strInput[i + 1][0] == _T('-')) {
             return 0;
         }
         i++;
 
-        const auto paramList = std::vector<std::string>{ "model", "model_config_json", "resize" };
+        const auto paramList = std::vector<std::string>{ "enable", "model", "model_config_json", "resize" };
 
         for (const auto &param : split(strInput[i], _T(","))) {
             auto pos = param.find_first_of(_T("="));
             if (pos != std::string::npos) {
                 auto param_arg = param.substr(0, pos);
                 auto param_val = param.substr(pos + 1);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        common->metric.vshipCvvdp.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
                 if (param_arg == _T("model")) {
                     common->metric.vshipCvvdp.model = trim(param_val, _T("\""));
                     continue;
@@ -13968,7 +13988,7 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
         cmd << _T(" --vpp-deint-csp output");
     }
 
-    if (!isNvvfxResizeFiter(param->resize_algo) && !isNgxResizeFiter(param->resize_algo) && !isQSVMFXResizeFiter(param->resize_algo)) {
+    if (!isNgxResizeFiter(param->resize_algo) && !isQSVMFXResizeFiter(param->resize_algo)) {
         if (isLibplaceboResizeFiter(param->resize_algo)) {
             OPT_LST(_T("--vpp-resize"), resize_algo, list_vpp_resize);
             if (param->resize_libplacebo.radius != defaultPrm->resize_libplacebo.radius) {
@@ -16332,6 +16352,7 @@ tstring gen_cmd(const RGYParamCommon *param, const RGYParamCommon *defaultPrm, b
     OPT_BOOL(_T("--ssim"), _T("--no-ssim"), metric.ssim);
     OPT_BOOL(_T("--psnr"), _T("--no-psnr"), metric.psnr);
 
+#if ENABLE_VMAF
     if (param->metric.vmaf != defaultPrm->metric.vmaf) {
         tmp.str(tstring());
         if (!param->metric.vmaf.enable && save_disabled_prm) {
@@ -16346,8 +16367,11 @@ tstring gen_cmd(const RGYParamCommon *param, const RGYParamCommon *defaultPrm, b
         }
         if (!tmp.str().empty()) {
             cmd << _T(" --vmaf ") << tmp.str().substr(1);
+        } else if (param->metric.vmaf.enable) {
+            cmd << _T(" --vmaf");
         }
     }
+#endif //#if ENABLE_VMAF
 #if ENABLE_LIBVSHIP
     OPT_BOOL(_T("--vship-ssimulacra2"), _T("--no-vship-ssimulacra2"), metric.vshipSsimu2.enable);
     if (param->metric.vshipButteraugli != defaultPrm->metric.vshipButteraugli) {
@@ -16361,6 +16385,8 @@ tstring gen_cmd(const RGYParamCommon *param, const RGYParamCommon *defaultPrm, b
         }
         if (!tmp.str().empty()) {
             cmd << _T(" --vship-butteraugli ") << tmp.str().substr(1);
+        } else if (param->metric.vshipButteraugli.enable) {
+            cmd << _T(" --vship-butteraugli");
         }
     }
     if (param->metric.vshipCvvdp != defaultPrm->metric.vshipCvvdp) {
@@ -16370,11 +16396,13 @@ tstring gen_cmd(const RGYParamCommon *param, const RGYParamCommon *defaultPrm, b
         }
         if (param->metric.vshipCvvdp.enable || save_disabled_prm) {
             ADD_STR(_T("model"), metric.vshipCvvdp.model);
-            ADD_STR(_T("model_config_json"), metric.vshipCvvdp.model_config_json);
+            ADD_PATH(_T("model_config_json"), metric.vshipCvvdp.model_config_json.c_str());
             ADD_BOOL(_T("resize"), metric.vshipCvvdp.resize);
         }
         if (!tmp.str().empty()) {
             cmd << _T(" --vship-cvvdp ") << tmp.str().substr(1);
+        } else if (param->metric.vshipCvvdp.enable) {
+            cmd << _T(" --vship-cvvdp");
         }
     }
 #endif //#if ENABLE_LIBVSHIP
@@ -16703,7 +16731,7 @@ tstring gen_cmd_help_common() {
         _T("                                 if format is not specified, output format will\n")
         _T("                                 be guessed from output file extension.\n")
         _T("                                 set \"raw\" for H.264/ES output.\n")
-        _T("   --y4m-timestamp             add presentation timestamps and durations to y4m FRAME lines.\n")
+        _T("   --y4m-timestamp             add XTIMEBASE to y4m header and timestamps to FRAME lines.\n")
         _T("   --audio-copy [<int/string>[,...]]\n")
         _T("                                mux audio with video during output.\n")
         _T("                                 could be only used with\n")
@@ -17543,18 +17571,20 @@ tstring gen_cmd_help_vpp() {
                _T("      c=<float>                 for bicubic: Mitchell-Netravali C parameter (default=%.2f)\n")
                _T("                                 aliases: mitchell, catmull-rom, hermite\n"),
             FILTER_DEFAULT_RESIZE_BICUBIC_B, FILTER_DEFAULT_RESIZE_BICUBIC_C);
-#if ENABLE_NVVFX
-            str += strsprintf(_T("\n")
-                _T("      superres-mode=<int>\n")
-                _T("        mode for nvvfx-superres     0 ... conservative\n")
-                _T("                                    1 ... aggressive (default)\n")
-                _T("      superres-strength=<float>\n")
-                _T("        strength for nvvfx-superres (0.0 - 1.0, default = 0.4)\n"));
-#endif
 #if ENABLE_NVSDKNGX
             str += strsprintf(_T("\n")
                 _T("      vsr-quality=<int>\n")
-                _T("        quality for ngx-vsr\n"));
+                _T("        model/mode for ngx-vsr (NVIDIA \"QualityLevel\"; 0, 1 - 4, 8 - 19, 21, 23, default = 1)\n")
+                _T("        0 = bicubic baseline (non-AI, useful as a comparison baseline)\n")
+                _T("        8-11 = denoise, 12-15 = deblur, 16-19 = high-bitrate detail restoration\n")
+                _T("        larger values give higher quality within 1-4, 16-19, 21 and 23,\n")
+                _T("        and stronger effects within 8-15\n")
+                _T("        modes 0 and 8-19 require nvngx_vsr.dll from VFX SDK 1.2 or later\n")
+                _T("        21 / 23 = streaming (medium / ultra), require nvngx_vsr.dll from\n")
+                _T("                  VFX SDK 1.3 or later and an Ampere or newer GPU\n")
+                _T("      vsr-strength=<float>\n")
+                _T("        strength for ngx-vsr (0.0 - 1.0, default = 1.0)\n")
+                _T("        requires nvngx_vsr.dll from VFX SDK 1.3 or later\n"));
 #endif
 #if ENCODER_QSV
             str += strsprintf(_T("\n")
