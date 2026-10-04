@@ -299,37 +299,52 @@ static RGY_ERR detail_repeatability(const RGYFrameInfo *source, const RGYFrameIn
     return err_to_rgy(cudaGetLastError());
 }
 
-template<typename Type, int shift>
-__global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const int pitch,
-    const int width, const int height, const int blocksX, const int bitDepth,
-    FilmGrainBlockMetric *__restrict__ metrics) {
-    const int blockIndex = blockIdx.x;
-    const int tid = threadIdx.x;
-    const int bx = blockIndex % blocksX;
-    const int by = blockIndex / blocksX;
-    const int x0 = bx * FGS_BLOCK_SIZE;
-    const int y0 = by * FGS_BLOCK_SIZE;
-    const int bw = min(FGS_BLOCK_SIZE, width - x0);
-    const int bh = min(FGS_BLOCK_SIZE, height - y0);
-    if (bw < 8 || bh < 8) {
-        if (tid == 0) metrics[blockIndex] = {};
-        return;
-    }
+// One shared allocation serves both full and partial block specializations.
+struct FilmGrainFlatMetricsShared {
+    int tile[FGS_BLOCK_SIZE * FGS_BLOCK_SIZE];
+    FilmGrainQuietSourceMetric sourceRegions[4];
+    FilmGrainQuietSourceMetric sourceVarianceRegions[16];
+    float reduce0[FGS_FLAT_THREADS];
+    float reduce1[FGS_FLAT_THREADS];
+    float reduce2[FGS_FLAT_THREADS];
+    float reduce3[FGS_FLAT_THREADS];
+    float reduce4[FGS_FLAT_THREADS];
+    float reduce5[FGS_FLAT_THREADS];
+    int reduceCount[FGS_FLAT_THREADS];
+    float reduceMin[FGS_FLAT_THREADS];
+    float reduceMax[FGS_FLAT_THREADS];
+    float minimum;
+    float maximum;
+    float mean;
+    float planeX;
+    float planeY;
+};
 
+template<typename Type, int shift, bool fullBlock>
+__device__ inline void fgs_flat_metrics_block(FilmGrainFlatMetricsShared& shared,
+    const uint8_t *__restrict__ src, const int pitch, const int x0, const int y0,
+    const int bwIn, const int bhIn, const int blockIndex, const int bitDepth,
+    FilmGrainBlockMetric *__restrict__ metrics) {
+    static_assert(FGS_BLOCK_SIZE == 32, "fullBlock index math assumes 32x32 blocks");
+    const int tid = threadIdx.x;
+    const int bw = fullBlock ? FGS_BLOCK_SIZE : bwIn;
+    const int bh = fullBlock ? FGS_BLOCK_SIZE : bhIn;
     const int count = bw * bh;
+    auto pixelX = [bw](const int index) { return fullBlock ? (index & (FGS_BLOCK_SIZE - 1)) : index % bw; };
+    auto pixelY = [bw](const int index) { return fullBlock ? (index >> 5) : index / bw; };
     // Both passes below walk the same block, and the gradient pass adds four
     // neighbour taps per pixel -- about six global loads per pixel in total.
     // Those taps are guarded to stay strictly inside the block, so the whole
     // working set is bw*bh with no halo.  Stage it in shared memory once and
     // read every later tap from there, preserving the sample values and the
     // arithmetic order used below.
-    __shared__ int tile[FGS_BLOCK_SIZE * FGS_BLOCK_SIZE];
+    auto& tile = shared.tile;
     for (int index = tid; index < count; index += FGS_FLAT_THREADS) {
-        tile[index] = load_code<Type, shift>(src, pitch, x0 + index % bw, y0 + index / bw);
+        tile[index] = load_code<Type, shift>(src, pitch, x0 + pixelX(index), y0 + pixelY(index));
     }
     __syncthreads();
 
-    __shared__ FilmGrainQuietSourceMetric sourceRegions[4];
+    auto& sourceRegions = shared.sourceRegions;
     const int region = tid / 32;
     const int regionX = (region % 2) * FGS_QUIET_SIZE;
     const int regionY = (region / 2) * FGS_QUIET_SIZE;
@@ -338,7 +353,7 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     if (tid % 32 == 0) sourceRegions[region] = sourceRegion;
     // Reuse the staged source for 8x8 luma evidence. Each eight-lane group
     // owns one region; no new global source read, kernel or synchronization.
-    __shared__ FilmGrainQuietSourceMetric sourceVarianceRegions[16];
+    auto& sourceVarianceRegions = shared.sourceVarianceRegions;
     const int varianceRegion = tid / 8;
     const int varianceX = (varianceRegion % 4) * 8;
     const int varianceY = (varianceRegion / 4) * 8;
@@ -359,8 +374,8 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     float localMin = 65535.0f;
     float localMax = 0.0f;
     for (int index = tid; index < count; index += FGS_FLAT_THREADS) {
-        const int x = index % bw;
-        const int y = index / bw;
+        const int x = pixelX(index);
+        const int y = pixelY(index);
         const float yn = (2.0f * y - (bh - 1)) / bh;
         const float xn = (2.0f * x - (bw - 1)) / bw;
         const float value = static_cast<float>(tile[index]);
@@ -372,20 +387,20 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
         localNormX += xn * xn;
         localNormY += yn * yn;
     }
-    __shared__ float reduce0[FGS_FLAT_THREADS];
-    __shared__ float reduce1[FGS_FLAT_THREADS];
-    __shared__ float reduce2[FGS_FLAT_THREADS];
-    __shared__ float reduce3[FGS_FLAT_THREADS];
-    __shared__ float reduce4[FGS_FLAT_THREADS];
-    __shared__ float reduce5[FGS_FLAT_THREADS];
-    __shared__ int reduceCount[FGS_FLAT_THREADS];
-    __shared__ float reduceMin[FGS_FLAT_THREADS];
-    __shared__ float reduceMax[FGS_FLAT_THREADS];
-    __shared__ float minimum;
-    __shared__ float maximum;
-    __shared__ float mean;
-    __shared__ float planeX;
-    __shared__ float planeY;
+    auto& reduce0 = shared.reduce0;
+    auto& reduce1 = shared.reduce1;
+    auto& reduce2 = shared.reduce2;
+    auto& reduce3 = shared.reduce3;
+    auto& reduce4 = shared.reduce4;
+    auto& reduce5 = shared.reduce5;
+    auto& reduceCount = shared.reduceCount;
+    auto& reduceMin = shared.reduceMin;
+    auto& reduceMax = shared.reduceMax;
+    auto& minimum = shared.minimum;
+    auto& maximum = shared.maximum;
+    auto& mean = shared.mean;
+    auto& planeX = shared.planeX;
+    auto& planeY = shared.planeY;
     reduce0[tid] = localSum;
     reduce1[tid] = localSumX;
     reduce2[tid] = localSumY;
@@ -423,8 +438,8 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     float localCorrelationEnergy = 0.0f;
     int localGradientCount = 0;
     for (int index = tid; index < count; index += FGS_FLAT_THREADS) {
-        const int x = index % bw;
-        const int y = index / bw;
+        const int x = pixelX(index);
+        const int y = pixelY(index);
         const float yn = (2.0f * y - (bh - 1)) / bh;
         const float xn = (2.0f * x - (bw - 1)) / bw;
         const float value = static_cast<float>(tile[index]);
@@ -521,6 +536,32 @@ __global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const i
     for (int region = 0; region < 4; ++region) out.sourceRegions[region] = sourceRegions[region];
     for (int region = 0; region < 16; ++region) out.sourceVarianceRegions[region] = sourceVarianceRegions[region];
     metrics[blockIndex] = out;
+}
+
+template<typename Type, int shift>
+__global__ void kernel_fgs_flat_metrics(const uint8_t *__restrict__ src, const int pitch,
+    const int width, const int height, const int blocksX, const int bitDepth,
+    FilmGrainBlockMetric *__restrict__ metrics) {
+    const int blockIndex = blockIdx.x;
+    const int tid = threadIdx.x;
+    const int bx = blockIndex % blocksX;
+    const int by = blockIndex / blocksX;
+    const int x0 = bx * FGS_BLOCK_SIZE;
+    const int y0 = by * FGS_BLOCK_SIZE;
+    const int bw = min(FGS_BLOCK_SIZE, width - x0);
+    const int bh = min(FGS_BLOCK_SIZE, height - y0);
+    if (bw < 8 || bh < 8) {
+        if (tid == 0) metrics[blockIndex] = {};
+        return;
+    }
+
+    // The choice is uniform across the block, including every barrier below.
+    __shared__ FilmGrainFlatMetricsShared shared;
+    if (bw == FGS_BLOCK_SIZE && bh == FGS_BLOCK_SIZE) {
+        fgs_flat_metrics_block<Type, shift, true>(shared, src, pitch, x0, y0, bw, bh, blockIndex, bitDepth, metrics);
+    } else {
+        fgs_flat_metrics_block<Type, shift, false>(shared, src, pitch, x0, y0, bw, bh, blockIndex, bitDepth, metrics);
+    }
 }
 
 // Source-only chroma evidence, including blocks excluded from AR training.
