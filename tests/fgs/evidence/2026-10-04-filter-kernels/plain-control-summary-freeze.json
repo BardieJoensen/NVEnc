@@ -1,0 +1,12 @@
+{
+  "complete": true,
+  "files": {
+    "/tmp/downloads/codex-work/fgs-improvement-20261004/summarize_plain_controls.py": "2cdfee87c83b6f76d0f8acef74319e395a1ed81e0dca47490919ecdfbc24c806",
+    "/tmp/downloads/codex-work/fgs-improvement-20261004/aggregate_identity.py": "279d3af13c934459c297592a60a77cac3a89fdd6764179a16b458cb61070c188",
+    "/tmp/downloads/codex-work/fgs-improvement-20261004/repeat_identity.py": "6bbe9c681be59bda776915af28df4c9e23683583573785e16ccfef5ac9a967ad",
+    "/tmp/downloads/codex-work/fgs-improvement-20261004/identity-requirements.json": "4c16ebb69a7db3c2471f09d8a1a68332f0ef64a877923d56589d071a993e1aaa",
+    "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/plain-control-summary.json": "70be6549131feb81ebac0e2ac84bf24c889b7b100d36a282253792aa811cfb66",
+    "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/plain-control-summary.md": "51603e097d3a9409196ed98a6db4c55355ca68899799665954bff7c206ecc708"
+  },
+  "note": "Frozen final offline matched-plain-control audit. No original reports were changed."
+}

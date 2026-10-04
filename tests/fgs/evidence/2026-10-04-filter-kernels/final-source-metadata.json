@@ -1,0 +1,23 @@
+{
+  "time_utc": "2026-10-04T21:46:16Z",
+  "root": "/tmp/downloads",
+  "filename": "Play.Dirty.2025.REPACK.1080p.AMZN.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv",
+  "max_depth": 7,
+  "excluded_dirs": [
+    "codex-work",
+    "torrents"
+  ],
+  "symlink_dirs_followed": false,
+  "content_opened": false,
+  "found": [],
+  "visited_directories": 19907,
+  "time_limit_hit": false,
+  "errors": [],
+  "elapsed_seconds": 0.381458992997068,
+  "free_bytes": {
+    "/home": 61239410688,
+    "/opt/docker-apps": 46837510144,
+    "/var/lib/docker": 152774455296,
+    "/tmp/downloads": 304006668288
+  }
+}

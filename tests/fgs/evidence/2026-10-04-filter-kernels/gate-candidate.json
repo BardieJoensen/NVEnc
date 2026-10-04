@@ -1,0 +1,10 @@
+{
+  "started_at_utc": "2026-10-04T21:12:57.907858+00:00",
+  "candidate_commit": null,
+  "harness_commit": "6e8fa1fb1a2b06e64b8c4a19af392bc5adfe5c5e",
+  "candidate_nvencc": "/tmp/downloads/codex-work/fgs-improvement-20261004/bin/nvencc-kernels",
+  "candidate_sha256": "be7a50a1681fc5aa9a7133533f081d4e3253b2c74bc639605358f69d591ababe",
+  "candidate_version": "NVEnc (x64) 9.37 (r4366) by rigaya, Oct  4 2026 20:19:21 (gcc 13.3.0/Linux)\n  [NVENC API v13.1, CUDA 13.3]\n reader: raw, y4m, avs, vpy, avsw, avhw [H.264/AVC, H.265/HEVC, MPEG2, VP8, VP9, VC-1, MPEG1, MPEG4, AV1]\n others\n  nvml       : yes\n  nvrtc      : yes\n  nvvfx      : no\n  ngx        : no\n  nvof fruc  : no\n  libass     : yes\n  libdovi    : yes\n  vulkan     : yes\n  libplacebo : yes\n  vmaf       : no",
+  "reference_control": null,
+  "denoiser": "bilateral"
+}

@@ -1,0 +1,65 @@
+{
+  "root": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1",
+  "verified": {
+    "model_source": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/taxi-source-6f.y4m",
+      "sha256": "3d3a5f7e581052d75a90961ff28ee3c65a4239083e2c48c3f938a8eb4997ed3e"
+    },
+    "model_clean": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/taxi-clean-6f.y4m",
+      "sha256": "3260dd8c7aba1a85ae8105b9a28ba051aea7b9842a2397ced22f394d802817d2"
+    },
+    "model_reference": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/taxi-reference.tbl",
+      "sha256": "6b935bd145b6fa7e8b13c534a5834ca0ff47224ce2161546b25043a12f69e3b0"
+    },
+    "model_negative": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/taxi-metric-gamer.json",
+      "sha256": "00096654cbc0ab49c1ed34e8d8cb1ee4b1b072e9399697d3d432d77ab15d0c1e"
+    },
+    "taxi_clip": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/taxi-coarse-24f.mkv",
+      "sha256": "ccda916bd8585c2daacff6db9d7329f99e1e2f0260c4316d8e8036b09e39d30f"
+    },
+    "silo_clip": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/silo-fine-24f.mkv",
+      "sha256": "040468f686dc66c753c2a2899261b3434fda6f33e257d5047bfda14bd241607b"
+    },
+    "alien_clip": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/alien-coarse-24f.mkv",
+      "sha256": "eb1956a549ad48f382c2d7c4062f7e0657252545b2cb6c0b6458e45399b2fd70"
+    },
+    "substitution_encode": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/taxi-widened-r4047.mkv",
+      "sha256": "9d2ad6e750a6d89ff9d58ee990102895a1fe745264e5cfd50cd1a2bd00da9e54"
+    },
+    "gentlemen_clip": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/gentlemen-source-33m-150s.mkv",
+      "sha256": "e41e63a94dd19bb3c6ff584d1872008fb84c196e5d1b33689869e33a5d5f9e5a"
+    },
+    "gentlemen_mesh_negative": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/gentlemen-decay-33m-150s.mkv",
+      "sha256": "95fd75995df4d345e821f34d41b0cc54b87aea59f59c232eac01e33ea4f6b0bc"
+    },
+    "gentlemen_amplitude_guard_positive": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/gentlemen-amplitude-guard-positive-33m-150s.mkv",
+      "sha256": "3886c36063ca5b0551a0dfa82e1e6d9bee902385e025e23d0fe063e3c8941cc8"
+    },
+    "gentlemen_training_positive": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/gentlemen-corroborated-training-positive-33m-150s.mkv",
+      "sha256": "7f729a5577c94075bb59c845806532f5e19753edda5a7fc73c8c3ae9de58a705"
+    },
+    "gentlemen_detail_negative": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/gentlemen-spatial-denoising-detail-negative-33m-150s.mkv",
+      "sha256": "62670059833482ab7c325db1ac82ba30cc7182a72ddeec8bbfbca2b79a0024c7"
+    },
+    "invalid_chroma_negative": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/hornets-invalid-chroma-1495-35s.mkv",
+      "sha256": "9068d9fe536d0d45fe7a38979855e56e7bd824e256cdcfb3a82aab61cba4453d"
+    },
+    "gentlemen_guard_positive": {
+      "path": "/media/merged-storage/validation-fixtures/nvenc-fgs/v1/gentlemen-guard-positive-33m-150s.mkv",
+      "sha256": "249023f0dccc8a325dd46b9272982c7da0e1e64ff690df03706c84d4b9c54220"
+    }
+  }
+}

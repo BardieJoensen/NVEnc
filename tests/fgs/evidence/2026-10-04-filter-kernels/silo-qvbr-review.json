@@ -1,0 +1,96 @@
+{
+  "script_sha256": "aafa8acd2915770343fd390fccd1316f892d9bdaf54e9ffe52310cbfaebd225f",
+  "gpu_processes_launched": 0,
+  "all_15873_quantized_values_roundtrip_parser_exactly": true,
+  "all_log_rounding_errors_within_two_decimal_display_allowance": true,
+  "simulation_results": [
+    {
+      "case": "monotonic-match",
+      "matched": true,
+      "trials": 2,
+      "rows": [
+        {
+          "trial": 1,
+          "qvbr": 30.0,
+          "actual": 1562.863
+        },
+        {
+          "trial": 2,
+          "qvbr": 46.5,
+          "actual": 1397.863
+        }
+      ],
+      "range_exhausted": false
+    },
+    {
+      "case": "plateau-no-match",
+      "matched": false,
+      "trials": 12,
+      "rows": [
+        {
+          "trial": 1,
+          "qvbr": 30.0,
+          "actual": 1438.977
+        },
+        {
+          "trial": 2,
+          "qvbr": 46.5,
+          "actual": 1302.521
+        },
+        {
+          "trial": 3,
+          "qvbr": 38.25,
+          "actual": 1302.521
+        },
+        {
+          "trial": 4,
+          "qvbr": 34.125,
+          "actual": 1302.521
+        },
+        {
+          "trial": 5,
+          "qvbr": 32.0625,
+          "actual": 1302.521
+        },
+        {
+          "trial": 6,
+          "qvbr": 31.03125,
+          "actual": 1438.977
+        },
+        {
+          "trial": 7,
+          "qvbr": 31.546875,
+          "actual": 1438.977
+        },
+        {
+          "trial": 8,
+          "qvbr": 31.8046875,
+          "actual": 1438.977
+        },
+        {
+          "trial": 9,
+          "qvbr": 31.93359375,
+          "actual": 1438.977
+        },
+        {
+          "trial": 10,
+          "qvbr": 31.99609375,
+          "actual": 1438.977
+        },
+        {
+          "trial": 11,
+          "qvbr": 32.02734375,
+          "actual": 1302.521
+        },
+        {
+          "trial": 12,
+          "qvbr": 32.01171875,
+          "actual": 1302.521
+        }
+      ],
+      "range_exhausted": false
+    }
+  ],
+  "validated_max_bitrate_unchanged": 50000,
+  "source_report_sha256": "06c83ff1ae5bd1f58436de51994b5b5839a45d5ce42ef2484983e92f9f961abf"
+}

@@ -1,0 +1,13 @@
+{
+  "mode": "--full",
+  "result": "blocked during required-input preflight",
+  "exit_code": 2,
+  "full_gate_pass": false,
+  "candidate_sha256": "be7a50a1681fc5aa9a7133533f081d4e3253b2c74bc639605358f69d591ababe",
+  "harness_commit": "6e8fa1fb1a2b06e64b8c4a19af392bc5adfe5c5e",
+  "missing_manifest": "/tmp/downloads/codex-work/fgs-improvement-20261004/amplitude-regenerated-final/amplitude-manifest.json",
+  "cause": "Exact Play Dirty source has not appeared in the bounded download-directory metadata checks; fresh full-history artifacts/manifest cannot be generated.",
+  "log_sha256": "99ef30cd8433e9803e04e15e1a687b8157d03ee52bf3436ddc3728e572fed0bd",
+  "log": "\nlocal_gate: missing required input: /tmp/downloads/codex-work/fgs-improvement-20261004/amplitude-regenerated-final/amplitude-manifest.json\nThis gate refuses to skip a stage. Either provide the input or drop the stage\nexplicitly with --stage, so a missing negative control can never be mistaken\nfor a passing one.\n",
+  "stages_executed": []
+}

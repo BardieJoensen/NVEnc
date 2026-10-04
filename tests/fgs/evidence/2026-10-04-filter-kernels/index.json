@@ -1,5 +1,5 @@
 {
-  "status": "Not qualified: known-state admission unmet; controls and partial gate in progress; full gate missing Play Dirty source/history.",
+  "status": "Not qualified: known-state admission unmet (Taxi/Gentlemen); all 26 plain controls pass against the known FGS rate union; CPU and 22 partial-gate checks pass; full gate blocked on exact Play Dirty source/history.",
   "core": "6e8fa1fb1a2b06e64b8c4a19af392bc5adfe5c5e",
   "copies": [
     {
@@ -187,6 +187,102 @@
       "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/plain-control-v2-review.json",
       "bytes": 1259,
       "sha256": "1c57d26f6aa8aeba4160ced516eba949a15bab6d1a49a28409b6bd8b1bd56f36"
+    },
+    {
+      "file": "partial-gate.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/partial-gate-scope.json",
+      "bytes": 2644,
+      "sha256": "95fe7dd300320d1addd53b3579df35144972befc4dd760ca024c9ab636847fd3"
+    },
+    {
+      "file": "gate-candidate.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-gate-partial/candidate.json",
+      "bytes": 838,
+      "sha256": "cac18f7be795dcb9ab9ce12ab924b599df245a1f1e1db2a8893f9d96fe7726ce"
+    },
+    {
+      "file": "gate-fixtures.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-gate-partial/fixtures.json",
+      "bytes": 3393,
+      "sha256": "756b5ef69c2f75b6b766d9638e08aa2f7dc705179b91172579f7cf722ae18d48"
+    },
+    {
+      "file": "full-gate-blocked.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/full-gate-blocked.json",
+      "bytes": 1011,
+      "sha256": "da1b66436e57a3290f2a6415b69b249c90fea821f265ad398866562225c05081"
+    },
+    {
+      "file": "final-source-metadata.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/final-source-metadata.json",
+      "bytes": 581,
+      "sha256": "fcd18c797105b41cfd987e268e2adea2393102cbda3ec22710c564cef03c45b1"
+    },
+    {
+      "file": "kat-plain-controls.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-kat-plain-controls-v2/report.json",
+      "bytes": 364654,
+      "sha256": "9cfa1dd77e23bcf3dd968a16c330d9380ec5171f0705e688e4e2d6456c59d353"
+    },
+    {
+      "file": "real-plain-retuning.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-real-plain-retuned/report.json",
+      "bytes": 119107,
+      "sha256": "5e9c4057ff42de311253b531a2f1d028424da0a7c982bedd3b64fd9e9d7b44fb"
+    },
+    {
+      "file": "silo-plain-qvbr.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-silo-plain-qvbr/report.json",
+      "bytes": 35073,
+      "sha256": "1afe22eddcb8ce2e8018efe9f05a34a7a38aa81bda269b6a36565055767558bd"
+    },
+    {
+      "file": "silo-plain-vbr-refinement.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/kernels-silo-plain-refinement/report.json",
+      "bytes": 46109,
+      "sha256": "52820fa3c90bef06b1a51d6a06a4950f757591b61d4474e96f013bdedf95ced7"
+    },
+    {
+      "file": "match_plain_silo_qvbr.py",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/match_plain_silo_qvbr.py",
+      "bytes": 12539,
+      "sha256": "aafa8acd2915770343fd390fccd1316f892d9bdaf54e9ffe52310cbfaebd225f"
+    },
+    {
+      "file": "refine_silo_control.py",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/refine_silo_control.py",
+      "bytes": 3353,
+      "sha256": "af2781a0bf0869b07ddbdd60b31130b799175adc11dbe9c31faf50385aef0928"
+    },
+    {
+      "file": "silo-qvbr-review.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/plain-silo-qvbr-review.json",
+      "bytes": 2109,
+      "sha256": "b3c6e26718957f9749700907d31833928ecdb4a26324a07600576985f056ac08"
+    },
+    {
+      "file": "plain-control-summary.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/plain-control-summary.json",
+      "bytes": 283576,
+      "sha256": "70be6549131feb81ebac0e2ac84bf24c889b7b100d36a282253792aa811cfb66"
+    },
+    {
+      "file": "plain-control-summary.md",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/plain-control-summary.md",
+      "bytes": 2545,
+      "sha256": "51603e097d3a9409196ed98a6db4c55355ca68899799665954bff7c206ecc708"
+    },
+    {
+      "file": "plain-control-summary-freeze.json",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/plain-control-summary-freeze.json",
+      "bytes": 1057,
+      "sha256": "c8ebe8e0ee8e91df9fb5db65f978b5e0d8e475be806658ea3b2a4bbc2a3a2cbd"
+    },
+    {
+      "file": "summarize_plain_controls.py",
+      "original": "/tmp/downloads/codex-work/fgs-improvement-20261004/summarize_plain_controls.py",
+      "bytes": 9705,
+      "sha256": "2cdfee87c83b6f76d0f8acef74319e395a1ed81e0dca47490919ecdfbc24c806"
     }
   ],
   "lossless_encodings": [
