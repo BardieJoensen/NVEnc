@@ -630,7 +630,8 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
     constexpr int tileHeight = FGS_BILATERAL_BLOCK_Y + FGS_BILATERAL_RADIUS * 2;
     constexpr int tilePixels = tileWidth * tileHeight;
     constexpr int blockThreads = FGS_BILATERAL_BLOCK_X * FGS_BILATERAL_BLOCK_Y;
-    __shared__ int tile[tilePixels * components];
+    // Integer code values convert exactly; cache the float used by every tap.
+    __shared__ float tile[tilePixels * components];
 
     // Neighbourhoods overlap heavily: the original implementation issued 25
     // global source loads per output component.  Cooperatively cache this
@@ -646,7 +647,7 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
             static_cast<int>(blockIdx.x) * FGS_BILATERAL_BLOCK_X + tx - FGS_BILATERAL_RADIUS));
         const int sy = min(height - 1, max(0,
             static_cast<int>(blockIdx.y) * FGS_BILATERAL_BLOCK_Y + ty - FGS_BILATERAL_RADIUS));
-        tile[index] = load_code<Type, shift>(src, srcPitch, sx, sy, component, components);
+        tile[index] = static_cast<float>(load_code<Type, shift>(src, srcPitch, sx, sy, component, components));
     }
     __syncthreads();
     if (x >= width || y >= height) return;
@@ -733,22 +734,25 @@ __global__ void kernel_fgs_bilateral(uint8_t *__restrict__ dst, const int dstPit
         const int centerIndex = (
             (threadIdx.y + FGS_BILATERAL_RADIUS) * tileWidth
             + threadIdx.x + FGS_BILATERAL_RADIUS) * components + component;
-        const int center = tile[centerIndex];
+        const float center = tile[centerIndex];
         float weighted = 0.0f;
         float weightSum = 0.0f;
+        // Keep the dy-major accumulation order while specializing each tap.
+#pragma unroll
         for (int dy = -2; dy <= 2; ++dy) {
+#pragma unroll
             for (int dx = -2; dx <= 2; ++dx) {
                 const int sampleIndex = (
                     (threadIdx.y + FGS_BILATERAL_RADIUS + dy) * tileWidth
                     + threadIdx.x + FGS_BILATERAL_RADIUS + dx) * components + component;
-                const int sample = tile[sampleIndex];
+                const float sample = tile[sampleIndex];
                 if (dx == 0 && dy == 0) {
                     constexpr float centerWeight = spatial[2] * spatial[2];
                     weighted += centerWeight * center;
                     weightSum += centerWeight;
                     continue;
                 }
-                const float difference = static_cast<float>(sample - center);
+                const float difference = sample - center;
                 const float rangeWeight = 1.0f / (1.0f + difference * difference * invRange2);
                 float weight = spatial[dx + 2] * spatial[dy + 2] * rangeWeight;
                 if (normalPrecision > 0.0f) {
