@@ -1,0 +1,17 @@
+{
+  "result": "pass",
+  "passed": 5,
+  "failed": 0,
+  "kat_cases": 21,
+  "binary_sha256": "0134fef194357ba5f37a94ac6a45626ab967b7fb9de900ee0ed4e0562860bb57",
+  "harness_commit": "aeb14263c94bde5e3434920ce6281aa3285852fb",
+  "log": "/tmp/downloads/codex-work/fgs-improvement-20261004/reports/baseline-quick.log",
+  "log_sha256": "36a314a1566e1634cd58748ee35c588b4bcb227eade73e6d3d5c89247614f0d3",
+  "checks": [
+    "GPU KAT bilateral",
+    "table export finalization and failure paths",
+    "lookahead picture order/timestamps/drain",
+    "reject adversarial model",
+    "accept shipping model"
+  ]
+}
