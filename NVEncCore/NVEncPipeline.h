@@ -3140,6 +3140,23 @@ public:
                     frameEnc.release();
                     return unmapSts;
                 }
+                if (m_submissionTrace) {
+                    // The SDK forbids client access while mapped. Only read
+                    // after completion and unmap, before this exact input
+                    // allocation can return to the producer's free queue.
+                    const auto *buffer = frameEnc->encBuffer();
+                    const auto traceStatus = m_submissionTrace->captureCompleted(buffer,
+                        reinterpret_cast<const void *>(buffer->stInputBfr.pNV12devPtr),
+                        buffer->stInputBfr.dwWidth, buffer->stInputBfr.dwHeight,
+                        buffer->stInputBfr.uNV12Stride);
+                    if (traceStatus != RGY_ERR_NONE) {
+                        PrintMes(RGY_LOG_ERROR, _T("Completed submission trace failed: %s.\n"), get_err_mes(traceStatus));
+                        // Do not recycle a surface after a failed diagnostic
+                        // readback; pipeline teardown owns its final release.
+                        frameEnc.release();
+                        return traceStatus;
+                    }
+                }
             }
             if (outBs.first != RGY_ERR_NONE) {
                 if (devFrame) {
@@ -3417,17 +3434,17 @@ protected:
         }
         m_encTimestamp->add(timestamp, inputFrameId, (encPicParams.frameIdx = id), duration, metadatalist);
 
-        // Debug-only receipt of the actual mapped input and exact per-picture
-        // grain object at the submission boundary, from this same encode run.
-        // Disabled: one branch, no CUDA calls, allocations, hashes or file I/O.
+        // Snapshot this exact picture's metadata and grain by value. CUDA
+        // surface access waits until output completion and successful unmap.
+        // Disabled: two pointer checks per picture (here and completion), with
+        // no CUDA calls, allocations, locks, hashes or file I/O.
         if (m_submissionTrace) {
             if (m_encCodec != RGY_CODEC_AV1) return RGY_ERR_UNSUPPORTED;
-            NVEncCtxAutoLock(ctxlock(m_dev->vidCtxLock()));
-            const auto traceStatus = m_submissionTrace->capture(encPicParams,
-                m_stEncConfig.encodeCodecConfig.av1Config,
+            const auto traceStatus = m_submissionTrace->prepare(encPicParams,
+                m_stEncConfig.encodeCodecConfig.av1Config, pEncodeBuffer,
                 reinterpret_cast<const void *>(pEncodeBuffer->stInputBfr.pNV12devPtr),
                 pEncodeBuffer->stInputBfr.dwWidth, pEncodeBuffer->stInputBfr.dwHeight,
-                pEncodeBuffer->stInputBfr.uNV12Stride, inputFrameId, m_runCtx->streamIn());
+                pEncodeBuffer->stInputBfr.uNV12Stride, inputFrameId);
             if (traceStatus != RGY_ERR_NONE) {
                 PrintMes(RGY_LOG_ERROR, _T("Submission trace failed: %s.\n"), get_err_mes(traceStatus));
                 return traceStatus;
