@@ -65,3 +65,17 @@ The user approved measuring task4 originals while unrelated subtitle-ASR work fi
 - Auto: compensate only source-only observed seek trimming to retain the unchanged576/720 displayed-frame and288/360 evaluation-frame targets.
 - Auto: retain native evidence for the first excess event before releasing only this task’s completed raw intermediates.
 - Auto: continuously check the already-running Sunshine context with NVML activity/session counters without stopping services or consuming Tdarr pause time.
+
+### Continuation at 12:03 UTC
+
+Tasks1–2 are complete under the supported schema-2 trace: five real fixtures and21 KAT fixtures have stable identical production/candidate submission traces, while Lost Tapes and Gentlemen reproduce different IVFs from identical inputs; investigation stops downstream of submission. Candidate CPU checks pass119 Python tests and nine C++ programs. All three Play Dirty full histories are verified at183,661 decoded frames; the first full gate passed22 checks but its historical Butteraugli canary failed from shared-GPU OutOfVRAM. The unchanged complete gate is running again after the unrelated ASR campaign finished.
+
+Task4's frozen held-out census and supporting SDR/HDR/amplitude controls are complete. Constant-source additions occur in212/4,536 sampled frames across four of five titles, generally on very small picture areas; the strong Insidious case survives full preceding history. The bounded next proposal is [clean-source protection](CLEAN-SOURCE-FIX-PLAN-2026-10-05.md), with [clean safety](FINDINGS-2026-10-05-CLEAN-SOURCE-GRAIN.md) and [grain axes](FINDINGS-2026-10-05-GRAIN-AXES.md) findings. This is a proposal only, pending the user's go after the remaining throughput task.
+
+- auto: Count exact-constant source patches independently of band averages and exclude whole-patch legal-range clipping before attributing a difference to grain.
+- auto: Confirm Insidious with production encoded from frame zero and exclude this selected witness from prevalence denominators.
+- auto: Preserve the OutOfVRAM full-gate failure and rerun every unchanged stage after foreign GPU memory clears.
+- auto: Replace the unexecuted two-animation throughput sample with Marshals digital live action and Amphibia animation, preserving run counts, alternating order, controls and the two-hour total pause budget.
+- auto: Accept each timing source's pinned native geometry, including Marshals1920×960, rather than resizing the original or treating its cropped1080p-class picture as1920×1080.
+- auto: Keep the2% minimum conditional library video-encode-time saving for a standalone kernel release, frozen before any timed result.
+- auto: Rank confirmed clean-region additions above temporal excess and coarse-grain distance, and propose only a bounded change to existing production safety paths.

@@ -1,0 +1,8 @@
+{
+  "archive": "grain-evidence.tar.gz",
+  "sha256": "c50dfe861c2209f9e5c0c859c4debc2a56b50a06a82a4318e375f4a4febb4469",
+  "bytes": 5412355,
+  "included_files": 269,
+  "all_members_verified": true,
+  "external_per_frame_files": 40
+}
