@@ -29,15 +29,29 @@ Each count below means a frame with **at least one** affected constant patch in 
 | Insidious, live action |864|53|88|0|0.835 /0.634 /0|
 | Toy Story5, animation |864|53|0|3|0.475 /0 /0.295|
 
-Across the frozen sample,212/4,536 frames (4.67%) have a positive constant patch in at least one plane. This is a **sample incidence**, not a library-wide rate. Knightfall contains no exactly constant luma grid patches, so its zero Y count is not evidence that clean luma is protected.
+Across the frozen sample, 212/4,536 frames (4.67%) have a positive constant patch in at least one plane. This is a **sample incidence**, not a library-wide rate. Knightfall contains no exactly constant luma grid patches, so its zero Y count is not evidence that clean luma is protected.
 
 The footprint is much smaller than the affected-frame count suggests. Averaged over the three sampled windows per title, positive patch area occupies 0.0084% of Insidious luma area×time and 0.109% of Cb; Knightfall Cr occupies 0.116%; Toy Story5 Y occupies 0.0046%. These count the entire positive patch, so actual changed-pixel footprints are smaller. No perceptual visibility threshold is claimed for the sub-quarter-code chroma cases.
 
 The largest clean-source witnesses are inside the active image: black hair/shadows in Insidious and the first animation window, plus bright sky in the later animation window. Toy Story5's late-window Y witness has source code 234, RMS 0.354 and peak 1.0; its Cr witness has constant source 128, RMS 0.295 and peak 0.75. Thus the problem is not confined to black bars or dark luma.
 
+The Insidious constant-patch additions occur in source-luma band 0–32; the animation's later sky additions occur in 224–256. Smaller constant-chroma additions in Knightfall span 96–256 and Homegrown 96–224. These are source-luma bins for all planes, not bins of Cb/Cr values.
+
+Band averages provide a complementary, less definitive census. The following counts are frames with any measured added-sigma excess over source sigma in a core-selected band, followed in parentheses by frames with excess of at least 0.25 code. The latter is a reporting bin, not an acceptable-grain allowance.
+
+| Original sample | Y excess frames | Cb excess frames | Cr excess frames |
+|---|---:|---:|---:|
+| Knightfall |215 (2)|0 (0)|2 (0)|
+| Marshals |0 (0)|0 (0)|0 (0)|
+| Homegrown |0 (0)|0 (0)|0 (0)|
+| Insidious |165 (6)|73 (9)|0 (0)|
+| Toy Story5 |0 (0)|0 (0)|0 (0)|
+
+Small differences are sensitive to finite sampling and source texture; these are descriptive flags, not a count of visible defects. Bands with fewer than eight selected patches remain separate in the receipts. The animation and reality examples show why a zero band-average excess count does not prove clean-region safety: textured neighbors can hide additions to a constant patch. The full-history confirmations establish the stronger individual failures independently.
+
 ## Full-history confirmation and temporal behavior
 
-Insidious was separately encoded from frame zero through 103,930 frames using the same production binary and video settings. A 16-frame witness around source 4326.36–4326.99 seconds was decoded with grain on/off. Actual PTS and independent pixel-offset checks pass; its source pixels and selection arrays exactly match the corresponding frozen-window source subset. Eleven frames contain an affected constant Y patch and15 an affected constant Cb patch. Maximum added RMS is 0.831Y /0.639Cb; Y changes reach4.0 codes. These selected confirmation frames are **excluded** from the census denominator.
+Insidious was separately encoded from frame zero through 103,930 frames using the same production binary and video settings. A 16-frame witness around source 4326.36–4326.99 seconds was decoded with grain on/off. Actual PTS and independent pixel-offset checks pass; its source pixels and selection arrays exactly match the corresponding frozen-window source subset. Eleven frames contain an affected constant Y patch and 15 an affected constant Cb patch. Maximum added RMS is 0.831Y /0.639Cb; Y changes reach4.0 codes. These selected confirmation frames are **excluded** from the census denominator.
 
 The other confirmed failure is temporal over-strength in Knightfall, documented in [the temporal findings](FINDINGS-2026-10-05-PRODUCTION-TEMPORAL-EXCESS.md). With full preceding history, two dark-band frames have added sigma 0.917/0.891 against source 0.625/0.661, followed by 0.381 added against 0.616 source. The grain falls57% while source strength falls7%, within the same shot. Played texture also falls; this is stronger evidence than a film-grain-table switch by itself.
 
