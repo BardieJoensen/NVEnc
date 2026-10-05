@@ -18,7 +18,7 @@ extern "C" {
 
 class NVEncSubmissionTrace {
     const std::string m_path;
-    std::unique_ptr<FILE, decltype(&fclose)> m_file;
+    std::unique_ptr<FILE, int (*)(FILE *)> m_file;
     std::vector<uint8_t> m_surface;
 #if ENABLE_AVSW_READER
     std::unique_ptr<AVMD5, decltype(&av_free)> m_md5;
