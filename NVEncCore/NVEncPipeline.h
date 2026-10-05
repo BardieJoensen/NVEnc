@@ -3422,7 +3422,7 @@ protected:
         // Disabled: one branch, no CUDA calls, allocations, hashes or file I/O.
         if (m_submissionTrace) {
             if (m_encCodec != RGY_CODEC_AV1) return RGY_ERR_UNSUPPORTED;
-            NVEncCtxAutoLock ctxlock(m_dev->vidCtxLock());
+            NVEncCtxAutoLock(ctxlock(m_dev->vidCtxLock()));
             const auto traceStatus = m_submissionTrace->capture(encPicParams,
                 m_stEncConfig.encodeCodecConfig.av1Config,
                 reinterpret_cast<const void *>(pEncodeBuffer->stInputBfr.pNV12devPtr),
