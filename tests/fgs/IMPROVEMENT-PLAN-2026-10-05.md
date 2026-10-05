@@ -57,3 +57,11 @@ New scratch is `/tmp/downloads/codex-work/fgs-submission-20261005`, peak budget 
 - 2026-10-05 auto: Stop repeat-variability investigation after supported same-run traces reproduced both Lost Tapes IVF states with identical submitted surfaces and grain parameters; keep IVF/decoded hashes informational for candidate identity.
 - 2026-10-05 auto: Add a portable schema-2 repeated-trace comparator to the qualification branch, reusing the validated parser and checking an actual KAT plus a changed-surface negative control without more GPU runs.
 - 2026-10-05 auto: Pool the already-required production candidate-comparison repeats with instrumentation receipts after checking identical commands/pins, establishing observed deployed-versus-traced IVF sets on all three real cases while preserving the first batch’s finite-subset verdict.
+
+### Continuation at 10:49 UTC
+
+The user approved measuring task4 originals while unrelated subtitle-ASR work finishes; quiet throughput remains pending and no Tdarr pause has been acquired. The unchanged full Play Dirty candidate encoded183661 frames and is undergoing strict decode validation. First held-out animation window has288 scored frames; two show dark-band added luma sigma0.934/0.943 against source0.625/0.661, with a subsequent same-shot strength drop. Native neighboring frames and source-only mask evidence are retained; the full census and confirmation remain unfinished.
+
+- Auto: compensate only source-only observed seek trimming to retain the unchanged576/720 displayed-frame and288/360 evaluation-frame targets.
+- Auto: retain native evidence for the first excess event before releasing only this task’s completed raw intermediates.
+- Auto: continuously check the already-running Sunshine context with NVML activity/session counters without stopping services or consuming Tdarr pause time.
