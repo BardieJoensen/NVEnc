@@ -1,0 +1,24 @@
+{
+  "root": "/tmp/downloads/codex-work/fgs-submission-20261005/prod-trace-pin-v2",
+  "direct_include_reverse_closure": {
+    "NVEncSubmissionTrace.h": [
+      "NVEncCore/NVEncPipeline.h"
+    ],
+    "NVEncPipeline.h": [
+      "NVEncCore/NVEncCore.h",
+      "NVEncCore/NVEncCore.cpp"
+    ],
+    "NVEncCore.h": [
+      "NVEncC/NVEncC.cpp",
+      "NVEncCore/NVEncCore.cpp",
+      "NVEncCore/rgy_parallel_enc.cpp"
+    ]
+  },
+  "translation_units": [
+    "NVEncC/NVEncC.cpp",
+    "NVEncCore/NVEncCore.cpp",
+    "NVEncCore/rgy_parallel_enc.cpp"
+  ],
+  "cuda_translation_units_affected": [],
+  "reason": "Only these host C++ translation units transitively include the diagnostic headers; Ninja tracks their header dependencies; CUDA objects do not include this reverse closure."
+}

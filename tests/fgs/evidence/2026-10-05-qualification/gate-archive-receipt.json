@@ -1,0 +1,10 @@
+{
+  "sha256": "868ba6151d5afb7e0cf27b797cf8430c14c9a9fb7905d683b2a6f8e0988d1df0",
+  "bytes": 3136234,
+  "members_verified": 1551,
+  "full_gate_passed": true,
+  "passed": 23,
+  "failed": 0,
+  "CPU_python": 119,
+  "CPU_cpp": 9
+}

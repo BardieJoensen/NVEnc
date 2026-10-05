@@ -1,0 +1,16 @@
+{
+  "complete": true,
+  "exit_code": 0,
+  "passed_checks": 23,
+  "failed_checks": 0,
+  "mode": "--full",
+  "runtime_commit": "a1ac278ae22425719fd567931329284f82950cd4",
+  "candidate_sha256": "d1de4e49025114d8c2040d278d83352ebb41e49b4b6e1aed46496a2c6228633b",
+  "harness": "unchanged pinned candidate clone; existing private canary path view only",
+  "log": "/tmp/downloads/codex-work/fgs-submission-20261005/reports/full-gate-unmapped-retry-console.log",
+  "log_sha256": "e7d4605d35d0d6a46c2eca45161cb7e3adb92eb606ec57cdef3164363dbcca52",
+  "reports": "/tmp/downloads/codex-work/fgs-submission-20261005/reports/full-gate-unmapped-retry",
+  "amplitude_manifest": "/tmp/downloads/codex-work/fgs-submission-20261005/amplitude-final-candidate/amplitude-manifest.json",
+  "first_failed_attempt_preserved": "/tmp/downloads/codex-work/fgs-submission-20261005/reports/full-gate-unmapped-console.log",
+  "recorded_utc": "2026-10-05T12:32:06.756897+00:00"
+}

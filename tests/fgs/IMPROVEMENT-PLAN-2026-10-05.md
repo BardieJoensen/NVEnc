@@ -79,3 +79,10 @@ Task4's frozen held-out census and supporting SDR/HDR/amplitude controls are com
 - auto: Accept each timing source's pinned native geometry, including Marshals1920×960, rather than resizing the original or treating its cropped1080p-class picture as1920×1080.
 - auto: Keep the2% minimum conditional library video-encode-time saving for a standalone kernel release, frozen before any timed result.
 - auto: Rank confirmed clean-region additions above temporal excess and coarse-grain distance, and propose only a bounded change to existing production safety paths.
+- auto: Move the animation timing intervals earlier within the same original so both strata allow12000 frames if the production-only pilot requests them, before any pause or timing result.
+
+### Qualification complete; quiet timing pending
+
+The unchanged full-gate retry exited zero with23 checks passing and no failures; CPU and schema-2 input identity are also complete. See [kernel qualification](FINDINGS-2026-10-05-KERNEL-QUALIFICATION.md). A new31-run subtitle-ASR campaign started before a pause could be acquired; the user explicitly selected waiting for that campaign. Tdarr remains unpaused with its original limits, and zero seconds of the two-hour allowance have been used.
+
+- user: Wait for the new31-run ASR campaign rather than pausing its worker; existing Tdarr-only timing authorization remains unchanged.

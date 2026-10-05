@@ -1,0 +1,32 @@
+{
+  "scripts": [
+    {
+      "source": "/opt/docker-apps/scripts/grain-base-canary.sh",
+      "view": "/tmp/downloads/codex-work/fgs-submission-20261005/gate-path-view/docker-apps/scripts/grain-base-canary.sh",
+      "source_sha256": "14d7f08a86bce25e07f0764917d230198951332ac16b122b6ec68bfe5caf0d87",
+      "view_sha256": "14d7f08a86bce25e07f0764917d230198951332ac16b122b6ec68bfe5caf0d87",
+      "only_four_temp_dir_literals_changed": false
+    },
+    {
+      "source": "/opt/docker-apps/scripts/grain-base-canary.py",
+      "view": "/tmp/downloads/codex-work/fgs-submission-20261005/gate-path-view/docker-apps/scripts/grain-base-canary.py",
+      "source_sha256": "78ea36a5cb960b93da2b6bb4694a1021c9d1caeaffd671446c21258a3ed592b5",
+      "view_sha256": "78ea36a5cb960b93da2b6bb4694a1021c9d1caeaffd671446c21258a3ed592b5",
+      "only_four_temp_dir_literals_changed": false
+    },
+    {
+      "source": "/opt/docker-apps/scripts/grain-base-fidelity.py",
+      "view": "/tmp/downloads/codex-work/fgs-submission-20261005/gate-path-view/docker-apps/scripts/grain-base-fidelity.py",
+      "source_sha256": "10be227729c22871991953dab761f18de7e197006188e8f93efca0074678858a",
+      "view_sha256": "8ab07805b41897bd55d5e68d96f896bacc209409865385ac369741f5763f6a76",
+      "only_four_temp_dir_literals_changed": true
+    }
+  ],
+  "global_helpers_unchanged": true,
+  "gate_unchanged": true,
+  "thresholds_algorithms_controls_unchanged": true,
+  "reverse_bytes_and_ast_proof": true,
+  "tmp": "/tmp/downloads/codex-work/fgs-submission-20261005/gate-path-view/tmp",
+  "docker_apps": "/tmp/downloads/codex-work/fgs-submission-20261005/gate-path-view/docker-apps",
+  "executed": false
+}
