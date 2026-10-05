@@ -6,6 +6,7 @@
 #include <cstring>
 #include <array>
 #include <memory>
+#include <mutex>
 #include <new>
 #include <string>
 #include <utility>
@@ -29,7 +30,8 @@ class NVEncSubmissionTrace {
         NV_ENC_BUFFER_FORMAT bufferFmt;
         uint32_t width, height;
         size_t pitch, rowBytes, rows;
-        bool hasGrain;
+        bool hasGrain, captured;
+        const void *bufferKey, *deviceSurface;
         std::array<uint8_t, sizeof(NV_ENC_FILM_GRAIN_PARAMS_AV1)> grain;
         std::unique_ptr<uint8_t[]> surface;
     };
@@ -39,6 +41,7 @@ class NVEncSubmissionTrace {
     const std::string m_path;
     std::unique_ptr<FILE, int (*)(FILE *)> m_file;
     std::vector<Snapshot> m_snapshots;
+    std::mutex m_mutex;
     size_t m_captureBytes;
     bool m_finished, m_hasInitialGrain;
     uint32_t m_enableFilmGrainParams;
@@ -112,7 +115,7 @@ class NVEncSubmissionTrace {
 #endif
 public:
     explicit NVEncSubmissionTrace(const char *path) : m_path(path), m_file(nullptr, &fclose),
-        m_snapshots(), m_captureBytes(0), m_finished(false), m_hasInitialGrain(false),
+        m_snapshots(), m_mutex(), m_captureBytes(0), m_finished(false), m_hasInitialGrain(false),
         m_enableFilmGrainParams(0), m_initialGrain()
 #if ENABLE_AVSW_READER
         , m_md5(av_md5_alloc(), &av_free)
@@ -124,12 +127,13 @@ public:
         const char *path = std::getenv("NVENC_TRACE_SUBMISSION");
         return path && path[0] ? std::make_unique<NVEncSubmissionTrace>(path) : nullptr;
     }
-    RGY_ERR capture(const NV_ENC_PIC_PARAMS& pic, const NV_ENC_CONFIG_AV1& config,
+    RGY_ERR prepare(const NV_ENC_PIC_PARAMS& pic, const NV_ENC_CONFIG_AV1& config, const void *bufferKey,
         const void *deviceSurface, uint32_t allocatedWidth, uint32_t allocatedHeight,
-        uint32_t allocatedPitch, int inputFrameId, cudaStream_t producerStream) {
+        uint32_t allocatedPitch, int inputFrameId) {
 #if ENABLE_AVSW_READER
+        std::lock_guard<std::mutex> lock(m_mutex);
         if (!m_md5) return RGY_ERR_MEMORY_ALLOC;
-        if (!deviceSurface || !pic.inputBuffer || pic.alphaBuffer
+        if (!bufferKey || !deviceSurface || !pic.inputBuffer || pic.alphaBuffer
             || (pic.bufferFmt != NV_ENC_BUFFER_FORMAT_NV12 && pic.bufferFmt != NV_ENC_BUFFER_FORMAT_YUV420_10BIT)
             || !pic.inputWidth || !pic.inputHeight || (pic.inputWidth & 1) || (pic.inputHeight & 1)
             || pic.inputWidth != allocatedWidth || pic.inputHeight != allocatedHeight
@@ -141,6 +145,10 @@ public:
         const size_t rows = static_cast<size_t>(pic.inputHeight) * 3 / 2;
         if (pitch < rowBytes || pitch > SIZE_MAX / rows) return RGY_ERR_INVALID_PARAM;
         if (m_finished) return RGY_ERR_INVALID_CALL;
+        if (pic.frameIdx != m_snapshots.size()) return RGY_ERR_INVALID_CALL;
+        for (const auto& pending : m_snapshots) {
+            if (pending.bufferKey == bufferKey && !pending.captured) return RGY_ERR_INVALID_CALL;
+        }
         if (!m_file) {
             m_file.reset(fopen(m_path.c_str(), "wbx"));
             if (!m_file) return RGY_ERR_FILE_OPEN;
@@ -160,7 +168,8 @@ public:
                 return RGY_ERR_NOT_ENOUGH_BUFFER;
             }
             Snapshot snapshot = {};
-            snapshot.surface.reset(new uint8_t[surfaceBytes]);
+            snapshot.bufferKey = bufferKey;
+            snapshot.deviceSurface = deviceSurface;
             snapshot.frameIdx = pic.frameIdx;
             snapshot.inputFrameId = inputFrameId;
             snapshot.timestamp = pic.inputTimeStamp;
@@ -178,16 +187,12 @@ public:
             snapshot.grainUpdate = static_cast<uint32_t>(av1.filmGrainParamsUpdate);
             snapshot.hasGrain = av1.filmGrainParams != nullptr;
             if (snapshot.hasGrain) std::memcpy(snapshot.grain.data(), av1.filmGrainParams, snapshot.grain.size());
-            // The pipeline has already queued its producer-event waits on this
-            // stream and mapped this same registered resource. This diagnostic
-            // intentionally waits; it does not alter pixels or grain lifetimes.
-            // Retain this exact completed snapshot until encoder drain. Do not
-            // hash, write JSON, or retain the caller's grain pointer here.
-            auto error = cudaMemcpy2DAsync(snapshot.surface.get(), pitch, deviceSurface, pitch,
-                pitch, rows, cudaMemcpyDeviceToHost, producerStream);
-            if (error == cudaSuccess) error = cudaStreamSynchronize(producerStream);
-            if (error != cudaSuccess) return err_to_rgy(error);
+            // Metadata is copied while the exact picture-local grain object is
+            // alive. Do not access the mapped CUDA surface: the SDK forbids it.
+            // Both SUCCESS and NEED_MORE_INPUT retain this buffer in the used
+            // queue until successful output completion and unmap.
             m_snapshots.push_back(std::move(snapshot));
+            // Reserve the eventual surface allocation against the cap now.
             m_captureBytes += surfaceBytes;
         } catch (const std::bad_alloc&) {
             return RGY_ERR_MEMORY_ALLOC;
@@ -197,15 +202,62 @@ public:
         return RGY_ERR_UNSUPPORTED;
 #endif
     }
+    // Called after successful output lock AND unmap, while this exact input
+    // buffer is still withheld from the free queue. Output packet timestamps
+    // can be reordered; only the original EncodeBuffer identity pairs records.
+    RGY_ERR captureCompleted(const void *bufferKey, const void *deviceSurface,
+        uint32_t allocatedWidth, uint32_t allocatedHeight, uint32_t allocatedPitch) {
+#if ENABLE_AVSW_READER
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_finished) return RGY_ERR_INVALID_CALL;
+        Snapshot *snapshot = nullptr;
+        for (auto& pending : m_snapshots) {
+            if (pending.bufferKey == bufferKey && !pending.captured) {
+                if (snapshot) return RGY_ERR_INVALID_CALL;
+                snapshot = &pending;
+            }
+        }
+        if (!snapshot || snapshot->deviceSurface != deviceSurface
+            || snapshot->width != allocatedWidth || snapshot->height != allocatedHeight
+            || snapshot->pitch != allocatedPitch) return RGY_ERR_INVALID_CALL;
+        try {
+            snapshot->surface.reset(new uint8_t[snapshot->pitch * snapshot->rows]);
+        } catch (const std::bad_alloc&) {
+            return RGY_ERR_MEMORY_ALLOC;
+        }
+        // Completion/unmap already establishes that input processing finished.
+        // A private nonblocking stream avoids synchronizing later producer work.
+        // Keep its lifetime inside the caller's CUDA context lock, including
+        // failure cleanup; no stream survives into destruction or finalization.
+        cudaStream_t captureStream = nullptr;
+        auto error = cudaStreamCreateWithFlags(&captureStream, cudaStreamNonBlocking);
+        if (error != cudaSuccess) return err_to_rgy(error);
+        error = cudaMemcpy2DAsync(snapshot->surface.get(), snapshot->pitch, deviceSurface,
+            snapshot->pitch, snapshot->pitch, snapshot->rows, cudaMemcpyDeviceToHost, captureStream);
+        if (error == cudaSuccess) error = cudaStreamSynchronize(captureStream);
+        const auto destroyError = cudaStreamDestroy(captureStream);
+        if (error != cudaSuccess) return err_to_rgy(error);
+        if (destroyError != cudaSuccess) return err_to_rgy(destroyError);
+        snapshot->captured = true;
+        return RGY_ERR_NONE;
+#else
+        return RGY_ERR_UNSUPPORTED;
+#endif
+    }
     // Called only after successful encoder drain, with errors propagated by
     // sendFrame. Destruction must never manufacture a successful receipt.
     RGY_ERR finish() {
 #if ENABLE_AVSW_READER
+        std::lock_guard<std::mutex> lock(m_mutex);
         if (m_finished) return RGY_ERR_NONE;
         if (!m_file || m_snapshots.empty()) return RGY_ERR_INVALID_CALL;
+        for (const auto& snapshot : m_snapshots) {
+            if (!snapshot.captured || !snapshot.surface) return RGY_ERR_INVALID_CALL;
+        }
         try {
-            fprintf(m_file.get(), "{\"type\":\"header\",\"schema\":1,\"hash\":\"md5\","
-                "\"capture\":\"before_NvEncEncodePicture_after_producer_stream\","
+            fprintf(m_file.get(), "{\"type\":\"header\",\"schema\":2,\"hash\":\"md5\","
+                "\"capture\":\"after_NvEncLockBitstream_and_unmap_before_recycle\","
+                "\"metadata_capture\":\"before_NvEncEncodePicture\","
                 "\"padding_policy\":\"observe_full_pitch_no_initialization_or_normalization\","
                 "\"visible_policy\":\"stored_Y_then_interleaved_UV_bytes_including_P010_low_bits\","
                 "\"enableFilmGrainParams\":%u,\"initial_grain\":", m_enableFilmGrainParams);
