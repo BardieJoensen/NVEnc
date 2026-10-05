@@ -3532,6 +3532,20 @@ public:
         } else {
             // フレームがない場合は、エンコーダのキューをフラッシュ
             auto sts = flushEncoder();
+            if (m_submissionTrace && (sts == RGY_ERR_NONE || sts == RGY_ERR_MORE_DATA)) {
+                // Finalize only on the normal successful drain path, never
+                // from the destructor (which cannot propagate trace errors).
+                if (m_bEnableOutputThread) {
+                    const auto outputStatus = getOutputThreadResult(0);
+                    if (!outputStatus.has_value()) return RGY_ERR_UNKNOWN;
+                    if (outputStatus.value() != RGY_ERR_NONE) return outputStatus.value();
+                }
+                const auto traceStatus = m_submissionTrace->finish();
+                if (traceStatus != RGY_ERR_NONE) {
+                    PrintMes(RGY_LOG_ERROR, _T("Submission trace finalization failed: %s.\n"), get_err_mes(traceStatus));
+                    return traceStatus;
+                }
+            }
             if (sts != RGY_ERR_NONE) {
                 if (sts != RGY_ERR_MORE_DATA) {
                     PrintMes(RGY_LOG_ERROR, _T("Failed to flush encoder queue: %s.\n"), get_err_mes(sts));

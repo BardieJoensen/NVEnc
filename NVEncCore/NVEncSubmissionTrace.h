@@ -3,8 +3,12 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
+#include <array>
 #include <memory>
+#include <new>
 #include <string>
+#include <utility>
 #include <vector>
 #include "rgy_err.h"
 #include "nvEncodeAPI.h"
@@ -17,9 +21,28 @@ extern "C" {
 #endif
 
 class NVEncSubmissionTrace {
+    struct Snapshot {
+        uint32_t frameIdx, picVersion, encodePicFlags, grainUpdate;
+        int inputFrameId;
+        uint64_t timestamp, duration;
+        NV_ENC_PIC_STRUCT pictureStruct;
+        NV_ENC_BUFFER_FORMAT bufferFmt;
+        uint32_t width, height;
+        size_t pitch, rowBytes, rows;
+        bool hasGrain;
+        std::array<uint8_t, sizeof(NV_ENC_FILM_GRAIN_PARAMS_AV1)> grain;
+        std::unique_ptr<uint8_t[]> surface;
+    };
+    // Bound retained diagnostic data; never spill or hash during submission.
+    static constexpr size_t MAX_CAPTURE_BYTES = size_t(2) << 30;
+    static constexpr size_t MAX_CAPTURE_FRAMES = 4096;
     const std::string m_path;
     std::unique_ptr<FILE, int (*)(FILE *)> m_file;
-    std::vector<uint8_t> m_surface;
+    std::vector<Snapshot> m_snapshots;
+    size_t m_captureBytes;
+    bool m_finished, m_hasInitialGrain;
+    uint32_t m_enableFilmGrainParams;
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 m_initialGrain;
 #if ENABLE_AVSW_READER
     std::unique_ptr<AVMD5, decltype(&av_free)> m_md5;
 
@@ -88,7 +111,9 @@ class NVEncSubmissionTrace {
     }
 #endif
 public:
-    explicit NVEncSubmissionTrace(const char *path) : m_path(path), m_file(nullptr, &fclose), m_surface()
+    explicit NVEncSubmissionTrace(const char *path) : m_path(path), m_file(nullptr, &fclose),
+        m_snapshots(), m_captureBytes(0), m_finished(false), m_hasInitialGrain(false),
+        m_enableFilmGrainParams(0), m_initialGrain()
 #if ENABLE_AVSW_READER
         , m_md5(av_md5_alloc(), &av_free)
 #endif
@@ -115,44 +140,106 @@ public:
         const size_t rowBytes = static_cast<size_t>(pic.inputWidth) * (pic.bufferFmt == NV_ENC_BUFFER_FORMAT_NV12 ? 1 : 2);
         const size_t rows = static_cast<size_t>(pic.inputHeight) * 3 / 2;
         if (pitch < rowBytes || pitch > SIZE_MAX / rows) return RGY_ERR_INVALID_PARAM;
+        if (m_finished) return RGY_ERR_INVALID_CALL;
         if (!m_file) {
             m_file.reset(fopen(m_path.c_str(), "wbx"));
             if (!m_file) return RGY_ERR_FILE_OPEN;
+            m_enableFilmGrainParams = static_cast<uint32_t>(config.enableFilmGrainParams);
+            m_hasInitialGrain = config.filmGrainParams != nullptr;
+            if (m_hasInitialGrain) std::memcpy(&m_initialGrain, config.filmGrainParams, sizeof(m_initialGrain));
+        }
+        const size_t surfaceBytes = pitch * rows;
+        try {
+            if (m_snapshots.capacity() == 0) {
+                m_snapshots.reserve(MAX_CAPTURE_FRAMES);
+                m_captureBytes = m_snapshots.capacity() * sizeof(Snapshot);
+            }
+            if (m_snapshots.size() >= MAX_CAPTURE_FRAMES || m_captureBytes > MAX_CAPTURE_BYTES
+                || surfaceBytes > MAX_CAPTURE_BYTES - m_captureBytes) {
+                fprintf(stderr, "Submission trace snapshot limit exceeded (2 GiB including records, 4096 frames).\n");
+                return RGY_ERR_NOT_ENOUGH_BUFFER;
+            }
+            Snapshot snapshot = {};
+            snapshot.surface.reset(new uint8_t[surfaceBytes]);
+            snapshot.frameIdx = pic.frameIdx;
+            snapshot.inputFrameId = inputFrameId;
+            snapshot.timestamp = pic.inputTimeStamp;
+            snapshot.duration = pic.inputDuration;
+            snapshot.picVersion = pic.version;
+            snapshot.encodePicFlags = pic.encodePicFlags;
+            snapshot.pictureStruct = pic.pictureStruct;
+            snapshot.bufferFmt = pic.bufferFmt;
+            snapshot.width = pic.inputWidth;
+            snapshot.height = pic.inputHeight;
+            snapshot.pitch = pitch;
+            snapshot.rowBytes = rowBytes;
+            snapshot.rows = rows;
+            const auto& av1 = pic.codecPicParams.av1PicParams;
+            snapshot.grainUpdate = static_cast<uint32_t>(av1.filmGrainParamsUpdate);
+            snapshot.hasGrain = av1.filmGrainParams != nullptr;
+            if (snapshot.hasGrain) std::memcpy(snapshot.grain.data(), av1.filmGrainParams, snapshot.grain.size());
+            // The pipeline has already queued its producer-event waits on this
+            // stream and mapped this same registered resource. This diagnostic
+            // intentionally waits; it does not alter pixels or grain lifetimes.
+            // Retain this exact completed snapshot until encoder drain. Do not
+            // hash, write JSON, or retain the caller's grain pointer here.
+            auto error = cudaMemcpy2DAsync(snapshot.surface.get(), pitch, deviceSurface, pitch,
+                pitch, rows, cudaMemcpyDeviceToHost, producerStream);
+            if (error == cudaSuccess) error = cudaStreamSynchronize(producerStream);
+            if (error != cudaSuccess) return err_to_rgy(error);
+            m_snapshots.push_back(std::move(snapshot));
+            m_captureBytes += surfaceBytes;
+        } catch (const std::bad_alloc&) {
+            return RGY_ERR_MEMORY_ALLOC;
+        }
+        return RGY_ERR_NONE;
+#else
+        return RGY_ERR_UNSUPPORTED;
+#endif
+    }
+    // Called only after successful encoder drain, with errors propagated by
+    // sendFrame. Destruction must never manufacture a successful receipt.
+    RGY_ERR finish() {
+#if ENABLE_AVSW_READER
+        if (m_finished) return RGY_ERR_NONE;
+        if (!m_file || m_snapshots.empty()) return RGY_ERR_INVALID_CALL;
+        try {
             fprintf(m_file.get(), "{\"type\":\"header\",\"schema\":1,\"hash\":\"md5\","
                 "\"capture\":\"before_NvEncEncodePicture_after_producer_stream\","
                 "\"padding_policy\":\"observe_full_pitch_no_initialization_or_normalization\","
                 "\"visible_policy\":\"stored_Y_then_interleaved_UV_bytes_including_P010_low_bits\","
-                "\"enableFilmGrainParams\":%u,\"initial_grain\":", static_cast<unsigned>(config.enableFilmGrainParams));
-            writeGrain(config.filmGrainParams);
+                "\"enableFilmGrainParams\":%u,\"initial_grain\":", m_enableFilmGrainParams);
+            writeGrain(m_hasInitialGrain ? &m_initialGrain : nullptr);
             fprintf(m_file.get(), "}\n");
+            for (const auto& snapshot : m_snapshots) {
+                const auto *surface = snapshot.surface.get();
+                const auto pitch = snapshot.pitch, rowBytes = snapshot.rowBytes, rows = snapshot.rows;
+                fprintf(m_file.get(), "{\"type\":\"submit\",\"frameIdx\":%u,\"inputFrameId\":%d,"
+                    "\"timestamp\":%llu,\"duration\":%llu,\"pic_version\":%u,\"encodePicFlags\":%u,"
+                    "\"pictureStruct\":%u,\"bufferFmt\":%u,\"width\":%u,\"height\":%u,"
+                    "\"pitch\":%zu,\"visible_row_bytes\":%zu,\"rows\":%zu,"
+                    "\"surface_md5\":\"%s\",\"visible_md5\":\"%s\",\"y_md5\":\"%s\",\"uv_md5\":\"%s\","
+                    "\"padding_md5\":\"%s\",\"filmGrainParamsUpdate\":%u,\"grain\":",
+                    snapshot.frameIdx, snapshot.inputFrameId, static_cast<unsigned long long>(snapshot.timestamp),
+                    static_cast<unsigned long long>(snapshot.duration), snapshot.picVersion, snapshot.encodePicFlags,
+                    static_cast<unsigned>(snapshot.pictureStruct), static_cast<unsigned>(snapshot.bufferFmt), snapshot.width, snapshot.height,
+                    pitch, rowBytes, rows, hashRows(surface, pitch, pitch, rows).c_str(),
+                    hashRows(surface, pitch, rowBytes, rows).c_str(), hashRows(surface, pitch, rowBytes, snapshot.height).c_str(),
+                    hashRows(surface + pitch * snapshot.height, pitch, rowBytes, snapshot.height / 2).c_str(),
+                    hashRows(surface + rowBytes, pitch, pitch - rowBytes, rows).c_str(),
+                    snapshot.grainUpdate);
+                NV_ENC_FILM_GRAIN_PARAMS_AV1 grain;
+                if (snapshot.hasGrain) std::memcpy(&grain, snapshot.grain.data(), sizeof(grain));
+                writeGrain(snapshot.hasGrain ? &grain : nullptr);
+                fprintf(m_file.get(), "}\n");
+            }
+            if (ferror(m_file.get()) || fflush(m_file.get()) != 0) return RGY_ERR_UNKNOWN;
+            if (fclose(m_file.release()) != 0) return RGY_ERR_UNKNOWN;
+            m_snapshots.clear();
+            m_finished = true;
+        } catch (const std::bad_alloc&) {
+            return RGY_ERR_MEMORY_ALLOC;
         }
-        m_surface.resize(pitch * rows);
-        // The pipeline has already queued its producer-event waits on this
-        // stream and mapped this same registered resource. This diagnostic
-        // intentionally waits; it does not alter pixels or grain lifetimes.
-        auto error = cudaMemcpy2DAsync(m_surface.data(), pitch, deviceSurface, pitch,
-            pitch, rows, cudaMemcpyDeviceToHost, producerStream);
-        if (error == cudaSuccess) error = cudaStreamSynchronize(producerStream);
-        if (error != cudaSuccess) return err_to_rgy(error);
-        const auto *surface = m_surface.data();
-        const auto& av1 = pic.codecPicParams.av1PicParams;
-        fprintf(m_file.get(), "{\"type\":\"submit\",\"frameIdx\":%u,\"inputFrameId\":%d,"
-            "\"timestamp\":%llu,\"duration\":%llu,\"pic_version\":%u,\"encodePicFlags\":%u,"
-            "\"pictureStruct\":%u,\"bufferFmt\":%u,\"width\":%u,\"height\":%u,"
-            "\"pitch\":%zu,\"visible_row_bytes\":%zu,\"rows\":%zu,"
-            "\"surface_md5\":\"%s\",\"visible_md5\":\"%s\",\"y_md5\":\"%s\",\"uv_md5\":\"%s\","
-            "\"padding_md5\":\"%s\",\"filmGrainParamsUpdate\":%u,\"grain\":",
-            pic.frameIdx, inputFrameId, static_cast<unsigned long long>(pic.inputTimeStamp),
-            static_cast<unsigned long long>(pic.inputDuration), pic.version, pic.encodePicFlags,
-            static_cast<unsigned>(pic.pictureStruct), static_cast<unsigned>(pic.bufferFmt), pic.inputWidth, pic.inputHeight,
-            pitch, rowBytes, rows, hashRows(surface, pitch, pitch, rows).c_str(),
-            hashRows(surface, pitch, rowBytes, rows).c_str(), hashRows(surface, pitch, rowBytes, pic.inputHeight).c_str(),
-            hashRows(surface + pitch * pic.inputHeight, pitch, rowBytes, pic.inputHeight / 2).c_str(),
-            hashRows(surface + rowBytes, pitch, pitch - rowBytes, rows).c_str(),
-            static_cast<unsigned>(av1.filmGrainParamsUpdate));
-        writeGrain(av1.filmGrainParams);
-        fprintf(m_file.get(), "}\n");
-        if (ferror(m_file.get()) || fflush(m_file.get()) != 0) return RGY_ERR_UNKNOWN;
         return RGY_ERR_NONE;
 #else
         return RGY_ERR_UNSUPPORTED;
