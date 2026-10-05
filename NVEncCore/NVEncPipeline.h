@@ -65,6 +65,7 @@
 #include "NVEncFilmGrain.h"
 #include "NVEncFilterFilmGrain.h"
 #include "NvHWEncoder.h"
+#include "NVEncSubmissionTrace.h"
 #include "dynlink_nvcuvid.h"
 
 #pragma warning(push)
@@ -2963,6 +2964,7 @@ protected:
     NV_ENC_FILM_GRAIN_PARAMS_AV1 m_filmGrainParamsCache;
     bool m_filmGrainParamsCacheValid;
     bool m_forceFilmGrainParamsUpdate;
+    std::unique_ptr<NVEncSubmissionTrace> m_submissionTrace;
     std::vector<NVEncRCParam>& m_dynamicRC;
     int m_appliedDynamicRC;
     std::vector<int>& m_keyFile;
@@ -2989,7 +2991,7 @@ public:
         m_runCtx(runCtx), m_encCodec(encCodec), m_encWidth(encWidth), m_encHeight(encHeight), m_encCsp(encCsp), m_encBitdepth(encBitdepth), m_encPicStruct(encPicStruct),
         m_stEncConfig(stEncConfig), m_stCreateEncodeParams(stCreateEncodeParams),
         m_timecode(timecode), m_encTimestamp(encTimestamp), m_outputTimebase(outputTimebase),
-        m_bitStreamOut(), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu), m_filmGrainTable(filmGrainTable), m_filmGrainParamsCache(), m_filmGrainParamsCacheValid(false), m_forceFilmGrainParamsUpdate(false),
+        m_bitStreamOut(), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu), m_filmGrainTable(filmGrainTable), m_filmGrainParamsCache(), m_filmGrainParamsCacheValid(false), m_forceFilmGrainParamsUpdate(false), m_submissionTrace(NVEncSubmissionTrace::fromEnvironment()),
         m_dynamicRC(dynamicRC), m_appliedDynamicRC(-1), m_keyFile(keyFile), m_keyOnChapter(keyOnChapter), m_Chapters(chapters),
         m_threadOutput(), m_threadOutputPromise(), m_threadOutputFuture(), m_threadOutputResult(), m_threadOutputAbort(false) {
         if (m_encCodec == RGY_CODEC_AV1
@@ -3415,6 +3417,22 @@ protected:
         }
         m_encTimestamp->add(timestamp, inputFrameId, (encPicParams.frameIdx = id), duration, metadatalist);
 
+        // Debug-only receipt of the actual mapped input and exact per-picture
+        // grain object at the submission boundary, from this same encode run.
+        // Disabled: one branch, no CUDA calls, allocations, hashes or file I/O.
+        if (m_submissionTrace) {
+            if (m_encCodec != RGY_CODEC_AV1) return RGY_ERR_UNSUPPORTED;
+            NVEncCtxAutoLock ctxlock(m_dev->vidCtxLock());
+            const auto traceStatus = m_submissionTrace->capture(encPicParams,
+                m_stEncConfig.encodeCodecConfig.av1Config,
+                reinterpret_cast<const void *>(pEncodeBuffer->stInputBfr.pNV12devPtr),
+                pEncodeBuffer->stInputBfr.dwWidth, pEncodeBuffer->stInputBfr.dwHeight,
+                pEncodeBuffer->stInputBfr.uNV12Stride, inputFrameId, m_runCtx->streamIn());
+            if (traceStatus != RGY_ERR_NONE) {
+                PrintMes(RGY_LOG_ERROR, _T("Submission trace failed: %s.\n"), get_err_mes(traceStatus));
+                return traceStatus;
+            }
+        }
         NVENCSTATUS nvStatus = m_dev->encoder()->NvEncEncodePicture(&encPicParams);
         if (nvStatus != NV_ENC_SUCCESS && nvStatus != NV_ENC_ERR_NEED_MORE_INPUT) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to add frame into the encoder.\n"));
