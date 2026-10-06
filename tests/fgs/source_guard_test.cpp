@@ -124,6 +124,17 @@ int main() {
     require(caps.lookup(localValues, localScales, localCount, 80) == 64
         && caps.lookup(localValues, localScales, localCount, 120) == 64,
         "narrow source protection erased unrelated brightness levels");
+    // Independently held clean-source protection combines by lower gain and
+    // leaves the original holder, which gates other policies, untouched.
+    fgsmodel::FilmGrainSourceCaps held, clean;
+    clean.preserveRange(0, 12, 20, 0.0);
+    held.preserveRange(0, 100, 110, 0.5);
+    auto combined = held;
+    combined.limitTo(clean);
+    require(combined.gain(0, 16) == 0 && combined.gain(0, 105) == 0.5 && combined.gain(0, 50) == 1,
+        "combined protection did not take the lower gain");
+    require(held.gain(0, 16) == 1 && !held.hasProtection(1) && clean.gain(0, 105) == 1,
+        "combining clean protection changed the held state");
     caps.preserveRange(1, 90, 110, .3);
     for (int i = 0; i < 100; ++i) caps.advance(true);
     require(caps.gain(1, 100) == 1, "fractional source cap overshot full recovery");

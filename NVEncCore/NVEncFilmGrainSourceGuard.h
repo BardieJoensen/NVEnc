@@ -224,6 +224,11 @@ public:
         }
         return size;
     }
+    // Combine an independently held protection: the lower gain wins.
+    void limitTo(const FilmGrainSourceCaps& other) {
+        for (int p = 0; p < 3; ++p) for (int x = 0; x < 256; ++x)
+            gains_[p][x] = std::min(gains_[p][x], other.gains_[p][x]);
+    }
     double gain(int plane, int x) const { return gains_[plane][x]; }
     bool hasProtection(int plane) const {
         return std::any_of(gains_[plane].begin(), gains_[plane].end(),
