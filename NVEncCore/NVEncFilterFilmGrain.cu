@@ -2647,7 +2647,18 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         }
     }
     bool sourceCurveLimited = false;
+    // The curve under sourceCaps alone keeps driving the source blend away
+    // from clean-source levels, so the extra knots a clean notch takes from
+    // the AV1 point budget do not blend source grain in everywhere.
+    NV_ENC_FILM_GRAIN_PARAMS_AV1 sourceParams = params;
     if (modelValid && params.applyGrain) {
+        bool sourceOnlyLimited = false;
+        sourceParams.numYPoints = m_state->sourceCaps.refitCurve(0, sourceParams.pointYValue, sourceParams.pointYScaling,
+            sourceParams.numYPoints, 14, sourceOnlyLimited);
+        sourceParams.numCbPoints = m_state->sourceCaps.refitCurve(1, sourceParams.pointCbValue, sourceParams.pointCbScaling,
+            sourceParams.numCbPoints, 10, sourceOnlyLimited);
+        sourceParams.numCrPoints = m_state->sourceCaps.refitCurve(2, sourceParams.pointCrValue, sourceParams.pointCrScaling,
+            sourceParams.numCrPoints, 10, sourceOnlyLimited);
         auto caps = m_state->sourceCaps;
         caps.limitTo(m_state->cleanCaps);
         params.numYPoints = caps.refitCurve(0, params.pointYValue, params.pointYScaling,
@@ -2756,25 +2767,33 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // Reproduce the same integer scaling on the original curve, then use
         // the actual signalled ratio. Couple it to any earlier scalar source
         // retention/recovery; reducing synthesis alone would blur the picture.
-        if (diagnostics.residualRetain > 0.0f) {
-            const float retain = diagnostics.residualRetain;
-            const float synthScale = std::sqrt(std::max(0.0f, 1.0f-retain*retain));
-            for (uint32_t i=0;i<unlimitedParams.numYPoints;++i)
-                unlimitedParams.pointYScaling[i]=static_cast<uint8_t>(std::lround(unlimitedParams.pointYScaling[i]*synthScale));
-        }
-        if (recoveryGain < 1.0) {
-            for (uint32_t i=0;i<unlimitedParams.numYPoints;++i)
-                unlimitedParams.pointYScaling[i]=static_cast<uint8_t>(std::lround(unlimitedParams.pointYScaling[i]*recoveryGain));
-            for (uint32_t i=0;i<unlimitedParams.numCbPoints;++i)
-                unlimitedParams.pointCbScaling[i]=static_cast<uint8_t>(std::lround(unlimitedParams.pointCbScaling[i]*recoveryGain));
-            for (uint32_t i=0;i<unlimitedParams.numCrPoints;++i)
-                unlimitedParams.pointCrScaling[i]=static_cast<uint8_t>(std::lround(unlimitedParams.pointCrScaling[i]*recoveryGain));
-        }
+        auto scaleLikeOutput = [&](NV_ENC_FILM_GRAIN_PARAMS_AV1& curve) {
+            if (diagnostics.residualRetain > 0.0f) {
+                const float retain = diagnostics.residualRetain;
+                const float synthScale = std::sqrt(std::max(0.0f, 1.0f-retain*retain));
+                for (uint32_t i=0;i<curve.numYPoints;++i)
+                    curve.pointYScaling[i]=static_cast<uint8_t>(std::lround(curve.pointYScaling[i]*synthScale));
+            }
+            if (recoveryGain < 1.0) {
+                for (uint32_t i=0;i<curve.numYPoints;++i)
+                    curve.pointYScaling[i]=static_cast<uint8_t>(std::lround(curve.pointYScaling[i]*recoveryGain));
+                for (uint32_t i=0;i<curve.numCbPoints;++i)
+                    curve.pointCbScaling[i]=static_cast<uint8_t>(std::lround(curve.pointCbScaling[i]*recoveryGain));
+                for (uint32_t i=0;i<curve.numCrPoints;++i)
+                    curve.pointCrScaling[i]=static_cast<uint8_t>(std::lround(curve.pointCrScaling[i]*recoveryGain));
+            }
+        };
+        scaleLikeOutput(unlimitedParams);
+        scaleLikeOutput(sourceParams);
         auto blendLut=static_cast<float *>(m_sourceBlendLut->ptrHost);
         for (int plane=0;plane<3;++plane) {
-            float original[FGS_STRENGTH_LUT_SIZE], limited[FGS_STRENGTH_LUT_SIZE];
+            float original[FGS_STRENGTH_LUT_SIZE], limited[FGS_STRENGTH_LUT_SIZE], sourceLimited[FGS_STRENGTH_LUT_SIZE];
             build_strength_lut(unlimitedParams,bitDepth,original,plane,diagnostics.templateGain[plane]);
             build_strength_lut(params,bitDepth,limited,plane,diagnostics.templateGain[plane]);
+            build_strength_lut(sourceParams,bitDepth,sourceLimited,plane,diagnostics.templateGain[plane]);
+            for (int x=0;x<FGS_STRENGTH_LUT_SIZE;++x) {
+                if (m_state->cleanCaps.gain(plane, x) >= 1.0) limited[x] = sourceLimited[x];
+            }
             const double retained=plane==0 ? diagnostics.residualRetain : 0.0;
             const double prior=std::sqrt(std::max(0.0,1.0-recoveryGain*recoveryGain*(1.0-retained*retained)));
             for (int x=0;x<FGS_STRENGTH_LUT_SIZE;++x) {
