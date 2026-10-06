@@ -2584,25 +2584,25 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 constexpr int reconstructedCodeMargin = 4;
                 const int first = clamp(static_cast<int>(std::floor(evidence.minCode / depthScale)) - reconstructedCodeMargin, 0, 255);
                 const int last = clamp(static_cast<int>(std::ceil(evidence.maxCode / depthScale)) + reconstructedCodeMargin, 0, 255);
-                // Neutral chroma in clipped black/white regions is not evidence
-                // about the active image's colour noise at neighboring levels.
-                if (evidence.maxCode / depthScale <= 20.0f
-                    || evidence.minCode / depthScale >= 232.0f) return;
+                // Exactly constant source samples carry no grain at any level,
+                // including black/white bars, fades and clipped highlights.
+                // An exactly constant colour block is direct evidence even over
+                // textured luma (for example, monochrome title lettering).
+                // Integer moments keep these comparisons exact.
+                const double sigma = (plane ? evidence.chromaSigma[plane - 1] : evidence.sigma) / depthScale;
+                const bool constantSource = plane ? sigma == 0.0 : evidence.minCode == evidence.maxCode;
+                // Merely quiet neutral chroma or luma in clipped black/white
+                // regions is not evidence about neighbouring active levels.
+                if (!constantSource && (evidence.maxCode / depthScale <= 20.0f
+                    || evidence.minCode / depthScale >= 232.0f)) return;
                 // The existing kernels already measure partial edge blocks.
                 // Require 8x8 observations in the plane actually being checked.
                 if (plane && (blockWidth < 16 || blockHeight < 16)) return;
                 const double mean = (plane ? evidence.chromaMean[plane - 1] : evidence.mean) / depthScale;
-                const double sigma = (plane ? evidence.chromaSigma[plane - 1] : evidence.sigma) / depthScale;
-                if (sigma > sigmaLimit || mean <= 20.0 || mean >= 232.0) return;
-                // An exactly constant colour block is direct evidence, even
-                // over textured luma (for example, monochrome title lettering).
-                // Require an active luma mean so quantized black bars do not
-                // constrain neighbouring picture levels. Less certain, merely
-                // quiet chroma retains the recovery/auto policy above.
-                const double sourceLumaMean = evidence.mean / depthScale;
-                const bool constantSourceChroma = plane && sigma == 0.0
-                    && sourceLumaMean > 20.0 && sourceLumaMean < 232.0;
-                if (plane && !constantSourceChroma && !fullChromaProtection
+                if (!constantSource && (sigma > sigmaLimit || mean <= 20.0 || mean >= 232.0)) return;
+                // Less certain, merely quiet chroma retains the recovery/auto
+                // policy above.
+                if (plane && !constantSource && !fullChromaProtection
                     && !m_state->sourceCaps.hasProtection(0)) return;
                 double modeled = std::max(predicted[plane][first], predicted[plane][last]) / depthScale;
                 for (uint32_t j = 0; j < counts[plane]; ++j) {
@@ -2611,7 +2611,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                     }
                 }
                 quietSource.observe(plane, mean, sigma, modeled);
-                if (modeled - sigma > 0.25) {
+                if (constantSource) {
+                    // No small-excess tolerance: zero evidence is not a
+                    // positive grain allowance.
+                    if (modeled > 0.0) m_state->sourceCaps.preserveRange(plane, first, last, 0.0);
+                } else if (modeled - sigma > 0.25) {
                     // Retain source-supported variance; a quiet but nonzero
                     // source is not a reason to force its whole range to zero.
                     m_state->sourceCaps.preserveRange(plane, first, last, sigma / modeled);
