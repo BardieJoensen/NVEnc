@@ -86,3 +86,7 @@ Task4's frozen held-out census and supporting SDR/HDR/amplitude controls are com
 The unchanged full-gate retry exited zero with23 checks passing and no failures; CPU and schema-2 input identity are also complete. See [kernel qualification](FINDINGS-2026-10-05-KERNEL-QUALIFICATION.md). A new31-run subtitle-ASR campaign started before a pause could be acquired; the user explicitly selected waiting for that campaign. Tdarr remains unpaused with its original limits, and zero seconds of the two-hour allowance have been used.
 
 - user: Wait for the new31-run ASR campaign rather than pausing its worker; existing Tdarr-only timing authorization remains unchanged.
+
+- 2026-10-05 auto: Analyze only completed restored timing receipts, report all paired ratios and sampled engine utilization, and apply the pre-recorded standalone-release rule without selecting replacement runs.
+
+- 2026-10-05 auto: Preserve the foreign-Gemma-interrupted timing attempt and retry the entire unchanged matrix with its frozen frame counts, deducting the verified1099.106-second first pause from the user-authorized7200-second total before another acquisition.
