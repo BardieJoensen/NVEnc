@@ -1338,6 +1338,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
     int heldStreak;
     fgsmodel::FilmGrainSynthesisRecovery synthesisRecovery;
     fgsmodel::FilmGrainSourceCaps sourceCaps;
+    fgsmodel::FilmGrainSourceCaps cleanCaps;
     bool sourceFallbackActive;
     int fidelityRecoveryFrames;
 
@@ -1351,7 +1352,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
         if (framesSinceModelUpdate < std::numeric_limits<int>::max()) ++framesSinceModelUpdate;
     }
     void clear(const bool resetRecovery = false) {
-        if (resetRecovery) { synthesisRecovery.reset(); sourceCaps.reset(); }
+        if (resetRecovery) { synthesisRecovery.reset(); sourceCaps.reset(); cleanCaps.reset(); }
         history.clear();
         previousBlockMeans.clear();
         stableNoise = 0.0f;
@@ -2536,6 +2537,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     FilmGrainSourceVarianceGuard sourceVariance;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 unlimitedParams = params;
     m_state->sourceCaps.advance(modelValid && (freshFitValid || diagnostics.freshModel));
+    m_state->cleanCaps.advance(modelValid && (freshFitValid || diagnostics.freshModel));
     if (modelValid && params.applyGrain) {
         float predicted[3][FGS_STRENGTH_LUT_SIZE];
         const uint8_t *values[3] = { params.pointYValue, params.pointCbValue, params.pointCrValue };
@@ -2584,38 +2586,44 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 constexpr int reconstructedCodeMargin = 4;
                 const int first = clamp(static_cast<int>(std::floor(evidence.minCode / depthScale)) - reconstructedCodeMargin, 0, 255);
                 const int last = clamp(static_cast<int>(std::ceil(evidence.maxCode / depthScale)) + reconstructedCodeMargin, 0, 255);
-                // Exactly constant source samples carry no grain at any level,
-                // including black/white bars, fades and clipped highlights.
-                // An exactly constant colour block is direct evidence even over
-                // textured luma (for example, monochrome title lettering).
-                // Integer moments keep these comparisons exact.
-                const double sigma = (plane ? evidence.chromaSigma[plane - 1] : evidence.sigma) / depthScale;
-                const bool constantSource = plane ? sigma == 0.0 : evidence.minCode == evidence.maxCode;
-                // Merely quiet neutral chroma or luma in clipped black/white
-                // regions is not evidence about neighbouring active levels.
-                if (!constantSource && (evidence.maxCode / depthScale <= 20.0f
-                    || evidence.minCode / depthScale >= 232.0f)) return;
                 // The existing kernels already measure partial edge blocks.
                 // Require 8x8 observations in the plane actually being checked.
                 if (plane && (blockWidth < 16 || blockHeight < 16)) return;
                 const double mean = (plane ? evidence.chromaMean[plane - 1] : evidence.mean) / depthScale;
-                if (!constantSource && (sigma > sigmaLimit || mean <= 20.0 || mean >= 232.0)) return;
-                // Less certain, merely quiet chroma retains the recovery/auto
-                // policy above.
-                if (plane && !constantSource && !fullChromaProtection
-                    && !m_state->sourceCaps.hasProtection(0)) return;
+                const double sigma = (plane ? evidence.chromaSigma[plane - 1] : evidence.sigma) / depthScale;
                 double modeled = std::max(predicted[plane][first], predicted[plane][last]) / depthScale;
                 for (uint32_t j = 0; j < counts[plane]; ++j) {
                     if (values[plane][j] >= first && values[plane][j] <= last) {
                         modeled = std::max(modeled, static_cast<double>(predicted[plane][values[plane][j]]) / depthScale);
                     }
                 }
+                // Exactly constant source samples carry no grain at any level,
+                // including black/white bars, fades and clipped highlights, and
+                // zero evidence is not a small-excess allowance. Integer moments
+                // keep these comparisons exact. Hold this separately: it must
+                // not open the merely-quiet chroma policy below.
+                const bool constantSource = plane ? sigma == 0.0 : evidence.minCode == evidence.maxCode;
+                if (constantSource && modeled > 0.0) {
+                    m_state->cleanCaps.preserveRange(plane, first, last, 0.0);
+                }
+                // Merely quiet neutral chroma in clipped black/white regions is
+                // not evidence about the active image's colour noise at
+                // neighboring levels.
+                if (evidence.maxCode / depthScale <= 20.0f
+                    || evidence.minCode / depthScale >= 232.0f) return;
+                if (sigma > sigmaLimit || mean <= 20.0 || mean >= 232.0) return;
+                // An exactly constant colour block is direct evidence, even
+                // over textured luma (for example, monochrome title lettering).
+                // Require an active luma mean so quantized black bars do not
+                // constrain neighbouring picture levels. Less certain, merely
+                // quiet chroma retains the recovery/auto policy above.
+                const double sourceLumaMean = evidence.mean / depthScale;
+                const bool constantSourceChroma = plane && sigma == 0.0
+                    && sourceLumaMean > 20.0 && sourceLumaMean < 232.0;
+                if (plane && !constantSourceChroma && !fullChromaProtection
+                    && !m_state->sourceCaps.hasProtection(0)) return;
                 quietSource.observe(plane, mean, sigma, modeled);
-                if (constantSource) {
-                    // No small-excess tolerance: zero evidence is not a
-                    // positive grain allowance.
-                    if (modeled > 0.0) m_state->sourceCaps.preserveRange(plane, first, last, 0.0);
-                } else if (modeled - sigma > 0.25) {
+                if (modeled - sigma > 0.25) {
                     // Retain source-supported variance; a quiet but nonzero
                     // source is not a reason to force its whole range to zero.
                     m_state->sourceCaps.preserveRange(plane, first, last, sigma / modeled);
@@ -2640,11 +2648,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     }
     bool sourceCurveLimited = false;
     if (modelValid && params.applyGrain) {
-        params.numYPoints = m_state->sourceCaps.refitCurve(0, params.pointYValue, params.pointYScaling,
+        auto caps = m_state->sourceCaps;
+        caps.limitTo(m_state->cleanCaps);
+        params.numYPoints = caps.refitCurve(0, params.pointYValue, params.pointYScaling,
             params.numYPoints, 14, sourceCurveLimited);
-        params.numCbPoints = m_state->sourceCaps.refitCurve(1, params.pointCbValue, params.pointCbScaling,
+        params.numCbPoints = caps.refitCurve(1, params.pointCbValue, params.pointCbScaling,
             params.numCbPoints, 10, sourceCurveLimited);
-        params.numCrPoints = m_state->sourceCaps.refitCurve(2, params.pointCrValue, params.pointCrScaling,
+        params.numCrPoints = caps.refitCurve(2, params.pointCrValue, params.pointCrScaling,
             params.numCrPoints, 10, sourceCurveLimited);
     }
     bool nonzeroCurve = false;
