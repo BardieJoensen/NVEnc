@@ -2541,9 +2541,10 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     FilmGrainSourceVarianceGuard sourceVariance;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 unlimitedParams = params;
     // Diagnostic counters for the analyzer trace: protections by rule per plane
-    // (0 variance-luma, 1 quiet-luma, 2 constant-chroma, 3 quiet-chroma, 4 clean).
+    // (0 variance-luma, 1 quiet-luma, 2 constant-chroma, 3 quiet-chroma, 4 clean,
+    // 5 codec-flat chroma exempted).
     const NV_ENC_FILM_GRAIN_PARAMS_AV1 traceUncapped = params;
-    std::array<std::array<uint32_t, 5>, 3> traceCapEvents = {};
+    std::array<std::array<uint32_t, 6>, 3> traceCapEvents = {};
     bool traceFullChroma = false;
     m_state->sourceCaps.advance(modelValid && (freshFitValid || diagnostics.freshModel));
     m_state->cleanCaps.advance(modelValid && (freshFitValid || diagnostics.freshModel));
@@ -2587,7 +2588,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         const bool fullChromaProtection = prm->filmGrain.residualRetain < 0.0f
             || m_state->synthesisRecovery.gain() < 1.0;
         for (int plane = 0; plane < (prm->filmGrain.analyzeChroma ? 3 : 1); ++plane) {
-            auto protectSource = [&](const auto& evidence, const int blockWidth, const int blockHeight, const double sigmaLimit) {
+            auto protectSource = [&](const FilmGrainBlockMetric& block, const auto& evidence,
+                const int blockWidth, const int blockHeight, const double sigmaLimit) {
                 if (blockWidth < 8 || blockHeight < 8) return;
                 // Include actual source levels, not just a block mean. Chroma may
                 // be uniform while the luma indexing its grain spans many levels.
@@ -2620,6 +2622,19 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 // cannot serve both.
                 const double sourceLumaMean = evidence.mean / depthScale;
                 const bool activeLuma = sourceLumaMean > 20.0 && sourceLumaMean < 232.0;
+                // Flat chroma over structure-free, grain-bearing luma is codec
+                // damage, not clean colour: 8-bit source codecs often code only
+                // a chroma prediction inside grainy pictures. It is no evidence
+                // against chroma grain. Fills and graphics (no luma grain),
+                // lettering (luma structure), bars and black/white flats keep
+                // their protection. Monochrome grain has no chroma model at all.
+                const int lumaLevel = clamp(static_cast<int>(block.mean / depthScale), 0, 255);
+                const bool grainBearingLuma = block.flat && block.sigma > 0.0f
+                    && block.sigma / depthScale >= 0.5 * predicted[0][lumaLevel] / depthScale;
+                if (plane && sigma == 0.0 && grainBearingLuma) {
+                    ++traceCapEvents[plane][5];
+                    return;
+                }
                 const bool constantSource = plane ? sigma == 0.0 && activeLuma : evidence.minCode == evidence.maxCode;
                 if (constantSource && modeled > 0.0) {
                     m_state->cleanCaps.preserveRange(plane, first, last, 0.0);
@@ -2652,12 +2667,12 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 const int blockHeight = std::min(FGS_BLOCK_SIZE, luma.height - (i / m_blocksX) * FGS_BLOCK_SIZE);
                 // Keep the existing detrended coarse evidence for gradients,
                 // and add raw finer evidence for small quiet source regions.
-                protectSource(metrics[i], blockWidth, blockHeight, 0.5);
+                protectSource(metrics[i], metrics[i], blockWidth, blockHeight, 0.5);
                 // Smaller regions need stronger quiet-source evidence: one
                 // low-variance sample from genuine fine grain must not impose
                 // a persistent brightness cap across the rest of the frame.
                 for (int region = 0; region < 4; ++region) {
-                    protectSource(metrics[i].sourceRegions[region],
+                    protectSource(metrics[i], metrics[i].sourceRegions[region],
                         std::min(FGS_QUIET_SIZE, blockWidth - (region % 2) * FGS_QUIET_SIZE),
                         std::min(FGS_QUIET_SIZE, blockHeight - (region / 2) * FGS_QUIET_SIZE), 0.3);
                 }
@@ -2921,7 +2936,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                     cleanLevels += m_state->cleanCaps.gain(p, x) < 0.5;
                 }
                 out += std::string(p ? "," : "") + "{\"events\":[";
-                for (int k = 0; k < 5; ++k) out += (k ? "," : "") + std::to_string(traceCapEvents[p][k]);
+                for (int k = 0; k < 6; ++k) out += (k ? "," : "") + std::to_string(traceCapEvents[p][k]);
                 out += "],\"source_levels\":" + std::to_string(sourceLevels) + ",\"clean_levels\":" + std::to_string(cleanLevels) + "}";
             }
             return out + "]";
