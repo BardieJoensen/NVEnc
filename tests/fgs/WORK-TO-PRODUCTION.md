@@ -1,5 +1,7 @@
 # FGS encoder: current work and handoff
 
+> **Superseded 2026-10-07.** The current single entry point (release, gate, parked work) is `~/git-repos/NVEnc-fgs-clean-source-20261006/tests/fgs/WORK-TO-PRODUCTION.md` on branch `fix/fgs-clean-source-20261006`. Everything below is history.
+
 Updated September 28, 2026 after D85 qualification. This is the current entry
 point; the [archived handoff](WORK-HISTORY-THROUGH-2026-09-28.md) preserves older
 checkpoints and the detailed repair/campaign evidence map. Dated findings are
