@@ -13,7 +13,8 @@ Branch `research/fgs-separator-20261007` (worktree `~/git-repos/NVEnc-fgs-separa
 
 - Step 1a done (`FINDINGS-2026-10-07-CHROMA-DETAIL.md`): the release's structured colour loss (0.89-0.995) is almost all in NVENC's coding; the submitted picture keeps 0.995-1.000 in 17 of 19 windows (0.983-0.995 in two). A default-mode chroma threshold fix can recover at most 0-1.7% in two windows. Premise of 1b contradicted: waiting for the user before building the 1b prototype. NVENC chroma QP offset does not help.
 - Step 3 done: gate stage `chroma_base_detail` (`3d7c5405`), passes the release, fails `725585b8` option-on, rejects its labelled negative; CPU tests pass.
-- Step 2 (coarse-band phase-1 prototype): in progress.
+- Step 2 done (`FINDINGS-2026-10-07-COARSE-BAND-PROTOTYPE.md`): captures 0.29 -> 0.44 of known-answer coarse grain but output amplitude does not rise (0.695 -> 0.702, 0.706 -> 0.692; plan required +0.1), so the plan's stop rule applies. Fixed-QVBR plain bytes 2.0% smaller on Gentlemen, 0.9-4.8% on Play Dirty; structured luma detail -0.06 to -0.14%; panel-edge systematic error +10-13%.
+- Stopped after phase 1 as instructed. Waiting for the user on the chroma prototype (1b, premise contradicted) and on any CUDA build.
 
 ## Decision log
 
@@ -26,3 +27,6 @@ Branch `research/fgs-separator-20261007` (worktree `~/git-repos/NVEnc-fgs-separa
 - 2026-10-07 stop: The release's structured colour loss is in NVENC's coding, not the chroma threshold (submitted picture 0.995-1.000 in 17 of 19 windows); ask before building the 1b prototype.
 - 2026-10-07 auto: Put the chroma base-detail check in its own gate stage on the pinned Gentlemen clip, floor computed from the pinned release positive at run time, the option-on output as labelled negative, margin 0.002 (20x repeat variation).
 - 2026-10-07 auto: Cap traced windows at 264 frames, because the submission trace holds at most 2 GiB of 1080p P010 surfaces (about 270 frames).
+- 2026-10-07 auto: Prototype the coarse band offline on the exact release separator output from the trace dumps, and validate the replica (capture 0.287 vs 0.29) and the output-amplitude estimate (0.695/0.706/0.920 vs measured 0.68/0.69/0.91) before comparing.
+- 2026-10-07 auto: Align real windows on each encode's first timestamp, after finding NVEncC's --seek started Play Dirty p25/p75 one second late (the attribution's p25/p75 stage numbers were misaligned and are not cited there).
+- 2026-10-07 stop: Phase 1 fails the plan's texture criterion (no output amplitude gain); report both results and stop before any CUDA build.
