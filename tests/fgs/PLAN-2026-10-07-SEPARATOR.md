@@ -1,6 +1,6 @@
 # Separator plan: remove only the grain synthesis can put back
 
-The bilateral separator decides what goes into the coded picture and what becomes synthesized grain. It is a fine-scale filter: it takes out almost all fine grain but only about 30% of coarse-grain energy, and the rest stays in the base, where NVENC spends bits on it and still destroys most of it. That is the main reason FGS saves only 0–11% on 1080p with the release, and 4–14% with the codec-flat chroma option (against 30% on the 24-frame 4K HDR Taxi clip). Neither existing alternative helps: FFT3D saves at most 1% and loses luma texture on Gentlemen, and the motion separator costs up to 6.6% more bytes and bleeds the previous frame into the base. This plan proposes a two-band separator whose low-frequency band removes grain only where the local band energy is noise, and only as much as the fitted AR grain model can synthesize back. On 1080p live action it should cut file size by about 3% (0-9% by title) at the same QVBR on top of the codec-flat chroma option, at roughly 0.15 ms of extra GPU time per frame and about 6-7.5 working days to a qualified opt-in build. Its main risk is the one that sank the wider bilateral (r4047) and `psd=on`: real low-contrast texture moving into the grain layer. The gates are built around that. Real 4K HDR coverage is only two 24-frame clips (Taxi, Alien), so this plan qualifies 1080p only and proposes how to cover 4K before enabling it there.
+The bilateral separator decides what goes into the coded picture and what becomes synthesized grain. It is a fine-scale filter: it takes out almost all fine grain but only about 30% of coarse-grain energy, and the rest stays in the base, where NVENC spends bits on it and still destroys most of it. That is the main reason FGS saves only 0–11% on 1080p with the release, and 4–14% with the codec-flat chroma option (fixed build `725585b8`) (against 30% on the 24-frame 4K HDR Taxi clip). Neither existing alternative helps: FFT3D saves at most 1% and loses luma texture on Gentlemen, and the motion separator costs up to 6.6% more bytes and bleeds the previous frame into the base. This plan proposes a two-band separator whose low-frequency band removes grain only where the local band energy is noise, and only as much as the fitted AR grain model can synthesize back. On 1080p live action it should cut file size by about 3% (0-9% by title) at the same QVBR on top of the codec-flat chroma option, at roughly 0.15 ms of extra GPU time per frame and about 6-7.5 working days to a qualified opt-in build. Its main risk is the one that sank the wider bilateral (r4047) and `psd=on`: real low-contrast texture moving into the grain layer. The gates are built around that. Real 4K HDR coverage is only two 24-frame clips (Taxi, Alien), so this plan qualifies 1080p only and proposes how to cover 4K before enabling it there.
 
 ## Evidence
 
@@ -28,10 +28,10 @@ FFT3D removes more coarse grain at sigma 3, but output amplitude does not move: 
 
 **Byte floor.** Plain NVENC of the source pre-denoised with `--vpp-fft3d sigma=2/4/8` stands in for a separator that removes grain everywhere, including the low-frequency part, at the cost of some detail. Fine luma grain left in the decoded picture falls from 0.40 to 0.33 of source on Gentlemen and from 0.25 to 0.18 on Play Dirty. Luma detail in the most-structured quarter of patches stays within 1% in amplitude (HF 0.98 to 0.96 on Gentlemen, 0.77 to 0.69 on Play Dirty). Chroma detail drops more (Gentlemen Cb HF 0.90 to 0.74). Bytes relative to plain NVENC:
 
-| Title | Plain | FGS bilateral (release) | FGS, codec-flat chroma on | fft3d 2 | fft3d 4 | fft3d 8 |
+| Title | Plain | FGS bilateral (release) | FGS, codec-flat chroma on (`725585b8`) | fft3d 2 | fft3d 4 | fft3d 8 |
 |---|---|---|---|---|---|---|
-| Gentlemen 3,600 frames | 1 | 0.975 | 0.958 | 0.902 | 0.875 | 0.854 |
-| Play Dirty 10 min | 1 | 0.890 | 0.859 | 0.884 | 0.849 | 0.811 |
+| Gentlemen 3,600 frames | 1 | 0.975 | 0.961 | 0.902 | 0.875 | 0.854 |
+| Play Dirty 10 min | 1 | 0.890 | 0.864 | 0.884 | 0.849 | 0.811 |
 
 ## Design
 
@@ -50,12 +50,12 @@ Relative to the live-action baseline the flow will run (codec-flat chroma on), t
 
 | Title | fft3d 2 | fft3d 4 | fft3d 8 |
 |---|---|---|---|
-| Gentlemen (digital, fine to medium grain) | -5.8% | -8.7% | -10.8% |
-| Play Dirty (35 mm, coarse grain) | +2.9% | -1.3% | -5.6% |
+| Gentlemen (digital, fine to medium grain) | -6.1% | -9.0% | -11.1% |
+| Play Dirty (35 mm, coarse grain) | +2.4% | -1.7% | -6.1% |
 
 These are upper bounds for a grain-only separator, because the pre-filter also takes detail, mostly chroma (Cb HF in structured patches down 8-18%) and, on Play Dirty, some luma (structured HF down 5-10% across strengths 2-8). A separator that removes the low-frequency grain without that detail should land between the strength-2 and strength-4 points.
 
-**Expected 1080p saving: about 3-6% at the same QVBR on live action with fine to medium grain (Gentlemen-like), and 0-2% on coarse film like Play Dirty, where FGS with the chroma option already saves 14% against plain NVENC.** Across both, plan on about 3%, with 0-9% as the range. This is two titles; the prototype phase re-measures it on the held-out windows and stops the work if the saving is under 2%.
+**Expected 1080p saving: about 3-6% at the same QVBR on live action with fine to medium grain (Gentlemen-like), and 0-2% on coarse film like Play Dirty, where FGS with the chroma option already saves 13.6% against plain NVENC.** Across both, plan on about 3%, with 0-9% as the range. This is two titles; the prototype phase re-measures it on the held-out windows and stops the work if the saving is under 2%.
 
 The texture side matters as much as bytes: on the known-answer coarse grain, output amplitude is stuck at 0.68 with every existing separator, and real 1080p luma texture is already 0.87-1.02 of source with bilateral. The gain to expect is coarse-grain fidelity plus the byte saving above, not a large change on fine-grain digital footage.
 
