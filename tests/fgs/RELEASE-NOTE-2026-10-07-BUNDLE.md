@@ -47,7 +47,7 @@ The quiet-GPU timing matrix was cancelled: it could only start with no other GPU
 
 ## Deploy (user-operated, existing `Dockerfile.fidelity` recipe)
 
-Deploy only after the timing run has restored Tdarr; a redeploy during its owned pause would collide with it.
+The timing run was cancelled and no Tdarr pause is held by this work; deploy whenever the node is idle, with the safe redeploy script (step 4).
 
 
 1. Copy `/opt/docker-apps/build/tdarr-node/` to a private staging context. Keep production's `nvencc` as `nvencc-aeb14263`, and copy the release binary in as `nvencc`; verify SHA256 `46d6781c…`.
