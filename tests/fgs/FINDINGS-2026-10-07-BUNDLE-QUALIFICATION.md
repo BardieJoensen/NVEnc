@@ -31,3 +31,10 @@ Re-encoding the same command with a grain table on both binaries (`scratch perio
 - The largest correlation change is 0.13 (red) and 0.21 (blue) against the 0.10 limit, on patches whose chroma RMS is 0.21–0.33 code. Bundle RMS there is 12–16% below the kernel's: the reduced synthesis on those low-amplitude chroma patches.
 
 This is the intended clean-source change measured by a detector that requires review for any change. Making the gate green needs either acceptance of this review and a baseline update for that stage by the user, or a change to the candidate.
+
+## Follow-up: review accepted, baseline updated, clean release build
+
+The user accepted this review. Commit `733a4fe0` points the periodic stage at a new fixture: the unmodified reviewed `candidate.mkv`, stored as `gentlemen-clean-source-positive-33m-150s.mkv` (SHA256 `da7f25e4…`). No existing fixture changed. Run from a pinned clone of `733a4fe0`, the stage passes with the release binary (no failures) and still rejects the mesh negative (13 failures).
+
+The release binary is a from-scratch build of `e78e97f2`, SHA256 `46d6781c…`, version `r4389, Oct 7 2026`. A same-run submission trace shows all 1,496 frames identical to `5cb5a80a` on 21 KAT and 5 real fixtures (`fgs-submission-20261005/release-trace-46d6781c`).
+

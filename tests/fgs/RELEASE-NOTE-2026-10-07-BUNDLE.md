@@ -4,9 +4,9 @@ This release combines the qualified film-grain kernel speedup with a fix that st
 
 ## Artifact
 
-- Branch `fix/fgs-clean-source-20261006`; runtime commit `e78e97f223f3cececc29ddcd47504e2dd828c4b7` (on qualified kernel runtime `a1ac278a`, itself on production `aeb14263`).
-- Binary `nvencc`, SHA256 `5cb5a80ac98694aff71dfb9d7843d594a54bcc65d1cd9bf84baeeaa58e05f86c`, at `/tmp/downloads/codex-work/fgs-submission-20261005/bin/nvencc-bundle-5cb5a80a` (copy: `/tmp/downloads/codex-work/fgs-clean-source-20261006/bin/nvencc-D-5cb5a80a`).
-- Built in `nvenc-fgs-build:cuda13.3` from pinned clone `fgs-clean-source-20261006/pin-e78e97f2`, reusing the qualified candidate's cache; only `NVEncFilterFilmGrain.cu` recompiled. Its `--version` build date reads Oct 5 because the version object was reused, so identify the binary by SHA, not by version string.
+- Branch `fix/fgs-clean-source-20261006`; runtime commit `e78e97f223f3cececc29ddcd47504e2dd828c4b7` (on qualified kernel runtime `a1ac278a`, itself on production `aeb14263`). Later branch commits change only tests, fixtures pins and documents.
+- **Release binary** `nvencc`, SHA256 `46d6781cab9995de227ebe668765cb91869706bd8399f0c57a86ae4a6fcfdfb8`, at `/tmp/downloads/codex-work/fgs-submission-20261005/bin/nvencc-release-46d6781c`. It is a from-scratch build: fresh clone at `e78e97f2`, pinned submodules, new meson configure, all 230 targets, in `nvenc-fgs-build:cuda13.3` (`sha256:031ff182…`), 708 s. Version string `NVEnc (x64) 9.37 (r4389) … Oct 7 2026`.
+- It is trace-identical to the qualified incremental build `5cb5a80ac98694aff71dfb9d7843d594a54bcc65d1cd9bf84baeeaa58e05f86c`: all 1,496 submitted frames match (full-pitch surfaces and exact grain objects) on 21 KAT and 5 real fixtures, so every measurement below applies to it.
 
 ## What changed
 
@@ -26,7 +26,7 @@ This release combines the qualified film-grain kernel speedup with a fix that st
 | Equal-bytes FR metrics | VMAF/NEG/PSNR/SSIMU2 match production; Taxi Butteraugli max p95 +1.3 on 24 frames |
 | Library-scan detector | Clean on full Amphibia and Lost Tapes episodes, as production |
 | CPU tests | pass (119 Python, all C++) |
-| Full gate (`local_gate.sh --full`, unchanged) | 22/23; the periodic-stage change detector flags the intended chroma change, reviewed and accepted by the user |
+| Full gate (`local_gate.sh --full`, unchanged) | 22/23 on `5cb5a80a`; the periodic-stage change detector flagged the intended chroma change, which the user reviewed and accepted. After the baseline update (`733a4fe0`) the periodic stage passes with the release binary, and the mesh negative is still rejected |
 | Submission trace vs kernel candidate | changes only in scaling-curve fields (and pictures alongside them); identical on 21 KAT + Silo |
 | Throughput (video stage, quiet GPU) | THROUGHPUT_PENDING |
 
@@ -34,7 +34,7 @@ Evidence: [clean-source findings](FINDINGS-2026-10-06-CLEAN-SOURCE-FIX.md), [bun
 
 ## Risks and known limits
 
-- The periodic stage stays red until its pinned training-positive baseline is updated to the reviewed bundle output; nothing in the gate or fixtures was changed.
+- The periodic stage's pinned positive is now the reviewed bundle output (`gentlemen-clean-source-positive-33m-150s.mkv`, SHA256 `da7f25e4…`, added to the validation fixture store; no existing fixture changed). A future candidate that changes texture again will need its own review.
 - Letterboxed films lose luma grain synthesis at codes 12–20 (the bars' level); source grain is blended back there. On Taxi this cost 4% of dark-band luma amplitude and no bytes.
 - NVENC still smears motion over flat black on some frames; grain then follows the decoded level. Production has the same.
 - The Knightfall same-shot strength jump is unchanged (separate future slice).
@@ -43,8 +43,11 @@ Evidence: [clean-source findings](FINDINGS-2026-10-06-CLEAN-SOURCE-FIX.md), [bun
 
 ## Deploy (user-operated, existing `Dockerfile.fidelity` recipe)
 
-1. Copy `/opt/docker-apps/build/tdarr-node/` to a private staging context. Keep production's `nvencc` as `nvencc-aeb14263`, and copy the bundle binary in as `nvencc`; verify SHA256 `5cb5a80a…`.
-2. In `Dockerfile.fidelity` change only the final encoder check (line with `c6cbd528…  /usr/bin/nvencc` → `5cb5a80ac98694aff71dfb9d7843d594a54bcc65d1cd9bf84baeeaa58e05f86c`) and the labels: `org.opencontainers.image.version="2.94.02-nvencc-e78e97f2-opus16"`, `fgs.encoder.core="e78e97f223f3cececc29ddcd47504e2dd828c4b7"`, `fgs.encoder.sha256="5cb5a80a…"`. Leave the Tdarr application digest, base image, `fgs-scan`, `packet-audit`, `dovi_tool` checks, plugins and flow untouched.
+Deploy only after the timing run has restored Tdarr; a redeploy during its owned pause would collide with it.
+
+
+1. Copy `/opt/docker-apps/build/tdarr-node/` to a private staging context. Keep production's `nvencc` as `nvencc-aeb14263`, and copy the release binary in as `nvencc`; verify SHA256 `46d6781c…`.
+2. In `Dockerfile.fidelity` change only the final encoder check (line with `c6cbd528…  /usr/bin/nvencc` → `46d6781cab9995de227ebe668765cb91869706bd8399f0c57a86ae4a6fcfdfb8`) and the labels: `org.opencontainers.image.version="2.94.02-nvencc-e78e97f2-opus16"`, `fgs.encoder.core="e78e97f223f3cececc29ddcd47504e2dd828c4b7"`, `fgs.encoder.sha256="46d6781cab9995de227ebe668765cb91869706bd8399f0c57a86ae4a6fcfdfb8"`. Leave the Tdarr application digest, base image, `fgs-scan`, `packet-audit`, `dovi_tool` checks, plugins and flow untouched.
 3. `docker build -f Dockerfile.fidelity -t nvenc-fidelity/tdarr-node:2.94.02-e78e97f2-<date> .`, then verify the image's `/usr/bin/nvencc` hash and labels and run the existing release image/flow qualification and source canary. Keep `NVENC_TRACE_SUBMISSION` unset.
 4. Update the `docker-compose.yml` image line with a dated comment naming the rollback tag, and deploy only with `scripts/tdarr-node-safe-redeploy.py` (never a plain `compose up` while encodes run).
 
