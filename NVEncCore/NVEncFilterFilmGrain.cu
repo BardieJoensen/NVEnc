@@ -2704,7 +2704,9 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 const int lumaLevel = clamp(static_cast<int>(metrics[blockIndex].mean / depthScale), 0, 255);
                 const bool grainBearingLuma = predicted[0][lumaLevel] > 0.0f
                     && blockResidual[blockIndex] >= 0.5f * predicted[0][lumaLevel];
-                if (plane && sigma == 0.0 && grainBearingLuma) {
+                // Nearly flat chroma (within the quiet-source limit) over the same
+                // grain-bearing luma is the same codec smoothing.
+                if (plane && sigma <= sigmaLimit && grainBearingLuma) {
                     ++traceCapEvents[plane][5];
                     return;
                 }
