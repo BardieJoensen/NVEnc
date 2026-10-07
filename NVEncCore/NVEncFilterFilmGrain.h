@@ -32,6 +32,7 @@
 
 #pragma once
 
+#include <cstdio>
 #include <array>
 #include <cstdint>
 #include <memory>
@@ -182,6 +183,8 @@ private:
     int64_t m_tableFrameDuration10MHz;
     std::vector<NVEncFilmGrainTableEntry> m_tableEntries;
     std::unique_ptr<NVEncFilmGrainTableWriter> m_tableWriter;
+    // Diagnostic analyzer trace (NVENC_FGS_TRACE_ANALYZER); null when disabled.
+    std::unique_ptr<FILE, int (*)(FILE *)> m_analyzerTrace;
     int m_blocksX;
     int m_blocksY;
 };

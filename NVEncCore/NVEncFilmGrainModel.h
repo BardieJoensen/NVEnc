@@ -42,6 +42,7 @@
 #include <array>
 #include <cstdint>
 #include <utility>
+#include <string>
 #include <vector>
 
 #pragma warning (push)
@@ -190,6 +191,11 @@ bool film_grain_params_close(const NV_ENC_FILM_GRAIN_PARAMS_AV1& a, const NV_ENC
 constexpr int FGS_STRENGTH_LUT_SIZE = 256;
 void build_strength_lut(const NV_ENC_FILM_GRAIN_PARAMS_AV1& params, int bitDepth,
     float lut[FGS_STRENGTH_LUT_SIZE], int plane = 0, double templateGain = 1.0);
+
+// Diagnostic only: the analyzer's measured per-bin residual and solved model
+// for these statistics, as one JSON object in 8-bit code units. Re-solves with
+// the same deterministic solver; never called unless analyzer tracing is on.
+std::string film_grain_analyzer_trace_json(const FilmGrainGpuStats& stats, int bitDepth, bool analyzeChroma);
 
 } // namespace fgsmodel
 

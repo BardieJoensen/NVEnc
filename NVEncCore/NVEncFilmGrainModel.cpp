@@ -37,6 +37,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <limits>
 
@@ -520,6 +521,46 @@ FilmGrainStrengthFidelity film_grain_strength_fidelity(const FilmGrainGpuStats& 
         result.rmsError8bit[plane] = std::sqrt(squaredError / result.blocks[plane]) / depthScale;
     }
     return result;
+}
+
+std::string film_grain_analyzer_trace_json(const FilmGrainGpuStats& stats, const int bitDepth, const bool analyzeChroma) {
+    const double scale = static_cast<double>(1 << std::max(0, bitDepth - 8));
+    std::array<FilmGrainSolvedPlane, 3> solved;
+    solved[0] = solve_plane(stats.plane[0], false, nullptr);
+    if (analyzeChroma && solved[0].valid) {
+        solved[1] = solve_plane(stats.plane[1], true, &solved[0]);
+        solved[2] = solve_plane(stats.plane[2], true, &solved[0]);
+    }
+    auto number = [](double v) {
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%.6g", std::isfinite(v) ? v : 0.0);
+        return std::string(buf);
+    };
+    std::string out = "[";
+    for (int p = 0; p < 3; ++p) {
+        const auto& in = stats.plane[p];
+        const auto& sv = solved[p];
+        if (p) out += ",";
+        out += "{\"observations\":" + std::to_string(in.observations);
+        out += ",\"bin_blocks\":[";
+        for (int b = 0; b < FGS_STRENGTH_BINS; ++b) out += (b ? "," : "") + std::to_string(in.binBlockCount[b]);
+        out += "],\"bin_sigma\":[";
+        for (int b = 0; b < FGS_STRENGTH_BINS; ++b) {
+            const double var = in.binBlockCount[b] ? in.binVarSum[b] / static_cast<double>(in.binBlockCount[b]) : 0.0;
+            out += (b ? "," : "") + number(std::sqrt(std::max(0.0, var)) / scale);
+        }
+        out += "],\"luma_pred_sigma\":" + number(in.lumaPredBlocks
+            ? std::sqrt(std::max(0.0, in.lumaPredVarSum / static_cast<double>(in.lumaPredBlocks))) / scale : 0.0);
+        out += ",\"valid\":" + std::string(sv.valid ? "true" : "false");
+        out += ",\"ar_gain\":" + number(sv.arGain) + ",\"template_gain\":" + number(sv.templateGain)
+            + ",\"signal_correlation\":" + number(sv.signalCorrelation);
+        out += ",\"strength\":[";
+        for (int b = 0; b < FGS_STRENGTH_BINS; ++b) out += (b ? "," : "") + number(sv.strength[b] / scale);
+        out += "],\"coeffs\":[";
+        for (size_t i = 0; i < sv.coeffs.size(); ++i) out += (i ? "," : "") + number(sv.coeffs[i]);
+        out += "]}";
+    }
+    return out + "]";
 }
 
 } // namespace fgsmodel

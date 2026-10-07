@@ -1456,8 +1456,12 @@ NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_motionDegrain(), m_motionDegrainParam(),
     m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sourceBlendLut(), m_sceneCounts(), m_modelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWriter(),
-    m_state(std::make_unique<AnalyzerState>()), m_blocksX(0), m_blocksY(0) {
+    m_state(std::make_unique<AnalyzerState>()), m_analyzerTrace(nullptr, &fclose), m_blocksX(0), m_blocksY(0) {
     m_name = _T("film-grain");
+    // Read once. Unset or empty disables it; the file must not already exist.
+    if (const char *path = std::getenv("NVENC_FGS_TRACE_ANALYZER"); path && path[0]) {
+        m_analyzerTrace.reset(fopen(path, "wbx"));
+    }
     m_pathThrough = FILTER_PATHTHROUGH_NONE;
 }
 
@@ -2891,6 +2895,38 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             static_cast<int>(params.arCoeffsCbPlus128[FGS_AR_COEFFS]) - 128,
             static_cast<int>(params.arCoeffsCrPlus128[FGS_AR_COEFFS]) - 128,
             pointsY.c_str(), pointsCb.c_str(), pointsCr.c_str());
+    }
+    if (m_analyzerTrace) {
+        auto curve = [](const uint8_t *values, const uint8_t *scalings, uint32_t count) {
+            std::string out = "[";
+            for (uint32_t i = 0; i < count; ++i) out += (i ? "," : "") + std::to_string(values[i]) + "," + std::to_string(scalings[i]);
+            return out + "]";
+        };
+        auto coeffs = [](const uint8_t *plus128, int count) {
+            std::string out = "[";
+            for (int i = 0; i < count; ++i) out += (i ? "," : "") + std::to_string(static_cast<int>(plus128[i]) - 128);
+            return out + "]";
+        };
+        fprintf(m_analyzerTrace.get(), "{\"frame\":%d,\"pts\":%lld,\"reliable\":%d,\"fresh\":%d,\"held\":%d,\"reset\":%d,"
+            "\"model_frames\":%d,\"flat\":%d,\"total\":%d,\"source_fallback\":%d,\"source_curve_limited\":%d,"
+            "\"template_gain\":[%.6g,%.6g,%.6g],\"apply\":%u,\"scaling_shift\":%u,\"ar_shift\":%u,\"ar_lag\":%u,"
+            "\"y\":%s,\"cb\":%s,\"cr\":%s,\"ar_y\":%s,\"ar_cb\":%s,\"ar_cr\":%s,\"cb_mult\":[%u,%u,%u],\"cr_mult\":[%u,%u,%u],"
+            "\"window\":%s}\n",
+            source->inputFrameId, static_cast<long long>(source->timestamp), modelValid ? 1 : 0,
+            diagnostics.freshModel ? 1 : 0, diagnostics.modelHeld ? 1 : 0, diagnostics.sceneReset ? 1 : 0,
+            diagnostics.modelFrames, diagnostics.flatBlocks, diagnostics.totalBlocks,
+            diagnostics.sourceFidelityFallback ? 1 : 0, sourceCurveLimited ? 1 : 0,
+            diagnostics.templateGain[0], diagnostics.templateGain[1], diagnostics.templateGain[2],
+            params.applyGrain, params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6, params.arCoeffLag,
+            curve(params.pointYValue, params.pointYScaling, params.numYPoints).c_str(),
+            curve(params.pointCbValue, params.pointCbScaling, params.numCbPoints).c_str(),
+            curve(params.pointCrValue, params.pointCrScaling, params.numCrPoints).c_str(),
+            coeffs(params.arCoeffsYPlus128, FGS_AR_COEFFS).c_str(),
+            coeffs(params.arCoeffsCbPlus128, FGS_AR_COEFFS_CHROMA).c_str(),
+            coeffs(params.arCoeffsCrPlus128, FGS_AR_COEFFS_CHROMA).c_str(),
+            params.cbMult, params.cbLumaMult, params.cbOffset, params.crMult, params.crLumaMult, params.crOffset,
+            film_grain_analyzer_trace_json(combined, bitDepth, prm->filmGrain.analyzeChroma).c_str());
+        fflush(m_analyzerTrace.get());
     }
     attachResult();
     return RGY_ERR_NONE;
