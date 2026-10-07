@@ -2703,7 +2703,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 // grain), edge-preserved lettering, bars and black/white flats
                 // keep their protection. Monochrome grain has no chroma model.
                 const int lumaLevel = clamp(static_cast<int>(metrics[blockIndex].mean / depthScale), 0, 255);
-                const bool grainBearingLuma = predicted[0][lumaLevel] > 0.0f
+                // The luma at this level must also still be grained after this
+                // frame's luma protections: where luma is clean the encoder adds
+                // no luma grain, and flat colour there is clean colour (animation
+                // fills, CG), not codec damage.
+                const double lumaKept = std::min(m_state->sourceCaps.gain(0, lumaLevel),
+                    m_state->cleanCaps.gain(0, lumaLevel));
+                const bool grainBearingLuma = predicted[0][lumaLevel] > 0.0f && lumaKept >= 0.5
                     && blockResidual[blockIndex] >= 0.25f * predicted[0][lumaLevel];
                 // Nearly flat chroma (within the quiet-source limit) over the same
                 // grain-bearing luma is the same codec smoothing.
