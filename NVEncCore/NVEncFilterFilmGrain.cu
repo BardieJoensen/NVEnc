@@ -2697,13 +2697,14 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 // Flat chroma over grain-bearing luma is codec damage, not clean
                 // colour: 8-bit source codecs often code only a chroma prediction
                 // inside grainy pictures. It is no evidence against chroma grain.
-                // Grain-bearing means the separator removed at least half the
-                // modeled luma grain from this block. Fills and graphics (no luma
+                // Grain-bearing means the separator removed at least a quarter of
+                // the modeled luma grain from this block (detail protection keeps
+                // textured grainy blocks below the flat-block level). Fills and graphics (no luma
                 // grain), edge-preserved lettering, bars and black/white flats
                 // keep their protection. Monochrome grain has no chroma model.
                 const int lumaLevel = clamp(static_cast<int>(metrics[blockIndex].mean / depthScale), 0, 255);
                 const bool grainBearingLuma = predicted[0][lumaLevel] > 0.0f
-                    && blockResidual[blockIndex] >= 0.5f * predicted[0][lumaLevel];
+                    && blockResidual[blockIndex] >= 0.25f * predicted[0][lumaLevel];
                 // Nearly flat chroma (within the quiet-source limit) over the same
                 // grain-bearing luma is the same codec smoothing.
                 if (plane && sigma <= sigmaLimit && grainBearingLuma) {
