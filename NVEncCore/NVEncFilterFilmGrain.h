@@ -173,6 +173,7 @@ private:
     std::unique_ptr<CUMemBufPair> m_blockMetrics;
     std::unique_ptr<CUMemBufPair> m_blockMask;
     std::unique_ptr<CUMemBufPair> m_sigmaMap;
+    std::unique_ptr<CUMemBufPair> m_blockResidual;
     std::unique_ptr<CUMemBufPair> m_strengthLut;
     std::unique_ptr<CUMemBufPair> m_sourceBlendLut;
     std::unique_ptr<CUMemBufPair> m_sceneCounts;
