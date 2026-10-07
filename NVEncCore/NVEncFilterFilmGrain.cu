@@ -1375,7 +1375,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
 
 NVEncFilmGrainAnalyzerConfig::NVEncFilmGrainAnalyzerConfig() :
     enable(true), analyzeChroma(true), clipToRestrictedRange(true),
-    denoiser(FGS_DENOISE_FFT3D), fft3dTemporal(1), motionRefs(2), residualRetain(0.0f), autoRetainMax(0.5f), denoiseLevel(0.0f),
+    denoiser(FGS_DENOISE_FFT3D), fft3dTemporal(1), motionRefs(2), residualRetain(0.0f), autoRetainMax(0.5f), codecFlatChroma(false), denoiseLevel(0.0f),
     denoisePasses(2), modelWindow(8), minModelFrames(1), minFlatBlocks(8),
     minFlatFraction(0.02f), minNoiseLevel(0.5f), maxNoiseLevel(50.0f) {
 }
@@ -1389,6 +1389,7 @@ bool NVEncFilmGrainAnalyzerConfig::operator==(const NVEncFilmGrainAnalyzerConfig
         && motionRefs == other.motionRefs
         && residualRetain == other.residualRetain
         && autoRetainMax == other.autoRetainMax
+        && codecFlatChroma == other.codecFlatChroma
         && denoiseLevel == other.denoiseLevel
         && denoisePasses == other.denoisePasses
         && modelWindow == other.modelWindow
@@ -1400,7 +1401,7 @@ bool NVEncFilmGrainAnalyzerConfig::operator==(const NVEncFilmGrainAnalyzerConfig
 }
 
 tstring NVEncFilmGrainAnalyzerConfig::print() const {
-    return strsprintf(_T("film-grain: denoise=%s%s, denoiser=%s, chroma=%s, window=%d%s%s"),
+    return strsprintf(_T("film-grain: denoise=%s%s, denoiser=%s, chroma=%s, window=%d%s%s%s"),
         denoiseLevel <= 0.0f ? _T("auto") : _T(""),
         denoiseLevel <= 0.0f ? _T("") : strsprintf(_T("%.2f"), denoiseLevel).c_str(),
         denoiser == FGS_DENOISE_FFT3D
@@ -1409,7 +1410,8 @@ tstring NVEncFilmGrainAnalyzerConfig::print() const {
         analyzeChroma ? _T("on") : _T("off"), modelWindow,
         denoiser == FGS_DENOISE_MOTION ? strsprintf(_T(", motion-refs=%d"), motionRefs).c_str() : _T(""),
         residualRetain < 0.0f ? strsprintf(_T(", retain=auto, retain-max=%.2f"), autoRetainMax).c_str()
-            : (residualRetain > 0.0f ? strsprintf(_T(", retain=%.2f"), residualRetain).c_str() : _T("")));
+            : (residualRetain > 0.0f ? strsprintf(_T(", retain=%.2f"), residualRetain).c_str() : _T("")),
+        codecFlatChroma ? _T(", codec-flat-chroma=on") : _T(""));
 }
 
 RGYFrameDataFilmGrain::RGYFrameDataFilmGrain() :
@@ -2340,11 +2342,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
         static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice), stream);
     if (sts != RGY_ERR_NONE) return sts;
-    // Rides the existing model-stats readback; no extra host synchronization.
-    sts = collect_block_residual(source, output, m_blocksX, m_blocksY,
-        static_cast<float *>(m_blockResidual->ptrDevice), stream);
-    if (sts != RGY_ERR_NONE) return sts;
-    if ((sts = m_blockResidual->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
+    if (prm->filmGrain.codecFlatChroma) {
+        // Rides the existing model-stats readback; no extra host synchronization.
+        sts = collect_block_residual(source, output, m_blocksX, m_blocksY,
+            static_cast<float *>(m_blockResidual->ptrDevice), stream);
+        if (sts != RGY_ERR_NONE) return sts;
+        if ((sts = m_blockResidual->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
+    }
     if ((sts = m_modelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     cudaerr = cudaStreamSynchronize(stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
@@ -2703,13 +2707,10 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 // grain), edge-preserved lettering, bars and black/white flats
                 // keep their protection. Monochrome grain has no chroma model.
                 const int lumaLevel = clamp(static_cast<int>(metrics[blockIndex].mean / depthScale), 0, 255);
-                // The luma at this level must also still be grained after this
-                // frame's luma protections: where luma is clean the encoder adds
-                // no luma grain, and flat colour there is clean colour (animation
-                // fills, CG), not codec damage.
-                const double lumaKept = std::min(m_state->sourceCaps.gain(0, lumaLevel),
-                    m_state->cleanCaps.gain(0, lumaLevel));
-                const bool grainBearingLuma = predicted[0][lumaLevel] > 0.0f && lumaKept >= 0.5
+                // Off by default: animation keeps flat colour clean even under luma
+                // grain, and no analyzer signal separates that case reliably. The
+                // caller enables this only for live action.
+                const bool grainBearingLuma = prm->filmGrain.codecFlatChroma && predicted[0][lumaLevel] > 0.0f
                     && blockResidual[blockIndex] >= 0.25f * predicted[0][lumaLevel];
                 // Nearly flat chroma (within the quiet-source limit) over the same
                 // grain-bearing luma is the same codec smoothing.
