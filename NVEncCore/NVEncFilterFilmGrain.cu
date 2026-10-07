@@ -1454,7 +1454,7 @@ tstring NVEncFilterParamFilmGrain::print() const {
 NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_denoiseWork(), m_detailReference(), m_detailConfidence(), m_detailReferenceValid(false), m_trainingHistory(std::make_unique<FilmGrainTrainingHistory>()), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(),
-    m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sourceBlendLut(), m_sceneCounts(), m_modelStats(),
+    m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_blockResidual(), m_strengthLut(), m_sourceBlendLut(), m_sceneCounts(), m_modelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWriter(),
     m_state(std::make_unique<AnalyzerState>()), m_analyzerTrace(nullptr, &fclose), m_blocksX(0), m_blocksY(0) {
     m_name = _T("film-grain");
@@ -1564,6 +1564,70 @@ static RGY_ERR collect_model_stats_typed(const RGYFrameInfo *src, const RGYFrame
         }
     }
     return RGY_ERR_NONE;
+}
+
+// Per-block luma separator residual (source minus denoised) for every block.
+// The separator removes grain, so a grain-bearing block leaves a residual near
+// the modeled grain level; clean fills, graphics and edge-preserved lettering
+// leave almost none.
+template<typename Type, int shift>
+__global__ void kernel_fgs_block_residual(const uint8_t *__restrict__ src, const int srcPitch,
+    const uint8_t *__restrict__ denoised, const int denoisedPitch, const int width, const int height,
+    const int blocksX, float *__restrict__ out) {
+    const int index = blockIdx.x;
+    const int x0 = (index % blocksX) * FGS_BLOCK_SIZE;
+    const int y0 = (index / blocksX) * FGS_BLOCK_SIZE;
+    const int bw = min(FGS_BLOCK_SIZE, width - x0);
+    const int bh = min(FGS_BLOCK_SIZE, height - y0);
+    __shared__ float sums[2][64];
+    float sum = 0.0f, sumSq = 0.0f;
+    for (int i = threadIdx.x; i < bw * bh; i += 64) {
+        const int x = x0 + i % bw, y = y0 + i / bw;
+        const float r = static_cast<float>(load_code<Type, shift>(src, srcPitch, x, y)
+            - load_code<Type, shift>(denoised, denoisedPitch, x, y));
+        sum += r;
+        sumSq += r * r;
+    }
+    sums[0][threadIdx.x] = sum;
+    sums[1][threadIdx.x] = sumSq;
+    __syncthreads();
+    for (int stride = 32; stride > 0; stride >>= 1) {
+        if (threadIdx.x < stride) {
+            sums[0][threadIdx.x] += sums[0][threadIdx.x + stride];
+            sums[1][threadIdx.x] += sums[1][threadIdx.x + stride];
+        }
+        __syncthreads();
+    }
+    if (threadIdx.x == 0) {
+        const float n = static_cast<float>(max(1, bw * bh));
+        const float mean = sums[0][0] / n;
+        out[index] = sqrtf(fmaxf(0.0f, sums[1][0] / n - mean * mean));
+    }
+}
+
+template<typename Type, int shift>
+static RGY_ERR launch_block_residual(const RGYFrameInfo *src, const RGYFrameInfo *denoised,
+    const int blocksX, const int blocksY, float *out, cudaStream_t stream) {
+    const auto s = getPlane(src, RGY_PLANE_Y);
+    const auto d = getPlane(denoised, RGY_PLANE_Y);
+    kernel_fgs_block_residual<Type, shift><<<blocksX * blocksY, 64, 0, stream>>>(
+        s.ptr[0], s.pitch[0], d.ptr[0], d.pitch[0], s.width, s.height, blocksX, out);
+    return err_to_rgy(cudaGetLastError());
+}
+
+static RGY_ERR collect_block_residual(const RGYFrameInfo *src, const RGYFrameInfo *denoised,
+    const int blocksX, const int blocksY, float *out, cudaStream_t stream) {
+    switch (src->csp) {
+    case RGY_CSP_NV12:
+    case RGY_CSP_YV12:
+        return launch_block_residual<uint8_t, 0>(src, denoised, blocksX, blocksY, out, stream);
+    case RGY_CSP_YV12_10:
+        return launch_block_residual<uint16_t, 0>(src, denoised, blocksX, blocksY, out, stream);
+    case RGY_CSP_P010:
+        return launch_block_residual<uint16_t, 6>(src, denoised, blocksX, blocksY, out, stream);
+    default:
+        return RGY_ERR_UNSUPPORTED;
+    }
 }
 
 static RGY_ERR collect_model_stats(const RGYFrameInfo *src, const RGYFrameInfo *denoised,
@@ -1702,6 +1766,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(FilmGrainBlockMetric));
     m_blockMask = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY);
     m_sigmaMap = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(float));
+    m_blockResidual = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(float));
     m_strengthLut = std::make_unique<CUMemBufPair>(3 * FGS_STRENGTH_LUT_SIZE * sizeof(float));
     m_sourceBlendLut = std::make_unique<CUMemBufPair>(3 * FGS_STRENGTH_LUT_SIZE * sizeof(float));
     m_sceneCounts = std::make_unique<CUMemBufPair>(8 * sizeof(uint32_t));
@@ -1709,6 +1774,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     if ((sts = m_blockMetrics->alloc()) != RGY_ERR_NONE
         || (sts = m_blockMask->alloc()) != RGY_ERR_NONE
         || (sts = m_sigmaMap->alloc()) != RGY_ERR_NONE
+        || (sts = m_blockResidual->alloc()) != RGY_ERR_NONE
         || (sts = m_strengthLut->alloc()) != RGY_ERR_NONE
         || (sts = m_sourceBlendLut->alloc()) != RGY_ERR_NONE
         || (sts = m_sceneCounts->alloc()) != RGY_ERR_NONE
@@ -2274,6 +2340,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
         static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice), stream);
     if (sts != RGY_ERR_NONE) return sts;
+    // Rides the existing model-stats readback; no extra host synchronization.
+    sts = collect_block_residual(source, output, m_blocksX, m_blocksY,
+        static_cast<float *>(m_blockResidual->ptrDevice), stream);
+    if (sts != RGY_ERR_NONE) return sts;
+    if ((sts = m_blockResidual->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     if ((sts = m_modelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
     cudaerr = cudaStreamSynchronize(stream);
     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
@@ -2588,7 +2659,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         const bool fullChromaProtection = prm->filmGrain.residualRetain < 0.0f
             || m_state->synthesisRecovery.gain() < 1.0;
         for (int plane = 0; plane < (prm->filmGrain.analyzeChroma ? 3 : 1); ++plane) {
-            auto protectSource = [&](const FilmGrainBlockMetric& block, const auto& evidence,
+            const auto blockResidual = static_cast<const float *>(m_blockResidual->ptrHost);
+            auto protectSource = [&](const int blockIndex, const auto& evidence,
                 const int blockWidth, const int blockHeight, const double sigmaLimit) {
                 if (blockWidth < 8 || blockHeight < 8) return;
                 // Include actual source levels, not just a block mean. Chroma may
@@ -2622,15 +2694,16 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 // cannot serve both.
                 const double sourceLumaMean = evidence.mean / depthScale;
                 const bool activeLuma = sourceLumaMean > 20.0 && sourceLumaMean < 232.0;
-                // Flat chroma over structure-free, grain-bearing luma is codec
-                // damage, not clean colour: 8-bit source codecs often code only
-                // a chroma prediction inside grainy pictures. It is no evidence
-                // against chroma grain. Fills and graphics (no luma grain),
-                // lettering (luma structure), bars and black/white flats keep
-                // their protection. Monochrome grain has no chroma model at all.
-                const int lumaLevel = clamp(static_cast<int>(block.mean / depthScale), 0, 255);
-                const bool grainBearingLuma = block.flat && block.sigma > 0.0f
-                    && block.sigma / depthScale >= 0.5 * predicted[0][lumaLevel] / depthScale;
+                // Flat chroma over grain-bearing luma is codec damage, not clean
+                // colour: 8-bit source codecs often code only a chroma prediction
+                // inside grainy pictures. It is no evidence against chroma grain.
+                // Grain-bearing means the separator removed at least half the
+                // modeled luma grain from this block. Fills and graphics (no luma
+                // grain), edge-preserved lettering, bars and black/white flats
+                // keep their protection. Monochrome grain has no chroma model.
+                const int lumaLevel = clamp(static_cast<int>(metrics[blockIndex].mean / depthScale), 0, 255);
+                const bool grainBearingLuma = predicted[0][lumaLevel] > 0.0f
+                    && blockResidual[blockIndex] >= 0.5f * predicted[0][lumaLevel];
                 if (plane && sigma == 0.0 && grainBearingLuma) {
                     ++traceCapEvents[plane][5];
                     return;
@@ -2667,12 +2740,12 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 const int blockHeight = std::min(FGS_BLOCK_SIZE, luma.height - (i / m_blocksX) * FGS_BLOCK_SIZE);
                 // Keep the existing detrended coarse evidence for gradients,
                 // and add raw finer evidence for small quiet source regions.
-                protectSource(metrics[i], metrics[i], blockWidth, blockHeight, 0.5);
+                protectSource(i, metrics[i], blockWidth, blockHeight, 0.5);
                 // Smaller regions need stronger quiet-source evidence: one
                 // low-variance sample from genuine fine grain must not impose
                 // a persistent brightness cap across the rest of the frame.
                 for (int region = 0; region < 4; ++region) {
-                    protectSource(metrics[i], metrics[i].sourceRegions[region],
+                    protectSource(i, metrics[i].sourceRegions[region],
                         std::min(FGS_QUIET_SIZE, blockWidth - (region % 2) * FGS_QUIET_SIZE),
                         std::min(FGS_QUIET_SIZE, blockHeight - (region / 2) * FGS_QUIET_SIZE), 0.3);
                 }
@@ -2996,6 +3069,7 @@ void NVEncFilterFilmGrain::close() {
     m_blockMetrics.reset();
     m_blockMask.reset();
     m_sigmaMap.reset();
+    m_blockResidual.reset();
     m_strengthLut.reset();
     m_sourceBlendLut.reset();
     m_sceneCounts.reset();
