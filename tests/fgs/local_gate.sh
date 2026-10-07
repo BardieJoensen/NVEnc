@@ -255,7 +255,7 @@ if want_stage canary_negative; then
 fi
 if want_stage periodic_regression; then
     required_fixtures+=(gentlemen_clip gentlemen_mesh_negative gentlemen_amplitude_guard_positive
-                       gentlemen_training_positive gentlemen_detail_negative)
+                       gentlemen_clean_source_positive gentlemen_detail_negative)
 fi
 if want_stage grain_syntax; then
     required_fixtures+=(invalid_chroma_negative gentlemen_guard_positive)

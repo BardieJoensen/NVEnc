@@ -102,6 +102,16 @@ the fine jacket pattern. The new check must reject it as well as passing the
 candidate. The original mesh negative and its 84.5-second zero-synthesis
 requirement remain. Whole-sequence numerical comparison limits are unchanged.
 
+The October 7 kernel + clean-source bundle (`e78e97f2`) replaces the periodic
+stage's decoded texture positive with `gentlemen-clean-source-positive-33m-150s.mkv`,
+the unmodified periodic-stage output of that bundle's full gate. The user
+reviewed and accepted its change: 43 frames of low-amplitude chroma correlation
+change, all on frames where the clean-source rule changed the chroma curve, with
+no texture, amplitude, temporal or scheduling change. See
+`FINDINGS-2026-10-07-BUNDLE-QUALIFICATION.md`. The corroborated-training positive
+stays in the store; the amplitude positive remains the source-detail reference,
+and the mesh negative and numerical limits are unchanged.
+
 The September 12 recovery baseline is separately retained as
 `gentlemen-recovery-positive-33m-150s.mkv`. It is the reviewed e2c3a99d output;
 the earlier positive and known mesh negative remain available. The transition

@@ -123,6 +123,11 @@
       "sha256": "7f729a5577c94075bb59c845806532f5e19753edda5a7fc73c8c3ae9de58a705",
       "bytes": 50583824
     },
+    "gentlemen_clean_source_positive": {
+      "file": "gentlemen-clean-source-positive-33m-150s.mkv",
+      "sha256": "da7f25e4beb7285a2a858160fd8c063316e1e88a341efac8922be3bfd530c812",
+      "bytes": 50508806
+    },
     "gentlemen_detail_negative": {
       "file": "gentlemen-spatial-denoising-detail-negative-33m-150s.mkv",
       "sha256": "62670059833482ab7c325db1ac82ba30cc7182a72ddeec8bbfbca2b79a0024c7",
@@ -333,6 +338,14 @@
       "encoder_core": "cb903a17",
       "review": "/opt/docker-apps/logs/fgs-ripple-repair-20260906/full-temporal-audit-20260912/followup-20260916/source-variance/training-v7/periodic-source-review/actual-visual-review.json",
       "role": "Decoded texture positive; independent source-detail reference remains the older amplitude positive"
+    },
+    "gentlemen_clean_source_positive": {
+      "encoder_core": "e78e97f2",
+      "encoder_sha256": "5cb5a80ac98694aff71dfb9d7843d594a54bcc65d1cd9bf84baeeaa58e05f86c",
+      "origin": "Unmodified periodic-stage candidate.mkv from the 2026-10-07 full gate of the kernel + clean-source bundle",
+      "review": "tests/fgs/FINDINGS-2026-10-07-BUNDLE-QUALIFICATION.md",
+      "decision": "User accepted the reviewed change: 43 frames of low-amplitude chroma correlation change, all on frames whose chroma curve the clean-source rule changed; no texture, amplitude, temporal or scheduling change.",
+      "role": "Decoded texture positive for the periodic whole-sequence comparison; the training positive and amplitude positive remain retained, the latter still the source-detail reference"
     },
     "gentlemen_detail_negative": {
       "encoder_core": "af37b958",

@@ -91,10 +91,10 @@ def main():
     pinned = fixtures.verify(args.root, json.loads(fixtures.MANIFEST.read_text()),
                              ['gentlemen_clip', 'gentlemen_mesh_negative',
                               'gentlemen_amplitude_guard_positive',
-                              'gentlemen_training_positive', 'gentlemen_detail_negative'])
+                              'gentlemen_clean_source_positive', 'gentlemen_detail_negative'])
     source = Path(pinned['gentlemen_clip']['path'])
     negative = Path(pinned['gentlemen_mesh_negative']['path'])
-    positive = Path(pinned['gentlemen_training_positive']['path'])
+    positive = Path(pinned['gentlemen_clean_source_positive']['path'])
     detail_reference = Path(pinned['gentlemen_amplitude_guard_positive']['path'])
     detail_negative = Path(pinned['gentlemen_detail_negative']['path'])
     repo = Path(__file__).resolve().parents[2]
