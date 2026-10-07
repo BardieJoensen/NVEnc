@@ -2597,12 +2597,18 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                         modeled = std::max(modeled, static_cast<double>(predicted[plane][values[plane][j]]) / depthScale);
                     }
                 }
-                // Exactly constant source samples carry no grain at any level,
-                // including black/white bars, fades and clipped highlights, and
-                // zero evidence is not a small-excess allowance. Integer moments
-                // keep these comparisons exact. Hold this separately: it must
-                // not open the merely-quiet chroma policy below.
-                const bool constantSource = plane ? sigma == 0.0 : evidence.minCode == evidence.maxCode;
+                // Exactly constant luma carries no grain at any level, including
+                // black/white bars, fades and clipped highlights, and zero
+                // evidence is not a small-excess allowance. Integer moments keep
+                // these comparisons exact. Hold this separately: it must not open
+                // the merely-quiet chroma policy below.
+                // Constant chroma keeps the active luma mean required below: near
+                // black/white its luma-indexed curve also carries grainy shadow or
+                // highlight chroma (bars, codec-flattened dark chroma), and AV1
+                // cannot serve both.
+                const double sourceLumaMean = evidence.mean / depthScale;
+                const bool activeLuma = sourceLumaMean > 20.0 && sourceLumaMean < 232.0;
+                const bool constantSource = plane ? sigma == 0.0 && activeLuma : evidence.minCode == evidence.maxCode;
                 if (constantSource && modeled > 0.0) {
                     m_state->cleanCaps.preserveRange(plane, first, last, 0.0);
                 }
@@ -2617,9 +2623,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 // Require an active luma mean so quantized black bars do not
                 // constrain neighbouring picture levels. Less certain, merely
                 // quiet chroma retains the recovery/auto policy above.
-                const double sourceLumaMean = evidence.mean / depthScale;
-                const bool constantSourceChroma = plane && sigma == 0.0
-                    && sourceLumaMean > 20.0 && sourceLumaMean < 232.0;
+                const bool constantSourceChroma = plane && sigma == 0.0 && activeLuma;
                 if (plane && !constantSourceChroma && !fullChromaProtection
                     && !m_state->sourceCaps.hasProtection(0)) return;
                 quietSource.observe(plane, mean, sigma, modeled);
