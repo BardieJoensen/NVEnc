@@ -2,6 +2,22 @@
 
 With the option off, the new build is frame-for-frame identical to the release. With it on, the first full gate run exposed a real defect: a small flat graphic over grainy picture (constant luma and colour, under 64 px, off the 32-pixel block grid) borrowed its block's "grain-bearing" verdict and got colour grain, breaking your guard against grain on composited graphics. The fix (`74d3d744`) judges each 16x16 region by its own luma. The fixed build keeps most of the gain: held-out live-action colour texture is 0.42-1.04 of source (variant D 0.08-0.70), closer than D in 53/61 Cb and 52/61 Cr bands, and files are 1.2% smaller on the held-out windows, 1.4% on Gentlemen and 3.0% on Play Dirty, never larger. Guard fixtures, small graphics and luma checks are all at zero, and the animation episodes still grade Clean. Three gate stages flag with the option on, all by design: the Gentlemen periodic detector sees the intended colour restoration (reviewed below; it follows the source, no new jumping), and two synthetic or animation fixtures assert the very rule the option relaxes (flat colour over noisy luma stays clean). One held-out band remains above 1.10x source amplitude, at variant D's own level. The full gate with the fixed build and the option on passes every stage except those three; the periodic stage now has an added option-on check pinned to the reviewed output, and both of its checks pass with the release binary.
 
+## Blind A/B review: a visible colour-detail loss (not shippable as built)
+
+Your side-by-side review on the TV (lossless A | REF | B strips at native scale) could not separate the grain in most moments, which matches its size: the option changes colour grain by 0.02-0.2 code values while luma is untouched. But in moment 2 (Insidious f55, centre third, about 8 s in) you saw the woman's red lips duller in A, which the key identifies as the candidate. Measured, that is a real base-picture regression, not grain:
+
+| | Lips: peak Cr above neutral (frame 190 / frames 150-239) | Lips: Cr fine detail |
+|---|---|---|
+| Source | 6.00 / 6.25 | 0.39 / 0.50 |
+| Production | 6.25 / 6.11 | 0.23 / 0.25 |
+| Candidate, grain off | 5.75 / 5.87 | 0.17 / 0.18 |
+
+The same holds in every moment on the most colour-structured tenth of 16x16 chroma patches (grain off, against the lossless source): structured colour amplitude 0.905-0.987 for the candidate against 0.921-0.992 for production, and peak saturation 0.927-0.992 against 0.946-0.995. The worst case is moment 2 Cr (0.905 against 0.971).
+
+Mechanism: with the option on, codec-flat chroma no longer protects those brightness levels, so the coded base gets the separator's smoothed chroma instead of the source chroma that production blends back at protected levels. The chroma bilateral pass takes its range threshold from the luma noise level, which is much larger than the chroma noise, so it also flattens real colour variation (lip colour, small saturated features). Synthesized chroma grain is zero-mean and does not restore it. My qualification checked structured detail and base fidelity on luma only, so it missed this.
+
+This fails the brief's "no base-detail loss" criterion. A fix belongs to the separator (chroma range threshold from the chroma noise model, under the option only), which your rule routes to a costed plan rather than a direct fix.
+
 ## What is qualified
 
 - NVEncC `fix/fgs-chroma-codec-flat-20261007`: option `559b80c0` (`--av1-film-grain ...,codec-flat-chroma=on|off`, default off; help text and all three `NVEncC_Options` files), region fix `74d3d744`.
