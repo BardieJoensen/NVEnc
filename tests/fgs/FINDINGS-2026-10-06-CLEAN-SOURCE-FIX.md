@@ -1,5 +1,7 @@
 # Clean-source fix: works, but trips the chroma kill criterion on 4K HDR
 
+**Outcome (2026-10-07):** the user chose variant D, committed as `e78e97f2` (binary `5cb5a80a…`). It is the bundle candidate; see [the shipped variant](#shipped-variant-d) at the end.
+
 The cause of grain on flat picture areas is found and fixed. Production deliberately ignored exactly flat source evidence near black and white (luma ≤20 or ≥232), and allowed up to a quarter code of grain over flat colour. The candidate (v3, binary `4179a32a…`) adds zero grain to every constant test panel, to letterbox bars, and to the retained Insidious, Toy Story, Knightfall and Homegrown witnesses. It barely changes file size (worst so far +1.0%), matches production on the full-reference metrics at equal bytes, and the library-scan detector grades it Clean. But on the 4K HDR Taxi fixture it removes about a third of the chroma grain in the darkest shadows (luma band 0–32: Cb −38%, Cr −35%; whole picture −2% to −4%). That breaks the 10% legitimate-grain kill line. AV1 signals one chroma grain curve per frame, indexed by brightness. Flat chroma at a dark level (bars, and shadow chroma that Taxi's source codec flattened) and grainy chroma at the same level elsewhere in the frame cannot both be honoured. Whether flat black/white areas or dark-shadow chroma grain win is a product decision. The evidence for both options is below.
 
 ## Cause (controlled panel test)
@@ -85,3 +87,18 @@ With full history, v3 emits the same luma curves as production at 477.519–477.
 | Bytes | ≤ +1.0% | ≤ 0% on tested fixtures |
 
 Both are bounded edits to the existing source-safety path. D exists only as a scratch diagnostic build so far; promoting it is a one-condition change to v3 (constant chroma keeps production's active-luma-mean requirement). Neither needs a new framework.
+
+## Shipped variant D
+
+Commit `e78e97f2` protects exactly constant luma at every level. Constant chroma keeps production's active-luma-mean requirement (21–231) and loses only the 0.25-code tolerance. The release binary `5cb5a80ac98694aff71dfb9d7843d594a54bcc65d1cd9bf84baeeaa58e05f86c` reproduces the measured diagnostic D exactly: identical grain tables and payload bytes on Lost Tapes, Gentlemen and Taxi. So the D rows above apply to it.
+
+Full history, release binary, all 15 census windows plus the Insidious witness:
+
+| | Luma policy positives | Chroma policy positives |
+|---|---|---|
+| Insidious (p10/p40/p70, witness) | 0 | Cb at black, kept by design: witness 15f/0.639, p70 83f/0.620; p10/p40 0 |
+| Toy Story 5 | 0 | Cr at white sky, kept by design: p70 3f/0.286; p10/p40 0 |
+| Knightfall, Homegrown, Marshals | 0 | 0 |
+
+Production's luma witnesses were Insidious Y 11f/0.831 (witness) and 45f/0.835 (p70), and Toy Story Y 48f/0.354. Reconstruction-only positives remain at Insidious p10 and Marshals p40, as in production. Insidious full-history bytes are +0.92%. The Knightfall event is unchanged (0.94 → 0.92 → 0.36). The same-run submission trace against the kernel candidate is identical on all 21 KAT fixtures and Silo. On Amphibia, Gentlemen, Lost Tapes and Taxi, every differing frame differs only in scaling-curve fields (pictures change only alongside them, from the notch-level blend). There are no picture-only differences and no other grain field changes.
+
