@@ -1,6 +1,6 @@
 # Opt-in codec-flat chroma: qualification of both modes
 
-With the option off, the new build is frame-for-frame identical to the release. With it on, the first full gate run exposed a real defect: a small flat graphic over grainy picture (constant luma and colour, under 64 px, off the 32-pixel block grid) borrowed its block's "grain-bearing" verdict and got colour grain, breaking your guard against grain on composited graphics. The fix (`74d3d744`) judges each 16x16 region by its own luma. The fixed build keeps most of the gain: held-out live-action colour texture is 0.42-1.04 of source (variant D 0.08-0.70), closer than D in 53/61 Cb and 52/61 Cr bands, and files are 1.2% smaller on the held-out windows, 1.4% on Gentlemen and 3.0% on Play Dirty, never larger. Guard fixtures, small graphics and luma checks are all at zero, and the animation episodes still grade Clean. Three gate stages flag with the option on, all by design: the Gentlemen periodic detector sees the intended colour restoration (reviewed below; it follows the source, no new jumping), and two synthetic or animation fixtures assert the very rule the option relaxes (flat colour over noisy luma stays clean). One held-out band remains above 1.10x source amplitude, at variant D's own level. <<GATE2_SUMMARY>>
+With the option off, the new build is frame-for-frame identical to the release. With it on, the first full gate run exposed a real defect: a small flat graphic over grainy picture (constant luma and colour, under 64 px, off the 32-pixel block grid) borrowed its block's "grain-bearing" verdict and got colour grain, breaking your guard against grain on composited graphics. The fix (`74d3d744`) judges each 16x16 region by its own luma. The fixed build keeps most of the gain: held-out live-action colour texture is 0.42-1.04 of source (variant D 0.08-0.70), closer than D in 53/61 Cb and 52/61 Cr bands, and files are 1.2% smaller on the held-out windows, 1.4% on Gentlemen and 3.0% on Play Dirty, never larger. Guard fixtures, small graphics and luma checks are all at zero, and the animation episodes still grade Clean. Three gate stages flag with the option on, all by design: the Gentlemen periodic detector sees the intended colour restoration (reviewed below; it follows the source, no new jumping), and two synthetic or animation fixtures assert the very rule the option relaxes (flat colour over noisy luma stays clean). One held-out band remains above 1.10x source amplitude, at variant D's own level. The full gate with the fixed build and the option on passes every stage except those three; the periodic stage now has an added option-on check pinned to the reviewed output, and both of its checks pass with the release binary.
 
 ## What is qualified
 
@@ -47,13 +47,27 @@ Insidious f55, luma 224-256, Cr: source 0.23, fixed build 1.22x, variant D 1.23x
 
 ## Gate stages flagged with the option on
 
-First full run with the option on (`3efac63c`, `reports/full-gate-optcand-on-559b80c0`): 21 pass, 3 fail. <<GATE2_TABLE>>
+First full run with the option on (`3efac63c`, `reports/full-gate-optcand-on-559b80c0`): 21 pass, 3 fail. Second run with the fixed build (`725585b8`, `reports/full-gate-optcand-on-74d3d744`, harness `74d3d744`): 21 pass, 3 fail, the same three. Live-action stages: real-film oracle, base-fidelity canaries, amplitude regression (Play Dirty full history, 183,661 frames, option on), source-variance and source-training support all pass; periodic flags as reviewed below.
+
+| Stage | Option on, fixed build | Reason |
+|---|---|---|
+| Periodic grain (Gentlemen, live action) | flagged | Intended colour restoration, reviewed below; now covered by its own pinned positive |
+| Flicker, `losttapes_colour` (animation) | fail | Constant U patch under Lost Tapes' luma grain gets chroma grain; flow keeps animation off. Other three flash cases pass |
+| Mixed-source candidate (synthetic) | fail | `interior`, `chroma_only`, `islands`: constant chroma over noisy luma, the option's definition. `edges` passes |
 
 **Periodic grain (Gentlemen, live action): the intended colour restoration.** The detector compares decoded grain per frame against the pinned variant D positive. With the fixed build, red/blue texture, amplitude and correlation change on 502-1,881 frames, all on frames whose chroma curves changed. Luma curves and AR coefficients are identical on all 3,600 frames. No frame approaches the 2.0 mesh ceiling (peak red 1.55, blue 1.67; positive 0.82/0.78). The flagged luma frame (141.46 s) is display luminance from rounded and clipped R/G/B in a dark scene: Y grain is unchanged there and only chroma grain is new. The adjacent-frame flags are grain on/off transitions on the same schedule as the positive (37 transitions in both), whose steps are larger only because chroma amplitude is larger, and two source pulses. At 117.29 s and 118.00 s the source's own chroma noise jumps (U/V 1.54/1.65 and 1.40/1.51 against 0.7-0.9 around them) and the candidate follows it. Through 118-121 s the candidate tracks source chroma noise better than D (correlation 0.84 vs 0.79, level 0.85 vs 0.64 of source) with frame-to-frame change no larger than D's. Relative frame-to-frame change p99 equals the positive's (red 0.99 vs 1.00, blue 1.00 vs 0.98). This is intended and is not new jumping.
 
 **Mixed-source (synthetic) `interior`, `chroma_only`, `islands`: the option's definition.** These cases set chroma exactly constant over luma that keeps its sigma-3 noise ("Source chroma is clean while co-located luma remains noisy") and require no chroma grain there. That is the exact pattern you chose to treat as codec damage in live action. The option grains it at the background chroma level (1.1-1.6), and the flow keeps the option off everywhere else.
 
 **Flicker `losttapes_colour` (animation): the reason the flow excludes animation.** An exactly constant U patch in Lost Tapes gets chroma grain (SD 0.40-0.49 against a 0.3 limit). Option off passes this case.
+
+## Periodic baseline: added, not replaced
+
+The gate runs a binary's default mode, which with the option off is trace-identical to the release, so the existing periodic positive stays correct and is unchanged. Commit `badbbca8` adds a second periodic check that encodes the same Gentlemen clip with `codec-flat-chroma=on` and compares it with its own positive: `gentlemen-codec-flat-chroma-positive-33m-150s.mkv`, the unmodified periodic-stage `candidate.mkv` of the fixed build's option-on gate (SHA256 `0e8521d8`), stored beside the existing fixtures. The mesh negative and every limit are unchanged. Run from a clean clone of `badbbca8` with the release candidate binary, both periodic checks pass (`reports/periodic-default-725585b8-badbbca8`), including the source-preservation, synthesis-free 84.5 s and mesh-concentration checks for the option-on encode. CPU tests pass on `badbbca8`.
+
+## Deploying
+
+Deploy the image with `725585b8` first and then apply the v43 flow patch. An older nvencc rejects `codec-flat-chroma`, so the patched flow on an old image would fail every live-action job. The router logs `[bucket-router] codec-flat chroma (live action): on|off` per job, which gives a per-file audit of the classification.
 
 ## Evidence
 
