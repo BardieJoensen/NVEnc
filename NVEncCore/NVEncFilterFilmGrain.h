@@ -64,6 +64,7 @@ struct NVEncFilmGrainAnalyzerConfig {
                                // or -1.0 for content-adaptive auto retention; signalled luma synthesis
                                // is scaled by sqrt(1 - retain^2) so total grain variance is preserved
     float autoRetainMax;       // caps automatic residual blending; source fallback remains independent
+    bool codecFlatChroma;      // flat chroma over grain-bearing luma is codec damage (live action only)
     float denoiseLevel;
     int denoisePasses;
     int modelWindow;

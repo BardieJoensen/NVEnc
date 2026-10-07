@@ -325,6 +325,9 @@ tstring encoder_help() {
         _T("                                   to match (0.0 - 0.9, default: 0.0)\n")
         _T("                                  retain-max=0.0-0.5     cap automatic residual blending\n")
         _T("                                   (default: 0.5; does not cap source fallback or file size)\n")
+        _T("                                  codec-flat-chroma=off|on treat exactly or nearly flat chroma\n")
+        _T("                                   over grain-bearing luma as source-codec damage and let chroma\n")
+        _T("                                   grain cover it (live action only; default: off)\n")
         _T("   --film-grain-table <path>    [AV1] read film grain parameters from an AOM filmgrn1 table.\n")
         _T("   --film-grain-table-out <path> write the measured film grain as an AOM filmgrn1 table\n")
         _T("                                  (with --av1-film-grain; also usable with --codec raw to\n")
@@ -1286,6 +1289,17 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                 }
                 continue;
             }
+            if (param_arg == _T("codec-flat-chroma")) {
+                if (param_val == _T("on")) {
+                    pParams->av1.filmGrainCodecFlatChroma = true;
+                } else if (param_val == _T("off")) {
+                    pParams->av1.filmGrainCodecFlatChroma = false;
+                } else {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" codec-flat-chroma="), param_val);
+                    return 1;
+                }
+                continue;
+            }
             if (param_arg == _T("retain")) {
                 if (param_val == _T("auto")) {
                     pParams->av1.filmGrainRetain = -1.0f;
@@ -1939,7 +1953,7 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
         OPT_OPTBOOL(_T("--disable-seq-hdr"), av1.disableSeqHdr);
         if (pParams->av1.filmGrainAuto) {
             cmd << _T(" --av1-film-grain");
-            if (pParams->av1.filmGrainDenoise > 0.0f || !pParams->av1.filmGrainChroma || pParams->av1.filmGrainDenoiser != 0 || pParams->av1.filmGrainMotionRefs != 2 || pParams->av1.filmGrainRetain != 0.0f || pParams->av1.filmGrainRetainMax != 0.5f) {
+            if (pParams->av1.filmGrainDenoise > 0.0f || !pParams->av1.filmGrainChroma || pParams->av1.filmGrainDenoiser != 0 || pParams->av1.filmGrainMotionRefs != 2 || pParams->av1.filmGrainRetain != 0.0f || pParams->av1.filmGrainRetainMax != 0.5f || pParams->av1.filmGrainCodecFlatChroma) {
                 cmd << _T(" ");
                 bool needComma = false;
                 if (pParams->av1.filmGrainDenoise > 0.0f) {
@@ -1973,6 +1987,11 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
                 if (pParams->av1.filmGrainRetainMax != 0.5f) {
                     if (needComma) cmd << _T(",");
                     cmd << _T("retain-max=") << pParams->av1.filmGrainRetainMax;
+                    needComma = true;
+                }
+                if (pParams->av1.filmGrainCodecFlatChroma) {
+                    if (needComma) cmd << _T(",");
+                    cmd << _T("codec-flat-chroma=on");
                 }
             }
         }

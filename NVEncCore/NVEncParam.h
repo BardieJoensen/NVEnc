@@ -852,6 +852,7 @@ struct NVEncVideoParamAV1 {
     int filmGrainMotionRefs;                       // causal motion references: 2 (default) or 1 (reduced cost)
     float filmGrainRetain;                         // measured residual kept in base (0.0 - 0.9, -1.0 = auto)
     float filmGrainRetainMax;                      // ceiling for automatic residual retention (0.0 - 0.5)
+    bool filmGrainCodecFlatChroma;                 // treat flat chroma over grain-bearing luma as codec damage
     tstring filmGrainTable;                        // AOM filmgrn1 parameter table
     tstring filmGrainTableOut;                     // write measured grain as an AOM filmgrn1 table
 
