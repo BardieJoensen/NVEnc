@@ -28,9 +28,13 @@ This release combines the qualified film-grain kernel speedup with a fix that st
 | CPU tests | pass (119 Python, all C++) |
 | Full gate (`local_gate.sh --full`, unchanged) | 22/23 on `5cb5a80a`; the periodic-stage change detector flagged the intended chroma change, which the user reviewed and accepted. After the baseline update (`733a4fe0`) the periodic stage passes with the release binary, and the mesh negative is still rejected |
 | Submission trace vs kernel candidate | changes only in scaling-curve fields (and pictures alongside them); identical on 21 KAT + Silo |
-| Throughput (video stage, quiet GPU) | THROUGHPUT_PENDING |
+| Throughput | not measured before release (see below) |
 
 Evidence: [clean-source findings](FINDINGS-2026-10-06-CLEAN-SOURCE-FIX.md), [bundle qualification](FINDINGS-2026-10-07-BUNDLE-QUALIFICATION.md), [kernel qualification](FINDINGS-2026-10-05-KERNEL-QUALIFICATION.md).
+
+## Throughput: measure from production after deployment
+
+The quiet-GPU timing matrix was cancelled: it could only start with no other GPU work, which rarely happens on this host, and the expected gain is small. None of the Tdarr pause allowance was used; the remaining allowance is released and no pause is held by this work. Instead, compare production Tdarr job reports from a few days before deployment with a few days after, using `/opt/docker-apps/benchmarks/tdarr-throughput/encode_throughput.py --days N` (per-stage pipeline time and NVEncC fps). Report NVEncC fps by resolution class. Treat host load (other batch jobs cut fps by about 23%), the number of active Tdarr workers, Emby-yield pauses and the content mix as confounders, and record them for both periods. The kernel saving measured in isolation was about 0.12 ms of GPU work per 1080p frame.
 
 ## Risks and known limits
 
