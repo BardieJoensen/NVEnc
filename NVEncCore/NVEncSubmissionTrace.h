@@ -39,6 +39,9 @@ class NVEncSubmissionTrace {
     static constexpr size_t MAX_CAPTURE_BYTES = size_t(2) << 30;
     static constexpr size_t MAX_CAPTURE_FRAMES = 4096;
     const std::string m_path;
+    // Optional exact copy of each submitted picture's visible rows, for offline
+    // separator measurement. Same retained bytes as the hashes; written at drain.
+    const std::string m_rawPath;
     std::unique_ptr<FILE, int (*)(FILE *)> m_file;
     std::vector<Snapshot> m_snapshots;
     std::mutex m_mutex;
@@ -114,7 +117,8 @@ class NVEncSubmissionTrace {
     }
 #endif
 public:
-    explicit NVEncSubmissionTrace(const char *path) : m_path(path), m_file(nullptr, &fclose),
+    explicit NVEncSubmissionTrace(const char *path, const char *rawPath = nullptr) : m_path(path),
+        m_rawPath(rawPath ? rawPath : ""), m_file(nullptr, &fclose),
         m_snapshots(), m_mutex(), m_captureBytes(0), m_finished(false), m_hasInitialGrain(false),
         m_enableFilmGrainParams(0), m_initialGrain()
 #if ENABLE_AVSW_READER
@@ -125,7 +129,8 @@ public:
         // Read once at encoder construction, not once per frame. An empty value
         // is disabled too. No file, capture buffer or digest allocation then.
         const char *path = std::getenv("NVENC_TRACE_SUBMISSION");
-        return path && path[0] ? std::make_unique<NVEncSubmissionTrace>(path) : nullptr;
+        return path && path[0] ? std::make_unique<NVEncSubmissionTrace>(path,
+            std::getenv("NVENC_TRACE_SUBMISSION_RAW")) : nullptr;
     }
     RGY_ERR prepare(const NV_ENC_PIC_PARAMS& pic, const NV_ENC_CONFIG_AV1& config, const void *bufferKey,
         const void *deviceSurface, uint32_t allocatedWidth, uint32_t allocatedHeight,
@@ -287,6 +292,19 @@ public:
             }
             if (ferror(m_file.get()) || fflush(m_file.get()) != 0) return RGY_ERR_UNKNOWN;
             if (fclose(m_file.release()) != 0) return RGY_ERR_UNKNOWN;
+            if (!m_rawPath.empty()) {
+                // Visible Y rows then visible interleaved UV rows per picture, in
+                // submission order; the JSON lines above give that order.
+                std::unique_ptr<FILE, int (*)(FILE *)> raw(fopen(m_rawPath.c_str(), "wbx"), &fclose);
+                if (!raw) return RGY_ERR_FILE_OPEN;
+                for (const auto& snapshot : m_snapshots) {
+                    for (size_t row = 0; row < snapshot.rows; ++row) {
+                        if (fwrite(snapshot.surface.get() + row * snapshot.pitch, 1, snapshot.rowBytes, raw.get())
+                            != snapshot.rowBytes) return RGY_ERR_UNKNOWN;
+                    }
+                }
+                if (fflush(raw.get()) != 0 || fclose(raw.release()) != 0) return RGY_ERR_UNKNOWN;
+            }
             m_snapshots.clear();
             m_finished = true;
         } catch (const std::bad_alloc&) {
