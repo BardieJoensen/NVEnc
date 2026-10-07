@@ -128,6 +128,11 @@
       "sha256": "da7f25e4beb7285a2a858160fd8c063316e1e88a341efac8922be3bfd530c812",
       "bytes": 50508806
     },
+    "gentlemen_chroma_detail_negative": {
+      "file": "gentlemen-codec-flat-chroma-detail-negative-33m-150s.mkv",
+      "sha256": "0e8521d8292a0879f78897767232ff019cfaa2b412b4b3cec23c5f577754f80f",
+      "bytes": 49778398
+    },
     "gentlemen_detail_negative": {
       "file": "gentlemen-spatial-denoising-detail-negative-33m-150s.mkv",
       "sha256": "62670059833482ab7c325db1ac82ba30cc7182a72ddeec8bbfbca2b79a0024c7",
@@ -346,6 +351,14 @@
       "review": "tests/fgs/FINDINGS-2026-10-07-BUNDLE-QUALIFICATION.md",
       "decision": "User accepted the reviewed change: 43 frames of low-amplitude chroma correlation change, all on frames whose chroma curve the clean-source rule changed; no texture, amplitude, temporal or scheduling change.",
       "role": "Decoded texture positive for the periodic whole-sequence comparison; the training positive and amplitude positive remain retained, the latter still the source-detail reference"
+    },
+    "gentlemen_chroma_detail_negative": {
+      "encoder_core": "74d3d744",
+      "encoder_sha256": "725585b8e458d12d9fb1709c231f7d6b5846d69148dcc2a2646725356437605b",
+      "film_grain": "denoise=auto,chroma=auto,denoiser=bilateral,codec-flat-chroma=on",
+      "origin": "Unmodified periodic-stage candidate.mkv from the 2026-10-07 option-on full gate (parked codec-flat chroma option, branch fix/fgs-chroma-codec-flat-20261007)",
+      "review": "Blind TV review 2026-10-07: duller red lips; FINDINGS-2026-10-07-CHROMA-OPTION-QUALIFICATION.md on that branch",
+      "role": "Labelled negative for the chroma base-detail check: structured colour in the coded base below the release floor"
     },
     "gentlemen_detail_negative": {
       "encoder_core": "af37b958",

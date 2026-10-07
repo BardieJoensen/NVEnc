@@ -87,7 +87,7 @@ CEILING_MODEL="$FIXTURE_ROOT/taxi-metric-gamer.json"
 TAXI_CLIP="$FIXTURE_ROOT/taxi-coarse-24f.mkv"
 SUBSTITUTION_ENCODE="$FIXTURE_ROOT/taxi-widened-r4047.mkv"
 
-ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate periodic_regression grain_syntax flicker_regression mixed_source amplitude_regression variance_support training_support)
+ALL_STAGES=(tools kat export synthetic_oracle model_negative real_oracle texture_negative canary_negative canary_candidate chroma_base_detail periodic_regression grain_syntax flicker_regression mixed_source amplitude_regression variance_support training_support)
 # The GPU fixtures and export tests plus the offline adversarial
 # specimen. Deliberately excludes the libaom oracles and the canary, which need
 # real-film encodes. A pre-push hook long enough to be bypassed with
@@ -252,6 +252,9 @@ if want_stage texture_negative || want_stage canary_candidate; then
 fi
 if want_stage canary_negative; then
     required_fixtures+=(taxi_clip substitution_encode)
+fi
+if want_stage chroma_base_detail; then
+    required_fixtures+=(gentlemen_clip gentlemen_clean_source_positive gentlemen_chroma_detail_negative)
 fi
 if want_stage periodic_regression; then
     required_fixtures+=(gentlemen_clip gentlemen_mesh_negative gentlemen_amplitude_guard_positive
@@ -670,6 +673,18 @@ if want_stage canary_candidate; then
     else
         record fail "candidate base-fidelity canary (see $REPORT_DIR/canary-candidate.log)"
         tail -30 "$REPORT_DIR/canary-candidate.log"
+    fi
+fi
+
+if want_stage chroma_base_detail; then
+    log "stage: chroma base-detail check (release floor, labelled negative)"
+    if python3 "$HERE/chroma_base_detail.py" --nvencc "$CANDIDATE_NVENCC" \
+        --root "$FIXTURE_ROOT" --output "$REPORT_DIR/chroma-base-detail" \
+        > "$REPORT_DIR/chroma-base-detail.log" 2>&1; then
+        record pass "structured colour in the coded base holds the release floor; known colour-detail loss rejected"
+    else
+        record fail "chroma base-detail check (see $REPORT_DIR/chroma-base-detail.log)"
+        tail -20 "$REPORT_DIR/chroma-base-detail.log"
     fi
 fi
 
