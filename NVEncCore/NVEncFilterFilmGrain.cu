@@ -2540,6 +2540,11 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
     FilmGrainQuietSourceGuard quietSource;
     FilmGrainSourceVarianceGuard sourceVariance;
     NV_ENC_FILM_GRAIN_PARAMS_AV1 unlimitedParams = params;
+    // Diagnostic counters for the analyzer trace: protections by rule per plane
+    // (0 variance-luma, 1 quiet-luma, 2 constant-chroma, 3 quiet-chroma, 4 clean).
+    const NV_ENC_FILM_GRAIN_PARAMS_AV1 traceUncapped = params;
+    std::array<std::array<uint32_t, 5>, 3> traceCapEvents = {};
+    bool traceFullChroma = false;
     m_state->sourceCaps.advance(modelValid && (freshFitValid || diagnostics.freshModel));
     m_state->cleanCaps.advance(modelValid && (freshFitValid || diagnostics.freshModel));
     if (modelValid && params.applyGrain) {
@@ -2568,6 +2573,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                     std::min(8, blockHeight - (region / 4) * 8));
                 if (gain < 1.0) {
                     m_state->sourceCaps.preserveRange(0, first, last, gain);
+                    ++traceCapEvents[0][0];
                 }
             }
         }
@@ -2576,6 +2582,8 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // mode: on genuine grain it can change NVENC's luma bit allocation.
         // Process all luma evidence first so a later block protects chroma
         // throughout the same frame, regardless of raster traversal order.
+        traceFullChroma = prm->filmGrain.residualRetain < 0.0f
+            || m_state->synthesisRecovery.gain() < 1.0;
         const bool fullChromaProtection = prm->filmGrain.residualRetain < 0.0f
             || m_state->synthesisRecovery.gain() < 1.0;
         for (int plane = 0; plane < (prm->filmGrain.analyzeChroma ? 3 : 1); ++plane) {
@@ -2615,6 +2623,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 const bool constantSource = plane ? sigma == 0.0 && activeLuma : evidence.minCode == evidence.maxCode;
                 if (constantSource && modeled > 0.0) {
                     m_state->cleanCaps.preserveRange(plane, first, last, 0.0);
+                    ++traceCapEvents[plane][4];
                 }
                 // Merely quiet neutral chroma in clipped black/white regions is
                 // not evidence about the active image's colour noise at
@@ -2635,6 +2644,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                     // Retain source-supported variance; a quiet but nonzero
                     // source is not a reason to force its whole range to zero.
                     m_state->sourceCaps.preserveRange(plane, first, last, sigma / modeled);
+                    ++traceCapEvents[plane][plane ? (constantSourceChroma ? 2 : 3) : 1];
                 }
             };
             for (int i = 0; i < blockCount; ++i) {
@@ -2902,6 +2912,20 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             for (uint32_t i = 0; i < count; ++i) out += (i ? "," : "") + std::to_string(values[i]) + "," + std::to_string(scalings[i]);
             return out + "]";
         };
+        auto capsJson = [&]() {
+            std::string out = "[";
+            for (int p = 0; p < 3; ++p) {
+                int sourceLevels = 0, cleanLevels = 0;
+                for (int x = 0; x < 256; ++x) {
+                    sourceLevels += m_state->sourceCaps.gain(p, x) < 0.5;
+                    cleanLevels += m_state->cleanCaps.gain(p, x) < 0.5;
+                }
+                out += std::string(p ? "," : "") + "{\"events\":[";
+                for (int k = 0; k < 5; ++k) out += (k ? "," : "") + std::to_string(traceCapEvents[p][k]);
+                out += "],\"source_levels\":" + std::to_string(sourceLevels) + ",\"clean_levels\":" + std::to_string(cleanLevels) + "}";
+            }
+            return out + "]";
+        };
         auto coeffs = [](const uint8_t *plus128, int count) {
             std::string out = "[";
             for (int i = 0; i < count; ++i) out += (i ? "," : "") + std::to_string(static_cast<int>(plus128[i]) - 128);
@@ -2911,6 +2935,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             "\"model_frames\":%d,\"flat\":%d,\"total\":%d,\"source_fallback\":%d,\"source_curve_limited\":%d,"
             "\"template_gain\":[%.6g,%.6g,%.6g],\"apply\":%u,\"scaling_shift\":%u,\"ar_shift\":%u,\"ar_lag\":%u,"
             "\"y\":%s,\"cb\":%s,\"cr\":%s,\"ar_y\":%s,\"ar_cb\":%s,\"ar_cr\":%s,\"cb_mult\":[%u,%u,%u],\"cr_mult\":[%u,%u,%u],"
+            "\"caps\":%s,\"full_chroma_protection\":%d,\"luma_gate\":%d,\"uncapped_y\":%s,\"uncapped_cb\":%s,\"uncapped_cr\":%s,"
             "\"window\":%s}\n",
             source->inputFrameId, static_cast<long long>(source->timestamp), modelValid ? 1 : 0,
             diagnostics.freshModel ? 1 : 0, diagnostics.modelHeld ? 1 : 0, diagnostics.sceneReset ? 1 : 0,
@@ -2925,6 +2950,10 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             coeffs(params.arCoeffsCbPlus128, FGS_AR_COEFFS_CHROMA).c_str(),
             coeffs(params.arCoeffsCrPlus128, FGS_AR_COEFFS_CHROMA).c_str(),
             params.cbMult, params.cbLumaMult, params.cbOffset, params.crMult, params.crLumaMult, params.crOffset,
+            capsJson().c_str(), traceFullChroma ? 1 : 0, m_state->sourceCaps.hasProtection(0) ? 1 : 0,
+            curve(traceUncapped.pointYValue, traceUncapped.pointYScaling, traceUncapped.numYPoints).c_str(),
+            curve(traceUncapped.pointCbValue, traceUncapped.pointCbScaling, traceUncapped.numCbPoints).c_str(),
+            curve(traceUncapped.pointCrValue, traceUncapped.pointCrScaling, traceUncapped.numCrPoints).c_str(),
             film_grain_analyzer_trace_json(combined, bitDepth, prm->filmGrain.analyzeChroma).c_str());
         fflush(m_analyzerTrace.get());
     }
