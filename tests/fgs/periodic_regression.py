@@ -87,14 +87,18 @@ def main():
     parser.add_argument('--nvencc', type=Path, required=True)
     parser.add_argument('--root', type=Path, default=fixtures.DEFAULT_ROOT)
     parser.add_argument('--output', type=Path, required=True)
+    # The live-action flow adds codec-flat-chroma=on; its reviewed decoded
+    # output is a separate pinned positive, so both modes stay covered.
+    parser.add_argument('--film-grain', default='denoise=auto,chroma=auto,denoiser=bilateral')
+    parser.add_argument('--positive', default='gentlemen_clean_source_positive')
     args = parser.parse_args(); args.output.mkdir(parents=True, exist_ok=True)
     pinned = fixtures.verify(args.root, json.loads(fixtures.MANIFEST.read_text()),
                              ['gentlemen_clip', 'gentlemen_mesh_negative',
                               'gentlemen_amplitude_guard_positive',
-                              'gentlemen_clean_source_positive', 'gentlemen_detail_negative'])
+                              args.positive, 'gentlemen_detail_negative'])
     source = Path(pinned['gentlemen_clip']['path'])
     negative = Path(pinned['gentlemen_mesh_negative']['path'])
-    positive = Path(pinned['gentlemen_clean_source_positive']['path'])
+    positive = Path(pinned[args.positive]['path'])
     detail_reference = Path(pinned['gentlemen_amplitude_guard_positive']['path'])
     detail_negative = Path(pinned['gentlemen_detail_negative']['path'])
     repo = Path(__file__).resolve().parents[2]
@@ -118,7 +122,7 @@ def main():
     command = [str(args.nvencc), '--avsw', '-i', str(source), '--codec', 'av1', '--output-depth', '10',
                '--qvbr', '30', '--max-bitrate', '50000', '--preset', 'quality', '--tune', 'hq',
                '--lookahead', '32', '--lookahead-level', '3', '--aq', '--aq-temporal',
-               '--av1-film-grain', 'denoise=auto,chroma=auto,denoiser=bilateral', '-o', str(output)]
+               '--av1-film-grain', args.film_grain, '-o', str(output)]
     run(command, args.output / 'encode.log')
     run([str(scanner), str(output)], args.output / 'scan.json')
     scan = json.loads((args.output / 'scan.json').read_text())

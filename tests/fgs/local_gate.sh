@@ -255,7 +255,8 @@ if want_stage canary_negative; then
 fi
 if want_stage periodic_regression; then
     required_fixtures+=(gentlemen_clip gentlemen_mesh_negative gentlemen_amplitude_guard_positive
-                       gentlemen_clean_source_positive gentlemen_detail_negative)
+                       gentlemen_clean_source_positive gentlemen_codec_flat_chroma_positive
+                       gentlemen_detail_negative)
 fi
 if want_stage grain_syntax; then
     required_fixtures+=(invalid_chroma_negative gentlemen_guard_positive)
@@ -694,6 +695,18 @@ if want_stage periodic_regression; then
     else
         record fail "periodic grain regression (see $REPORT_DIR/periodic-regression.log)"
         tail -20 "$REPORT_DIR/periodic-regression.log"
+    fi
+    # Same live-action clip with the flow's live-action option, against its
+    # own reviewed positive.
+    if python3 "$HERE/periodic_regression.py" --nvencc "$CANDIDATE_NVENCC" \
+        --film-grain denoise=auto,chroma=auto,denoiser=bilateral,codec-flat-chroma=on \
+        --positive gentlemen_codec_flat_chroma_positive \
+        --root "$FIXTURE_ROOT" --output "$REPORT_DIR/periodic-regression-codec-flat-chroma" \
+        > "$REPORT_DIR/periodic-regression-codec-flat-chroma.log" 2>&1; then
+        record pass "codec-flat chroma: periodic grain negative rejected and reviewed live-action positive reproduced"
+    else
+        record fail "codec-flat chroma periodic regression (see $REPORT_DIR/periodic-regression-codec-flat-chroma.log)"
+        tail -20 "$REPORT_DIR/periodic-regression-codec-flat-chroma.log"
     fi
 fi
 
