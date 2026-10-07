@@ -78,6 +78,8 @@ constexpr int FGS_BILATERAL_RADIUS = 2;
 // Separate source evidence from the 32x32 statistical model. A quiet 16x16
 // island inside a textured model block must not inherit that block's grain.
 constexpr int FGS_QUIET_SIZE = FGS_BLOCK_SIZE / 2;
+// Whole-block separator residual followed by its four quiet-source regions.
+constexpr int FGS_RESIDUAL_STRIDE = 5;
 struct FilmGrainQuietSourceMetric {
     float mean;
     float sigma;
@@ -1576,34 +1578,51 @@ template<typename Type, int shift>
 __global__ void kernel_fgs_block_residual(const uint8_t *__restrict__ src, const int srcPitch,
     const uint8_t *__restrict__ denoised, const int denoisedPitch, const int width, const int height,
     const int blocksX, float *__restrict__ out) {
+    // Separator residual RMS of the whole block and of its four quiet-source
+    // regions, laid out as FGS_RESIDUAL_STRIDE floats per block.
     const int index = blockIdx.x;
     const int x0 = (index % blocksX) * FGS_BLOCK_SIZE;
     const int y0 = (index / blocksX) * FGS_BLOCK_SIZE;
     const int bw = min(FGS_BLOCK_SIZE, width - x0);
     const int bh = min(FGS_BLOCK_SIZE, height - y0);
-    __shared__ float sums[2][64];
-    float sum = 0.0f, sumSq = 0.0f;
+    __shared__ float sums[2][4][64];
+    float sum[4] = {}, sumSq[4] = {};
     for (int i = threadIdx.x; i < bw * bh; i += 64) {
-        const int x = x0 + i % bw, y = y0 + i / bw;
-        const float r = static_cast<float>(load_code<Type, shift>(src, srcPitch, x, y)
-            - load_code<Type, shift>(denoised, denoisedPitch, x, y));
-        sum += r;
-        sumSq += r * r;
+        const int dx = i % bw, dy = i / bw;
+        const float r = static_cast<float>(load_code<Type, shift>(src, srcPitch, x0 + dx, y0 + dy)
+            - load_code<Type, shift>(denoised, denoisedPitch, x0 + dx, y0 + dy));
+        const int region = (dy >= FGS_QUIET_SIZE ? 2 : 0) + (dx >= FGS_QUIET_SIZE ? 1 : 0);
+        sum[region] += r;
+        sumSq[region] += r * r;
     }
-    sums[0][threadIdx.x] = sum;
-    sums[1][threadIdx.x] = sumSq;
+    for (int region = 0; region < 4; ++region) {
+        sums[0][region][threadIdx.x] = sum[region];
+        sums[1][region][threadIdx.x] = sumSq[region];
+    }
     __syncthreads();
     for (int stride = 32; stride > 0; stride >>= 1) {
         if (threadIdx.x < stride) {
-            sums[0][threadIdx.x] += sums[0][threadIdx.x + stride];
-            sums[1][threadIdx.x] += sums[1][threadIdx.x + stride];
+            for (int region = 0; region < 4; ++region) {
+                sums[0][region][threadIdx.x] += sums[0][region][threadIdx.x + stride];
+                sums[1][region][threadIdx.x] += sums[1][region][threadIdx.x + stride];
+            }
         }
         __syncthreads();
     }
     if (threadIdx.x == 0) {
+        float total = 0.0f, totalSq = 0.0f;
+        for (int region = 0; region < 4; ++region) {
+            const int rw = max(0, min(FGS_QUIET_SIZE, bw - (region % 2) * FGS_QUIET_SIZE));
+            const int rh = max(0, min(FGS_QUIET_SIZE, bh - (region / 2) * FGS_QUIET_SIZE));
+            const float n = static_cast<float>(max(1, rw * rh));
+            const float mean = sums[0][region][0] / n;
+            out[index * FGS_RESIDUAL_STRIDE + 1 + region] = sqrtf(fmaxf(0.0f, sums[1][region][0] / n - mean * mean));
+            total += sums[0][region][0];
+            totalSq += sums[1][region][0];
+        }
         const float n = static_cast<float>(max(1, bw * bh));
-        const float mean = sums[0][0] / n;
-        out[index] = sqrtf(fmaxf(0.0f, sums[1][0] / n - mean * mean));
+        const float mean = total / n;
+        out[index * FGS_RESIDUAL_STRIDE] = sqrtf(fmaxf(0.0f, totalSq / n - mean * mean));
     }
 }
 
@@ -1768,7 +1787,7 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
         static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(FilmGrainBlockMetric));
     m_blockMask = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY);
     m_sigmaMap = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(float));
-    m_blockResidual = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY * sizeof(float));
+    m_blockResidual = std::make_unique<CUMemBufPair>(static_cast<size_t>(m_blocksX) * m_blocksY * FGS_RESIDUAL_STRIDE * sizeof(float));
     m_strengthLut = std::make_unique<CUMemBufPair>(3 * FGS_STRENGTH_LUT_SIZE * sizeof(float));
     m_sourceBlendLut = std::make_unique<CUMemBufPair>(3 * FGS_STRENGTH_LUT_SIZE * sizeof(float));
     m_sceneCounts = std::make_unique<CUMemBufPair>(8 * sizeof(uint32_t));
@@ -2664,7 +2683,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             || m_state->synthesisRecovery.gain() < 1.0;
         for (int plane = 0; plane < (prm->filmGrain.analyzeChroma ? 3 : 1); ++plane) {
             const auto blockResidual = static_cast<const float *>(m_blockResidual->ptrHost);
-            auto protectSource = [&](const int blockIndex, const auto& evidence,
+            auto protectSource = [&](const auto& evidence, const float lumaResidual,
                 const int blockWidth, const int blockHeight, const double sigmaLimit) {
                 if (blockWidth < 8 || blockHeight < 8) return;
                 // Include actual source levels, not just a block mean. Chroma may
@@ -2702,16 +2721,20 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 // colour: 8-bit source codecs often code only a chroma prediction
                 // inside grainy pictures. It is no evidence against chroma grain.
                 // Grain-bearing means the separator removed at least a quarter of
-                // the modeled luma grain from this block (detail protection keeps
-                // textured grainy blocks below the flat-block level). Fills and graphics (no luma
-                // grain), edge-preserved lettering, bars and black/white flats
-                // keep their protection. Monochrome grain has no chroma model.
-                const int lumaLevel = clamp(static_cast<int>(metrics[blockIndex].mean / depthScale), 0, 255);
+                // the modeled luma grain from this same region (detail protection
+                // keeps textured grainy blocks below the flat-block level). The
+                // region's own luma decides: a small graphic sharing a block with
+                // grainy picture has constant luma and no residual of its own.
+                // Fills and graphics (no luma grain), edge-preserved lettering,
+                // bars and black/white flats keep their protection. Monochrome
+                // grain has no chroma model.
+                const int lumaLevel = clamp(static_cast<int>(evidence.mean / depthScale), 0, 255);
                 // Off by default: animation keeps flat colour clean even under luma
                 // grain, and no analyzer signal separates that case reliably. The
                 // caller enables this only for live action.
                 const bool grainBearingLuma = prm->filmGrain.codecFlatChroma && predicted[0][lumaLevel] > 0.0f
-                    && blockResidual[blockIndex] >= 0.25f * predicted[0][lumaLevel];
+                    && evidence.minCode != evidence.maxCode
+                    && lumaResidual >= 0.25f * predicted[0][lumaLevel];
                 // Nearly flat chroma (within the quiet-source limit) over the same
                 // grain-bearing luma is the same codec smoothing.
                 if (plane && sigma <= sigmaLimit && grainBearingLuma) {
@@ -2750,12 +2773,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
                 const int blockHeight = std::min(FGS_BLOCK_SIZE, luma.height - (i / m_blocksX) * FGS_BLOCK_SIZE);
                 // Keep the existing detrended coarse evidence for gradients,
                 // and add raw finer evidence for small quiet source regions.
-                protectSource(i, metrics[i], blockWidth, blockHeight, 0.5);
+                const float *residual = prm->filmGrain.codecFlatChroma ? blockResidual + i * FGS_RESIDUAL_STRIDE : nullptr;
+                protectSource(metrics[i], residual ? residual[0] : 0.0f, blockWidth, blockHeight, 0.5);
                 // Smaller regions need stronger quiet-source evidence: one
                 // low-variance sample from genuine fine grain must not impose
                 // a persistent brightness cap across the rest of the frame.
                 for (int region = 0; region < 4; ++region) {
-                    protectSource(i, metrics[i].sourceRegions[region],
+                    protectSource(metrics[i].sourceRegions[region], residual ? residual[1 + region] : 0.0f,
                         std::min(FGS_QUIET_SIZE, blockWidth - (region % 2) * FGS_QUIET_SIZE),
                         std::min(FGS_QUIET_SIZE, blockHeight - (region / 2) * FGS_QUIET_SIZE), 0.3);
                 }
