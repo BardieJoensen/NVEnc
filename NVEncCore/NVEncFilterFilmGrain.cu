@@ -3023,7 +3023,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             return out + "]";
         };
         fprintf(m_analyzerTrace.get(), "{\"frame\":%d,\"pts\":%lld,\"reliable\":%d,\"fresh\":%d,\"held\":%d,\"reset\":%d,"
-            "\"model_frames\":%d,\"flat\":%d,\"total\":%d,\"source_fallback\":%d,\"source_curve_limited\":%d,"
+            "\"model_frames\":%d,\"flat\":%d,\"total\":%d,\"source_fallback\":%d,\"source_curve_limited\":%d,\"rejected\":%d,"
             "\"template_gain\":[%.6g,%.6g,%.6g],\"apply\":%u,\"scaling_shift\":%u,\"ar_shift\":%u,\"ar_lag\":%u,"
             "\"y\":%s,\"cb\":%s,\"cr\":%s,\"ar_y\":%s,\"ar_cb\":%s,\"ar_cr\":%s,\"cb_mult\":[%u,%u,%u],\"cr_mult\":[%u,%u,%u],"
             "\"caps\":%s,\"full_chroma_protection\":%d,\"luma_gate\":%d,\"uncapped_y\":%s,\"uncapped_cb\":%s,\"uncapped_cr\":%s,"
@@ -3031,7 +3031,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             source->inputFrameId, static_cast<long long>(source->timestamp), modelValid ? 1 : 0,
             diagnostics.freshModel ? 1 : 0, diagnostics.modelHeld ? 1 : 0, diagnostics.sceneReset ? 1 : 0,
             diagnostics.modelFrames, diagnostics.flatBlocks, diagnostics.totalBlocks,
-            diagnostics.sourceFidelityFallback ? 1 : 0, sourceCurveLimited ? 1 : 0,
+            diagnostics.sourceFidelityFallback ? 1 : 0, sourceCurveLimited ? 1 : 0, diagnostics.rejectedModel ? 1 : 0,
             diagnostics.templateGain[0], diagnostics.templateGain[1], diagnostics.templateGain[2],
             params.applyGrain, params.grainScalingMinus8 + 8, params.arCoeffShiftMinus6 + 6, params.arCoeffLag,
             curve(params.pointYValue, params.pointYScaling, params.numYPoints).c_str(),
