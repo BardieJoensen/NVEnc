@@ -48,4 +48,4 @@ In the blind TV review, grain-statistic changes this small were invisible, while
 
 ## Housekeeping
 
-Proposed branch, worktree and scratch cleanup (nothing deleted yet): [CLEANUP-PROPOSAL-2026-10-07.md](CLEANUP-PROPOSAL-2026-10-07.md).
+Branch, worktree and scratch cleanup was carried out on 2026-10-08; what remains and why: [CLEANUP-PROPOSAL-2026-10-07.md](CLEANUP-PROPOSAL-2026-10-07.md). Archived branches are under `refs/archive/20261007/`.
