@@ -1,6 +1,6 @@
 # Cleanup (proposed 2026-10-07, carried out 2026-10-08)
 
-**Done 2026-10-08, at the user's go-ahead.** 16 branches archived under `refs/archive/20261007/` and their 15 worktrees removed, plus the detached `NVEnc-fgs-ripple`. Seven branches and worktrees remain (the keep table below). Two worktrees held initialized vendored submodules, which `git worktree remove` refuses; they were clean (only caches ignored), so the directories were deleted and pruned. Scratch went from 309 GB to 88 GB (`/tmp/downloads` 738 to 508 GB used): media files, 25 clone trees and 33 development binaries removed. Corrections made while doing it:
+**Done 2026-10-08, at the user's go-ahead.** 16 branches archived under `refs/archive/20261007/` and their 14 worktrees removed (two had none), plus the detached `NVEnc-fgs-ripple`. Seven branches and worktrees remain (the keep table below). Two worktrees held initialized vendored submodules, which `git worktree remove` refuses; they were clean (only caches ignored), so the directories were deleted and pruned. Scratch went from 309 GB to 88 GB (`/tmp/downloads` 738 to 508 GB used): media files, 25 clone trees and 33 development binaries removed. Corrections made while doing it:
 
 - `fgs-submission-20261005/amplitude-regenerated` was **kept**, not removed: its `negative/video.mkv` is the gate's labelled amplitude negative named in the release manifest.
 - The bundle binary `5cb5a80a` is gone, so `release-trace-manifest.json` (release vs bundle identity) cannot be re-run as is; its completed result stays in `release-trace-46d6781c`.
