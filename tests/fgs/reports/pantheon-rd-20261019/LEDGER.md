@@ -9,11 +9,12 @@ production, library, torrent and Tdarr changes remain unauthorized.
 
 | Hypothesis | Supporting evidence | Contrary evidence / limits | Unknown | Cheapest discriminator |
 |---|---|---|---|---|
-| Effective quantization destroys meaningful residual texture | Exact final-TU traces; lower realized qindex recovers both fixtures | Quantization alone does not repair E05 selected 64x64 transforms; q16 preservation is very expensive | Minimum preservation cost with better coefficient decisions | Intermediate-qindex coefficient-retention experiment with exercised <=32 transforms |
-| Full optimize_b discards perceptually useful coefficients more aggressively than their coded cost warrants | Initial-to-final reconstruction loses texture at identical predictors/TUs | Initial HF alone need not be source-correlated; more coefficients can be expensive or noisy | Fidelity gain and entropy cost of retaining those exact coefficients | Same initial FP quantization and fixed coding decisions; compare retained and pruned coefficients with cloned entropy state |
-| Transform/search choices limit preservation separately from quantization | E05 actual 64x64 support truncation; supported TX32 improves q16 result | A TX32 cap changes search/partitions; no isolated search optimum shown | Whether intermediate qindex plus TX32 has a useful retention frontier | Hold exercised <=32 TUs fixed for diagnostic, label skipped/hypothetical TUs separately |
-| Source-budget texture allocation can preserve the full picture | E05 target patch passes at +0.175% video rate | E05 face/tails/outside regress; E04 +5.68% still severely damages outside | A feasible automatic allocation or distortion objective | Only after a preservation benefit, real unconstrained encode, then measured within-1% budget test with full-window controls |
-| A legal frame-wide grain model can replace all missing texture safely | Prior reconstruction-aware model improves E05 shirt amplitude | Same-frame equal-input quiet/textured neighborhoods have conflicting expected amplitudes; E04 structure remains lost | Feasibility on other bases, intervals and legal parameter sets | Do not repeat estimator fitting on the same failed base; retain established local bounds |
+| Quantization destroys useful residual texture | Fixed-decision unquantized inverse nearly matches source; lower actual FP q restores amplitude/ACF | Bypassed blocks and earlier64x64 support loss remain separate; no isolated global search optimum | Minimum whole-picture preservation cost | Current independent conventional HEVC2x control |
+| Coefficient pruning alone explains loss | Same initial FP retention improves both fixtures; validated local coder deltas measure added cost | E05 q32 retention still fails amplitude and ACF; regular-B at sameq is worse | Whether a different RD objective preserves efficiently | Do not repeat pruning-only q32; real q20 retention already tested |
+| Local precision allocation can repair at source budget | Real q20/q24 target blocks are realized; selected textures pass within1% source rate | E04/E05 outside detail, face and metric tails regress; E05 unselected background fails | Automatic objective/classifier with better whole-picture tradeoff | New allocation needs a specific objective, not another manual ROI sweep |
+| More thorough native analysis improves preservation | x264 subme11 improves broad controls/background at2x | Shirt amplitude fails; QP-RD changes quantizers and first-pass analysis | Rate-by-analysis interaction | Matched3x subme8 is missing factorial cell if mechanism isolation is needed |
+| Conventional grain-oriented coding can preserve affordably | x2643x passes shirt amplitude/background and improves line/detail/banding | Shirt ACF0.05736 fails; x264 AQ2 harms face/edges | Independent x26510bit grain policy feasibility at2x | R10: exact-source two-pass x265 slow/grain, fixed controls and packet target |
+| Legal grain synthesis can replace lost texture safely | Prior reconstruction-aware model restores some E05 amplitude | Established same-input quiet/textured conflict and E04 structure loss on tested base | Other bases/legal parameter sets | No repeated estimator fitting on unchanged failed base |
 
 ## Round 1 contract and acceptance
 
@@ -248,3 +249,17 @@ concurrency. This changes codec, coding precision, filters, RC and search togeth
 it is a feasibility test, not an isolated codec-superiority or bit-depth claim.
 Originals are8bit and the x2648bit input also lifts exactly to the10bit fixture:
 there was no input-sample loss to "repair" by changing input conversion.
+
+Round10 result: calibrated19.258751Mbps(−0.4872%2xtarget),219.569s two-pass.
+Background passes (HF+0.0048%, ACFerror0.02701), but shirt HF−39.66% and ACF
+error0.19511 both fail. VMAF96.30/NEG94.38 coexist with SSIMU62.82/p555.08 and
+Butter1.502; no single score establishes fidelity. All336 CPU/NVDEC Main10
+frames/planes agree exactly. Accept this configuration's failure, not a HEVC
+limit. The grain tune disabled AQ/cutree; no HEVC block-QP allocation claim is made.
+
+Round11 primary question: is the x264 shirt ACF failure at3x attributable to a
+rate-by-analysis interaction rather than rate alone? Fill the missing AQ1/subme8
+at3x cell, same slow/grain/input/twopass/actualpacket criteria. Initial request
+28322kbps uses the R9 calibration, then independently audit actualpackets. Compare
+all four2x/3x andsubme8/11 cells. Both analysis passes can change, and no fixed-QP
+or fixed-predictor mechanism is claimed. No further HEVC settings are selected.

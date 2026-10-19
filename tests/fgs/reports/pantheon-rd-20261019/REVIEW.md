@@ -123,3 +123,22 @@ hold MB quantizers fixed when QP-RD is enabled. The exported R8 map is retained;
 no unmeasured fixed-allocation claim remains. Quiet HF error slightly worsens
 despite otherwise broad control improvements, and midpoint background temporal
 correlation moves slightly away from source. Both limitations are retained.
+
+R9 independent review found no provenance defect and accepted the negative
+joint-screen result: at calibrated3x rate, shirt amplitude passes but ACF error
+0.05736 fails. Raising rate improves many metrics but does not monotonically
+improve every structure statistic. The initial+1.416% calibration arm remains
+unscored. No threshold was rounded or relaxed.
+
+The reviewer recommended a single x265 feasibility control before another x264
+rate increase. [x2653.5 documentation](https://x265.readthedocs.io/_/downloads/en/release_3.5/pdf/)
+and its [grain-tune table](https://x265.readthedocs.io/en/stable/presets.html)
+describe a bundled policy: AQ/cutree/SAO disabled, high psy-RD/RDOQ, constrained
+QP variation and grain-oriented rate control. That makes it an independent
+feasibility test, not a codec-only or quantizer-only contrast. Original samples
+remain identical; coding at10bits adds no source precision. Multipass stats
+reuse, effective options, exact input identity and Main10 CPU/NVDEC agreement
+are required explicitly. Review of the first worker script caught count-only
+input validation and absent stats assertions; the running script was preserved
+unchanged to keep its receipt hash honest, and supplemental checks were required
+before accepting the run.

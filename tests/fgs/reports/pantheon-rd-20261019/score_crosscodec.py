@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GPU campaign, original-conditioned controls and independent H264 decoders."""
+"""GPU campaign, original-conditioned controls and independent AVC/HEVC decoders."""
 import json
 import os
 from pathlib import Path
@@ -17,11 +17,15 @@ for name in ('ref.mkv','source.yuv','validity.json'):
     dest=s/name;target=ROOT/'fixtures'/case/name
     if not dest.exists():os.link(target,dest)
     assert not dest.is_symlink() and os.path.samefile(dest,target)
-enc=d/'out.mkv';result=x.score(case,enc,tag,grain=0)
+enc=d/'out.mkv';stream=x.probe(enc)['streams'][0]
+codec=stream['codec_name'];assert codec in ('h264','hevc')
+assert stream['pix_fmt']==('yuv420p' if codec=='h264' else 'yuv420p10le')
+result=x.score(case,enc,tag,grain=0)
 decoded=s/(tag+'-decoded.mkv');texture.analyze(case,tag,decoded)
 cpu=['ffmpeg','-v','error','-threads','4','-i',enc,'-frames:v','336','-pix_fmt','yuv420p10le']
 gpu=['/usr/bin/ffmpeg','-v','error','-threads','4','-hwaccel','cuda','-hwaccel_output_format','cuda',
-     '-c:v','h264_cuvid','-i',enc,'-vf','hwdownload,format=nv12,format=yuv420p10le',
+     '-c:v',codec+'_cuvid','-i',enc,'-vf',
+     'hwdownload,format='+('nv12' if codec=='h264' else 'p010le')+',format=yuv420p10le',
      '-frames:v','336','-pix_fmt','yuv420p10le']
 hashes=[x.hashes(c) for c in (cpu,gpu)]
 assert len(hashes[0])==336 and hashes[0]==hashes[1]
@@ -58,7 +62,7 @@ for kind in ['all','quiet','edge','flat_texture','other']:
           'acf1_abs_error':[abs(r[arm]['acf1']-r['source']['acf1']) for r in pool if r[arm]['acf1'] is not None and r['source']['acf1'] is not None]}.items()}
     summary[kind]=obj
 x.dump(d/'controls.json',{'source_control_provenance':x.fingerprint(oldpath),'source_descriptors_match_prior':True,'summary':summary,'face':face,'tiles':rows})
-x.dump(d/'decoder-validation.json',{'all336_allplanes_cpu_NVDEC_exact':True,'hashes':hashes[0],
+x.dump(d/'decoder-validation.json',{'all336_allplanes_cpu_NVDEC_exact':True,'codec':codec,'hashes':hashes[0],
     'commands':[list(map(str,cpu)),list(map(str,gpu))],'ffmpeg_CPU':x.fingerprint(x.shutil.which('ffmpeg')),
     'ffmpeg_GPU':x.fingerprint('/usr/bin/ffmpeg'),
     'output':x.fingerprint(enc),'scoring_script':x.fingerprint(__file__)})

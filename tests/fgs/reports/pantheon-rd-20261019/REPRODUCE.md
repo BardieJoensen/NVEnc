@@ -109,6 +109,17 @@ excluding the padded bottom8rows.
 
 ## Metrics and visual evidence
 
+The independent HEVC control uses `crosshevc.py e05-1440 x265-grain-2x1 19938`.
+Its measured system libx265 is3.5+1-f0c1022b6, Main10. It uses exact8→10bit
+lifted samples, slow/grain, explicit pass1/2 statistics, four pool workers and
+two frame threads. The original x0 script is preserved beside its first-run
+receipts; strengthened x1 checks exact all336 input equality and stats reuse.
+The shared scorer probes codec and uses `hevc_cuvid` with p010le for Main10.
+Linked libx265 file SHA256 is
+`d36cd663a24eeca90178f95b91513b96ae1d4e3c6cf28557646af5926ef03934`.
+Raw `ldd` text contains load addresses, so its text hash is not a stable library
+identity; use the saved parsed library path and file SHA.
+
 `score.py` and `score_crosscodec.py` call the prior independent report's
 `investigate.py` adapter, which uses `tests/fgs/campaign.py`, patched CUDA VMAF
 and GPU FFVship. The campaign commands, executable versions, per-frame JSON,
