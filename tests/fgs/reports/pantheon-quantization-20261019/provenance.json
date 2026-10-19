@@ -1,0 +1,24 @@
+{
+  "upstream_svt": "4.2.0",
+  "source_commit": "9292ec8e32bce26f781f277ec8739b53426c4300",
+  "base_repo_head": "58a113db",
+  "files": {
+    "/tmp/downloads/codex-work/pantheon-quantization-20261019/svt-source/Bin/Release/SvtAv1EncApp": "f0373fd33170e2409c991cd878f56689ca58b0c44b3dc5a31efd836501dd9fd3",
+    "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-quantization-20261019/svt-quantization.patch": "836e0f3e421bd981d478e0da3aa706bd21d15fe77ade57e6217ebac26ac2edd5",
+    "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-causal-20261019/svt-causal.patch": "dcf2344865e06c84e958cd6e02ecd51c51b032a056df2582d3b106761d2c18bf",
+    "/tmp/downloads/codex-work/pantheon-quantization-20261019/apply_grain": "e25e527411b8d98d96a86a0cb3ba1e737798d6e980c6b5e2c76a92ae1eca0922"
+  },
+  "flags": "Release static GCC13.3 cmake -j6",
+  "baseline_byte_identity": {
+    "e04": {
+      "rate_mbps": 10.027343856143856,
+      "sha256": "166ad07314e3b613fb2193d4d78f818cca56baad08952c1218bccd9762919ecd",
+      "identical_prior_baseline": true
+    },
+    "e05-1440": {
+      "rate_mbps": 9.6763312,
+      "sha256": "1c81edf6697164dd51179ffeb3218d8cba1eeecfca796c3abe4f7cf6ac5c408f",
+      "identical_prior_baseline": true
+    }
+  }
+}
