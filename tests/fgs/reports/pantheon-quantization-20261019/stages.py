@@ -2,6 +2,7 @@
 """Read native final-TU records and verify independently assembled stages."""
 import sys,struct,json
 import numpy as np
+from scipy.ndimage import minimum_filter
 from study import ROOT,OLD,x
 from texture import desc,corr,BOXES
 W,H=1920,1080
@@ -17,13 +18,22 @@ def analyze(case,tag):
  d=ROOT/case;n=134 if case=='e04' else 120;poc=n+96
  src=np.memmap(d/'source.yuv',dtype='<u2',mode='r',shape=(240,W*H*3//2))[n,:W*H].reshape(H,W).astype(float)/4
  names=['input','predictor','actual_recon','unquantized','scalar0_recon','scalar1_recon','scalar2_recon','initial_recon','rdoq_recon','final_recon']
- maps={k:np.full((H,W),np.nan) for k in names};coverage=np.zeros((H,W),int);qmap=np.full((H,W),np.nan);skipmap=qmap.copy();rows=[];transform_errors=[];flags={'forward_exact':True,'private_final_recon_exact':True,'source_minus_predictor_exact':True};coeffstats=[]
+ maps={k:np.full((H,W),np.nan) for k in names};coverage=np.zeros((H,W),int);qmap=np.full((H,W),np.nan);skipmap=qmap.copy();zeromap=qmap.copy();rows=[];transform_errors=[];flags={'forward_exact':True,'private_final_recon_exact':True,'source_minus_predictor_exact':True};coeffstats=[]
  for p in sorted((d/(tag+'-detail')).glob('*.tu')):
   r=read(p);m=r['meta'];xx,yy,w,h=[m[k] for k in ('x','y','w','h')];sl=np.s_[yy:min(H,yy+h),xx:min(W,xx+w)];hh,ww=coverage[sl].shape
   assert m['poc']==poc and m['bypass']==0
   coverage[sl]+=1;qmap[sl]=m['effective_qindex'];skip=m['skip_mode'] or m['md_skip'];skipmap[sl]=skip
   flags['source_minus_predictor_exact'] &= np.array_equal(r['input'].astype(int)-r['predictor'].astype(int),r['prediction_residual'])
+  zeromap[sl]=skip or int(r.get('final_eob',[0])[0])==0
+  derived_path='quantizer_bypassed'
   if 'actual_forward' in r:
+   qm=r['quant_meta'];initial_eob=int(r['initial_eob'][0]);density=initial_eob*100//(w*h)
+   if not qm['rdoq_enabled']:derived_path='regular_B_no_RDOQ'
+   elif initial_eob==0:derived_path='FP_zero_EOB_no_optimization'
+   elif density>=qm['eob_threshold']:derived_path='FP_then_regular_B_requantize'
+   elif density>=qm['eob_fast_threshold']:derived_path='FP_then_fast_then_possible_full_optimization_UNRESOLVED'
+   else:derived_path='FP_then_full_optimize_b'
+
    flags['forward_exact'] &= np.array_equal(r['private_forward'][:len(r['actual_forward'])],r['actual_forward'])
    flags['private_final_recon_exact'] &= np.array_equal(r['actual_recon'],r['final_recon'])
    assert r['quant_meta']['effective_qindex']==m['effective_qindex']
@@ -31,7 +41,7 @@ def analyze(case,tag):
    # A skip is exactly predictor: no quantizer stage ran. Never fill with stale coeffs.
    a=r.get(k,r['predictor'] if k in ('initial_recon','rdoq_recon','final_recon') else None);assert a is not None,k
    maps[k][sl]=a.reshape(h,w)[:hh,:ww]/4
-  c={'meta':m,'quant_meta':r.get('quant_meta'),'stages':{}}
+  c={'meta':m,'quant_meta':r.get('quant_meta'),'derived_quantizer_path':derived_path,'initial_eob':int(r.get('initial_eob',[0])[0]),'final_eob':int(r.get('final_eob',[0])[0]),'stages':{}}
   for k in ('private_forward','actual_forward','initial_qcoeff','rdoq_qcoeff','final_qcoeff','scalar0_qcoeff','scalar1_qcoeff','scalar2_qcoeff'):
    if k in r:c['stages'][k]={'nonzero':int(np.count_nonzero(r[k])),'sumabs':int(np.abs(r[k]).sum()),'sumsq':float(np.square(r[k].astype(float)).sum())}
   rows.append(c)
@@ -48,22 +58,31 @@ def analyze(case,tag):
  summaries={}
  for name,(xx,yy,w,h) in roi.items():
   sl=np.s_[yy:yy+h,xx:xx+w];ss=src[sl];inp=maps['input'][sl]
-  summaries[name]={'source':desc(ss),'qindex':{'min':float(qmap[sl].min()),'mean':float(qmap[sl].mean()),'max':float(qmap[sl].max())},'skip_area_fraction':float(skipmap[sl].mean()),'stages':{}}
+  summaries[name]={'source':desc(ss),'qindex':{'min':float(qmap[sl].min()),'mean':float(qmap[sl].mean()),'max':float(qmap[sl].max())},'quantizer_bypass_area_fraction':float(skipmap[sl].mean()),'final_no_residual_area_fraction':float(zeromap[sl].mean()),'stages':{}}
   for k,a in maps.items():
    z=a[sl];summaries[name]['stages'][k]={**desc(z),'mae_to_source':float(np.abs(z-ss).mean()),'hf_corr_source':corr(x.high_pass(z),x.high_pass(ss)),'mae_to_input':float(np.abs(z-inp).mean())}
   ids=[r for r in rows if r['meta']['x']>=xx and r['meta']['y']>=yy and r['meta']['x']+r['meta']['w']<=xx+w and r['meta']['y']+r['meta']['h']<=yy+h]
   summaries[name]['fully_contained_tus']=len(ids)
+  summaries[name]['derived_quantizer_path_counts']={k:sum(r['derived_quantizer_path']==k for r in ids) for k in set(r['derived_quantizer_path'] for r in ids)}
+  # Fixed-decision quantization inference is restricted to actually transformed
+  # TUs; hypothetical transforms for bypassed blocks remain a separate diagnostic.
+  valid=minimum_filter((skipmap[sl]==0).astype(int),size=3,mode='constant')[1:-1,1:-1].astype(bool)
+  hp_source=x.high_pass(ss);summary={}
+  for k,a in {'source':src,**maps}.items():
+   hp=x.high_pass(a[sl]);summary[k]={'hf_sigma':float(hp[valid].std()*np.sqrt(8/5)) if valid.any() else None,'hf_corr_source':corr(hp[valid],hp_source[valid]) if valid.any() else None}
+  summaries[name]['quantizer_run_neighborhoods_only']={'pixels':int(valid.sum()),'stages':summary}
+
   groups={}
   for m,err in transform_errors:
    bx,by,bw,bh=[m[k] for k in ('x','y','w','h')];l,t=max(bx,xx),max(by,yy);right,bottom=min(bx+bw,xx+w),min(by+bh,yy+h)
    if l>=right or t>=bottom:continue
-   e=err[t-by:bottom-by,l-bx:right-bx];g=groups.setdefault(f'{bw}x{bh}',{'pixels':0,'sum_absolute_error':0.,'sse':0.,'max_error':0.})
+   e=err[t-by:bottom-by,l-bx:right-bx];g=groups.setdefault(f'{bw}x{bh}'+('_hypothetical_bypass' if m['md_skip'] or m['skip_mode'] else '_actually_transformed'),{'pixels':0,'sum_absolute_error':0.,'sse':0.,'max_error':0.})
    g['pixels']+=int(e.size);g['sum_absolute_error']+=float(abs(e).sum());g['sse']+=float((e**2).sum());g['max_error']=max(g['max_error'],float(abs(e).max()))
   summaries[name]['unquantized_error_by_transform']=groups
   summaries[name]['coefficient_proxies']={k:{stat:sum(r['stages'].get(k,{}).get(stat,0) for r in ids) for stat in ('nonzero','sumabs','sumsq')} for k in ('private_forward','actual_forward','initial_qcoeff','rdoq_qcoeff','final_qcoeff','scalar0_qcoeff','scalar1_qcoeff','scalar2_qcoeff')}
- np.savez_compressed(d/(tag+'-stages.npz'),source=src,qindex=qmap,skip=skipmap,**maps)
+ np.savez_compressed(d/(tag+'-stages.npz'),source=src,qindex=qmap,quantizer_bypass=skipmap,final_no_residual=zeromap,**maps)
  x.dump(d/(tag+'-stages.json'),{'case':case,'frame':n,'checks':checks,'roi':summaries,'blocks':rows,'proxies_are_not_bits':True})
  print(case,tag,'validation',checks,flush=True)
  for name in BOXES[case]:
-  s=summaries[name];print(name,s['qindex'],'skip',s['skip_area_fraction'],'sourceHF',s['source']['hf_sigma'],{k:round(v['hf_sigma'],4) for k,v in s['stages'].items()},flush=True)
+  s=summaries[name];print(name,s['qindex'],'quantizer bypass',s['quantizer_bypass_area_fraction'],'no residual',s['final_no_residual_area_fraction'],'sourceHF',s['source']['hf_sigma'],{k:round(v['hf_sigma'],4) for k,v in s['stages'].items()},flush=True)
 if __name__=='__main__':analyze(*sys.argv[1:])

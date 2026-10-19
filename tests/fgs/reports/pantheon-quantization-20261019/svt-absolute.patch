@@ -1,0 +1,23 @@
+--- a/Source/Lib/Codec/pantheon_alloc.h
++++ b/Source/Lib/Codec/pantheon_alloc.h
+@@ -10,6 +10,20 @@
+ #include "pcs.h"
+ #include "sequence_control_set.h"
+ static void pt_adjust_q(PictureControlSet *pcs) {
++    const char *absolute=getenv("PANTHEON_ABSOLUTE_Q_MAP");
++    if(absolute){
++        if(pcs->ppcs->picture_number>=336 || pcs->scs->sb_size!=64 || pcs->sb_total_count!=510)abort();
++        FILE *f=fopen(absolute,"rb");if(!f)abort();
++        if(fseek(f,pcs->ppcs->picture_number*510*2,SEEK_SET))abort();
++        int16_t map[510];if(fread(map,2,510,f)!=510)abort();fclose(f);
++        int changed=0;
++        for(int i=0;i<510;i++)if(map[i]>=0){
++            if(map[i]<1||map[i]>255)abort();
++            changed=1;pcs->sb_ptr_array[i]->qindex=map[i];
++        }
++        if(changed){pcs->ppcs->frm_hdr.delta_q_params.delta_q_present=1;pcs->ppcs->frm_hdr.delta_q_params.delta_q_res=1;}
++        return;
++    }
+     const char *path=getenv("PANTHEON_ALLOCATION_MAP");if(!path)return;
+     if(pcs->ppcs->picture_number>=336 || pcs->scs->sb_size!=64 || pcs->sb_total_count!=510)abort();
+     FILE *f=fopen(path,"rb");if(!f)abort();

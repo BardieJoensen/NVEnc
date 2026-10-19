@@ -4,8 +4,11 @@ from study import ROOT,OLD,x
 case,tag,kind=sys.argv[1:4];d=ROOT/case
 args=json.loads((OLD/case/'b-trace-command.json').read_text())['argv']
 a=[s.replace('/tmp/downloads/codex-work/pantheon-causal-20261019',str(ROOT)).replace('b-trace.ivf',tag+'.ivf').replace('b-trace-recon.yuv',tag+'-recon.yuv') for s in args]
-if kind!='baseline':
+if kind.startswith('rate:'):
+ a[a.index('--tbr')+1]=kind.split(':')[1]
+elif kind!='baseline':
  i=a.index('--rc');a[i+1]='0';i=a.index('--tbr');del a[i:i+2];a+=['--qp',kind,'--aq-mode','0']
+a+=sys.argv[4:]
 trace=d/(tag+'-trace');detail=d/(tag+'-detail');trace.mkdir();detail.mkdir()
 os.environ['PANTHEON_TRACE_DIR']=str(trace);os.environ['PANTHEON_TRACE_IMAGES_OFF']='1'
 os.environ['PANTHEON_DETAIL_DIR']=str(detail);os.environ['PANTHEON_DETAIL_POC']= ',230,' if case=='e04' else ',216,'

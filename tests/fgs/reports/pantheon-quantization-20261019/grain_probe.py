@@ -44,7 +44,7 @@ def run():
      for name,(cx,cy) in [('quiet',q),('texture',t)]:
       sl=np.s_[cy+2:cy+30,cx+2:cx+30];mask=flat[sl];diff=A[cy:cy+32,cx:cx+32]-B[cy:cy+32,cx:cx+32]
       hp=x.high_pass(A[cy:cy+32,cx:cx+32])[1:-1,1:-1]
-      stats[name].append({'roi':desc(A[cy:cy+32,cx:cx+32]),'isolated_grain':desc(diff),'conditional_hf':float(hp[mask].std()*np.sqrt(8/5)),'clip_fraction':float(np.mean((A[sl]<=16)|(A[sl]>=235)))})
+      stats[name].append({'roi':desc(A[cy:cy+32,cx:cx+32]),'isolated_grain':desc(diff),'conditional_hf':float(hp[mask].std()*np.sqrt(8/5)),'clip_fraction':float(np.mean((A[sl]<=16)|(A[sl]>=235))),'conditional_endpoint_occupancy':float(np.mean(((A[sl]<=16)|(A[sl]>=235))[mask]))})
     row['probes'].append({'shape':shape,'scale':scale,'seed_count':REPS,'stats':stats,'base_before_after_exact':True})
     # Raw 32-frame ensembles are reproducible; statistics and legal model retained.
     del a;raw.unlink()

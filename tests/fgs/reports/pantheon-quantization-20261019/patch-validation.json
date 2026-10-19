@@ -1,0 +1,17 @@
+{
+  "all12_patched_files_match_build_source": true,
+  "sha256": {
+    "Source/Lib/Codec/coding_loop.c": "3907057b2d3b18d15baadd27dad22a75ddd75cf0c996c187e33b74a55f56f4c1",
+    "Source/Lib/Codec/full_loop.c": "27f544b3e7b13b5aa2c79cd07a3e5566fd6b0c4f45c4f697ed59aea7cfa64b0f",
+    "Source/Lib/Codec/pantheon_quant.h": "29363ec60aa8ba2600c87febec1a28d9c5226d94ebf1240646a59010750f1fd0",
+    "Source/Lib/Codec/pantheon_alloc.h": "e0f8159a30e435ef2a10a49566eab6f57797a8252be092b6bd3778aded34b7b6",
+    "Source/Lib/Codec/pantheon_trace.h": "37625ec85d96f627357898d992654bbbedef023836144f06ba50b40fb3b6eaec",
+    "Source/Lib/Codec/dlf_process.c": "e09ad098757f6db5bd791547e902fd45345a8202ee024265211cfa5a63f56f4a",
+    "Source/Lib/Codec/enc_dec_process.c": "c575c0ecaf2e983905c74a8533714df6580c8893848803b152562349bc8ade68",
+    "Source/Lib/Codec/entropy_coding.c": "57205f09f9ef3e428622e91cf4b85bb7fa938f6b9a62b341e0cb3ec8e6af7bd5",
+    "Source/Lib/Codec/rc_process.c": "93c432ebf77419d672b965e6f5ddfe8c518cdc61d7aa8e7c10cb57157c4f15ac",
+    "Source/Lib/Codec/resource_coordination_process.c": "7690ed75f59b51c8e8b97904c2ce451fd975f3717d0d57ae5ff6e29cfa4b237c",
+    "Source/Lib/Codec/rest_process.c": "497287d2febba12bf86ef3c47a297aacde5c9a5d42556234540023ce8df99a46",
+    "Source/Lib/Codec/temporal_filtering.c": "1695a0ccd7780fdaa140e759cdb707b34ed2fa7d64a93d5bbbace595a9b532ef"
+  }
+}

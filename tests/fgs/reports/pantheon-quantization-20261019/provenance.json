@@ -3,10 +3,15 @@
   "source_commit": "9292ec8e32bce26f781f277ec8739b53426c4300",
   "base_repo_head": "58a113db",
   "files": {
-    "/tmp/downloads/codex-work/pantheon-quantization-20261019/svt-source/Bin/Release/SvtAv1EncApp": "f0373fd33170e2409c991cd878f56689ca58b0c44b3dc5a31efd836501dd9fd3",
     "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-quantization-20261019/svt-quantization.patch": "836e0f3e421bd981d478e0da3aa706bd21d15fe77ade57e6217ebac26ac2edd5",
     "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-causal-20261019/svt-causal.patch": "dcf2344865e06c84e958cd6e02ecd51c51b032a056df2582d3b106761d2c18bf",
-    "/tmp/downloads/codex-work/pantheon-quantization-20261019/apply_grain": "e25e527411b8d98d96a86a0cb3ba1e737798d6e980c6b5e2c76a92ae1eca0922"
+    "/tmp/downloads/codex-work/pantheon-quantization-20261019/apply_grain": "e25e527411b8d98d96a86a0cb3ba1e737798d6e980c6b5e2c76a92ae1eca0922",
+    "/tmp/downloads/codex-work/pantheon-quantization-20261019/SvtAv1EncApp-quant": "f0373fd33170e2409c991cd878f56689ca58b0c44b3dc5a31efd836501dd9fd3",
+    "/tmp/downloads/codex-work/pantheon-quantization-20261019/svt-source/Source/Lib/Codec/pantheon_alloc.h": "e0f8159a30e435ef2a10a49566eab6f57797a8252be092b6bd3778aded34b7b6",
+    "/tmp/downloads/codex-work/pantheon-quantization-20261019/svt-source/Bin/Release/SvtAv1EncApp": "18997352d7c90752369b4ef6de7300ac95a3816a5d62e9ac4bfb468ea688a997",
+    "tests/fgs/reports/pantheon-quantization-20261019/svt-absolute.patch": "26dafc85d3ae04d839270654babae11fc8144b2c6aab784de182a8dd0d6194f2",
+    "/tmp/downloads/codex-work/pantheon-quantization-20261019/grain_probe": "fd5cb47cf9a9df41d823773e8447318cf1768eceea8c576612fd7ac1fbfef2cc",
+    "/tmp/downloads/codex-work/pantheon-quantization-20261019/grain_probe.c": "ea1612f294ee5bb998197f50356780a6feaf4a0c919605b1320031be776529e9"
   },
   "flags": "Release static GCC13.3 cmake -j6",
   "baseline_byte_identity": {
@@ -20,5 +25,11 @@
       "sha256": "1c81edf6697164dd51179ffeb3218d8cba1eeecfca796c3abe4f7cf6ac5c408f",
       "identical_prior_baseline": true
     }
-  }
+  },
+  "original_binary_artifact_moved_without_change": true,
+  "archived_artifact_copies": {
+    "/tmp/downloads/codex-work/pantheon-quantization-20261019/svt-source/Bin/Release/SvtAv1EncApp": "/tmp/downloads/codex-work/pantheon-quantization-20261019/SvtAv1EncApp-absolute",
+    "/tmp/downloads/codex-work/pantheon-quantization-20261019/svt-source/Source/Lib/Codec/pantheon_alloc.h": "/tmp/downloads/codex-work/pantheon-quantization-20261019/pantheon_alloc.h"
+  },
+  "artifact_root_after_archive": "/media/merged-storage/cold-storage/docker-apps/pantheon-quantization-20261019"
 }
