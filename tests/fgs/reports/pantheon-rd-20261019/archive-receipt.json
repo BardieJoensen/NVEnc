@@ -1,0 +1,34 @@
+{
+  "verified_at_utc": "2026-10-19T23:42:20.826928+00:00",
+  "archive": "/media/merged-storage/cold-storage/docker-apps/pantheon-rd-20261019",
+  "archive_script": "/opt/docker-apps/scripts/archive-to-cold-storage.sh",
+  "archive_script_result": "1030 files verified, source removed, INDEX row added",
+  "report_commit": "a6df36d6",
+  "retained_files": 1030,
+  "manifest_entries": 1029,
+  "manifest_sha256": "8cb4b411f234b5c5b5e4d847133af9cb1ab9de2fbe3775f42d2bb61a33ddbfdb",
+  "full_archive_sha256_check": {
+    "command": "sha256sum --quiet -c SHA256SUMS",
+    "cwd": "/media/merged-storage/cold-storage/docker-apps/pantheon-rd-20261019",
+    "exit_code": 0
+  },
+  "archive_allocated_bytes": 7314206720,
+  "source_scratch_removed": true,
+  "raw_evidence_members": 206089,
+  "raw_evidence_sha256": "c14077e093e56eacf92e25455a604a820715902fd9ac12edf7a0b903993cb0f0",
+  "retirement_receipt_sha256": "b3ecf722534dc1a7f191db712f6a3804319c712229d530b50ef288f0422dcf56",
+  "preflight_sha256": "3a34afa16d490aa9b9a0fdcd84e341915cf6895cd5acfcd8ab5131781f49dd53",
+  "measured_source_validation_sha256": "c55ece38a5f9fabb57c51db9e2981b931f975ddf29e04293861790857df1c911",
+  "reproducible_media_removed_count": 48,
+  "reproducible_directories_removed": [
+    "analysis-venv",
+    "parent-build",
+    "parent-source",
+    "parent/audit-source",
+    "worker/build",
+    "worker/src"
+  ],
+  "prior_archives_untouched": true,
+  "playback_observed": false,
+  "remaining": "Human player/display assessment and explicit acceptance of approximately4x bitrate and observed runtime costs. No production proposal."
+}
