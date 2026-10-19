@@ -1,0 +1,20 @@
+{
+  "archive": "/media/merged-storage/cold-storage/docker-apps/pantheon-independent-investigation",
+  "files": 644,
+  "sha256_verified_files": 643,
+  "bytes": 621215811,
+  "scratch_removed": true,
+  "report_commit": "9bd111a0",
+  "review": "Final independent review: no outstanding blockers",
+  "preserved": [
+    "selected encodes",
+    "native crops/full frames",
+    "synchronized comparison clips",
+    "temporal plots",
+    "all metrics/hashes/commands/logs",
+    "grain tables",
+    "SVT source archive and binary",
+    "scripts/report snapshot"
+  ],
+  "production_changes": false
+}
