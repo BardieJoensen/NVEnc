@@ -1,0 +1,19 @@
+{
+  "verified_at": "2026-10-19T21:45:07.071983+00:00",
+  "archive": "/media/merged-storage/cold-storage/docker-apps/pantheon-quantization-20261019",
+  "original_scratch": "/tmp/downloads/codex-work/pantheon-quantization-20261019",
+  "scratch_removed": true,
+  "sha256_all_passed": true,
+  "hashed_files": 515,
+  "hashed_bytes": 3144700672,
+  "archive_file_count": 516,
+  "sha256sums_sha256": "376b5cd7f94ad444117c1c82074799d18060f20cff5abf62fcd7349819888aee",
+  "report_media_links_exist": true,
+  "cleanup_manifest_sha256": "88c01fdac69aae2cde9557497546f48fbe1c07d66e391e191ba1b37a9ae18f45",
+  "retired_bytes_including_losslessly_bundled_data": 57775942653,
+  "compressed_trace_bundles": 24,
+  "archive_tool": "/opt/docker-apps/scripts/archive-to-cold-storage.sh",
+  "archive_tool_verified_file_count": 516,
+  "report_commit": "44c14d5f",
+  "no_production_changes": true
+}

@@ -155,7 +155,8 @@ was fitted, and quiet protection was not relaxed. Strong original grain around
 [independent method review](REVIEW.md) accompany the scripts and isolated patches.
 Evidence is preserved under
 `/media/merged-storage/cold-storage/docker-apps/pantheon-quantization-20261019/`.
-Earlier archives remain unchanged.
+[Archive contents and cleanup receipt](ARTIFACTS.md) document preservation and
+post-move SHA-256 verification. Earlier archives remain unchanged.
 
 Minimum clips for human viewing:
 
