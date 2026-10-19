@@ -8,7 +8,7 @@ x=g.x
 def analyze(case,tag='b-trace'):
     assert tag=='b-trace', 'This validator is baseline-only; allocation has CSVs but no raw stage images.'
     d=x.ROOT/case;t=d/'trace';src=g.mm(d/'source.yuv')
-    ct=d/'coeff-trace' if case=='e04' else t
+    ct=d/'coeff-trace' if (d/'coeff-trace').is_dir() else t
     assert len(list(ct.glob('luma_txs-*.csv')))==240
     if not (d/(tag+'-decoder.yuv')).exists():
         x.run([x.ROOT/'apply_grain',d/(tag+'.ivf'),d/(tag+'-decoder.yuv'),0,96,240,'-'],d,tag+'-independent')
