@@ -115,3 +115,11 @@ termination; it is not simply more subpixel iterations or fixed-QP prediction.
 Explicit x264 params override fast-first-pass defaults too, so changed first-pass
 statistics are part of the intervention. Pass2 options differ only subme8→11;
 required trellis2/AQ>0 are logged. Keep this two-pass analysis-depth scope explicit.
+
+R8 result review accepted packet/input/decoder/whole-control evidence and its
+failure of the shirt screen. It also required removal of "without further
+spatial reallocation" from the initial question: fixed AQ strength does not
+hold MB quantizers fixed when QP-RD is enabled. The exported R8 map is retained;
+no unmeasured fixed-allocation claim remains. Quiet HF error slightly worsens
+despite otherwise broad control improvements, and midpoint background temporal
+correlation moves slightly away from source. Both limitations are retained.

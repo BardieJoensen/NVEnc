@@ -64,6 +64,8 @@ reconfirm the untouched originals; full decoder and packet receipts are retained
 | E05 x264slow/grain two-pass, AQ0.5 |19.25284|Shirt HF−30.56%; background ACF error0.05154: fail|Quiet, edge and face errors improve vs source-budget SVT|
 | E05 same, AQ1 |19.35914|Shirt HF−18.94%; background ACF error0.05067: fail|Quiet improves; edge/face regress versus AQ0.5|
 | E05 same, AQ2 |19.34029|Shirt amplitude passes but ACF error0.07887 fails; background narrowly passes|VMAF90.78/SSIMU63.49; displaced damage grows|
+| E05 AQ1/subme11,2x |19.36834|Background passes; shirt HF−15.84% fails|VMAF95.16/SSIMU67.63; modest broad improvement|
+| E05 AQ1/subme11,3x |29.01377|Shirt HF−5.25% passes but ACF error0.05736 fails; background passes|VMAF96.85/SSIMU76.70; whole-tile/face errors improve|
 
 The provisional texture screen remains HF amplitude within10% and ACF1 error<=0.05,
 paired with source correlation/structure, controls, edges, banding and temporal

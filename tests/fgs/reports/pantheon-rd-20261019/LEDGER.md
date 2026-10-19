@@ -198,8 +198,8 @@ both. Picture-wide cost grows:VMAF90.78/NEG88.64/SSIMU63.49 versus AQ1
 94.94/93.07/67.34. More amplitude is not equivalent to recovered texture. Do not
 increase AQ again after this displaced-damage and structure failure.
 
-Round8 primary question: can more thorough prediction/mode refinement improve
-this frontier without further spatial reallocation? Keep x264slow/grain/AQ1 at
+Round8 primary question: can more thorough analysis improve this frontier
+without increasing AQ strength? Keep x264slow/grain/AQ1 at
 2x actual packet rate and change only subme8→11 (pass2 log must confirm11 and
 requiredtrellis2/AQ1 prerequisites). Compare with AQ1/subme8 at the samepacket
 budget, frozen controls and decoder/geometry gates. This is a native search-
@@ -212,7 +212,10 @@ Round8 result:19.368337Mbps(+0.079%2xtarget,+0.0475% versusAQ1/subme8),
 modestly, not enough for a repair. Independent source review clarifies subme11
 adds QP-RD/deblock-aware RDO/mode refinement and disables early termination;
 explicitsubme also changes fast-first-pass analysis. This is a two-pass analysis-
-depth contrast, not pure prediction precision or fixed quantization.
+depth contrast, not pure prediction precision or fixed quantization. Independent
+review corrected the original "without further spatial reallocation" wording:
+QP-RD can change MB quantizers even with AQ strength held fixed. The exported
+R8 QP map exists, but no regional fixed-allocation claim is made.
 
 Round9 primary question: does relaxing total rate, while keeping the balanced
 AQ1/subme11 configuration fixed, close the remaining fidelity gap without the
@@ -222,3 +225,26 @@ cost, not matched-rate superiority or accepted practicality. All screens stay
 fixed; actual3xpackets must matchwithin1%. A passing3x sample would still require
 held-out checks, human playback and an explicit practicality judgment;3x is not
 silently accepted as a practical production budget. Do not re-escalate AQ.
+
+Round9 result: calibrated29.013766Mbps(−0.0544%3xtarget),74.287s two-pass.
+Shirt HF0.58686 versus0.61935 (−5.25%) now passes, but ACF−0.17039 versus−0.22775
+(error0.05736) fails. Background jointly passes (HF+0.22%, ACFerror0.02097).
+Shirt source correlation improves0.267→0.434; amplitude and covariance do not
+improve monotonically together. Whole-tile MSE4.531→2.626, face5.366→3.161,
+VMAF95.16→96.85 and SSIMU67.63→76.70 improve. Quiet HF error improves slightly,
+quiet ACF error0.07825→0.08253 worsens. Accept the failed unchanged screen rather
+than rounding0.05736 to0.05. All336 CPU/NVDEC planes and QP export grids validate.
+Native shirt/background stills inspected; no motion playback claim.
+
+Round10 primary question: can an independent conventional encoder decision stack
+preserve the E05 whole picture at2x source rate? No HEVC/x265 arm appears in the
+prior Pantheon evidence inventory. Test one x2653.5 slow/grain native10bit
+two-pass configuration, request19353kbps then packet calibration if necessary.
+Use exact lifted original samples, same336 input/240 scored positions, bounded
+pool4/frame-threads2 and CPU affinity0-7. Require logged effective tune/options,
+both passes and stats reuse, exact all336 CPU/NVDEC Main10 planes, packetwithin1%,
+and unchanged texture/controls/full GPU/tails/banding/temporal screens. No GPU
+concurrency. This changes codec, coding precision, filters, RC and search together;
+it is a feasibility test, not an isolated codec-superiority or bit-depth claim.
+Originals are8bit and the x2648bit input also lifts exactly to the10bit fixture:
+there was no input-sample loss to "repair" by changing input conversion.
