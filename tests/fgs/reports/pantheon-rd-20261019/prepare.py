@@ -13,6 +13,23 @@ import investigate as x
 ROOT = Path(os.environ.get('PANTHEON_RD_ROOT', '/tmp/downloads/codex-work/pantheon-rd-20261019'))
 OLD = Path('/media/merged-storage/cold-storage/docker-apps/pantheon-causal-20261019')
 
+def verify_source(case):
+    d = ROOT / 'fixtures' / case
+    v = json.loads((d / 'validity.json').read_text())
+    hashes = []
+    with (d / 'source.yuv').open('rb') as f:
+        for n in range(240):
+            raw = f.read(1920*1080*3)
+            assert len(raw) == 1920*1080*3
+            hashes.append(hashlib.md5(raw).hexdigest())
+        assert not f.read(1)
+    assert hashes == v['hashes_ref']
+    receipt = d / 'fresh-validation.json'
+    out = json.loads(receipt.read_text())
+    out['source_raw_frame_md5'] = hashes
+    out['source_raw'] = x.fingerprint(d / 'source.yuv')
+    x.dump(receipt, out)
+
 def prepare(case):
     assert case in ('e04', 'e05-1440')
     assert str(ROOT.resolve()).startswith('/tmp/downloads/codex-work/')
@@ -43,7 +60,11 @@ def prepare(case):
         'ffmpeg': x.fingerprint('/usr/bin/ffmpeg'),
         'script': x.fingerprint(__file__),
     })
+    verify_source(case)
     print(case, 'source/input hashes verified', flush=True)
 
 if __name__ == '__main__':
-    prepare(sys.argv[1])
+    if len(sys.argv) == 3 and sys.argv[2] == '--verify-source':
+        verify_source(sys.argv[1])
+    else:
+        prepare(sys.argv[1])

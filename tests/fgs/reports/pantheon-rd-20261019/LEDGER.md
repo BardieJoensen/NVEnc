@@ -49,3 +49,33 @@ human playback. No new numerical gate or practical bitrate ceiling is invented.
 - auto: Do not fit another grain estimator to the unchanged base after the documented quiet-region failure.
 - auto: Freeze complete source-only control grids before viewing new encoded results. Neither diagnostic frame has a quiet tile under the existing definition; add the earliest previously sampled qualifying frame (E04 88, 23 quiet tiles; E05 24, 20 quiet tiles), without changing thresholds.
 - auto: Exclude whole-block skip revival from TU-only entropy accounting. Preserve pre-reset exercised transform type for any zero-EOB TU revival inside a coded block.
+
+## Round 1 observation and next discriminator
+
+On the E05 frame120 CQP8/TX32 control, effective qindex is exactly32. The private
+initial-FP reconstruction raises shirt HF0.2587→0.5031 against0.6063 source, but
+ACF1 changes +0.1761→−0.0940 against−0.2224 source. Both unchanged screens fail.
+These are single-frame, fixed-predictor diagnostics; entropy evidence is still
+under independent review. This falsifies pruning-only sufficiency at this qindex.
+
+Round2 primary question: does the initial FP quantizer itself, rather than just
+its subsequent pruning, account for the remaining E05 loss? The existing exports
+already contain regular-B quantization at the SAME effective qindex and
+unquantized inverse under the SAME exercised transform. Compare those private
+reconstructions on quantizer-run neighborhoods, keep bypassed pixels unchanged,
+and retain both amplitude and ACF/source-correlation tests. Changing FP to B is
+explicitly an algorithm contrast, not another pruning-only intervention. No real
+encode is authorized by a single-frame diagnostic improvement alone.
+
+Round2 result: regular-B q32 is worse for the E05 shirt (quantizer-run HF0.3306,
+ACF+0.0038 versus source0.6178/−0.2268). The unquantized inverse of those same
+exercised <=32 transforms is close (HF0.6215, ACF−0.2294, source correlation0.9936).
+Thus this is quantizer loss, not a remaining transform-support floor in these TUs.
+
+Round3 primary question: can an intermediate FP quantizer at q24 preserve the
+same actual residual more cheaply than the established q16 preservation arm?
+Export private FP at current q32 (identity control), q24, and q16 with the same
+predictor, partition, transform, qmatrix and no pruning. q16 is the prior supported
+preservation endpoint, not a settings sweep. Keep bypassed pixels unchanged and
+test the same target/control screens. A passing q24 diagnostic would justify a
+real q24+FP-retention arm before any new source-budget redistribution.
