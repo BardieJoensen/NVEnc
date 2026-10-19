@@ -134,3 +134,63 @@ standalone amplitude/ACF plot. `visuals.py` creates native-pixel stills and
 lossless synchronized10-bit comparison clips; both panels are validated on
 all240 frames. Stills explicitly convert limited BT709 to RGB. These artifacts
 do not establish playback observation or perceptual acceptance.
+
+
+## Provisional 4x candidate and playback
+
+The exact accepted requests are below. Fresh extraction/validation must precede
+these commands, and packet calibration remains mandatory on any replay.
+
+```bash
+"$PYTHON" "$REPORT/crosscodec.py" e05-1440 x264-search11-4x1 37335 1.0 11 4
+"$PYTHON" "$REPORT/score_crosscodec.py" e05-1440 x264-search11-4x1
+"$PYTHON" "$REPORT/crosscodec.py" e04 x264-search11-4x1 34531 1.0 11 4
+"$PYTHON" "$REPORT/score_crosscodec.py" e04 x264-search11-4x1
+"$PYTHON" "$REPORT/block_edges.py" e05-1440 x264-search11-4x1
+"$PYTHON" "$REPORT/block_edges.py" e04 x264-search11-4x1
+"$PYTHON" "$REPORT/playback.py" e05-1440
+"$PYTHON" "$REPORT/playback.py" e04
+"$PYTHON" "$REPORT/summarize.py"
+```
+
+E05 playback additionally requires the scored3x arm from the earlier example.
+Use fresh output directories; scripts reject existing playback directories.
+`playback.py` renders deterministic blinded labels, records their key separately,
+and verifies every panel on every frame against hash-bound inputs. Native crop
+loops are FFV1 references; actual H264 streams plus an original-derived full
+reference are retained for real-player checks. Reference hardlinks survive
+fixture retirement. Rendering/decoder checks are not observed playback.
+
+`block_edges.py` measures source-compensated grid-gradient excess on the same
+12,870 source-defined tiles/15 sampled frames. Its8/16-grid summaries are
+additional descriptors, not newly imposed pass/fail thresholds. Boundaries and
+interiors have different pixel populations;16-grid interiors include8-grid
+boundaries. Use source/control hashes and complete tile rows to reproduce it.
+
+## Preservation and cleanup
+
+[ARTIFACTS.md](ARTIFACTS.md) gives the cold-storage root. `raw-evidence.tar.zst`
+contains original detail/trace exports and full H264 macroblock CSVs. Its member
+manifest records each SHA and size; `preserve.py pack` independently streams and
+verifies every tar member before `retire` removes those raw originals. Extract
+only required members into fresh scratch, never modify the archive:
+
+```bash
+tar --zstd -tf "$ARCHIVE/raw-evidence.tar.zst"
+tar --zstd -xf "$ARCHIVE/raw-evidence.tar.zst" -C "$FRESH_SCRATCH" MEMBER
+```
+
+`parent/measured-svt/source.tar.zst` and its actual binary retain historical
+provenance. `worker/rejected-source.tar.zst` preserves rejected attempts solely
+for audit; do not substitute them for accepted instrumentation. `retirement.json`
+lists removed reproducible media/builds/venv. A full manifest covers retained
+streams, metric data, logs, scripts, sources and playback packets. Historical
+command paths remain original scratch paths; remap them deliberately when
+reproducing. Do not rebuild earlier immutable archives or run replay inside them.
+
+
+After `summarize.py` and `playback.py`, `quiet_tail.py CASE` adds the explicitly
+post-hoc maximum quiet-HF-excess stress crop with the same blinded labels.
+It binds summary and upstream playback hashes and validates all240/all-plane
+panel crops. It must not replace source-selected quiet controls or be described
+as a confirmatory sample.

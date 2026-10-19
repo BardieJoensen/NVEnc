@@ -1,16 +1,19 @@
 # Pantheon: measured precision, texture and repair feasibility
 
-**No tested arm currently qualifies as a faithful whole-picture repair. Lower
-realized quantization can preserve the difficult texture in legal encodes, but
-local preservation displaces damage at the original bitrate.** Independent
-same-codec controls also change texture; neither defective NVENC nor an AV1 limit
-is established. Production, Tdarr, torrents, library files and previous archives
-were untouched. Motion playback has not been observed.
+**A conventional x264 re-encode now passes the unchanged texture screens on both
+E04 and E05 fixtures at approximately four times the original video bitrate. It
+is a provisional numerical candidate, awaiting human playback and a practical
+cost decision.** No production proposal is supported yet. Lower realized
+quantization preserves selected texture in SVT too, but the tested redistribution
+at original bitrate damages other regions. Neither defective NVENC nor a
+fundamental AV1 limit is established. Production, Tdarr, torrents, library files
+and previous archives were untouched. Motion playback has not been observed.
 
 This continues the [quantization investigation](../pantheon-quantization-20261019/README.md),
 which was newer than the supplied causal-report pointer. Starting branch was
-`master` at `031569ae`, coord task `pantheon-fix` revision7. New work uses fresh
-`/tmp/downloads/codex-work/pantheon-rd-20261019` scratch. The detailed evolving
+`master` at `031569ae`, coord task `pantheon-fix` revision7. New work used fresh
+`/tmp/downloads/codex-work/pantheon-rd-20261019` scratch; preserved evidence and
+cleanup are indexed in [ARTIFACTS.md](ARTIFACTS.md). The detailed evolving
 [hypothesis/experiment ledger](LEDGER.md) states each discriminator and decision.
 
 ## Causal findings and limits
@@ -69,6 +72,8 @@ reconfirm the untouched originals; full decoder and packet receipts are retained
 | E05 x265slow/grain10bit,2x |19.25875|Background passes; shirt HF−39.66%/ACF error0.19511 fail|VMAF96.30 coexists with SSIMU62.82/p555.08; not a repair|
 | E05 AQ1/subme8,3x |29.00634|Shirt HF−2.53% passes but ACF error0.05768 fails; background passes|Similar structure miss to subme11;40.43s two-pass|
 | E05 AQ1/subme11/deblockoff,3x |28.97162|Shirt ACF error0.06649 worsens; background passes|8-pixel grid excess rises39%; reject this intervention|
+| E05 AQ1/subme11/default deblock,4x |38.68522|Shirt HF+0.82%, ACF error0.03557; background HF+2.75%, ACF error0.00358: pass|VMAF97.71/NEG96.26/SSIMU81.79; provisional candidate|
+| E04 unchanged configuration,4x |40.17652|Purple HF+3.80%, ACF error0.00708: pass|VMAF96.61/NEG95.21/SSIMU84.26; provisional transfer candidate|
 
 The provisional texture screen remains HF amplitude within10% and ACF1 error<=0.05,
 paired with source correlation/structure, controls, edges, banding and temporal
@@ -99,9 +104,43 @@ position accounting, real intervention verification and H264 export corrections.
 Only validated evidence enters the findings. The parent inspected decisive raw
 checks and native stills; still inspection is not motion playback.
 
-No production proposal is supported. The best local SVT preservation and the
-stronger whole-window x264 controls have different regressions; neither can be
-presented as an accepted repair. Measured short-window runtime includes the
-stated CPU restrictions and, for SVT, instrumentation overhead; it is not a
-clean episode-throughput forecast. Practical bitrate tolerance and the user's
-actual player/display remain unassessed.
+The provisional candidate is x264 core164 r3108, two-pass slow/grain, AQ1,
+subme11, default grain deblocking (1:-2:-2), four encoder threads. Effective
+first-pass analysis is subme9/trellis0; second pass is subme11/trellis2. E04 actual
+video bitrate is **40.17652 Mbps** versus10.02936 original (+0.147% of its4x target).
+E05 is **38.68522 Mbps** versus9.67652 original (−0.054% of its4x target).
+Measured two-pass times are **76.684s and94.102s** for336 input frames
+(14.014s and14.000s):5.472 and6.722 wall-seconds per input-second. These restricted
+CPU short-window costs are not full-episode throughput predictions.
+
+Both prescribed E05 regions and E04 purple pass; full-window metrics/tails,
+source-defined controls and temporal traces improve broadly. Remaining errors
+are measurable: E05 shirt midpoint source-HF correlation is0.586, versus0.434
+at3x; its framewise maximum ACF error is0.0660 despite the midpoint passing.
+Quiet-region mean signed HF excess is+0.0172(E04)/+0.0174(E05) on the8-bit scale,
+with maxima+0.0733/+0.0489. E05 quiet HF/ACF absolute errors are slightly worse
+than3x (0.01749/0.08947 versus0.01634/0.08253), although MSE improves. No added
+synthesis is used, but this does not prove the absence of visible quiet-region
+noise. Full-reference CAMBI means/maxima are0.000149/0.007932(E04) and
+0.000008/0.001877(E05); low banding scores do not prove artifact-free motion.
+
+The tested E05 3x configuration fails and the tested4x configuration passes the
+midpoint screen. **This does not establish a minimum rate or monotonic threshold.**
+E04 is an unchanged-configuration transfer on a known fixture, not a blind
+held-out episode validation. Neither full episodes nor other content have been
+qualified. The earlier matched-original-budget strategy validly failed; a4x
+preservation result does not imply source-budget feasibility.
+
+The next discriminator is the [blind playback packet](ARTIFACTS.md), followed by
+an explicit decision on the approximately4x bitrate and measured runtime cost.
+Check natural texture through motion, quiet noise, lines, grid/ringing/banding,
+and whether E05's3x→4x difference is visible at normal viewing distance. State
+player/display/scaling. More settings trials cannot answer those perceptual and
+practical questions. If playback fails, use the identified frame/region and
+artifact type for the next targeted experiment. If4x is unacceptable, agree a
+ceiling before pursuing another specific rate-distortion strategy. No production
+binary, configuration or library change is proposed.
+
+[Complete measured table](RESULTS.md) · [Machine-readable evidence](results.json)
+· [Experiment ledger](LEDGER.md) · [Independent review](REVIEW.md)
+· [Reproduction](REPRODUCE.md) · [Artifacts and playback](ARTIFACTS.md)

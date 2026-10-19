@@ -52,6 +52,23 @@ for case in ('e04','e05-1440'):
         row['evidence']=[x.fingerprint(z) for z in evidence];rows.append(row)
 x.dump(out/'results.json',{'scope':'Known fixtures; provisional numerical screens, no playback or production qualification.',
     'screen':{'hf_relative_abs_max':.1,'acf1_abs_max':.05},'arms':rows})
+lines=['# Measured results','',
+       'Rates use240 scored video-packet positions after96 preroll frames. Runtime covers all336 input frames; x264/x265 includes both passes. Instrumented SVT lp1, x264 four threads, and x265 pool4/frame-threads2 are different execution policies, so these are observed costs rather than a controlled encoder speed ranking.',
+       '', '| Case / arm | Mbps | Source multiple | Encode seconds | VMAF / NEG | VMAF p1* | SSIMU / p5 | Butter / max p95 | CAMBI full-ref mean / max |',
+       '|---|---:|---:|---:|---|---:|---|---|---|']
+for r in rows:
+    s=r['scores'];b=r['banding']['cambi_full_reference']
+    lines.append(f"| {r['case']} / {r['tag']} | {r['actual_mbps']:.5f} | {r['source_rate_multiple']:.3f} | {r['encode_seconds']:.3f} | {s['vmaf']:.2f} / {s['vmaf_neg']:.2f} | {s['vmaf_p1_excluding_frame0']:.3f} | {s['ssimu2']:.2f} / {s['ssimu2_p5']:.2f} | {s['butter_2norm']:.3f} / {s['butter_max_p95']:.2f} | {b['mean']:.5f} / {b['max']:.5f} |")
+lines+=['','*VMAF p1 excludes frame0 as explicitly recorded by the established harness. Complete per-frame data and minima remain in the archive. Q32 controls use application-reported execution time; other rows use measured wall time.',
+        '', '## Frozen midpoint texture screen','',
+        'HF relative error must be within10% and ACF1 absolute error at most0.05. These necessary numerical screens are not perceptual qualification. Correlation, controls, temporal evidence, tails and human playback remain separate.',
+        '', '| Case / arm / ROI | HF error % | ACF1 error | Source HF correlation | HF + ACF pass |',
+        '|---|---:|---:|---:|---|']
+for r in rows:
+    for name,v in r['midpoint_texture'].items():
+        lines.append(f"| {r['case']} / {r['tag']} / {name} | {100*v['hf_relative_error']:+.3f} | {v['acf1_abs_error']:.6f} | {v['paired_hf_correlation']:.4f} | {v['provisional_hf_acf_pass']} |")
+lines+=['','Full control summaries, signed quiet-region HF tails, source/evidence hashes, banding/source comparisons and runtime scope are in results.json. The archive retains all240 texture traces, metric frames, packet lists, decoder checks and source-defined tile measurements. No playback observation is implied.','']
+(out/'RESULTS.md').write_text('\n'.join(lines))
 
 import matplotlib
 matplotlib.use('Agg')
@@ -74,7 +91,7 @@ fig.tight_layout(rect=[0,.19,1,.95])
 fig.savefig(out/'texture-frontier.png',dpi=170);plt.close(fig)
 
 for case,roi_name in [('e04','purple'),('e05-1440','shirt')]:
-    tags=['budget1','high2x','x264-search11-3x1','x265-grain-2x1','x265-grain-2x0']
+    tags=['budget1','high2x','x264-search11-3x1','x264-search11-4x1','x265-grain-2x1','x265-grain-2x0']
     available=[tag for tag in tags if any(r['case']==case and r['tag']==tag for r in rows)]
     if not available:continue
     fig,axes=plt.subplots(3,1,figsize=(11,8),sharex=True,layout='constrained')

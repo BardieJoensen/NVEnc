@@ -172,3 +172,47 @@ raw-member manifest to its verified archive hash and reject escaping paths;
 also independently stream/check all607 measured-source tar members and the
 actual measured binary hash. Both are implemented and the source/binary check
 has passed. No retirement starts until jobs/mounts/schedules/worktrees are clear.
+
+
+R13 independent review accepts the E05 4x numerical screen, including full240
+traces: shirt HF error mean/p95/max2.252/5.069/6.833%, ACF0.01207/0.03379/0.06602.
+Background HF2.291/4.683/9.895%, ACF0.01136/0.03051/0.05428. Shirt temporal error
+maximum0.07978 improves from3x0.22043. Quiet HF/ACF errors slightly worsen versus
+3x; this limits any claim of uniform improvement. No source-clean threshold was
+relaxed and no new threshold was invented. Tested3x failure and4x success do not
+locate a monotonic minimum rate.
+
+R14 independent review finds no blocking validity defect and accepts E04 as a
+numerically qualified playback candidate. All240 purple HF error mean/p95/max
+2.656/4.653/6.548%; ACF0.01069/0.02778/0.04285; temporal error0.00483/0.01639/0.02557.
+Source correlation mean0.8666/minimum0.6998 and sampled strong-edge ratio mean
+0.9630/minimum0.9322 support broad preservation with remaining error. Quiet
+ACF absolute error0.08656 and signed HF excess0.01721 remain perceptual concerns;
+small CAMBI values cannot settle them. Known-fixture transfer is not held-out
+validation. The reviewer found no further machine diagnostic necessary before
+human playback; actual player/display and practicality remain unresolved.
+
+Playback artifact review caught a provenance gap: a decoder-success boolean
+alone did not prove that the currently rendered scored file was the validated
+one. The smallest correction binds each decoded file SHA to score identity and
+all240 plane hashes to decoder hashes[96:336], binds full streams to receipts,
+and binds reference hashes to fresh original validation. The second correction
+adds both E05 3x and4x actual full streams, so the requested normal-distance
+comparison is possible. Hardlink identity/link count is recorded before source
+retirement. Both cases then pass all240/all-plane native panel validation. The
+independent reviewer rechecked corrections and found no remaining concrete bug.
+The reviewer and parent have not observed motion playback.
+
+
+The reviewer recommended supplementary quiet-tail contexts because the largest
+measured overshoots were outside the preselected quiet crops. `quiet_tail.py`
+keeps those unbiased controls and adds only an explicitly outcome-selected
+stress diagnostic, with frozen-control provenance, summary fingerprint, exact
+tile/frame/time and the same blind mapping. It introduces no new gate. Native
+panels validate all240 frames/all planes. Full-reference supplemental receipts
+also bind retained source336 bytes to the all336 exact-input validation.
+
+Final quiet-tail review accepted selection, clamping, timestamps, upstream
+binding and exact panels. Supplemental `viewer-key-binding.json` fingerprints
+the unchanged key and both validation receipts, closing the archival key-binding
+omission without rerendering unchanged clips.

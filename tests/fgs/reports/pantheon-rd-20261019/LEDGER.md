@@ -9,12 +9,13 @@ production, library, torrent and Tdarr changes remain unauthorized.
 
 | Hypothesis | Supporting evidence | Contrary evidence / limits | Unknown | Cheapest discriminator |
 |---|---|---|---|---|
-| Quantization destroys useful residual texture | Fixed-decision unquantized inverse nearly matches source; lower actual FP q restores amplitude/ACF | Bypassed blocks and earlier64x64 support loss remain separate; no isolated global search optimum | Minimum whole-picture preservation cost | Current independent conventional HEVC2x control |
-| Coefficient pruning alone explains loss | Same initial FP retention improves both fixtures; validated local coder deltas measure added cost | E05 q32 retention still fails amplitude and ACF; regular-B at sameq is worse | Whether a different RD objective preserves efficiently | Do not repeat pruning-only q32; real q20 retention already tested |
-| Local precision allocation can repair at source budget | Real q20/q24 target blocks are realized; selected textures pass within1% source rate | E04/E05 outside detail, face and metric tails regress; E05 unselected background fails | Automatic objective/classifier with better whole-picture tradeoff | New allocation needs a specific objective, not another manual ROI sweep |
-| More thorough native analysis improves preservation | x264 subme11 improves broad controls/background at2x | Shirt amplitude fails; QP-RD changes quantizers and first-pass analysis | Rate-by-analysis interaction | Matched3x subme8 is missing factorial cell if mechanism isolation is needed |
-| Conventional grain-oriented coding can preserve affordably | x2643x passes shirt amplitude/background and improves line/detail/banding | Shirt ACF0.05736 fails; x264 AQ2 harms face/edges | Independent x26510bit grain policy feasibility at2x | R10: exact-source two-pass x265 slow/grain, fixed controls and packet target |
-| Legal grain synthesis can replace lost texture safely | Prior reconstruction-aware model restores some E05 amplitude | Established same-input quiet/textured conflict and E04 structure loss on tested base | Other bases/legal parameter sets | No repeated estimator fitting on unchanged failed base |
+| Quantization destroys useful residual texture | Fixed-decision unquantized inverse nearly matches source; lower actual FP q restores amplitude/ACF | Bypassed blocks and earlier64x64 support loss remain separate; no isolated global search optimum | Efficient automatic whole-picture allocation | New objective only after practical bitrate ceiling; do not repeat requested-only ROI controls |
+| Coefficient pruning alone explains loss | Same initial FP retention improves both fixtures; validated local coder deltas measure added cost | E05 q32 retention still fails both screens; regular-B at sameq is worse | Alternative rate-distortion objective efficiency | Pruning-only sufficiency rejected; no repeat |
+| Local precision allocation repairs at source budget | Actual q20/q24 selected blocks preserve target texture within1% source rate | Outside detail/face/tails regress and E05 background fails | Better automatic whole-picture tradeoff | New objective required, not another manual ROI sweep |
+| More thorough native analysis fixes3x structure | subme11 improves broad controls/background at2x | Both3x subme8/11 fail shirt ACF by nearly the same amount | Other decision-stack contributions | Closed bounded interaction; no pure-prediction claim |
+| Deblocking causes the remaining3x miss | Filtering can remove texture | Real filter-off worsens ACF and grid error at matched3x rate | Fixed-decision filter contribution | Filter-off repair rejected; no strength sweep |
+| Conventional coding preserves the known windows | x2644x passes all prescribed midpoint ROIs with broad control improvements |3x E05 ACF fails; x2652x shirt fails; quiet residual errors remain | Perceptual fidelity, practicality and generalization | Human blind/full-picture playback plus explicit rate/runtime tolerance |
+| Legal grain synthesis replaces lost texture safely | Prior reconstruction-aware model restores some E05 amplitude | Established same-input quiet/textured conflict and E04 structure loss on tested base | Other bases/legal parameter sets | No repeated estimator fitting on unchanged failed base |
 
 ## Round 1 contract and acceptance
 
@@ -294,3 +295,33 @@ calibrate actual4xpacketswithin1%. This is a preservation-cost test, not a claim
 that4x is practical or an equal-rate comparison against3x. All acceptance
 screens and full-window protections remain unchanged. If it passes, transfer
 the unchanged configuration to E04 before any repair/playback proposal.
+
+
+Round13 result: E05 calibrated38.685218Mbps (−0.0539%4x target),94.102s two-pass.
+Shirt HF+0.821% and ACF error0.035571 jointly pass; background HF+2.751% and
+ACF error0.003576 pass. VMAF97.71/NEG96.26/SSIMU81.79/p579.61; whole-tile MSE
+1.7386 versus3x2.626, face MSE2.1965 versus3.1608. Quiet MSE improves but HF/ACF
+errors slightly worsen versus3x. Full240 traces and tails remain evidence, not
+new acceptance gates: shirt ACF maximum0.06602 and temporal-correlation error
+maximum0.07978. Initial calibration39.150117Mbps was+1.147% and remains unscored.
+All336 CPU/NVDEC planes agree; complete QP-state export validates. Passing the
+prescribed screen is provisional and does not establish perceptual fidelity.
+
+Round14 primary question: does the unchanged balanced4x configuration transfer
+to structured E04 texture? Retain slow/grain/AQ1/subme11/defaultdeblock, same
+source controls and actual-packet±1% rule. Initial request33776kbps produced
+39.240118Mbps (−2.187%) and was not scored. Recalibrated request34531kbps produces
+40.176523Mbps (+0.1473%),76.684s two-pass. Purple HF+3.800%, ACF error0.007079,
+source-HF correlation0.8602 pass; VMAF96.61/NEG95.21/SSIMU84.26/p580.20. Whole-tile
+MSE1.3176, quiet0.1416, edge2.4281 improve over original-budget baseline. All336
+input/CPU/NVDEC planes validate. This is transfer on a known fixture, not a new
+held-out episode. Parent inspected native purple/shirt/background/face stills;
+no investigator has observed motion playback.
+
+- auto: Stop numerical settings trials at the supported provisional4x candidate;
+  actual player/display judgment and bitrate/runtime tolerance are now necessary.
+  Do not infer a minimum rate from the tested3x failure and4x success.
+- auto: Preserve blind crop loops plus actual coded full streams and lossless
+  original-derived full references; bind every panel to source/score/decoder hashes.
+- auto: Preserve exact measured SVT source/binary separately from later hardened
+  reader source; archive useful evidence before retiring reproducible scratch.
