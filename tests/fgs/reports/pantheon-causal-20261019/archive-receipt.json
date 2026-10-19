@@ -1,0 +1,13 @@
+{
+  "archive": "/media/merged-storage/cold-storage/docker-apps/pantheon-causal-20261019",
+  "files_verified_sha256": 7642,
+  "files_including_manifest": 7643,
+  "bytes_verified": 4201483181,
+  "manifest_sha256": "ae092b58e96c9c7dd26cae58c22450bc02278c98e5f8ec9ac83b04915a79856e",
+  "scratch_removed": true,
+  "index_row_present": true,
+  "archive_helper": "/opt/docker-apps/scripts/archive-to-cold-storage.sh",
+  "report_commit": "8fff590152b62880ef1c551e689197fa690c6e7b",
+  "production_changed": false,
+  "previous_archive_read_only": true
+}
