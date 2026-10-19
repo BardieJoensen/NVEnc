@@ -47,3 +47,5 @@ human playback. No new numerical gate or practical bitrate ceiling is invented.
 - auto: Keep the same FP initial quantizer for the retention contrast; the earlier regular-B diagnostic changed two variables and cannot isolate optimize_b.
 - auto: Measure local entropy cost before spending on a new rate-control strategy; a local gain is insufficient to claim a practical stream.
 - auto: Do not fit another grain estimator to the unchanged base after the documented quiet-region failure.
+- auto: Freeze complete source-only control grids before viewing new encoded results. Neither diagnostic frame has a quiet tile under the existing definition; add the earliest previously sampled qualifying frame (E04 88, 23 quiet tiles; E05 24, 20 quiet tiles), without changing thresholds.
+- auto: Exclude whole-block skip revival from TU-only entropy accounting. Preserve pre-reset exercised transform type for any zero-EOB TU revival inside a coded block.
