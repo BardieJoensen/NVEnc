@@ -1,0 +1,9 @@
+{
+  "fresh_score_succeeds": true,
+  "matching_repeat_reuses_equal_scores": true,
+  "different_encode_same_tag_rejected": true,
+  "threads": 16,
+  "all_frame_metrics_equal_to_historical_threads8": true,
+  "vmaf": 91.33,
+  "ssimu2": 61.13
+}

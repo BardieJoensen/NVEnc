@@ -1,0 +1,249 @@
+Production source evidence, git object f1327e1493e8cad967889af96571e974dd41245b.
+Build pin is process evidence, not a byte-reproducible build proof.
+
+
+NVEncCore/NVEncFilterFilmGrain.cu
+2260:             autoDetailProtection > 0.0f
+2261:                 ? static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice) : nullptr,
+2262:             m_blocksX, m_blocksY, stream, autoDetailProtection, true);
+2263:         if (sts != RGY_ERR_NONE) return sts;
+2264:     }
+2265:
+2266:     cudaerr = cudaMemsetAsync(m_modelStats->ptrDevice, 0, m_modelStats->nSize, stream);
+2267:     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+2268:     sts = collect_model_stats(source, output, prm->filmGrain.analyzeChroma, m_blocksX, m_blocksY,
+2269:         bitDepth, static_cast<const uint8_t *>(m_blockMask->ptrDevice),
+2270:         static_cast<const FilmGrainBlockMetric *>(m_blockMetrics->ptrDevice),
+2271:         static_cast<FilmGrainGpuStats *>(m_modelStats->ptrDevice), stream);
+2272:     if (sts != RGY_ERR_NONE) return sts;
+2273:     if ((sts = m_modelStats->copyDtoHAsync(stream)) != RGY_ERR_NONE) return sts;
+2274:     cudaerr = cudaStreamSynchronize(stream);
+2275:     if (cudaerr != cudaSuccess) return err_to_rgy(cudaerr);
+2276:
+2277:     bool sceneReset = false;
+
+NVEncCore/NVEncFilterFilmGrain.cu
+2650:             }
+2651:         }
+2652:     }
+2653:     bool sourceCurveLimited = false;
+2654:     // The curve under sourceCaps alone keeps driving the source blend away
+2655:     // from clean-source levels, so the extra knots a clean notch takes from
+2656:     // the AV1 point budget do not blend source grain in everywhere.
+2657:     NV_ENC_FILM_GRAIN_PARAMS_AV1 sourceParams = params;
+2658:     if (modelValid && params.applyGrain) {
+2659:         bool sourceOnlyLimited = false;
+2660:         sourceParams.numYPoints = m_state->sourceCaps.refitCurve(0, sourceParams.pointYValue, sourceParams.pointYScaling,
+2661:             sourceParams.numYPoints, 14, sourceOnlyLimited);
+2662:         sourceParams.numCbPoints = m_state->sourceCaps.refitCurve(1, sourceParams.pointCbValue, sourceParams.pointCbScaling,
+2663:             sourceParams.numCbPoints, 10, sourceOnlyLimited);
+2664:         sourceParams.numCrPoints = m_state->sourceCaps.refitCurve(2, sourceParams.pointCrValue, sourceParams.pointCrScaling,
+2665:             sourceParams.numCrPoints, 10, sourceOnlyLimited);
+2666:         auto caps = m_state->sourceCaps;
+2667:         caps.limitTo(m_state->cleanCaps);
+2668:         params.numYPoints = caps.refitCurve(0, params.pointYValue, params.pointYScaling,
+2669:             params.numYPoints, 14, sourceCurveLimited);
+2670:         params.numCbPoints = caps.refitCurve(1, params.pointCbValue, params.pointCbScaling,
+2671:             params.numCbPoints, 10, sourceCurveLimited);
+2672:         params.numCrPoints = caps.refitCurve(2, params.pointCrValue, params.pointCrScaling,
+2673:             params.numCrPoints, 10, sourceCurveLimited);
+2674:     }
+2675:     bool nonzeroCurve = false;
+2676:     for (uint32_t i = 0; i < params.numYPoints; ++i) nonzeroCurve |= params.pointYScaling[i] != 0;
+2677:     for (uint32_t i = 0; i < params.numCbPoints; ++i) nonzeroCurve |= params.pointCbScaling[i] != 0;
+2678:     for (uint32_t i = 0; i < params.numCrPoints; ++i) nonzeroCurve |= params.pointCrScaling[i] != 0;
+2679:     const bool quietSourceFallback = quietSource.invalid || sourceVariance.invalid || (sourceCurveLimited && !nonzeroCurve);
+2680:     if (quietSourceFallback) {
+2681:         diagnostics.sourceFidelityFallback = true;
+2682:         diagnostics.modelHeld = false;
+2683:         modelValid = false;
+2684:         // The temporal model cache still owns the original, unscaled fit.
+2685:         // Never publish the limited curve as fresh statistical evidence.
+2686:         std::memset(&params, 0, sizeof(params));
+2687:         if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
+2688:     }
+2689:     const bool recoveryAllowed = m_state->synthesisRecovery.allow(modelValid,
+2690:         freshFitValid || diagnostics.freshModel, diagnostics.modelFrames >= prm->filmGrain.modelWindow);
+2691:     const bool recoveryHeld = modelValid && !recoveryAllowed;
+2692:     if (recoveryHeld) {
+2693:         // A history reset must not turn a one/two-frame acceptable fit into
+2694:         // an isolated synthetic overlay. All planes keep the original source;
+2695:         // no unsafe fit or stale model is emitted to bridge the gap.
+2696:         modelValid = false;
+2697:         diagnostics.modelHeld = false;
+2698:         std::memset(&params, 0, sizeof(params));
+2699:         if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
+2700:     }
+2701:     diagnostics.reliable = modelValid;
+2702:     if (modelValid && params.applyGrain && diagnostics.residualRetain > 0.0f) {
+
+NVEncCore/NVEncFilterFilmGrain.cu
+2770:     if (modelValid && params.applyGrain && sourceCurveLimited) {
+2771:         // Reproduce the same integer scaling on the original curve, then use
+2772:         // the actual signalled ratio. Couple it to any earlier scalar source
+2773:         // retention/recovery; reducing synthesis alone would blur the picture.
+2774:         auto scaleLikeOutput = [&](NV_ENC_FILM_GRAIN_PARAMS_AV1& curve) {
+2775:             if (diagnostics.residualRetain > 0.0f) {
+2776:                 const float retain = diagnostics.residualRetain;
+2777:                 const float synthScale = std::sqrt(std::max(0.0f, 1.0f-retain*retain));
+2778:                 for (uint32_t i=0;i<curve.numYPoints;++i)
+2779:                     curve.pointYScaling[i]=static_cast<uint8_t>(std::lround(curve.pointYScaling[i]*synthScale));
+2780:             }
+2781:             if (recoveryGain < 1.0) {
+2782:                 for (uint32_t i=0;i<curve.numYPoints;++i)
+2783:                     curve.pointYScaling[i]=static_cast<uint8_t>(std::lround(curve.pointYScaling[i]*recoveryGain));
+2784:                 for (uint32_t i=0;i<curve.numCbPoints;++i)
+2785:                     curve.pointCbScaling[i]=static_cast<uint8_t>(std::lround(curve.pointCbScaling[i]*recoveryGain));
+2786:                 for (uint32_t i=0;i<curve.numCrPoints;++i)
+2787:                     curve.pointCrScaling[i]=static_cast<uint8_t>(std::lround(curve.pointCrScaling[i]*recoveryGain));
+2788:             }
+2789:         };
+2790:         scaleLikeOutput(unlimitedParams);
+2791:         scaleLikeOutput(sourceParams);
+2792:         auto blendLut=static_cast<float *>(m_sourceBlendLut->ptrHost);
+2793:         for (int plane=0;plane<3;++plane) {
+2794:             float original[FGS_STRENGTH_LUT_SIZE], limited[FGS_STRENGTH_LUT_SIZE], sourceLimited[FGS_STRENGTH_LUT_SIZE];
+2795:             build_strength_lut(unlimitedParams,bitDepth,original,plane,diagnostics.templateGain[plane]);
+2796:             build_strength_lut(params,bitDepth,limited,plane,diagnostics.templateGain[plane]);
+2797:             build_strength_lut(sourceParams,bitDepth,sourceLimited,plane,diagnostics.templateGain[plane]);
+2798:             for (int x=0;x<FGS_STRENGTH_LUT_SIZE;++x) {
+2799:                 if (m_state->cleanCaps.gain(plane, x) >= 1.0) limited[x] = sourceLimited[x];
+2800:             }
+2801:             const double retained=plane==0 ? diagnostics.residualRetain : 0.0;
+2802:             const double prior=std::sqrt(std::max(0.0,1.0-recoveryGain*recoveryGain*(1.0-retained*retained)));
+2803:             for (int x=0;x<FGS_STRENGTH_LUT_SIZE;++x) {
+2804:                 const double gain=original[x]>1e-12f ? clamp(static_cast<double>(limited[x])/original[x],0.0,1.0) : 1.0;
+2805:                 blendLut[plane*FGS_STRENGTH_LUT_SIZE+x]=static_cast<float>(film_grain_recovery_source_blend(gain,prior));
+2806:             }
+2807:         }
+2808:         // Separate pinned storage avoids reusing a still-pending DMA source
+2809:         // when the level-compensation LUT is populated immediately below.
+2810:         if ((sts=m_sourceBlendLut->copyHtoDAsync(stream)) != RGY_ERR_NONE) return sts;
+2811:         const auto lut=static_cast<const float *>(m_sourceBlendLut->ptrDevice);
+2812:         switch (output->csp) {
+2813:         case RGY_CSP_NV12:
+2814:         case RGY_CSP_YV12: sts=launch_source_curve_blend<uint8_t,0>(output,source,bitDepth,lut,stream); break;
+2815:         case RGY_CSP_YV12_10: sts=launch_source_curve_blend<uint16_t,0>(output,source,bitDepth,lut,stream); break;
+2816:         case RGY_CSP_P010: sts=launch_source_curve_blend<uint16_t,6>(output,source,bitDepth,lut,stream); break;
+2817:         default: sts=RGY_ERR_UNSUPPORTED; break;
+2818:         }
+2819:         if (sts != RGY_ERR_NONE) return sts;
+2820:     }
+2821:     if (modelValid && params.applyGrain && !m_tableOutPath.empty()) {
+2822:         recordTableEntry(source->timestamp, source->duration, params);
+2823:     }
+2824:     if (modelValid && params.applyGrain) {
+2825:         build_strength_lut(params, bitDepth, static_cast<float *>(m_strengthLut->ptrHost));
+
+NVEncCore/NVEncFilmGrainRecovery.h
+1: #pragma once
+2:
+3: #include <algorithm>
+4: #include <cmath>
+5:
+6: namespace fgsmodel {
+7:
+8: // Source preservation and synthesized grain can have different local texture.
+9: // After falling back, a single acceptable fit is not evidence that it is safe
+10: // to switch back. Keep the source until a settled rolling window remains usable
+11: // for the normal 24-frame model-update interval. This state is deliberately
+12: // independent of the fit history: low-confidence frames clear that history.
+13: class FilmGrainSynthesisRecovery {
+14: public:
+15:     static constexpr int recoveryFrames = 24;
+16:     static constexpr int rampFrames = 16;
+17:
+18:     void reset() { m_active = false; m_frames = 0; m_ramp = rampFrames; }
+19:     void preserveSource() { m_active = true; m_frames = 0; m_ramp = 0; }
+20:
+21:     bool allow(bool modelAvailable, bool freshFit, bool settledWindow) {
+22:         if (!modelAvailable) {
+23:             preserveSource();
+24:             return false;
+25:         }
+26:         if (!m_active) {
+27:             if (freshFit && m_ramp < rampFrames) ++m_ramp;
+28:             return true;
+29:         }
+30:         if (!freshFit || !settledWindow) {
+31:             m_frames = 0;
+32:             return false;
+33:         }
+34:         if (++m_frames < recoveryFrames) return false;
+35:         // Past evidence cannot promise that the next frame remains usable.
+36:         // Introduce synthesis gradually so an immediate new rejection does
+37:         // not leave a full-strength one-frame overlay in the output.
+38:         m_active = false;
+39:         m_frames = 0;
+40:         m_ramp = 1;
+41:         return true;
+42:     }
+43:
+44:     bool active() const { return m_active; }
+45:     int frames() const { return m_frames; }
+46:     double gain() const { return static_cast<double>(m_ramp) / rampFrames; }
+47:
+48: private:
+49:     bool m_active = false;
+50:     int m_frames = 0;
+51:     int m_ramp = rampFrames;
+52: };
+53:
+54: // Apply after any existing luma residual retention. Given its coefficient r,
+55: // blend an additional q of source into that base, so the combined coefficient
+56: // R = r + q*(1-r) satisfies R^2 + gain^2*(1-r^2) = 1. Scaling grain without
+57: // this matching source blend would temporarily remove the original texture.
+58: inline double film_grain_recovery_source_blend(double gain, double retained) {
+59:     gain = (std::clamp)(gain, 0.0, 1.0);
+60:     retained = (std::clamp)(retained, 0.0, 1.0);
+61:     if (retained == 1.0 || gain == 1.0) return 0.0;
+62:     const double combined = std::sqrt(std::max(0.0, 1.0 - gain * gain * (1.0 - retained * retained)));
+63:     return (std::clamp)((combined - retained) / (1.0 - retained), 0.0, 1.0);
+64: }
+65:
+
+NVEncCore/NVEncCore.cpp
+1870:
+1871:     if (inputParam->av1.filmGrainAuto && !inputParam->av1.filmGrainTable.empty()) {
+1872:         PrintMes(RGY_LOG_ERROR, _T("--av1-film-grain and --film-grain-table cannot be used together.\n"));
+1873:         return RGY_ERR_INVALID_PARAM;
+1874:     }
+1875:     // --av1-film-grain with raw output + a table target produces a denoised
+1876:     // base and a measured filmgrn1 table for an external AV1 encoder
+1877:     // (e.g. SvtAv1EncApp --fgs-table).
+1878:     const bool filmGrainRawAnalysis = inputParam->av1.filmGrainAuto
+1879:         && (inputParam->codec_rgy == RGY_CODEC_RAW || inputParam->codec_rgy == RGY_CODEC_AVCODEC);
+1880:     if ((inputParam->av1.filmGrainAuto || !inputParam->av1.filmGrainTable.empty())
+1881:         && inputParam->codec_rgy != RGY_CODEC_AV1 && !filmGrainRawAnalysis) {
+1882:         PrintMes(RGY_LOG_ERROR, _T("AV1 film-grain synthesis options are only supported with AV1 encoding.\n"));
+1883:         return RGY_ERR_UNSUPPORTED;
+1884:     }
+1885:     if (!inputParam->av1.filmGrainTableOut.empty() && !inputParam->av1.filmGrainAuto) {
+1886:         PrintMes(RGY_LOG_ERROR, _T("--film-grain-table-out requires --av1-film-grain.\n"));
+1887:         return RGY_ERR_INVALID_PARAM;
+1888:     }
+1889:
+1890:     if (inputParam->codec_rgy == RGY_CODEC_RAW || inputParam->codec_rgy == RGY_CODEC_AVCODEC) {
+1891:         PrintMes(RGY_LOG_DEBUG, _T("raw or avcodec output selected, skip initializing encoder.\n"));
+1892:         return RGY_ERR_NONE;
+1893:     }
+1894:
+1895:     m_dev->encoder()->setStructVer(m_stCreateEncodeParams);
+
+NVEncCore/NVEncCore.cpp
+3530:     }
+3531:
+3532:     if (inputParam->av1.filmGrainAuto) {
+3533:         if (!m_dev->encoder()) {
+3534:             // Raw analysis mode: the film grain filter (and its motion degrain
+3535:             // child) work on the encoder-style semi-planar csp, not the raw
+3536:             // output csp; convert in, and the trailing copy below converts out.
+3537:             const auto analysisCsp = (inputParam->outputDepth > 8) ? RGY_CSP_P010 : RGY_CSP_NV12;
+3538:             if (inputFrame.csp != analysisCsp) {
+3539:                 unique_ptr<NVEncFilter> filterCrop(new NVEncFilterCspCrop());
+3540:                 shared_ptr<NVEncFilterParamCrop> paramCrop(new NVEncFilterParamCrop());
+3541:                 paramCrop->frameIn = inputFrame;
+3542:                 paramCrop->frameOut = inputFrame;
+3543:                 paramCrop->frameOut.csp = analysisCsp;
+3544:                 paramCrop->baseFps = m_encFps;
+3545:                 paramCrop->matrix = VuiFiltered.matrix;

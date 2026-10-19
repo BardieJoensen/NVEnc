@@ -1,0 +1,71 @@
+{
+  "all_frame_alignment": {
+    "e04": {
+      "arms": 14,
+      "blocks_per_arm": 10,
+      "all240_covered": true,
+      "zero_offset_minimum_every_block": true
+    },
+    "e05-1420": {
+      "arms": 5,
+      "blocks_per_arm": 10,
+      "all240_covered": true,
+      "zero_offset_minimum_every_block": true
+    },
+    "e05-1440": {
+      "arms": 5,
+      "blocks_per_arm": 10,
+      "all240_covered": true,
+      "zero_offset_minimum_every_block": true
+    },
+    "e05-1460": {
+      "arms": 5,
+      "blocks_per_arm": 10,
+      "all240_covered": true,
+      "zero_offset_minimum_every_block": true
+    }
+  },
+  "cases": {
+    "e04": {
+      "extraction_different_seek_all240_exact": true,
+      "raw_conversion_all240_exact": true,
+      "source_h264_nvdec_matches_software_all240": true,
+      "library_av1_nvdec_matches_dav1d_all240": null,
+      "fgs_raw_vs_encoded_tables_exact": true
+    },
+    "e05-1420": {
+      "extraction_different_seek_all240_exact": true,
+      "raw_conversion_all240_exact": true,
+      "source_h264_nvdec_matches_software_all240": true,
+      "library_av1_nvdec_matches_dav1d_all240": true,
+      "fgs_raw_vs_encoded_tables_exact": true
+    },
+    "e05-1440": {
+      "extraction_different_seek_all240_exact": true,
+      "raw_conversion_all240_exact": true,
+      "source_h264_nvdec_matches_software_all240": true,
+      "library_av1_nvdec_matches_dav1d_all240": true,
+      "fgs_raw_vs_encoded_tables_exact": true
+    },
+    "e05-1460": {
+      "extraction_different_seek_all240_exact": true,
+      "raw_conversion_all240_exact": true,
+      "source_h264_nvdec_matches_software_all240": true,
+      "library_av1_nvdec_matches_dav1d_all240": true,
+      "fgs_raw_vs_encoded_tables_exact": true
+    }
+  },
+  "decoder_proof": "decoder-check.json in archive",
+  "raw_vs_integrated_e04": {
+    "base": {
+      "exact": true,
+      "frames": 240
+    },
+    "final": {
+      "exact": true,
+      "frames": 240
+    },
+    "tables_exact": true
+  },
+  "svt_input_all240_exact": true
+}

@@ -1,0 +1,30 @@
+{
+  "sha256": {
+    "/opt/docker-apps/build/tdarr-node/nvencc": "b30612f9e8b4b8f20e900a5cec0a64fa77e931b17f39ec83da4163057fce30db",
+    "/tmp/downloads/codex-work/pantheon-independent-investigation/svt-source/Bin/Release/SvtAv1EncApp": "5ed9fb98ec8a2a742f6ef45072371c1d63dcf6461af1e2ab54682fe023c24cde",
+    "/home/bardie/git-repos/vmaf/libvmaf/build/tools/vmaf": "85017a49217f364e51127af182e7d10a51189fe58942cb035a7c106d12155091",
+    "/usr/bin/ffmpeg": "ed16af623947494a72e284b6eb8ff225f2da22b38b5d5069c2fd4b4ba3384e41",
+    "/opt/docker-apps/build/tdarr-node/Dockerfile.fidelity": "bf68fcc488212638d696eaf0cef1d0599d89d5907a27e59f1bd67d0d4de4711f",
+    "/home/bardie/git-repos/NVEnc/tests/fgs/campaign.py": "38e951b9892334951f486e4b40e258f3aa2fc816a5ef6f800ed90dc14b8673ed",
+    "/usr/local/bin/ffmpeg": "a9621baa19be96b6cf880e388fc9cdaf1fb23ac5e5daad9672412e1c32c6a0c2",
+    "/usr/local/bin/ffprobe": "1e4fdb3dafbe4438990f4b8141774823eece931140e6b28e45e1bba66acd2bdd"
+  },
+  "nv_version": "NVEnc (x64) 9.38 (r4412) by rigaya, Oct  8 2026 12:39:00 (gcc 13.3.0/Linux)\n  [NVENC API v13.1, CUDA 13.3]\n reader: raw, y4m, avs, vpy, avsw, avhw [H.264/AVC, H.265/HEVC, MPEG2, VP8, VP9, VC-1, MPEG1, MPEG4, AV1]\n others\n  nvml       : yes\n  nvrtc      : yes\n  nvvfx      : no\n  ngx        : no\n  nvof fruc  : no\n  libass     : yes\n  libdovi    : yes\n  vulkan     : yes\n  libplacebo : yes\n  vmaf       : no\n",
+  "svt_version": "SVT-AV1 v4.2.0 (release)\n",
+  "nv_source_build_evidence": "Dockerfile.fidelity f1327e1493e8cad967889af96571e974dd41245b; binary hash pin, not embedded/reproducible Git proof",
+  "repo_head": "eb34f7dd55903446ef1adb072dcf7701ca73f9b9",
+  "vmaf_head": "c4a085f6023ab0c385ce634ece42b49da9bca2e8",
+  "svt_head": "9292ec8e32bce26f781f277ec8739b53426c4300",
+  "ffvship_image": "sha256:570b739a068e6448e77a2d7e4988846d515cefb807a0ae243d140516291b0c16",
+  "ffmpeg_version": "ffmpeg version git-2026-03-26-5dfe661f03 Copyright (c) 2000-2026 the FFmpeg developers\nbuilt with gcc 13 (Ubuntu 13.3.0-6ubuntu2~24.04.1)\nconfiguration: --enable-libvmaf --enable-libdav1d --enable-gpl --enable-nonfree\nlibavutil      60. 29.100 / 60. 29.100\nlibavcodec     62. 29.101 / 62. 29.101\nlibavformat    62. 13.101 / 62. 13.101\nlibavdevice    62.  4.100 / 62.  4.100\nlibavfilter    11. 15.101 / 11. 15.101\nlibswscale      9.  7.100 /  9.  7.100\nlibswresample   6.  4.100 /  6.  4.100\n\nExiting with exit code 0\n",
+  "gpu": "Mon Oct 19 19:08:43 2026       \n+-----------------------------------------------------------------------------------------+\n| NVIDIA-SMI 595.91.07              Driver Version: 595.91.07      CUDA Version: 13.2     |\n+-----------------------------------------+------------------------+----------------------+\n| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n|                                         |                        |               MIG M. |\n|=========================================+========================+======================|\n|   0  NVIDIA GeForce RTX 5060 Ti     On  |   00000000:01:00.0  On |                  N/A |\n|  0%   34C    P8              4W /  180W |     183MiB /  16311MiB |      0%      Default |\n|                                         |                        |                  N/A |\n+-----------------------------------------+------------------------+----------------------+\n\n+-----------------------------------------------------------------------------------------+\n| Processes:                                                                              |\n|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n|        ID   ID                                                               Usage      |\n|=========================================================================================|\n|    0   N/A  N/A           11093      G   sway                                      3MiB |\n|    0   N/A  N/A           13495    C+G   sunshine                                134MiB |\n+-----------------------------------------------------------------------------------------+\n",
+  "disk": "Filesystem                                      Size  Used Avail Use% Mounted on\n/dev/nvme0n1p7                                  131G   49G   76G  39% /home\n/dev/nvme0n1p6                                 1007G  435G  522G  46% /tmp/downloads\n/dev/nvme0n1p5                                  196G  118G   68G  64% /opt/docker-apps\n/media/storage:/media/storage1:/media/storage2   48T   27T   21T  57% /media/merged-storage\n",
+  "media_sha256": {
+    "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/Pantheon.S02.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb/Pantheon.S02E04.Olivia.&.Farhad.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb.mkv": "d1668e03d3f63a34c11424b345172f1f94d01a3ab67b2e285390e701ab8c55d5",
+    "/media/merged-storage/media/cartoon-anime/Pantheon (2022)/Season 02/Pantheon (2022) - S02E04 - Olivia and Farhad [AMZN v2][WEBDL-1080p Proper][EAC3 5.1][h264]-NTb.mkv": "b37e748d8b8b3cae50ecf4d074620f7ce73b70360c0df972c46bf44b9bd58466",
+    "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/Pantheon.S02.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb/Pantheon.S02E05.Yair.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb.mkv": "c220d19542c65cb8f98bb7efcd03fdce7400a06784ed6e47453d878e26899f17",
+    "/media/merged-storage/media/cartoon-anime/Pantheon (2022)/Season 02/Pantheon (2022) - S02E05 - Yair [AMZN][WEBDL-1080p Proper][EAC3 5.1][h264]-NTb.mkv": "414d32c5c171f1658fd4c8558c1721034d4615a0c947a0254d4df82cdc6c43ba"
+  },
+  "resolved_ffmpeg": "/usr/local/bin/ffmpeg",
+  "resolved_ffprobe": "/usr/local/bin/ffprobe"
+}
