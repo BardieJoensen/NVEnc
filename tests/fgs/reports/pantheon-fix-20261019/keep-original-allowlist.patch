@@ -1,0 +1,9 @@
+--- /opt/docker-apps/configs/tdarr-flow/keep-original-allowlist.txt
++++ /opt/docker-apps/configs/tdarr-flow/keep-original-allowlist.txt
+@@ -164,3 +164,6 @@
+ # dan; 3,6 -> only ice; 6 alone -> eng). The audio-policy guard then correctly refuses.
+ # Kept as H.264; the ffmpeg remux path keeps eng+dan and drops fin/ice/nor/swe.
+ /animated-movies/pippi longstocking (1997) [tmdbid-12630]
++
++# Pantheon: preserve source texture; quality audit 2026-10-19
++/cartoon-anime/Pantheon (2022)/

@@ -1,0 +1,6 @@
+{
+  "live_flow": "AV1NVENCflow1",
+  "keep_original_detection_matches_local": true,
+  "keep_original_node": "keepOrigDetect_001",
+  "allowlist_read_each_job": true
+}

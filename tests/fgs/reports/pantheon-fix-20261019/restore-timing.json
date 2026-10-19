@@ -1,0 +1,17 @@
+{
+  "checks": {
+    "v": {
+      "packets": 59628,
+      "exact_pts_dts_size_and_side_data_match_per_stream": true
+    },
+    "a": {
+      "packets": 202065,
+      "exact_pts_dts_size_and_side_data_match_per_stream": true
+    },
+    "s": {
+      "packets": 614,
+      "exact_pts_dts_size_and_side_data_match_per_stream": true
+    }
+  },
+  "note": "Final output disables lacing. All PTS/DTS, packet sizes, and skip/discard side data match per stream. Last Opus packet nominal duration is 11 ms instead of 20 ms; both discard the same 456 padding samples and whole decoded PCM hashes match exactly."
+}

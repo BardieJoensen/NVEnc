@@ -1,0 +1,494 @@
+{
+  "source_texture": {
+    "whole_frame": {
+      "hf_sigma": 2.0603,
+      "acf1": -0.1229,
+      "acf2": -0.1108,
+      "acf3": 0.003
+    },
+    "background_roi": {
+      "hf_sigma": 1.8585,
+      "acf1": -0.1842,
+      "acf2": -0.0954,
+      "acf3": 0.0163
+    }
+  },
+  "library": {
+    "alignment_costs": {
+      "-3": 1.780793309211731,
+      "-2": 1.4034837484359741,
+      "-1": 1.0316102504730225,
+      "0": 0.7221137285232544,
+      "1": 1.0407286882400513,
+      "2": 1.4288657903671265,
+      "3": 1.8185536861419678
+    },
+    "ssimu2": 46.55,
+    "ssimu2_p5": 6.1,
+    "t_ssimu2": 2.3,
+    "butter_2norm": 1.958,
+    "butter_max_p95": 11.19,
+    "t_butteraugli": 3.5,
+    "vmaf": 84.5,
+    "vmaf_min": 64.26,
+    "vmaf_neg": 83.32,
+    "vmaf_neg_gap": 1.18,
+    "psnr_y": 39.54,
+    "ssim": 0.9844,
+    "ciede2000": 43.14,
+    "t_vmaf": 2.3,
+    "t_score_wall": 5.8,
+    "vmaf_p1": 66.33,
+    "psnr_cb": 50.11,
+    "psnr_cr": 49.38,
+    "ciede": 43.14,
+    "cambi_enc": 1.514,
+    "cambi_src": 1.058,
+    "texture": {
+      "whole_frame": {
+        "hf_sigma": 1.0329,
+        "acf1": -0.2723,
+        "acf2": 0.0062,
+        "acf3": -0.0138
+      },
+      "background_roi": {
+        "hf_sigma": 0.6584,
+        "acf1": 0.0146,
+        "acf2": -0.0675,
+        "acf3": -0.0483
+      }
+    }
+  },
+  "q34-fgs": {
+    "kbps_window": 3309.32,
+    "kbps_all": 2672.56,
+    "alignment_costs": {
+      "-3": 1.7822482585906982,
+      "-2": 1.407287359237671,
+      "-1": 1.0348331928253174,
+      "0": 0.7242920398712158,
+      "1": 1.0399266481399536,
+      "2": 1.4267327785491943,
+      "3": 1.816287636756897
+    },
+    "ssimu2": 47.59,
+    "ssimu2_p5": 11.03,
+    "t_ssimu2": 2.2,
+    "butter_2norm": 1.939,
+    "butter_max_p95": 11.5,
+    "t_butteraugli": 3.1,
+    "vmaf": 84.78,
+    "vmaf_min": 66.49,
+    "vmaf_neg": 83.62,
+    "vmaf_neg_gap": 1.16,
+    "psnr_y": 39.58,
+    "ssim": 0.9849,
+    "ciede2000": 43.16,
+    "t_vmaf": 2.3,
+    "t_score_wall": 5.4,
+    "vmaf_p1": 68.45,
+    "psnr_cb": 50.19,
+    "psnr_cr": 49.45,
+    "ciede": 43.16,
+    "cambi_enc": 1.569,
+    "cambi_src": 1.058,
+    "texture": {
+      "whole_frame": {
+        "hf_sigma": 1.1635,
+        "acf1": -0.0735,
+        "acf2": -0.0423,
+        "acf3": -0.0704
+      },
+      "background_roi": {
+        "hf_sigma": 0.7155,
+        "acf1": 0.2222,
+        "acf2": -0.0737,
+        "acf3": -0.1392
+      }
+    }
+  },
+  "q30-fgs": {
+    "kbps_window": 5311.63,
+    "kbps_all": 4373.97,
+    "alignment_costs": {
+      "-3": 1.7856192588806152,
+      "-2": 1.4079846143722534,
+      "-1": 1.0260956287384033,
+      "0": 0.690743625164032,
+      "1": 1.0300838947296143,
+      "2": 1.425313949584961,
+      "3": 1.8185378313064575
+    },
+    "ssimu2": 52.94,
+    "ssimu2_p5": 21.03,
+    "t_ssimu2": 2.1,
+    "butter_2norm": 1.785,
+    "butter_max_p95": 9.69,
+    "t_butteraugli": 3.1,
+    "vmaf": 87.5,
+    "vmaf_min": 70.34,
+    "vmaf_neg": 86.4,
+    "vmaf_neg_gap": 1.1,
+    "psnr_y": 40.14,
+    "ssim": 0.988,
+    "ciede2000": 43.7,
+    "t_vmaf": 2.2,
+    "t_score_wall": 5.2,
+    "vmaf_p1": 74.38,
+    "psnr_cb": 50.79,
+    "psnr_cr": 50.14,
+    "ciede": 43.7,
+    "cambi_enc": 1.104,
+    "cambi_src": 1.058,
+    "texture": {
+      "whole_frame": {
+        "hf_sigma": 1.2968,
+        "acf1": -0.0535,
+        "acf2": -0.0642,
+        "acf3": -0.0699
+      },
+      "background_roi": {
+        "hf_sigma": 0.9142,
+        "acf1": 0.1532,
+        "acf2": -0.1009,
+        "acf3": -0.1208
+      }
+    }
+  },
+  "q26-fgs": {
+    "kbps_window": 8321.14,
+    "kbps_all": 7000.71,
+    "alignment_costs": {
+      "-3": 1.7903510332107544,
+      "-2": 1.4109264612197876,
+      "-1": 1.0206124782562256,
+      "0": 0.653863787651062,
+      "1": 1.0229871273040771,
+      "2": 1.4281582832336426,
+      "3": 1.822838544845581
+    },
+    "ssimu2": 58.5,
+    "ssimu2_p5": 31.46,
+    "t_ssimu2": 1.9,
+    "butter_2norm": 1.622,
+    "butter_max_p95": 8.31,
+    "t_butteraugli": 3.2,
+    "vmaf": 89.74,
+    "vmaf_min": 76.74,
+    "vmaf_neg": 88.69,
+    "vmaf_neg_gap": 1.05,
+    "psnr_y": 40.8,
+    "ssim": 0.9911,
+    "ciede2000": 44.33,
+    "t_vmaf": 2.3,
+    "t_score_wall": 5.1,
+    "vmaf_p1": 79.62,
+    "psnr_cb": 51.45,
+    "psnr_cr": 50.88,
+    "ciede": 44.33,
+    "cambi_enc": 0.645,
+    "cambi_src": 1.058,
+    "texture": {
+      "whole_frame": {
+        "hf_sigma": 1.4333,
+        "acf1": -0.0504,
+        "acf2": -0.0865,
+        "acf3": -0.0559
+      },
+      "background_roi": {
+        "hf_sigma": 1.1113,
+        "acf1": 0.075,
+        "acf2": -0.1266,
+        "acf3": -0.0824
+      }
+    }
+  },
+  "q22-fgs": {
+    "kbps_window": 12619.96,
+    "kbps_all": 10756.49,
+    "alignment_costs": {
+      "-3": 1.7978154420852661,
+      "-2": 1.4167009592056274,
+      "-1": 1.0162731409072876,
+      "0": 0.6016001105308533,
+      "1": 1.0178086757659912,
+      "2": 1.433963656425476,
+      "3": 1.830336570739746
+    },
+    "ssimu2": 64.01,
+    "ssimu2_p5": 40.67,
+    "t_ssimu2": 1.9,
+    "butter_2norm": 1.457,
+    "butter_max_p95": 7.27,
+    "t_butteraugli": 3.2,
+    "vmaf": 91.53,
+    "vmaf_min": 81.28,
+    "vmaf_neg": 90.53,
+    "vmaf_neg_gap": 1.0,
+    "psnr_y": 41.57,
+    "ssim": 0.9936,
+    "ciede2000": 45.07,
+    "t_vmaf": 2.3,
+    "t_score_wall": 5.1,
+    "vmaf_p1": 83.54,
+    "psnr_cb": 52.22,
+    "psnr_cr": 51.71,
+    "ciede": 45.07,
+    "cambi_enc": 0.359,
+    "cambi_src": 1.058,
+    "texture": {
+      "whole_frame": {
+        "hf_sigma": 1.5994,
+        "acf1": -0.0718,
+        "acf2": -0.0976,
+        "acf3": -0.0372
+      },
+      "background_roi": {
+        "hf_sigma": 1.3097,
+        "acf1": 0.0067,
+        "acf2": -0.1368,
+        "acf3": -0.05
+      }
+    }
+  },
+  "q30-plain": {
+    "kbps_window": 5742.98,
+    "kbps_all": 5096.48,
+    "alignment_costs": {
+      "-3": 1.7922743558883667,
+      "-2": 1.4135440587997437,
+      "-1": 1.0276929140090942,
+      "0": 0.6672096848487854,
+      "1": 1.0311139822006226,
+      "2": 1.432454228401184,
+      "3": 1.8257147073745728
+    },
+    "ssimu2": 54.76,
+    "ssimu2_p5": 21.17,
+    "t_ssimu2": 2.1,
+    "butter_2norm": 1.655,
+    "butter_max_p95": 9.96,
+    "t_butteraugli": 3.3,
+    "vmaf": 88.94,
+    "vmaf_min": 74.79,
+    "vmaf_neg": 87.7,
+    "vmaf_neg_gap": 1.24,
+    "psnr_y": 41.28,
+    "ssim": 0.9885,
+    "ciede2000": 44.66,
+    "t_vmaf": 2.3,
+    "t_score_wall": 5.4,
+    "vmaf_p1": 75.46,
+    "psnr_cb": 50.61,
+    "psnr_cr": 49.94,
+    "ciede": 44.66,
+    "cambi_enc": 1.84,
+    "cambi_src": 1.058,
+    "texture": {
+      "whole_frame": {
+        "hf_sigma": 1.1924,
+        "acf1": 0.1854,
+        "acf2": -0.147,
+        "acf3": -0.117
+      },
+      "background_roi": {
+        "hf_sigma": 0.8778,
+        "acf1": 0.1734,
+        "acf2": -0.1037,
+        "acf3": -0.1276
+      }
+    }
+  },
+  "q26-plain": {
+    "kbps_window": 9273.59,
+    "kbps_all": 8627.29,
+    "alignment_costs": {
+      "-3": 1.812668800354004,
+      "-2": 1.4308810234069824,
+      "-1": 1.032651424407959,
+      "0": 0.6231278777122498,
+      "1": 1.0337625741958618,
+      "2": 1.448068618774414,
+      "3": 1.845438838005066
+    },
+    "ssimu2": 60.81,
+    "ssimu2_p5": 31.28,
+    "t_ssimu2": 2.1,
+    "butter_2norm": 1.463,
+    "butter_max_p95": 8.5,
+    "t_butteraugli": 3.3,
+    "vmaf": 91.39,
+    "vmaf_min": 79.93,
+    "vmaf_neg": 90.2,
+    "vmaf_neg_gap": 1.19,
+    "psnr_y": 42.18,
+    "ssim": 0.9916,
+    "ciede2000": 45.46,
+    "t_vmaf": 2.4,
+    "t_score_wall": 5.4,
+    "vmaf_p1": 81.25,
+    "psnr_cb": 51.2,
+    "psnr_cr": 50.61,
+    "ciede": 45.46,
+    "cambi_enc": 0.958,
+    "cambi_src": 1.058,
+    "texture": {
+      "whole_frame": {
+        "hf_sigma": 1.359,
+        "acf1": 0.1228,
+        "acf2": -0.1548,
+        "acf3": -0.0842
+      },
+      "background_roi": {
+        "hf_sigma": 1.081,
+        "acf1": 0.0906,
+        "acf2": -0.1284,
+        "acf3": -0.0869
+      }
+    }
+  },
+  "q22-plain": {
+    "kbps_window": 14101.79,
+    "kbps_all": 13318.27,
+    "alignment_costs": {
+      "-3": 1.8337785005569458,
+      "-2": 1.4479649066925049,
+      "-1": 1.0399638414382935,
+      "0": 0.5739549398422241,
+      "1": 1.0397834777832031,
+      "2": 1.4642573595046997,
+      "3": 1.865291714668274
+    },
+    "ssimu2": 66.91,
+    "ssimu2_p5": 41.33,
+    "t_ssimu2": 2.4,
+    "butter_2norm": 1.263,
+    "butter_max_p95": 7.29,
+    "t_butteraugli": 3.3,
+    "vmaf": 93.36,
+    "vmaf_min": 84.6,
+    "vmaf_neg": 92.23,
+    "vmaf_neg_gap": 1.13,
+    "psnr_y": 43.28,
+    "ssim": 0.9942,
+    "ciede2000": 46.44,
+    "t_vmaf": 2.3,
+    "t_score_wall": 5.7,
+    "vmaf_p1": 85.32,
+    "psnr_cb": 51.91,
+    "psnr_cr": 51.39,
+    "ciede": 46.44,
+    "cambi_enc": 0.439,
+    "cambi_src": 1.058,
+    "texture": {
+      "whole_frame": {
+        "hf_sigma": 1.5535,
+        "acf1": 0.0585,
+        "acf2": -0.1533,
+        "acf3": -0.0536
+      },
+      "background_roi": {
+        "hf_sigma": 1.2943,
+        "acf1": 0.0152,
+        "acf2": -0.1369,
+        "acf3": -0.0514
+      }
+    }
+  },
+  "matched-q30fgs-plain": {
+    "kbps_window": 5595.55,
+    "kbps_all": 5121.58,
+    "alignment_costs": {
+      "-3": 1.7961134910583496,
+      "-2": 1.4166241884231567,
+      "-1": 1.028098464012146,
+      "0": 0.656595766544342,
+      "1": 1.0298480987548828,
+      "2": 1.4362452030181885,
+      "3": 1.8311251401901245
+    },
+    "ssimu2": 53.4,
+    "ssimu2_p5": 18.62,
+    "t_ssimu2": 2.2,
+    "butter_2norm": 1.693,
+    "butter_max_p95": 11.12,
+    "t_butteraugli": 3.2,
+    "vmaf": 88.07,
+    "vmaf_min": 73.11,
+    "vmaf_neg": 86.82,
+    "vmaf_neg_gap": 1.25,
+    "psnr_y": 41.13,
+    "ssim": 0.9876,
+    "ciede2000": 44.54,
+    "t_vmaf": 2.3,
+    "t_score_wall": 5.4,
+    "vmaf_p1": 73.74,
+    "psnr_cb": 50.54,
+    "psnr_cr": 49.84,
+    "ciede": 44.54,
+    "cambi_enc": 1.858,
+    "cambi_src": 1.058,
+    "texture": {
+      "whole_frame": {
+        "hf_sigma": 1.2158,
+        "acf1": 0.1727,
+        "acf2": -0.1519,
+        "acf3": -0.1099
+      },
+      "background_roi": {
+        "hf_sigma": 0.9151,
+        "acf1": 0.1599,
+        "acf2": -0.1182,
+        "acf3": -0.1175
+      }
+    }
+  },
+  "window-matched-q30fgs-plain": {
+    "kbps_window": 5324.16,
+    "kbps_all": 4876.4,
+    "alignment_costs": {
+      "-3": 1.7945008277893066,
+      "-2": 1.414933443069458,
+      "-1": 1.0271098613739014,
+      "0": 0.6600448489189148,
+      "1": 1.030268669128418,
+      "2": 1.4352816343307495,
+      "3": 1.8299291133880615
+    },
+    "ssimu2": 52.81,
+    "ssimu2_p5": 17.74,
+    "t_ssimu2": 2.3,
+    "butter_2norm": 1.711,
+    "butter_max_p95": 10.64,
+    "t_butteraugli": 3.2,
+    "vmaf": 87.76,
+    "vmaf_min": 71.61,
+    "vmaf_neg": 86.52,
+    "vmaf_neg_gap": 1.24,
+    "psnr_y": 41.05,
+    "ssim": 0.9872,
+    "ciede2000": 44.47,
+    "t_vmaf": 2.3,
+    "t_score_wall": 5.5,
+    "vmaf_p1": 72.55,
+    "psnr_cb": 50.48,
+    "psnr_cr": 49.78,
+    "ciede": 44.47,
+    "cambi_enc": 1.928,
+    "cambi_src": 1.058,
+    "texture": {
+      "whole_frame": {
+        "hf_sigma": 1.181,
+        "acf1": 0.1834,
+        "acf2": -0.153,
+        "acf3": -0.1142
+      },
+      "background_roi": {
+        "hf_sigma": 0.8757,
+        "acf1": 0.1772,
+        "acf2": -0.1074,
+        "acf3": -0.1217
+      }
+    }
+  }
+}

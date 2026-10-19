@@ -1,0 +1,6 @@
+{
+  "live_path": "/opt/docker-apps/configs/tdarr-flow/keep-original-allowlist.txt",
+  "base_sha256": "8d7576ae74eae771ef62a8c85509f7b5885ac7b330503c12f55477297975d210",
+  "entry": "/cartoon-anime/Pantheon (2022)/",
+  "status": "proposal only; live file unchanged"
+}
