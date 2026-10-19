@@ -57,5 +57,35 @@
     "actual_mbps": 9.676715199999999,
     "request_kbps": 10053,
     "lp": 1
+  },
+  "combined-disabled-validation": {
+    "e04_ivf_exact_baseline_with_final_combined_patch_and_env_unset": true
+  },
+  "patch-apply-validation": {
+    "dlf_process.c": true,
+    "pantheon_trace.h": true,
+    "pantheon_alloc.h": true,
+    "rest_process.c": true,
+    "temporal_filtering.c": true,
+    "enc_dec_process.c": true,
+    "entropy_coding.c": true,
+    "rc_process.c": true,
+    "resource_coordination_process.c": true
+  },
+  "e04_stage_identity": {
+    "original_all240_exact": true,
+    "final_all240_decoder_exact": true
+  },
+  "e04_maps": {
+    "all240_spatial_indices_verified": true,
+    "selected_packet_rate": 10.066084315684316
+  },
+  "e05-1440_stage_identity": {
+    "original_all240_exact": true,
+    "final_all240_decoder_exact": true
+  },
+  "e05-1440_maps": {
+    "all240_spatial_indices_verified": true,
+    "selected_packet_rate": 9.7486648
   }
 }

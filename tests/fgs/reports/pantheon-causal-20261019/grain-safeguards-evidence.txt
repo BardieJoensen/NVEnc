@@ -1,0 +1,166 @@
+Verified historical NVEnc source f1327e14; inspected safeguards, not edited.
+
+500:     gxy /= scale2;
+501:     gyy /= scale2;
+502:     const float trace = gxx + gyy;
+503:     const float determinant = gxx * gyy - gxy * gxy;
+504:     const float discriminant = fmaxf(0.0f, trace * trace - 4.0f * determinant);
+505:     const float e1 = (trace + sqrtf(discriminant)) * 0.5f;
+506:     const float e2 = (trace - sqrtf(discriminant)) * 0.5f;
+507:     const float ratio = e1 / fmaxf(e2, 1e-6f);
+508:
+509:     const float traceThreshold = 0.15f / (FGS_BLOCK_SIZE * FGS_BLOCK_SIZE);
+510:     const float normThreshold = 0.08f / (FGS_BLOCK_SIZE * FGS_BLOCK_SIZE);
+511:     const float varThreshold = 0.005f / count;
+512:     const bool isFlat = trace < traceThreshold && ratio < 1.25 && e1 < normThreshold && varNorm > varThreshold;
+513:     float scoreArg = -6682.0f * varNorm - 0.2056f * ratio + 13087.0f * trace - 12434.0f * e1 + 2.5694f;
+514:     scoreArg = fminf(100.0f, fmaxf(-25.0f, scoreArg));
+515:
+516:     FilmGrainBlockMetric out = {};
+517:     out.mean = mean;
+518:     out.minCode = minimum;
+519:     out.maxCode = maximum;
+520:     out.sigma = sqrtf(fmaxf(variance, 0.0f));
+521:     out.score = varNorm > varThreshold ? 1.0f / (1.0f + expf(-scoreArg)) : 0.0f;
+522:     // Random grain has similar gradient energy in every direction, while
+523:     // edges and line-like texture concentrate it along one eigenvector.  Keep
+524:     // this continuous confidence so the refinement mask can be interpolated
+525:     // without introducing visible 32x32 block boundaries.
+526:     out.coherence = (e1 - e2) / fmaxf(trace, 1e-12f);
+527:     out.tensorXX = gxx / fmaxf(trace, 1e-12f);
+528:     out.tensorXY = gxy / fmaxf(trace, 1e-12f);
+529:     out.tensorYY = gyy / fmaxf(trace, 1e-12f);
+530:     // Lag-one correlation distinguishes fine, nearly white grain from coarse
+531:     // grain whose spatial scale the compact AV1 AR model may not reproduce.
+532:     // The symmetric energy denominator keeps the diagnostic bounded.
+533:     out.spatialCorrelation = fminf(1.0f, fmaxf(-1.0f,
+534:         reduce4[0] / fmaxf(reduce5[0], 1e-12f)));
+535:     out.flat = isFlat ? 1u : 0u;
+536:     for (int region = 0; region < 4; ++region) out.sourceRegions[region] = sourceRegions[region];
+537:     for (int region = 0; region < 16; ++region) out.sourceVarianceRegions[region] = sourceVarianceRegions[region];
+538:     metrics[blockIndex] = out;
+
+1581: static int select_spatial_training(const FilmGrainBlockMetric *metrics, const int blockCount,
+1582:     const float minSigma, const float maxSigma, const int requiredBlocks, uint8_t *mask) {
+1583:     std::memset(mask, 0, blockCount);
+1584:     std::vector<int> candidates;
+1585:     candidates.reserve(blockCount);
+1586:     for (int i = 0; i < blockCount; ++i) {
+1587:         if (metrics[i].sigma >= minSigma && metrics[i].sigma <= maxSigma && metrics[i].score > 0.0f) {
+1588:             if (metrics[i].flat) mask[i] = 1;
+1589:             if (metrics[i].score >= 0.5f) candidates.push_back(i);
+1590:         }
+1591:     }
+1592:     std::sort(candidates.begin(), candidates.end(), [metrics](const int a, const int b) {
+1593:         return metrics[a].score > metrics[b].score;
+1594:     });
+1595:     int selected = static_cast<int>(std::count(mask, mask + blockCount, static_cast<uint8_t>(1)));
+1596:     // Always take the top decile of scored blocks in addition to the blocks
+1597:     // passing the strict gradient thresholds (libaom flat_block_finder_run
+1598:     // marks the 90th score percentile as flat).  Strong grain inflates the
+1599:     // gradient metrics, so strict-threshold selection alone samples only the
+1600:     // weakest-grain regions and biases the strength curve.
+1601:     const int topDecile = blockCount / 10;
+1602:     int examined = 0;
+1603:     for (const auto index : candidates) {
+1604:         if (examined >= topDecile && selected >= requiredBlocks) break;
+1605:         if (!mask[index]) { mask[index] = 1; ++selected; }
+1606:         ++examined;
+1607:     }
+1608:     return selected;
+1609: }
+1610:
+1611: static float selected_noise(const FilmGrainBlockMetric *metrics, const int blockCount, const uint8_t *mask) {
+
+2536:     FilmGrainQuietSourceGuard quietSource;
+2537:     FilmGrainSourceVarianceGuard sourceVariance;
+2538:     NV_ENC_FILM_GRAIN_PARAMS_AV1 unlimitedParams = params;
+2539:     m_state->sourceCaps.advance(modelValid && (freshFitValid || diagnostics.freshModel));
+2540:     m_state->cleanCaps.advance(modelValid && (freshFitValid || diagnostics.freshModel));
+2541:     if (modelValid && params.applyGrain) {
+2542:         float predicted[3][FGS_STRENGTH_LUT_SIZE];
+2543:         const uint8_t *values[3] = { params.pointYValue, params.pointCbValue, params.pointCrValue };
+2544:         const uint32_t counts[3] = { params.numYPoints, params.numCbPoints, params.numCrPoints };
+2545:         for (int plane = 0; plane < 3; ++plane) {
+2546:             build_strength_lut(params, bitDepth, predicted[plane], plane, diagnostics.templateGain[plane]);
+2547:         }
+2548:         // A brightness model fitted to textured areas must not extrapolate
+2549:         // strong grain onto a thin smooth highlight or cleaner source detail.
+2550:         // Bound only gross conflicts and retain the removed source residual
+2551:         // through the existing curve/temporal/source-blend path below.
+2552:         for (int i = 0; i < blockCount; ++i) {
+2553:             const int blockWidth = std::min(FGS_BLOCK_SIZE, luma.width - (i % m_blocksX) * FGS_BLOCK_SIZE);
+2554:             const int blockHeight = std::min(FGS_BLOCK_SIZE, luma.height - (i / m_blocksX) * FGS_BLOCK_SIZE);
+2555:             for (int region = 0; region < 16; ++region) {
+2556:                 const auto& evidence = metrics[i].sourceVarianceRegions[region];
+2557:                 const double mean = evidence.mean / depthScale;
+2558:                 const double sigma = evidence.sigma / depthScale;
+2559:                 const int first = clamp(static_cast<int>(std::floor(evidence.minCode / depthScale)) - 4, 0, 255);
+2560:                 const int last = clamp(static_cast<int>(std::ceil(evidence.maxCode / depthScale)) + 4, 0, 255);
+2561:                 const double modeled = film_grain_range_peak(predicted[0], values[0], counts[0], first, last) / depthScale;
+2562:                 const double gain = sourceVariance.observe(mean, sigma, modeled,
+2563:                     std::min(8, blockWidth - (region % 4) * 8),
+2564:                     std::min(8, blockHeight - (region / 4) * 8));
+2565:                 if (gain < 1.0) {
+2566:                     m_state->sourceCaps.preserveRange(0, first, last, gain);
+2567:                 }
+2568:             }
+2569:         }
+2570:         // Source-supported restart and mixed artwork are mandatory guards.
+
+2605:                 // Constant chroma keeps the active luma mean required below: near
+2606:                 // black/white its luma-indexed curve also carries grainy shadow or
+2607:                 // highlight chroma (bars, codec-flattened dark chroma), and AV1
+2608:                 // cannot serve both.
+2609:                 const double sourceLumaMean = evidence.mean / depthScale;
+2610:                 const bool activeLuma = sourceLumaMean > 20.0 && sourceLumaMean < 232.0;
+2611:                 const bool constantSource = plane ? sigma == 0.0 && activeLuma : evidence.minCode == evidence.maxCode;
+2612:                 if (constantSource && modeled > 0.0) {
+2613:                     m_state->cleanCaps.preserveRange(plane, first, last, 0.0);
+2614:                 }
+2615:                 // Merely quiet neutral chroma in clipped black/white regions is
+2616:                 // not evidence about the active image's colour noise at
+2617:                 // neighboring levels.
+2618:                 if (evidence.maxCode / depthScale <= 20.0f
+2619:                     || evidence.minCode / depthScale >= 232.0f) return;
+2620:                 if (sigma > sigmaLimit || mean <= 20.0 || mean >= 232.0) return;
+2621:                 // An exactly constant colour block is direct evidence, even
+2622:                 // over textured luma (for example, monochrome title lettering).
+2623:                 // Require an active luma mean so quantized black bars do not
+2624:                 // constrain neighbouring picture levels. Less certain, merely
+2625:                 // quiet chroma retains the recovery/auto policy above.
+2626:                 const bool constantSourceChroma = plane && sigma == 0.0 && activeLuma;
+2627:                 if (plane && !constantSourceChroma && !fullChromaProtection
+2628:                     && !m_state->sourceCaps.hasProtection(0)) return;
+2629:                 quietSource.observe(plane, mean, sigma, modeled);
+2630:                 if (modeled - sigma > 0.25) {
+2631:                     // Retain source-supported variance; a quiet but nonzero
+2632:                     // source is not a reason to force its whole range to zero.
+2633:                     m_state->sourceCaps.preserveRange(plane, first, last, sigma / modeled);
+2634:                 }
+2635:             };
+
+2665:             sourceParams.numCrPoints, 10, sourceOnlyLimited);
+2666:         auto caps = m_state->sourceCaps;
+2667:         caps.limitTo(m_state->cleanCaps);
+2668:         params.numYPoints = caps.refitCurve(0, params.pointYValue, params.pointYScaling,
+2669:             params.numYPoints, 14, sourceCurveLimited);
+2670:         params.numCbPoints = caps.refitCurve(1, params.pointCbValue, params.pointCbScaling,
+2671:             params.numCbPoints, 10, sourceCurveLimited);
+2672:         params.numCrPoints = caps.refitCurve(2, params.pointCrValue, params.pointCrScaling,
+2673:             params.numCrPoints, 10, sourceCurveLimited);
+2674:     }
+2675:     bool nonzeroCurve = false;
+2676:     for (uint32_t i = 0; i < params.numYPoints; ++i) nonzeroCurve |= params.pointYScaling[i] != 0;
+2677:     for (uint32_t i = 0; i < params.numCbPoints; ++i) nonzeroCurve |= params.pointCbScaling[i] != 0;
+2678:     for (uint32_t i = 0; i < params.numCrPoints; ++i) nonzeroCurve |= params.pointCrScaling[i] != 0;
+2679:     const bool quietSourceFallback = quietSource.invalid || sourceVariance.invalid || (sourceCurveLimited && !nonzeroCurve);
+2680:     if (quietSourceFallback) {
+2681:         diagnostics.sourceFidelityFallback = true;
+2682:         diagnostics.modelHeld = false;
+2683:         modelValid = false;
+2684:         // The temporal model cache still owns the original, unscaled fit.
+2685:         // Never publish the limited curve as fresh statistical evidence.
+2686:         std::memset(&params, 0, sizeof(params));
+2687:         if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
+2688:     }

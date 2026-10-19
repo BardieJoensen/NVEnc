@@ -6,7 +6,10 @@ import grain_model as g
 from texture import desc,BOXES
 x=g.x
 def analyze(case,tag='b-trace'):
+    assert tag=='b-trace', 'This validator is baseline-only; allocation has CSVs but no raw stage images.'
     d=x.ROOT/case;t=d/'trace';src=g.mm(d/'source.yuv')
+    ct=d/'coeff-trace' if case=='e04' else t
+    assert len(list(ct.glob('luma_txs-*.csv')))==240
     if not (d/(tag+'-decoder.yuv')).exists():
         x.run([x.ROOT/'apply_grain',d/(tag+'.ivf'),d/(tag+'-decoder.yuv'),0,96,240,'-'],d,tag+'-independent')
     dec=g.mm(d/(tag+'-decoder.yuv'));out={'case':case,'frames':[],'original_all240_exact':True,'final_all240_decoder_exact':True,'stages':{}}
@@ -20,8 +23,8 @@ def analyze(case,tag='b-trace'):
             if stage=='original':out['original_all240_exact'] &= bool(np.array_equal(a,src[n]))
             if stage=='final':out['final_all240_decoder_exact'] &= bool(np.array_equal(a,dec[n]))
             row['stages'][stage]={name:desc(y[cy:cy+h,cx:cx+w]) for name,(cx,cy,w,h) in BOXES[case].items()}
-        sb=list(t.glob(f'sb-{n+96:04d}-*.csv'));tx=list(t.glob(f'luma_txs-{n+96:04d}-*.csv'))
-        if not tx:tx=list((d/'coeff-trace').glob(f'luma_txs-{n+96:04d}-*.csv'))
+        sb=list(t.glob(f'sb-{n+96:04d}-*.csv'));tx=list(ct.glob(f'luma_txs-{n+96:04d}-*.csv'))
+        assert len(tx)==1
         if sb:
             a=np.atleast_2d(np.loadtxt(sb[0],delimiter=','));last={int(r[0]):r for r in a};a=np.array(list(last.values()))
             row['sb_qindex']={'all_mean':float(a[:,4].mean()),'frame_base':float(a[0,5]),'sb_count':len(a),'regions':{}}

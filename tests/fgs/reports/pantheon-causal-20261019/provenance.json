@@ -1,0 +1,48 @@
+{
+  "svt_source_commit": "9292ec8e32bce26f781f277ec8739b53426c4300",
+  "nvenc_source_commit": "f1327e1493e8cad967889af96571e974dd41245b",
+  "binaries": {
+    "production_nvenc": {
+      "path": "/opt/docker-apps/build/tdarr-node/nvencc",
+      "sha256": "b30612f9e8b4b8f20e900a5cec0a64fa77e931b17f39ec83da4163057fce30db"
+    },
+    "svt_source_archive": {
+      "path": "/media/merged-storage/cold-storage/docker-apps/pantheon-independent-investigation/svt-source.tar.gz",
+      "sha256": "753bcc1ba62ca425ad003b22c92609dce9ecbbec2cd572ecf298df9d136d69bc"
+    },
+    "svt_preserved_binary": {
+      "path": "/media/merged-storage/cold-storage/docker-apps/pantheon-independent-investigation/SvtAv1EncApp",
+      "sha256": "5ed9fb98ec8a2a742f6ef45072371c1d63dcf6461af1e2ab54682fe023c24cde"
+    },
+    "svt_unmodified": {
+      "path": "/tmp/downloads/codex-work/pantheon-causal-20261019/SvtAv1EncApp-unmodified",
+      "sha256": "5bd538283d52958ffd1756400e4b7b49178bf7895c68904a4670f5ab3a5ba215"
+    },
+    "svt_instrumented": {
+      "path": "/tmp/downloads/codex-work/pantheon-causal-20261019/SvtAv1EncApp-instrumented",
+      "sha256": "54bb51bceb90d9af9befccc560880a3dd7e9a9d4bfbf17cda3c1811127ed174f"
+    },
+    "svt_allocation": {
+      "path": "/tmp/downloads/codex-work/pantheon-causal-20261019/svt-source/Bin/Release/SvtAv1EncApp",
+      "sha256": "7f3698f668ea22bbe0e35b5ad8d4ced1374783b058e49520ed40934abcfbba18"
+    },
+    "native_grain_helper": {
+      "path": "/tmp/downloads/codex-work/pantheon-causal-20261019/apply_grain",
+      "sha256": "e25e527411b8d98d96a86a0cb3ba1e737798d6e980c6b5e2c76a92ae1eca0922"
+    },
+    "vmaf": {
+      "path": "/home/bardie/git-repos/vmaf/libvmaf/build/tools/vmaf",
+      "sha256": "85017a49217f364e51127af182e7d10a51189fe58942cb035a7c106d12155091"
+    }
+  },
+  "tools": {
+    "compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+    "cmake": "cmake version 3.28.3\n\nCMake suite maintained and supported by Kitware (kitware.com/cmake).",
+    "dav1d": "1.4.1",
+    "ffmpeg": "ffmpeg version git-2026-03-26-5dfe661f03 Copyright (c) 2000-2026 the FFmpeg developers\nbuilt with gcc 13 (Ubuntu 13.3.0-6ubuntu2~24.04.1)\nconfiguration: --enable-libvmaf --enable-libdav1d --enable-gpl --enable-nonfree\nlibavutil      60. 29.100 / 60. 29.100\nlibavcodec     62. 29.101 / 62. 29.101\nlibavformat    62. 13.101 / 62. 13.101\nlibavdevice    62.  4.100 / 62.  4.100\nlibavfilter    11. 15.101 / 11. 15.101\nlibswscale      9.  7.100 /  9.  7.100\nlibswresample   6.  4.100 /  6.  4.100\n\nExiting with exit code 0",
+    "gpu": "NVIDIA GeForce RTX 5060 Ti, 595.91.07, 16311 MiB",
+    "ffvship_image": "sha256:570b739a068e6448e77a2d7e4988846d515cefb807a0ae243d140516291b0c16"
+  },
+  "build": "cmake -S svt-source -B svt-build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF; cmake --build svt-build -j 6",
+  "patch_sha256": "dcf2344865e06c84e958cd6e02ecd51c51b032a056df2582d3b106761d2c18bf"
+}

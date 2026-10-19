@@ -7,3 +7,6 @@
 - auto: capture reconstructed SB pixels before their deblock call, post-DLF and final recon; original and final traces match source/independent decoder on all240 frames in each fixture.
 - auto: collect final entropy-input luma coefficient levels, not mode-search quantizer calls; report counts/magnitudes/EOB as proxies, not bits.
 - auto: choose one two-pass allocation intervention: minus12 qindex for source-flat texture SBs with baseline residual amplitude loss, using all frames/regions. Calibrate only actual output rate; do not sweep intervention strengths.
+- auto: retain failed primary allocation results; do not expand B to regression windows after clear full-window/edge regressions. E05 rate calibration needed a request bracket after proportional calibration oscillated; no quality setting or map strength changed.
+- auto: reviewer caught mixed E04 coefficient-hook versions; use only the validated 240-frame coeff-trace rerun, assert coverage, and restrict the raw stage validator to baseline. Final combined patch with both environment switches absent remains IVF-exact to unmodified baseline.
+- auto: reject both candidates for qualification; preserve local A improvement separately from failed quiet controls and B allocation tradeoffs. No production plan or installation is justified.
