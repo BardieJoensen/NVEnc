@@ -84,3 +84,34 @@ because PATH selected a custom FFmpeg without cuvid, then because a command Path
 was not JSON serializable; both are corrected with explicit system NVDEC FFmpeg
 and string command arguments. Neither failure is a decoder mismatch or a metric
 failure. The durable final decoder receipt is required before claiming success.
+
+## H264 allocation and analysis-depth review
+
+The first reader omitted two delayed output frames. A later count-only receipt
+still did not implement requested error/coverage/resource checks; the parent
+rejected it, rewrote the reader/wrapper, and the reviewer accepted the final
+implementation. It has checked input/side-data bounds/geometry, two decoder
+threads, fail-on-unexpected send EAGAIN, complete flush-to-EOF, fresh outputs and
+streaming exact336x8160 grid/PTS checks. The compact maps and inputs are hashed.
+No causal claim uses the incomplete exports. An executor also prematurely
+reported a still-running two-pass encode as failed; parent inspection of both
+completed returncodes and final receipts corrected that reporting error.
+
+AQ0.5/1/2 comparisons each meet the common2x target and pairwise1% rate gates.
+Complete source-defined controls, decoders, QP maps, PTS and coding-type schedules
+validate. Area-weighted ROI-minus-outside contrasts prove exercised allocation;
+whole-frame QP also changes, so this remains a calibrated AQ/search intervention.
+AQ2 sharply increases edge/face error while quiet-region error improves. Its
+shirt amplitude passes but spatial structure fails; do not select amplitude
+alone or describe the tradeoff as uniform degradation. No further AQ escalation
+is justified by these results.
+
+The reviewer checked [x264 help](https://github.com/mirror/x264/blob/master/x264.c),
+[analysis source](https://github.com/mirror/x264/blob/master/encoder/analyse.c),
+[motion-estimation tables](https://github.com/mirror/x264/blob/master/encoder/me.c)
+and [FFmpeg's wrapper](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/libx264.c).
+Subme11 includes QP-RD/mode refinement, deblock-aware RDO and disabled early
+termination; it is not simply more subpixel iterations or fixed-QP prediction.
+Explicit x264 params override fast-first-pass defaults too, so changed first-pass
+statistics are part of the intervention. Pass2 options differ only subme8→11;
+required trellis2/AQ>0 are logged. Keep this two-pass analysis-depth scope explicit.

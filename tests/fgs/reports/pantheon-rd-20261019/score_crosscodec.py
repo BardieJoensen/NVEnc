@@ -11,7 +11,7 @@ from packet_window import measure, audit
 
 case,tag=sys.argv[1:];d=ROOT/'parent/crosscodec'/case/tag;s=SCORES/case;s.mkdir(exist_ok=True)
 rate_audit=audit(case,tag)
-assert rate_audit['within_1pct'], 'Calibrate actual packet rate before scoring a decisive 2x comparison.'
+assert rate_audit['within_1pct'], 'Calibrate actual packet rate before scoring a decisive comparison.'
 x.rate=lambda path,fps:measure(path,fps)[0]
 for name in ('ref.mkv','source.yuv','validity.json'):
     dest=s/name;target=ROOT/'fixtures'/case/name

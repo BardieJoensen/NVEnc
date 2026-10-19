@@ -181,3 +181,44 @@ Shirt HF0.4301→0.5020 but remains18.95%low; ACF error0.04811 passes narrowly.
 Background HF1.6458 passes, ACF error0.05067 fails narrowly. Reject qualification
 without relaxing0.05. Quiet HF error improves0.01835→0.01508. This supplies an
 allocation-response measurement, not proof that all MBs executed quantization.
+
+Round7 primary question: does a stronger *realized* flat-region allocation close
+the E05 preservation gap without displaced harm at the same2x budget? Increase
+only AQ strength1→2. The measured0.5→1 response lowered shirt QP by1.88; a linear
+planning extrapolation predicts~16.6 at2 (not a promised intervention). This is
+one bounded dose-response extension, motivated by insufficient actual precision,
+not an unrestricted settings sweep. Verify actual QP and framewise relative
+allocation again. Keep the original10%HF/.05ACF screens and all quiet, edge,
+banding, tail and temporal checks. A stronger allocation that damages other
+regions is a valid failure, not a reason to weaken the gate.
+
+Round7 result:19.340294Mbps(−0.066%2xtarget) closes the shirt amplitude gap
+(HF0.5820 versus0.6194) but ACF error0.07887 fails; background narrowly passes
+both. Picture-wide cost grows:VMAF90.78/NEG88.64/SSIMU63.49 versus AQ1
+94.94/93.07/67.34. More amplitude is not equivalent to recovered texture. Do not
+increase AQ again after this displaced-damage and structure failure.
+
+Round8 primary question: can more thorough prediction/mode refinement improve
+this frontier without further spatial reallocation? Keep x264slow/grain/AQ1 at
+2x actual packet rate and change only subme8→11 (pass2 log must confirm11 and
+requiredtrellis2/AQ1 prerequisites). Compare with AQ1/subme8 at the samepacket
+budget, frozen controls and decoder/geometry gates. This is a native search-
+refinement contrast, not a fixed-predictor quantization ablation. Its runtime
+cost is part of the result; no other preset/psy/qcomp/deblocking parameter changes.
+
+Round8 result:19.368337Mbps(+0.079%2xtarget,+0.0475% versusAQ1/subme8),
+58.649s two-pass versus32.856s. Background now passes both screens; shirt HF
+0.5212 versus0.6194 is still15.84%low, ACF error0.04788 passes. Full scores improve
+modestly, not enough for a repair. Independent source review clarifies subme11
+adds QP-RD/deblock-aware RDO/mode refinement and disables early termination;
+explicitsubme also changes fast-first-pass analysis. This is a two-pass analysis-
+depth contrast, not pure prediction precision or fixed quantization.
+
+Round9 primary question: does relaxing total rate, while keeping the balanced
+AQ1/subme11 configuration fixed, close the remaining fidelity gap without the
+severe AQ2 edge displacement? One3x-source rate bracket is justified by R8's
+background preservation and insufficient shirt amplitude. It tests preservation
+cost, not matched-rate superiority or accepted practicality. All screens stay
+fixed; actual3xpackets must matchwithin1%. A passing3x sample would still require
+held-out checks, human playback and an explicit practicality judgment;3x is not
+silently accepted as a practical production budget. Do not re-escalate AQ.

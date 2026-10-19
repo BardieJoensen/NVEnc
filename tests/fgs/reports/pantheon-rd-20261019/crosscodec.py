@@ -12,7 +12,11 @@ from packet_window import measure, audit
 
 case,tag,request=sys.argv[1],sys.argv[2],int(sys.argv[3]);assert case in ('e04','e05-1440')
 aq=float(sys.argv[4]) if len(sys.argv)>4 else .5
-assert aq in (.5,1.0)
+assert aq in (.5,1.0,2.0)
+subme=int(sys.argv[5]) if len(sys.argv)>5 else 8
+assert subme in (8,11)
+target_multiple=int(sys.argv[6]) if len(sys.argv)>6 else 2
+assert target_multiple in (2,3)
 d=ROOT/'parent/crosscodec'/case/tag;d.mkdir(parents=True,exist_ok=False)
 src=ROOT/'fixtures'/case/'input.mkv';ffmpeg='/usr/bin/ffmpeg'
 source_stat=x.fingerprint(src)
@@ -25,7 +29,10 @@ common=['nice','-n','10','taskset','-c','0-7',ffmpeg,'-v','info','-threads','4',
         '-map','0:v:0','-an','-sn','-frames:v','336','-fps_mode','passthrough',
         '-c:v','libx264','-preset','slow','-tune','grain','-b:v',str(request*1000),
         '-threads','4','-pix_fmt','yuv420p','-passlogfile',str(d/'pass'),*x.COLOR]
-if aq!=.5:common+=['-x264-params',f'aq-strength={aq}']
+params=[]
+if aq!=.5:params.append(f'aq-strength={aq}')
+if subme!=8:params.append(f'subme={subme}')
+if params:common+=['-x264-params',':'.join(params)]
 records=[]
 for phase in (1,2):
     cmd=common+['-pass',str(phase)]+(['-f','null','/dev/null'] if phase==1 else [str(d/'out.mkv')])
@@ -34,7 +41,7 @@ for phase in (1,2):
         p=subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT)
     records.append({'argv':cmd,'seconds':time.monotonic()-start,'returncode':p.returncode})
     x.dump(d/'command.json',{'passes':records,'ffmpeg':x.fingerprint(ffmpeg),'input':source_stat,
-            'aq_strength':aq,'script':x.fingerprint(__file__),
+            'aq_strength':aq,'subme':subme,'target_multiple':target_multiple,'script':x.fingerprint(__file__),
             'scope':'8-bit H264 conventional re-encode, two-pass slow/grain, no synthesis; 336-frame statistics only'})
     assert p.returncode==0,(d/f'pass{phase}.log').read_text()[-3000:]
 assert x.fingerprint(src)==source_stat
