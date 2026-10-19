@@ -112,3 +112,72 @@ source-defined whole-window controls and temporal traces are retained.
   an accepted truncation class. The new negative test rejects that class; complete
   measured TU exports were independently validated, so previous numeric results
   are unchanged. Parser-only hardening is not represented as an encode intervention.
+
+
+- auto: Record independent-review nuance: E05q20 transformed-only neighborhoods
+  overshoot HF by10.71%; the established whole-ROI screen passes. Quiet-frame
+  minus12 meansq15, notq20. Real absolute q acts before mode decision and changes
+  search; only private reconstructions hold decisions fixed.
+
+Round5 primary question: can a conventional same-codec re-encode preserve both
+E05 shirt and unselected background at about2x original packet rate, without the
+manual spatial map? The prior x264 evidence is E04-only, single-pass ABR at1x
+(selected10.041Mbps); its unscored overshoot was only1.25x. Use one two-pass
+x264slow/tunegrain8bit configuration, E05 first, with original-derived input,
+240scored+96preroll, actual-packet calibration, frozen source controls, all ROI
+texture/ACF/correlation, GPU metrics/tails/CAMBI and independent decoder equality.
+This tests repair feasibility across encoder families, not AV1 causality or a
+fundamental codec bound. Short-window two-pass statistics cannot establish
+full-episode rate/quality/runtime. No production format change is authorized.
+
+
+Round4 matched result: actual E04 10.009985Mbps(−0.193%) and E05
+9.617045Mbps(−0.615%) meet the original-packet window budgets. Both primary ROIs
+still pass. E04 VMAF85.42/SSIMU44.18 versus baseline90.59/61.02; outside MSE
+5.926→9.501. E05 VMAF92.88/SSIMU47.75 versus93.57/52.87; outside MSE9.329→10.847,
+face MSE6.840→9.537 and gradient error4.067→4.242. Tail regressions are substantial.
+Accept this negative result: this manually localized strategy does not preserve
+the whole picture at source rate. It does not prove all allocation objectives fail.
+
+- auto: Raise the task's planning estimate from50 to75GB after retained raw real
+  reconstructions and score decodes reached59GB; live free space remains~500GB,
+  well above120GB floor. This is a scratch estimate, not a user resource limit.
+- auto: Independent review required cross-codec packet accounting by sorted
+  presentation positions96:336, with timestamp-cadence checks, rather than absolute
+  PTS rounding; record the actual2x target and requirewithin1% before decisive
+  scoring. This guards container start offsets without changing decoded samples.
+
+Round5 E05 result: at19.252835Mbps(1.990xsource,−0.518%2xtarget), x264 improves
+background HF to1.6363 against1.7785, but ACF error0.05154 narrowly fails. Shirt HF
+0.4301 against0.6194 fails by30.56%, despite ACF error0.0013. Its source-residual
+correlation is only0.189 and temporal HF correlation0.234 versus0.119 source.
+Clean/control/face errors improve broadly; quiet HF absolute error0.01835 versus
+SVT baseline0.08861, face MSE4.511 versus6.840. This is complementary regional
+behavior, not a qualified repair. All336 CPU/NVDEC decoded planes agree exactly.
+
+Round6 conditional discriminator: test x264's variance-based AQ strength1.0
+against the grain tune's0.5 at the same2x original packet budget. This is one
+allocation intervention, aimed at the still-damaged low-variance shirt and
+background, with unchanged preset/tune/two-pass/coding depth. Export actual
+H264 luma QP_Y+block deltas from decoder side data for both arms before claiming
+allocation happened. Skipped-block QP state is not proof that quantization ran;
+this remains a combined allocation/search encode, not a fixed-predictor ablation.
+Require all current gates and inspect displaced damage/quiet regions. Do not
+change qcomp, psy or deblocking, and do not call the result an AV1 limit.
+
+Round5 E04 result:20.163398Mbps(2.010xsource,+0.522%2xtarget) passes amplitude
+(HF1.8366 versus1.8585), but ACF error0.06229 fails. Source-residual correlation
+0.6623; VMAF94.56/NEG92.96/SSIMU72.56; CAMBImean1.486/max16.31 needs explicit
+artifact inspection. This is another full-window improvement without texture
+qualification. No AV1-specific impossibility follows.
+
+Round6 result: actual19.359144Mbps is+0.032% of2xtarget and+0.552% versusAQ0.5.
+Both arms have identical keyframes and picture types. All336 decoded planes agree
+between CPU/NVDEC. Fully validated QP-state maps cover336x8160unique16x16MBs;
+visible-area weighting clips the padded bottom8rows. Shirt midpoint QP state
+22.250→20.370; same-frame shirt-minus-outside contrast decreases0.999QP. Face
+QP24.028→24.421 while background23.274→23.033; redistribution really occurs.
+Shirt HF0.4301→0.5020 but remains18.95%low; ACF error0.04811 passes narrowly.
+Background HF1.6458 passes, ACF error0.05067 fails narrowly. Reject qualification
+without relaxing0.05. Quiet HF error improves0.01835→0.01508. This supplies an
+allocation-response measurement, not proof that all MBs executed quantization.
