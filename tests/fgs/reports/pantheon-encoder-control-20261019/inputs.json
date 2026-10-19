@@ -1,0 +1,7 @@
+{
+  "original": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/Pantheon.S02.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb/Pantheon.S02E04.Olivia.&.Farhad.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb.mkv",
+  "library": "/media/merged-storage/media/cartoon-anime/Pantheon (2022)/Season 02/Pantheon (2022) - S02E04 - Olivia and Farhad [AMZN v2][WEBDL-1080p Proper][EAC3 5.1][h264]-NTb.mkv",
+  "encoder": "/opt/docker-apps/build/tdarr-node/nvencc",
+  "encoder_sha256": "b30612f9e8b4b8f20e900a5cec0a64fa77e931b17f39ec83da4163057fce30db",
+  "encoder_version": "NVEnc (x64) 9.38 (r4412) by rigaya, Oct  8 2026 12:39:00 (gcc 13.3.0/Linux)\n  [NVENC API v13.1, CUDA 13.3]\n reader: raw, y4m, avs, vpy, avsw, avhw [H.264/AVC, H.265/HEVC, MPEG2, VP8, VP9, VC-1, MPEG1, MPEG4, AV1]\n others\n  nvml       : yes\n  nvrtc      : yes\n  nvvfx      : no\n  ngx        : no\n  nvof fruc  : no\n  libass     : yes\n  libdovi    : yes\n  vulkan     : yes\n  libplacebo : yes\n  vmaf       : no\n"
+}

@@ -1,0 +1,24 @@
+{
+  "software_encoder": "SVT-AV1 1.7.0 through /usr/bin/ffmpeg 6.1.1-3ubuntu5; installed independent control, not a claim about current best SVT",
+  "nvenc": "Production binary path/version/hash recorded in inputs.json",
+  "software_preset": 4,
+  "software_tune": "VQ (tune=0)",
+  "film_grain": 0,
+  "reference": "Original download; independent reference and extracted input match on all240 frame hashes",
+  "frames": 240,
+  "preroll_frames": 96,
+  "fps": "24000/1001",
+  "window_start_requested_seconds": 1243.493,
+  "target_kbps": 10029.36,
+  "rate_tolerance": "Stop calibration at <=1.5%; require <=3% if max attempts reached; report actual rates",
+  "metric_build": "Patched CUDA vmaf c4a085f6; campaign.py FFVship GPU helpers",
+  "archive": "/media/merged-storage/cold-storage/docker-apps/pantheon-encoder-control-20261019",
+  "decision": "auto: independent SVT-AV1 control and NVENC VBR calibrated to original scored-window packet rate, synthesis disabled. No production changes.",
+  "software_library_sha256": "2e5a31a7e8abbf30367aae047ef8a0872e583868aba6461e57b967bd96ee2f01",
+  "additional_controls": [
+    "SVT tune0 enable-tf=0; all other settings unchanged",
+    "NVENC spatial and temporal AQ disabled together",
+    "x264 slow tune grain 8-bit same-codec transcode baseline; synthesis not applicable"
+  ],
+  "variant_count": 5
+}

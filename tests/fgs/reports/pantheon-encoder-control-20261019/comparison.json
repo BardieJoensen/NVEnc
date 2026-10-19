@@ -1,0 +1,362 @@
+{
+  "target_kbps": 10029.36,
+  "input_reference_exact": true,
+  "source_texture": {
+    "whole_frame": {
+      "hf_sigma": 2.0603,
+      "acf1": -0.1229,
+      "acf2": -0.1108,
+      "acf3": 0.003
+    },
+    "background_roi": {
+      "hf_sigma": 1.8585,
+      "acf1": -0.1842,
+      "acf2": -0.0954,
+      "acf3": 0.0163
+    }
+  },
+  "attempts": [
+    {
+      "kind": "nvenc",
+      "tag": "nvenc-1",
+      "requested_kbps": 10029.36,
+      "kbps_window": 12216.647352647353,
+      "encode_seconds": 3.2963528290274553,
+      "relative_rate_error": 0.21808842764118075
+    },
+    {
+      "kind": "nvenc",
+      "tag": "nvenc-2",
+      "requested_kbps": 8233.687942854676,
+      "kbps_window": 10172.834365634366,
+      "encode_seconds": 3.1054051319952123,
+      "relative_rate_error": 0.0143054358039163
+    },
+    {
+      "kind": "svt",
+      "tag": "svt-1",
+      "requested_kbps": 10029.36,
+      "kbps_window": 10028.845554445556,
+      "encode_seconds": 163.17319233104354,
+      "relative_rate_error": 5.129395638858725e-05
+    },
+    {
+      "kind": "svt-tf-off",
+      "tag": "svt-tf-off-1",
+      "requested_kbps": 10029.36,
+      "kbps_window": 9428.18941058941,
+      "encode_seconds": 149.33977528300602,
+      "relative_rate_error": 0.059941071953802716
+    },
+    {
+      "kind": "svt-tf-off",
+      "tag": "svt-tf-off-2",
+      "requested_kbps": 10668.863090152077,
+      "kbps_window": 10009.414585414585,
+      "encode_seconds": 165.55074274301296,
+      "relative_rate_error": 0.0019887026276268482
+    },
+    {
+      "kind": "nvenc-noaq",
+      "tag": "nvenc-noaq-1",
+      "requested_kbps": 10029.36,
+      "kbps_window": 12317.906893106892,
+      "encode_seconds": 3.1482612140243873,
+      "relative_rate_error": 0.22818473891722824
+    },
+    {
+      "kind": "nvenc-noaq",
+      "tag": "nvenc-noaq-2",
+      "requested_kbps": 8166.002786227355,
+      "kbps_window": 10041.538461538463,
+      "encode_seconds": 3.3025265769683756,
+      "relative_rate_error": 0.001214281024757513
+    },
+    {
+      "kind": "x264-grain",
+      "tag": "x264-grain-1",
+      "requested_kbps": 10029.36,
+      "kbps_window": 12571.065734265736,
+      "encode_seconds": 12.556413546029944,
+      "relative_rate_error": 0.2534265131838658
+    },
+    {
+      "kind": "x264-grain",
+      "tag": "x264-grain-2",
+      "requested_kbps": 8001.554055629577,
+      "kbps_window": 10208.31968031968,
+      "encode_seconds": 10.874315046996344,
+      "relative_rate_error": 0.01784357928319258
+    },
+    {
+      "kind": "x264-grain",
+      "tag": "x264-grain-3",
+      "requested_kbps": 7861.280670714258,
+      "kbps_window": 10041.136463536464,
+      "encode_seconds": 10.419616758998018,
+      "relative_rate_error": 0.001174198905659285
+    }
+  ],
+  "variants": {
+    "nvenc": {
+      "kind": "nvenc",
+      "tag": "nvenc-2",
+      "requested_kbps": 8233.687942854676,
+      "kbps_window": 10172.834365634366,
+      "encode_seconds": 3.1054051319952123,
+      "relative_rate_error": 0.0143054358039163,
+      "alignment_costs": {
+        "-3": 1.8215441703796387,
+        "-2": 1.4386231899261475,
+        "-1": 1.0361111164093018,
+        "0": 0.6056115031242371,
+        "1": 1.0361332893371582,
+        "2": 1.4556795358657837,
+        "3": 1.854640245437622
+      },
+      "ssimu2": 61.39,
+      "ssimu2_p5": 34.61,
+      "t_ssimu2": 2.0,
+      "butter_2norm": 1.438,
+      "butter_max_p95": 8.76,
+      "t_butteraugli": 3.2,
+      "vmaf": 91.43,
+      "vmaf_min": 81.05,
+      "vmaf_neg": 90.25,
+      "vmaf_neg_gap": 1.18,
+      "psnr_y": 42.3,
+      "ssim": 0.9918,
+      "ciede2000": 45.58,
+      "t_vmaf": 2.4,
+      "t_score_wall": 5.2,
+      "vmaf_p1": 81.61,
+      "psnr_cb": 51.29,
+      "psnr_cr": 50.69,
+      "ciede": 45.58,
+      "cambi_enc": 0.859,
+      "cambi_src": 1.058,
+      "texture": {
+        "whole_frame": {
+          "hf_sigma": 1.4306,
+          "acf1": 0.0867,
+          "acf2": -0.1559,
+          "acf3": -0.0651
+        },
+        "background_roi": {
+          "hf_sigma": 1.1576,
+          "acf1": 0.0488,
+          "acf2": -0.1377,
+          "acf3": -0.0696
+        }
+      }
+    },
+    "svt": {
+      "kind": "svt",
+      "tag": "svt-1",
+      "requested_kbps": 10029.36,
+      "kbps_window": 10028.845554445556,
+      "encode_seconds": 163.17319233104354,
+      "relative_rate_error": 5.129395638858725e-05,
+      "alignment_costs": {
+        "-3": 1.8276124000549316,
+        "-2": 1.435475468635559,
+        "-1": 1.0201412439346313,
+        "0": 0.5586009621620178,
+        "1": 1.018791913986206,
+        "2": 1.447595477104187,
+        "3": 1.8511935472488403
+      },
+      "ssimu2": 62.62,
+      "ssimu2_p5": 44.1,
+      "t_ssimu2": 2.1,
+      "butter_2norm": 1.414,
+      "butter_max_p95": 8.42,
+      "t_butteraugli": 3.2,
+      "vmaf": 91.29,
+      "vmaf_min": 76.47,
+      "vmaf_neg": 90.02,
+      "vmaf_neg_gap": 1.27,
+      "psnr_y": 42.56,
+      "ssim": 0.9926,
+      "ciede2000": 45.72,
+      "t_vmaf": 2.5,
+      "t_score_wall": 5.3,
+      "vmaf_p1": 77.22,
+      "psnr_cb": 50.89,
+      "psnr_cr": 50.22,
+      "ciede": 45.72,
+      "cambi_enc": 1.034,
+      "cambi_src": 1.058,
+      "texture": {
+        "whole_frame": {
+          "hf_sigma": 1.5018,
+          "acf1": 0.0261,
+          "acf2": -0.1178,
+          "acf3": -0.0662
+        },
+        "background_roi": {
+          "hf_sigma": 1.2739,
+          "acf1": -0.0904,
+          "acf2": -0.0915,
+          "acf3": -0.0196
+        }
+      }
+    },
+    "svt-tf-off": {
+      "kind": "svt-tf-off",
+      "tag": "svt-tf-off-2",
+      "requested_kbps": 10668.863090152077,
+      "kbps_window": 10009.414585414585,
+      "encode_seconds": 165.55074274301296,
+      "relative_rate_error": 0.0019887026276268482,
+      "alignment_costs": {
+        "-3": 1.8351731300354004,
+        "-2": 1.446648359298706,
+        "-1": 1.0352975130081177,
+        "0": 0.6011501550674438,
+        "1": 1.0372496843338013,
+        "2": 1.4600424766540527,
+        "3": 1.859848141670227
+      },
+      "ssimu2": 62.61,
+      "ssimu2_p5": 42.55,
+      "t_ssimu2": 2.4,
+      "butter_2norm": 1.411,
+      "butter_max_p95": 8.12,
+      "t_butteraugli": 3.1,
+      "vmaf": 90.98,
+      "vmaf_min": 74.97,
+      "vmaf_neg": 89.75,
+      "vmaf_neg_gap": 1.23,
+      "psnr_y": 42.67,
+      "ssim": 0.9925,
+      "ciede2000": 45.81,
+      "t_vmaf": 2.6,
+      "t_score_wall": 5.5,
+      "vmaf_p1": 76.79,
+      "psnr_cb": 50.97,
+      "psnr_cr": 50.34,
+      "ciede": 45.81,
+      "cambi_enc": 1.077,
+      "cambi_src": 1.058,
+      "texture": {
+        "whole_frame": {
+          "hf_sigma": 1.3901,
+          "acf1": 0.0596,
+          "acf2": -0.1122,
+          "acf3": -0.0867
+        },
+        "background_roi": {
+          "hf_sigma": 1.2019,
+          "acf1": -0.1022,
+          "acf2": -0.0777,
+          "acf3": -0.0236
+        }
+      }
+    },
+    "nvenc-noaq": {
+      "kind": "nvenc-noaq",
+      "tag": "nvenc-noaq-2",
+      "requested_kbps": 8166.002786227355,
+      "kbps_window": 10041.538461538463,
+      "encode_seconds": 3.3025265769683756,
+      "relative_rate_error": 0.001214281024757513,
+      "alignment_costs": {
+        "-3": 1.8202165365219116,
+        "-2": 1.4376108646392822,
+        "-1": 1.03612220287323,
+        "0": 0.6071349382400513,
+        "1": 1.0363739728927612,
+        "2": 1.4550530910491943,
+        "3": 1.8534880876541138
+      },
+      "ssimu2": 61.14,
+      "ssimu2_p5": 33.91,
+      "t_ssimu2": 2.7,
+      "butter_2norm": 1.444,
+      "butter_max_p95": 9.22,
+      "t_butteraugli": 4.0,
+      "vmaf": 91.36,
+      "vmaf_min": 81.17,
+      "vmaf_neg": 90.18,
+      "vmaf_neg_gap": 1.18,
+      "psnr_y": 42.27,
+      "ssim": 0.9917,
+      "ciede2000": 45.56,
+      "t_vmaf": 5.6,
+      "t_score_wall": 6.7,
+      "vmaf_p1": 81.62,
+      "psnr_cb": 51.27,
+      "psnr_cr": 50.67,
+      "ciede": 45.56,
+      "cambi_enc": 0.876,
+      "cambi_src": 1.058,
+      "texture": {
+        "whole_frame": {
+          "hf_sigma": 1.4189,
+          "acf1": 0.0969,
+          "acf2": -0.1578,
+          "acf3": -0.0685
+        },
+        "background_roi": {
+          "hf_sigma": 1.1499,
+          "acf1": 0.0561,
+          "acf2": -0.1395,
+          "acf3": -0.0688
+        }
+      }
+    },
+    "x264-grain": {
+      "kind": "x264-grain",
+      "tag": "x264-grain-3",
+      "requested_kbps": 7861.280670714258,
+      "kbps_window": 10041.136463536464,
+      "encode_seconds": 10.419616758998018,
+      "relative_rate_error": 0.001174198905659285,
+      "alignment_costs": {
+        "-3": 1.918818473815918,
+        "-2": 1.5308222770690918,
+        "-1": 1.1375713348388672,
+        "0": 0.6888956427574158,
+        "1": 1.137341856956482,
+        "2": 1.5456206798553467,
+        "3": 1.9498600959777832
+      },
+      "ssimu2": 57.42,
+      "ssimu2_p5": 35.03,
+      "t_ssimu2": 2.0,
+      "butter_2norm": 1.649,
+      "butter_max_p95": 10.31,
+      "t_butteraugli": 3.1,
+      "vmaf": 89.63,
+      "vmaf_min": 72.76,
+      "vmaf_neg": 87.84,
+      "vmaf_neg_gap": 1.79,
+      "psnr_y": 41.31,
+      "ssim": 0.9892,
+      "ciede2000": 45.08,
+      "t_vmaf": 2.3,
+      "t_score_wall": 5.2,
+      "vmaf_p1": 74.49,
+      "psnr_cb": 51.0,
+      "psnr_cr": 50.47,
+      "ciede": 45.08,
+      "cambi_enc": 3.678,
+      "cambi_src": 1.058,
+      "texture": {
+        "whole_frame": {
+          "hf_sigma": 1.8784,
+          "acf1": -0.0628,
+          "acf2": -0.1291,
+          "acf3": -0.0084
+        },
+        "background_roi": {
+          "hf_sigma": 1.6687,
+          "acf1": -0.1346,
+          "acf2": -0.1081,
+          "acf3": 0.0064
+        }
+      }
+    }
+  }
+}
