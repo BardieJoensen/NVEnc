@@ -1,4 +1,4 @@
-# Pantheon: coefficient retention and allocation investigation
+# Pantheon: measured precision, texture and repair feasibility
 
 **No tested arm currently qualifies as a faithful whole-picture repair. Lower
 realized quantization can preserve the difficult texture in legal encodes, but
@@ -67,6 +67,8 @@ reconfirm the untouched originals; full decoder and packet receipts are retained
 | E05 AQ1/subme11,2x |19.36834|Background passes; shirt HF−15.84% fails|VMAF95.16/SSIMU67.63; modest broad improvement|
 | E05 AQ1/subme11,3x |29.01377|Shirt HF−5.25% passes but ACF error0.05736 fails; background passes|VMAF96.85/SSIMU76.70; whole-tile/face errors improve|
 | E05 x265slow/grain10bit,2x |19.25875|Background passes; shirt HF−39.66%/ACF error0.19511 fail|VMAF96.30 coexists with SSIMU62.82/p555.08; not a repair|
+| E05 AQ1/subme8,3x |29.00634|Shirt HF−2.53% passes but ACF error0.05768 fails; background passes|Similar structure miss to subme11;40.43s two-pass|
+| E05 AQ1/subme11/deblockoff,3x |28.97162|Shirt ACF error0.06649 worsens; background passes|8-pixel grid excess rises39%; reject this intervention|
 
 The provisional texture screen remains HF amplitude within10% and ACF1 error<=0.05,
 paired with source correlation/structure, controls, edges, banding and temporal

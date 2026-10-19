@@ -18,7 +18,7 @@ def audit(case,tag):
     d=ROOT/'parent/crosscodec'/case/tag
     source=json.loads((ROOT/'fixtures'/case/'validity.json').read_text())
     multiple=json.loads((d/'command.json').read_text()).get('target_multiple',2)
-    assert multiple in (2,3)
+    assert multiple in (2,3,4)
     rate,selected,first=measure(d/'out.mkv',x.CASES[case][2]);target=multiple*source['source_mbps']
     result={'actual_mbps':rate,'source_mbps':source['source_mbps'],'target_mbps':target,'target_multiple':multiple,
             'relative_target_error':rate/target-1,'within_1pct':abs(rate/target-1)<=.01,

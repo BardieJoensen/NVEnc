@@ -142,3 +142,33 @@ are required explicitly. Review of the first worker script caught count-only
 input validation and absent stats assertions; the running script was preserved
 unchanged to keep its receipt hash honest, and supplemental checks were required
 before accepting the run.
+
+R10 final review accepted exact Main10 input/CPU/NVDEC, source/ref, campaign and
+packet receipts. The shirt's failed amplitude/ACF screens override its high
+VMAF and zero full-reference CAMBI. Flat-texture structure and temporal outliers
+remain; no codec-wide conclusion follows. The meaningful library identity is
+the linked libx265 file SHA, not raw `ldd` stdout whose load addresses vary.
+
+R11 closes the two-pass analysis interaction check: both3x arms fail shirt ACF
+at almost the same error. The3x rates differ only0.026%. R9 generally has better
+whole-window and temporal errors, while R11 midpoint amplitude is closer.
+Actual first-pass options are subme2 versus9 (plus chroma QP offset), and second
+pass8 versus11. Claims remain about the complete two-pass user-setting effect.
+
+R12 review accepted the deblock-off intervention and negative result. Pass1's
+effective option is in generated `pass-0.log`, not the null-output console log;
+pass2 reports it directly. The worker initially relied on argv for pass1, which
+was insufficient. Both effective headers now have an inspectable audit, the
+executed runner is preserved, and future runs assert the realized flag.
+Disabling the filter worsens shirt ACF and increases source-compensated8-grid
+mean excess0.28467→0.39555 (+39%). Whole-window and temporal structure are mostly
+slightly worse. The reviewer accepted the grid math after requiring exact
+source fingerprint, original-control identity and12,870tile/15frame coverage.
+This diagnostic is not a new acceptance gate;16-grid interiors include8-grid
+boundaries. Feedback/mode changes prevent fixed-decision filter attribution.
+
+Evidence-retirement review required two corrections before deletion: bind the
+raw-member manifest to its verified archive hash and reject escaping paths;
+also independently stream/check all607 measured-source tar members and the
+actual measured binary hash. Both are implemented and the source/binary check
+has passed. No retirement starts until jobs/mounts/schedules/worktrees are clear.

@@ -263,3 +263,34 @@ at3x cell, same slow/grain/input/twopass/actualpacket criteria. Initial request
 28322kbps uses the R9 calibration, then independently audit actualpackets. Compare
 all four2x/3x andsubme8/11 cells. Both analysis passes can change, and no fixed-QP
 or fixed-predictor mechanism is claimed. No further HEVC settings are selected.
+
+Round11 result:29.006342Mbps(−0.0800%3xtarget;0.026% belowR9),40.432s.
+Shirt HF−2.53% passes but ACFerror0.05768 fails, almost identical to subme11's
+0.05736. Background passes. VMAF96.73/NEG95.07/SSIMU76.17 versus R9
+96.85/95.20/76.70. This evidence does not support subme11/QP-RD as the explanation
+for that ACF threshold failure. It is a full two-pass policy contrast: pass1
+effective subme2 versus9, while pass2 is8 versus11. Decoder and QP-grid checks pass.
+
+Round12 primary question: does H264 in-loop deblocking account for the remaining
+shirt structure deficit at3x? Use AQ1/subme11 (stronger broad controls) and disable
+only deblocking, confirming effective `deblock=0` in both pass logs. Keep actual
+3x packet ratewithin1%, and all source/decoder/texture/quiet/edge/tail/CAMBI/temporal
+checks. This legal real encode also changes filtered reference feedback and
+analysis decisions; no fixed-predictor attribution. A failed off/on contrast
+closes this bounded filter hypothesis; do not sweep filter strengths.
+
+Round12 result:28.971625Mbps(−0.1996%3xtarget),76.827s. Effective deblock0
+is present in the pass1-generated stats header and pass2 log; argv alone was
+not accepted as proof. Shirt HF−4.36% passes but ACFerror0.06649 is worse than
+the filtered0.05736. Background still passes; global scores slightly regress.
+This rejects deblocking-off as the repair at this configuration. Do not tune
+intermediate strengths or generalize the result to every loop-filter decision.
+
+Round13 primary question: what additional rate is needed for joint preservation
+with the balanced x264 AQ1/subme11/defaultdeblock configuration? One4x-source
+upper bracket follows the near-threshold3x ACF failure and negative filter test.
+Keep the complete encoding stack fixed; request37763kbps, then independently
+calibrate actual4xpacketswithin1%. This is a preservation-cost test, not a claim
+that4x is practical or an equal-rate comparison against3x. All acceptance
+screens and full-window protections remain unchanged. If it passes, transfer
+the unchanged configuration to E04 before any repair/playback proposal.
