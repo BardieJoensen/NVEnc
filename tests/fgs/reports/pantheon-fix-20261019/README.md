@@ -12,6 +12,7 @@ Current production binary: `/opt/docker-apps/build/tdarr-node/nvencc`, version 9
 |---|---:|---:|---:|---:|
 | library | 84.50 | 66.33 | 46.55 | — |
 | q34-fgs | 84.78 | 68.45 | 47.59 | 3.309 |
+| q34-plain | 85.98 | 69.48 | 49.21 | 3.537 |
 | q30-fgs | 87.50 | 74.38 | 52.94 | 5.312 |
 | q26-fgs | 89.74 | 79.62 | 58.50 | 8.321 |
 | q22-fgs | 91.53 | 83.54 | 64.01 | 12.620 |
@@ -19,6 +20,8 @@ Current production binary: `/opt/docker-apps/build/tdarr-node/nvencc`, version 9
 | q26-plain | 91.39 | 81.25 | 60.81 | 9.274 |
 | q22-plain | 93.36 | 85.32 | 66.91 | 14.102 |
 | window-matched-q30fgs-plain | 87.76 | 72.55 | 52.81 | 5.324 |
+
+Follow-up exact-QVBR control: disabling FGS at production QVBR 34 raises VMAF **84.78 → 85.98**, VMAF p1 **68.45 → 69.48** and SSIMULACRA2 **47.59 → 49.21**, while scored-window bitrate rises **6.9%**. CAMBI worsens **1.569 → 2.526** (lower is better), and Butteraugli p95 is essentially unchanged (**11.50 → 11.46**). Background HF sigma remains far below source (**0.7155 with FGS / 0.6519 without / 1.8585 source**); paired residual ACF values are in the JSON. This is a modest, mixed benefit at the same QVBR, not proof that disabling FGS has no effect. It does not resolve the observed texture loss. Distinguish this same-settings comparison from the matched-bitrate control below. Raw follow-up evidence: `/media/merged-storage/cold-storage/docker-apps/pantheon-fgs-off-20261019/`.
 
 The original H.264 scored window is **10.029 Mbps**. Even plain AV1 at QVBR 22 uses **14.102 Mbps** in that window and retains only about 70% of the measured background high-frequency amplitude. QVBR 30 is an improvement, but does not recover the scene's source texture. None of the tested settings makes a compelling replacement for the available original.
 

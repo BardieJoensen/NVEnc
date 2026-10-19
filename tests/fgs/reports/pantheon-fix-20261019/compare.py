@@ -48,7 +48,7 @@ audit.decode(cfg['original'],TS,str(ref))
 rt=thumb(ref)
 results=json.loads((ROOT/'comparison.json').read_text()) if (ROOT/'comparison.json').exists() else {}
 if 'source_texture' not in results: results['source_texture']=texture(ref)
-variants=[('library',None,None)]+[(f'q{q}-'+('fgs' if fg else 'plain'),q,fg) for q,fg in [(34,True),(30,True),(26,True),(22,True),(30,False),(26,False),(22,False)]]+[('matched-q30fgs-plain',None,False),('window-matched-q30fgs-plain',None,False)]
+variants=[('library',None,None)]+[(f'q{q}-'+('fgs' if fg else 'plain'),q,fg) for q,fg in [(34,True),(34,False),(30,True),(26,True),(22,True),(30,False),(26,False),(22,False)]]+[('matched-q30fgs-plain',None,False),('window-matched-q30fgs-plain',None,False)]
 for tag,q,fg in variants:
     if tag in results:continue
     print(tag,'start',flush=True)
