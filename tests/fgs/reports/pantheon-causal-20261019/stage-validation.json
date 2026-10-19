@@ -1,0 +1,61 @@
+{
+  "trace-baseline-validation.json": {
+    "unmodified_vs_instrumented_ivf_exact": true,
+    "request_kbps": 10172,
+    "actual_mbps": 10.027343856143856,
+    "controlled_lp": 1,
+    "recon_enabled_both": true
+  },
+  "native-dav1d-validation.json": {
+    "e05-1440": {
+      "base": true,
+      "existing": true
+    },
+    "e04": {
+      "base": true,
+      "existing": true
+    },
+    "e05-1420": {
+      "base": true,
+      "existing": true
+    },
+    "e05-1460": {
+      "base": true,
+      "existing": true
+    }
+  },
+  "determinism.json": [
+    {
+      "tag": "preserved",
+      "sha256": "1fae73f5c9c7292906060ba549087ab8269b87551f5923d44372d65cb679b4b0",
+      "bytes": 18490182
+    },
+    {
+      "tag": "lp1old",
+      "sha256": "28d52a2d02d429126650484b332efd609b44bcf0c2d1f12e1c063d0269abe651",
+      "bytes": 18829490
+    },
+    {
+      "tag": "lp1new",
+      "sha256": "28d52a2d02d429126650484b332efd609b44bcf0c2d1f12e1c063d0269abe651",
+      "bytes": 18829490
+    }
+  ],
+  "app-recon-validation.json": {
+    "e04": {
+      "app_recon_scored_all240_decoder_exact": true
+    },
+    "e05-1440": {
+      "app_recon_scored_all240_decoder_exact": true
+    }
+  },
+  "e04_coefficients": {
+    "coefficient_instrumentation_ivf_exact": true
+  },
+  "e05_instrumentation": {
+    "instrumentation_ivf_exact": true,
+    "actual_mbps": 9.676715199999999,
+    "request_kbps": 10053,
+    "lp": 1
+  }
+}
