@@ -1,0 +1,12 @@
+{
+  "date_utc": "2026-10-19",
+  "nvenc_commit": "8972de4a456fbe66aacea33c4b602f7c1192a0b1",
+  "vmaf_commit": "c4a085f6023ab0c385ce634ece42b49da9bca2e8",
+  "ffvship_image": "sha256:570b739a068e6448e77a2d7e4988846d515cefb807a0ae243d140516291b0c16",
+  "ffmpeg": "ffmpeg version git-2026-03-26-5dfe661f03 Copyright (c) 2000-2026 the FFmpeg developers",
+  "sha256": {
+    "/home/bardie/git-repos/NVEnc/tests/fgs/campaign.py": "38e951b9892334951f486e4b40e258f3aa2fc816a5ef6f800ed90dc14b8673ed",
+    "/opt/docker-apps/scripts/library-fidelity/libvsorig.py": "e167486feb9d20b7d760343af35e17d31ead7a505bfeceaef2d42db56318a151",
+    "/home/bardie/git-repos/vmaf/libvmaf/build/tools/vmaf": "85017a49217f364e51127af182e7d10a51189fe58942cb035a7c106d12155091"
+  }
+}
