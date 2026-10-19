@@ -1,0 +1,18 @@
+{
+  "input_stats": {
+    "original": {
+      "path": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/Pantheon.S02.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb/Pantheon.S02E05.Yair.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb.mkv",
+      "size": 3260824045,
+      "mtime_ns": 1791587291089233836
+    },
+    "library": {
+      "path": "/media/merged-storage/media/cartoon-anime/Pantheon (2022)/Season 02/Pantheon (2022) - S02E05 - Yair [AMZN][WEBDL-1080p Proper][EAC3 5.1][h264]-NTb.mkv",
+      "size": 708673712,
+      "mtime_ns": 1791541153076269505
+    }
+  },
+  "ffmpeg": "ffmpeg version git-2026-03-26-5dfe661f03 Copyright (c) 2000-2026 the FFmpeg developers",
+  "metric_harness": "tests/fgs/campaign.py; decoded-pair adapter from /opt/docker-apps/scripts/library-fidelity/libvsorig.py",
+  "archive": "/media/merged-storage/cold-storage/docker-apps/pantheon-s02e05-grain-20261019",
+  "decision": "auto: sample three 240-frame windows starting 23:40, 24:00 and 24:20 against original; compare decoder grain on/off without re-encoding or changing library."
+}
