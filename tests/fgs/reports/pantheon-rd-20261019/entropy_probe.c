@@ -14,7 +14,7 @@ typedef struct RdRecord {
     char meta[4096];
     int32_t initial[1024], final[1024];
     uint16_t initial_eob, final_eob;
-    int have_initial, have_final, have_meta;
+    int have_initial, have_final, have_meta, have_initial_eob, have_final_eob;
 } RdRecord;
 static void rd_read(const char *path, int n, RdRecord *r) {
     FILE *f = fopen(path, "rb");
@@ -22,7 +22,9 @@ static void rd_read(const char *path, int n, RdRecord *r) {
     rd_require(f != NULL, "missing keyed TU export");
     memset(r, 0, sizeof(*r));
     char key[33]; uint32_t count, size;
-    while (fread(key, 1, 32, f) == 32) {
+    size_t header_bytes;
+    while ((header_bytes = fread(key, 1, 32, f)) != 0) {
+        rd_require(header_bytes == 32, "partial trailing record header");
         key[32] = 0;
         rd_require(fread(&count, 4, 1, f) == 1 && fread(&size, 4, 1, f) == 1, "record header");
         size_t bytes = (size_t)count * size;
@@ -37,11 +39,20 @@ static void rd_read(const char *path, int n, RdRecord *r) {
         } else if (!strcmp(key, "initial_eob") || !strcmp(key, "final_eob")) {
             rd_require(size == 2 && count == 1, "EOB layout");
             dst = key[0] == 'i' ? &r->initial_eob : &r->final_eob;
+            if (key[0] == 'i') r->have_initial_eob = 1; else r->have_final_eob = 1;
         }
         if (dst) rd_require(fread(dst, 1, bytes, f) == bytes, "record payload");
-        else rd_require(fseek(f, (long)bytes, SEEK_CUR) == 0, "record skip");
+        else {
+            unsigned char discard[4096];
+            while (bytes) {
+                size_t chunk = bytes < sizeof(discard) ? bytes : sizeof(discard);
+                rd_require(fread(discard, 1, chunk, f) == chunk, "unknown record payload");
+                bytes -= chunk;
+            }
+        }
     }
-    rd_require(feof(f) && r->have_meta, "TU complete");
+    rd_require(feof(f) && !ferror(f) && r->have_meta, "TU complete");
+    rd_require(!r->have_initial || (r->have_initial_eob && r->have_final && r->have_final_eob), "missing coefficient/EOB fields");
     fclose(f);
 }
 typedef struct RdClone {

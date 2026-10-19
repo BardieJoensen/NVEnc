@@ -50,6 +50,8 @@ def main():
     receipt['entropy_records'] = len(rows)
     receipt['all_clones_match_real_coder'] = True
     (out/'validation.json').write_text(json.dumps(receipt, indent=2)+'\n')
+    from entropy_summary import summarize
+    summarize(case)  # Exact expected key set from independently captured entropy/block traces.
     print(case, len(rows), 'validated coder records; exact control IVF/reconstruction', flush=True)
 
 if __name__ == '__main__': main()

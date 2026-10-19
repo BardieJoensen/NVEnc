@@ -52,7 +52,7 @@ def summarize(case):
                 **{k:sum(r[k] for r in pool) for k in ['baseline_bits','retained_bits','delta_bits']}}
     result = {'case':case,'rows':len(rows),'expected_population_exact':True,
         'quantizer_bypass_tus':len(bypass),'whole_block_skipped_quantizer_run_tus':excluded,
-        'groups':groups,'scope':'Sum of independent fixed-prestate arithmetic-coder tell_frac deltas, in eighth-bits. Not a sequential alternate stream or packet bitrate. Whole-block skip revival excluded.'}
+        'groups':groups,'scope':'Sum of independent fixed-prestate arithmetic-coder deltas in bits (tell_frac/8; 1/8-bit precision). Not a sequential alternate stream or packet bitrate. Whole-block skip revival excluded.'}
     (out/'summary.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps({k:v for k,v in result.items() if k!='whole_block_skipped_quantizer_run_tus'},indent=2))
 

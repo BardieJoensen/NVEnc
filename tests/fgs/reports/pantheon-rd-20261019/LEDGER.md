@@ -79,3 +79,36 @@ predictor, partition, transform, qmatrix and no pruning. q16 is the prior suppor
 preservation endpoint, not a settings sweep. Keep bypassed pixels unchanged and
 test the same target/control screens. A passing q24 diagnostic would justify a
 real q24+FP-retention arm before any new source-budget redistribution.
+
+
+Round3 result: same-predictor FP q24 passes E04 but misses E05 ACF by0.0058
+(HF0.5816/ACF−0.1666 versus0.6063/−0.2224). The single midpoint bisection q20
+passes E05 (0.6117/−0.2014); q16 is the previously supported endpoint. Current-q
+private FP exactly equals the exported initial FP coefficients, dequantized
+coefficients, EOB and reconstruction. Both complete streams/reconstructions stay
+byte-identical to their q32 controls. These remain counterfactual diagnostics.
+
+Round4 primary question: does that local preservation survive a real legal
+stream, and what happens when its packet budget is reduced? The combined strategy
+uses absolute selected-SB q24(E04)/q20(E05), global TX32 and final-encode FP
+retention. Mode decisions remain normal; no isolated pruning-only causal claim.
+The first requests are2x original rates. Every selected final block over240frames
+must realize its q, and retained coefficient/dequant hashes plus EOB must match.
+
+Round4 first result: E04 actual23.81770Mbps (2.375x original) and E05 actual
+18.15288Mbps (1.876x) both pass the five-frame primary-ROI screens. E04 HF1.9042/
+ACF−0.1860 versus1.8585/−0.1842; E05 shirt0.6077/−0.1812 versus0.6194/−0.2278.
+E05 background still fails (HF0.8984 versus1.7785; ACF−0.0036 versus−0.1924).
+These are target-preservation results, not whole-picture repairs. All240 decoded
+planes equal application reconstruction exactly. Full GPU scores, tails, CAMBI,
+source-defined whole-window controls and temporal traces are retained.
+
+- auto: Test the new local strategy once at the original window budget, because
+  lower-cost q20/q24 retention could reduce prior q16 collateral damage. This does
+  not assume that unchanged background loss will be repaired. Initial requests
+ 10316/8447kbps derive from measured high-rate response; actual packets decide match.
+- auto: Correct entropy unit wording to bits(tell_frac/8;1/8-bit precision), and
+  replace unknown-record fseek with checked reads after independent review found
+  an accepted truncation class. The new negative test rejects that class; complete
+  measured TU exports were independently validated, so previous numeric results
+  are unchanged. Parser-only hardening is not represented as an encode intervention.
