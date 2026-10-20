@@ -14,12 +14,25 @@ matched-rate causal controls. All texture/quiet/detail/banding/temporal/playback
 requirements remain unchanged. Full-episode qualification is still required
 before any production proposal; these are known difficult fixtures.
 
-Current primary uncertainty: can a different encoder prediction/search/decision
-policy retain both texture and clean/edge regions more efficiently than the
-previous precision redistribution? An inventory and independent design review
-will identify one new bounded discriminator before another encode is launched.
-Do not repeat manual ROI escalation, grain fitting on the same failed base,
-or a broad settings sweep. [Ledger](LEDGER.md) records contracts and decisions.
+The first new arm, SVT preset0/tune0, fails the texture screen at9.5227592Mbps,
+98.4110% of the E05 original. It is a valid under-cap practical screen, **not a
+matched-rate preset comparison**. Shirt/background HF amplitude remains74.6%/
+48.1% below source. Spatial structure, face errors and full-reference tails
+improve descriptively against preset4, while some quiet/edge errors worsen.
+Encoding336 frames took2740.622s on one SVT worker,39.64x the preserved preset4
+wall time. No motion playback was observed.
+
+[Measured result](RESULTS.md), [machine evidence](preset0-result.json),
+[independent review](REVIEW.md) and [reproduction](REPRODUCE.md) document scope.
+The ancillary [original H264 QP-state observation](ORIGINAL_QP.md) is validated;
+it does not equate original QP with re-encode preservation.
+
+Next discriminator: one independently implemented libaom AV1 policy at source
+budget. The large amplitude misses make that more informative for practical
+feasibility than calibrating the preset0 rate solely to estimate a clean preset
+effect. That matched preset effect remains unresolved. No inference of a codec
+limit follows. [Ledger](LEDGER.md) records contracts and decisions; no broad
+settings sweep, repeated manual ROI escalation or failed-base grain fitting.
 
 Prior evidence: [causal and measured preservation report](../pantheon-rd-20261019/README.md).
 Prior source-budget ROI failure is accepted; it does not prove source-budget
