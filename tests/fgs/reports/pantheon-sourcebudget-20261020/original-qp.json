@@ -1,0 +1,178 @@
+{
+  "scope": "Same H2648-bit QP_Y state conventions, including skipped MBs; coefficients, scaling matrices and residual execution are unobserved. Different picture types, predictors, transforms, filters and rates prevent causal attribution from QP alone.",
+  "rates_mbps": {
+    "original": 9.6765224,
+    "x264_2x": 19.3683368,
+    "x264_4x": 38.6852184
+  },
+  "summary": {
+    "shirt": {
+      "original": {
+        "all240": 27.56715,
+        "midpoint5": 24.12592,
+        "frame120": 24.06
+      },
+      "x264_2x": {
+        "all240": 23.539333333333335,
+        "midpoint5": 22.446080000000002,
+        "frame120": 22.0
+      },
+      "x264_4x": {
+        "all240": 17.703719999999997,
+        "midpoint5": 16.466559999999998,
+        "frame120": 16.2704
+      }
+    },
+    "background": {
+      "original": {
+        "all240": 28.17023,
+        "midpoint5": 25.78170666666667,
+        "frame120": 25.944444444444443
+      },
+      "x264_2x": {
+        "all240": 24.29983703703704,
+        "midpoint5": 24.288124444444446,
+        "frame120": 24.548
+      },
+      "x264_4x": {
+        "all240": 18.957794444444446,
+        "midpoint5": 19.70448,
+        "frame120": 20.17351111111111
+      }
+    },
+    "face": {
+      "original": {
+        "all240": 27.747805555555555,
+        "midpoint5": 27.187226666666668,
+        "frame120": 27.072933333333335
+      },
+      "x264_2x": {
+        "all240": 23.90528388888889,
+        "midpoint5": 25.84632,
+        "frame120": 25.777333333333335
+      },
+      "x264_4x": {
+        "all240": 18.356695555555557,
+        "midpoint5": 21.210533333333334,
+        "frame120": 21.232
+      }
+    },
+    "whole": {
+      "original": {
+        "all240": 27.77125128600823,
+        "midpoint5": 25.35669135802469,
+        "frame120": 25.40364197530864
+      },
+      "x264_2x": {
+        "all240": 23.897193672839503,
+        "midpoint5": 23.74367901234568,
+        "frame120": 23.80061728395062
+      },
+      "x264_4x": {
+        "all240": 18.343334619341565,
+        "midpoint5": 18.57017283950617,
+        "frame120": 18.342098765432098
+      }
+    }
+  },
+  "boxes": {
+    "shirt": [
+      1200,
+      650,
+      200,
+      100
+    ],
+    "background": [
+      950,
+      50,
+      250,
+      180
+    ],
+    "face": [
+      160,
+      600,
+      500,
+      480
+    ],
+    "whole": [
+      0,
+      0,
+      1920,
+      1080
+    ]
+  },
+  "midpoint_scored_frames": [
+    116,
+    118,
+    120,
+    122,
+    124
+  ],
+  "keyframe_input_positions": {
+    "original": [
+      0,
+      48,
+      96,
+      144,
+      192,
+      240,
+      288
+    ],
+    "x264_2x": [
+      0,
+      44,
+      108,
+      132,
+      182,
+      240,
+      267,
+      295,
+      328
+    ],
+    "x264_4x": [
+      0,
+      44,
+      108,
+      132,
+      182,
+      240,
+      267,
+      295,
+      328
+    ]
+  },
+  "provenance": {
+    "original": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/original-qp/e05-1440/preroll/selection.json",
+      "sha256": "9c9aab3d0c123fb6524c03ff82f6aea685a648b010d45f729e1fa7aaf72a67a4"
+    },
+    "source_validity": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/fixtures/e05-1440/validity.json",
+      "sha256": "48acc932cf17fa90b6a7d2306018fb9d593522d5fcf01786f9c8bf82afef618c"
+    },
+    "x264_2x": {
+      "receipt": {
+        "path": "/media/merged-storage/cold-storage/docker-apps/pantheon-rd-20261019/parent/h264-qp/search11-validated/receipt.json",
+        "sha256": "45c6e6512f272ba0e88bf2f03228ab662a51fe87b9dff8de29558314e761cd85"
+      },
+      "rate": {
+        "path": "/media/merged-storage/cold-storage/docker-apps/pantheon-rd-20261019/parent/crosscodec/e05-1440/x264-search11-2x0/packet-window-audit.json",
+        "sha256": "2efe09ab49eaa6dbef86fb48568a77064f72140b1f29147205e3480ed65d30ea"
+      }
+    },
+    "x264_4x": {
+      "receipt": {
+        "path": "/media/merged-storage/cold-storage/docker-apps/pantheon-rd-20261019/parent/h264-qp/search11-4x-validated/receipt.json",
+        "sha256": "cf1cec39562ab823cf02cc07710aa09e40dfae0ba4750785f4ef9cd779987a2b"
+      },
+      "rate": {
+        "path": "/media/merged-storage/cold-storage/docker-apps/pantheon-rd-20261019/parent/crosscodec/e05-1440/x264-search11-4x1/packet-window-audit.json",
+        "sha256": "a987c87da2091f846419d1b0c8e3cea43c7cfbb99132c4bc92378f9836048f93"
+      }
+    }
+  },
+  "script": {
+    "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/original_qp_summary.py",
+    "sha256": "a0506b5ad7d0fd9f473c37d58c1b329fb5932266e7e148291cbaa38e9d610845"
+  }
+}
