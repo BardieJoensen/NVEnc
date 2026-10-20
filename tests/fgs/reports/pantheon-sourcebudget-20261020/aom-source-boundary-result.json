@@ -1,0 +1,310 @@
+{
+  "status": "admitted",
+  "pristine_equals_installed": true,
+  "trace_equals_pristine": true,
+  "all336_source_indices_bound": true,
+  "all363_coded_events_matched": true,
+  "all_unfiltered_whole_and_plane_hashes_exact": true,
+  "summary": {
+    "all": {
+      "coded_events": 363,
+      "changed_events": 32,
+      "different_pointer_events": 33,
+      "unequal_samples": [
+        76672,
+        34822,
+        33222
+      ],
+      "maxabs": [
+        2,
+        2,
+        2
+      ]
+    },
+    "hidden": {
+      "coded_events": 154,
+      "changed_events": 26,
+      "different_pointer_events": 27,
+      "unequal_samples": [
+        61821,
+        29824,
+        28271
+      ],
+      "maxabs": [
+        2,
+        2,
+        2
+      ]
+    },
+    "shown": {
+      "coded_events": 209,
+      "changed_events": 6,
+      "different_pointer_events": 6,
+      "unequal_samples": [
+        14851,
+        4998,
+        4951
+      ],
+      "maxabs": [
+        2,
+        2,
+        2
+      ]
+    }
+  },
+  "provenance": {
+    "script": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/validate_aom_trace.py",
+      "sha256": "b127e6b893a7bc474391229d49507c646d389465c0bd3ba4830d443365a75136"
+    },
+    "input_planes": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-boundary/input-planes.json",
+      "sha256": "d4e7e47ac1c042bd3bbfcba559b55964e8389999cddd6c1b330c9a9c706146de"
+    },
+    "coverage_receipt": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-coverage/receipt.json",
+      "sha256": "c27051240d83c501ac9adfb1c8faf2d3359bf4d96a59b5901956ef1a61c07160"
+    },
+    "pristine_run": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-boundary/runs/pristine-v3/command.json",
+      "sha256": "d5f6d8a120522da11b3822e6de398d68f008b99858c8f5b4de1c3791c0b62a82"
+    },
+    "trace_run": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-boundary/runs/trace-v3/command.json",
+      "sha256": "f8cd1f56704c289d6242a3aa38dccf0c58fb8d3f554b24b170e67bc159178f94"
+    },
+    "installed_run": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/command.json",
+      "sha256": "fc1fbfc56dd660ce46e99cc2ccf98ee8633dd09aff7976031dd8a1c036265bbb"
+    },
+    "source_reconstruction": {
+      "receipt": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-verify-v3-20261020T100425Z/source-domain-receipt.json",
+        "sha256": "adaef450fb9f272e62033b7a409380cbefd71fb1ce1f010d8ff69074e3bca755"
+      },
+      "reconstructed": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-verify-v3-20261020T100425Z/reconstructed-source-manifest.json",
+        "sha256": "af4b0defbc6c3ced3eb9dacd2fcd8d12060db00df66f188af4cadcf015f31378"
+      },
+      "pristine2": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-verify-v3-20261020T100425Z/pristine2-source-manifest.json",
+        "sha256": "2a892db230d7e9c94461d9b24830ac5016180bdf59f002ea0a103c5f332fdf95"
+      },
+      "traced": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-verify-v3-20261020T100425Z/traced-source-manifest.json",
+        "sha256": "601d65cd7e1f686dbbbdd9a9adb5fb25295839f85e0385e7e52e5a497e453f8b"
+      },
+      "patch_log_1": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-verify-v3-20261020T100425Z/logs/patch-01-0001-doc-Use-libjs-mathjax-rather-than-cloudflare-copy.patch.log",
+        "sha256": "a5e434d79cce2e076348a7c33d0beed9fa69d3fe5f77debc8deb37d33c77dcb6"
+      },
+      "patch_log_2": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-verify-v3-20261020T100425Z/logs/patch-02-0002-use-system-libyuv.patch.log",
+        "sha256": "16139b7dd93ab4ca70a6dbc80d9a7893868e692874ab47c8ee105fbd17bf1f89"
+      },
+      "patch_log_3": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-verify-v3-20261020T100425Z/logs/patch-03-0003-use-system-libwebm.patch.log",
+        "sha256": "78b358e709c3f54dd9e5e3286262579db20cd8b8b272c05b8778ea160bd91a79"
+      },
+      "patch_log_4": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-verify-v3-20261020T100425Z/logs/patch-04-CVE-2024-5171-1.patch.log",
+        "sha256": "0953fdba021eaeefb42457214bf5d2fe7476f95ff2bbac41f39894414d47929c"
+      },
+      "patch_log_5": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-verify-v3-20261020T100425Z/logs/patch-05-CVE-2024-5171-2.patch.log",
+        "sha256": "ecc35d0ef78faad73f4da0b7a5113f7b32890f079e06341e407a3e86f2558600"
+      },
+      "patch_log_6": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-verify-v3-20261020T100425Z/logs/patch-06-CVE-2026-56208.patch.log",
+        "sha256": "13ab5594125207cf769fe2b315950de84ad0b175c6c5ac76e720eb3c17a766bf"
+      },
+      "patch_log_7": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-verify-v3-20261020T100425Z/logs/patch-07-CVE-2026-56209_56210_56211.patch.log",
+        "sha256": "c153d623817bee643b111f9bc5478a8133c66529d5deaec8a6192016948b6331"
+      },
+      "patch_receipts": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-verify-v3-20261020T100425Z/patch-receipts.tsv",
+        "sha256": "517c35d89cbc5bc9b843ced871199f08896ded3336b5d7c5280c96255fd155d5"
+      },
+      "archives": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-verify-v3-20261020T100425Z/input-archive-sha256.txt",
+        "sha256": "600e9456d01becb64fb8b8f0fc2c72ab5afc9c7968daa927d854dc21302b816b"
+      }
+    }
+  },
+  "scope": "Observed visible coding-source samples at the pre-SSIM boundary; not an ablation of prediction, allocation, or quantization.",
+  "playback_observed": false,
+  "full_event_artifact": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-boundary/trace-v3-validated.json",
+    "sha256": "41baf264905fb46af5c7522e96c04f651a7d2ccd5c58f4327352e0d7cc7f9aa6"
+  },
+  "changed_source_indices": [
+    0,
+    16,
+    27,
+    43,
+    44,
+    58,
+    71,
+    87,
+    103,
+    108,
+    124,
+    140,
+    156,
+    172,
+    178,
+    184,
+    190,
+    198,
+    214,
+    230,
+    236,
+    242,
+    258,
+    268,
+    269,
+    285,
+    294,
+    295,
+    311,
+    327,
+    328,
+    335
+  ],
+  "prescribed_source_frames": {
+    "120": [
+      {
+        "record_version": 3,
+        "frame_type": 1,
+        "show_frame": 0,
+        "showable_frame": 1,
+        "order_hint": 12,
+        "refresh_frame_flags": 64,
+        "gf_frame_index": 14,
+        "update_type": 6,
+        "frame_parallel_level": 0,
+        "source_ptr_equal": 1,
+        "bit_depth": 10,
+        "highbd": 1,
+        "width": 1920,
+        "height": 1080,
+        "uv_width": 960,
+        "uv_height": 540,
+        "subsampling": [
+          1,
+          1
+        ],
+        "strides_a": [
+          2240,
+          1120
+        ],
+        "strides_b": [
+          2240,
+          1120
+        ],
+        "source_md5": "b3b56b804816a1eed4217271f8594b15",
+        "unfiltered_md5": "b3b56b804816a1eed4217271f8594b15",
+        "source_plane_md5": [
+          "e800742668a4e6a5d252ebeefc96047e",
+          "f1617e1fc314df9e1670f508adbc21f1",
+          "fc1f9091015af4235a30d6c54c3ccd21"
+        ],
+        "unfiltered_plane_md5": [
+          "e800742668a4e6a5d252ebeefc96047e",
+          "f1617e1fc314df9e1670f508adbc21f1",
+          "fc1f9091015af4235a30d6c54c3ccd21"
+        ],
+        "neq": [
+          0,
+          0,
+          0
+        ],
+        "maxabs": [
+          0,
+          0,
+          0
+        ],
+        "source_index": 120,
+        "hook_match_key": [
+          120,
+          1,
+          0,
+          1,
+          12,
+          64
+        ],
+        "all_visible_samples_unchanged": true
+      }
+    ],
+    "216": [
+      {
+        "record_version": 3,
+        "frame_type": 1,
+        "show_frame": 0,
+        "showable_frame": 1,
+        "order_hint": 108,
+        "refresh_frame_flags": 128,
+        "gf_frame_index": 3,
+        "update_type": 6,
+        "frame_parallel_level": 0,
+        "source_ptr_equal": 1,
+        "bit_depth": 10,
+        "highbd": 1,
+        "width": 1920,
+        "height": 1080,
+        "uv_width": 960,
+        "uv_height": 540,
+        "subsampling": [
+          1,
+          1
+        ],
+        "strides_a": [
+          2240,
+          1120
+        ],
+        "strides_b": [
+          2240,
+          1120
+        ],
+        "source_md5": "94fa8bde346a2a52d40b26f8183afea5",
+        "unfiltered_md5": "94fa8bde346a2a52d40b26f8183afea5",
+        "source_plane_md5": [
+          "67afb3b722bfbcf85d80b9d8cf54df1a",
+          "2b3a64dca799675249410f8d84851768",
+          "118dc9fb054522fbcec845fa2576325c"
+        ],
+        "unfiltered_plane_md5": [
+          "67afb3b722bfbcf85d80b9d8cf54df1a",
+          "2b3a64dca799675249410f8d84851768",
+          "118dc9fb054522fbcec845fa2576325c"
+        ],
+        "neq": [
+          0,
+          0,
+          0
+        ],
+        "maxabs": [
+          0,
+          0,
+          0
+        ],
+        "source_index": 216,
+        "hook_match_key": [
+          216,
+          1,
+          0,
+          1,
+          108,
+          128
+        ],
+        "all_visible_samples_unchanged": true
+      }
+    ]
+  },
+  "coded_event_sample_fractions_changed": [
+    0.00010186035438560691,
+    0.00018504701901166548,
+    0.00017654448525660646
+  ]
+}

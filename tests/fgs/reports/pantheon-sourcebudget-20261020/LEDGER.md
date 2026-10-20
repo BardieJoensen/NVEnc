@@ -3,11 +3,13 @@
 Starting clean master a246c353, coord pantheon-fix r8. User supplied the missing
 practicality constraint; investigation resumes under original-rate hard cap.
 
-| Hypothesis | Support | Contradiction / limit | Unknown | Next discriminator |
+| Hypothesis | Supporting evidence | Contradiction / limit | Still unknown | Cheapest next discriminator |
 |---|---|---|---|---|
-| Tested search/decision policy wastes texture-preserving bits | Fixed-decision unquantized inverses retain information; broader analysis changes allocation/quality | Lower quantization and4x preservation alone do not prove coding inefficiency; local allocation damages controls | Whole-picture preservation with a distinct search/decision policy at source rate | Inventory prior AV1 settings and independently design one untested contrast |
-| More local precision alone solves source budget | Actual q20/q24 selected blocks preserve texture | Verified matched-source arms damage outside detail/face/tails; unselected E05 background fails | A more efficient decision stack or objective | Do not repeat the failed manual ROI strategy |
-| Grain synthesis safely replaces the loss | Some prior E05 amplitude recovery | Same-input quiet/textured conflict on tested base; E04 structure not restored | Other legal models/bases with demonstrable representability | No new estimator without a distinct representability discriminator |
+| Material source preprocessing causes libaom texture loss | Byte-neutral trace finds 32 sparsely changed coded events, max two 10-bit levels | Prescribed midpoint input is exactly unchanged; most events are identical | Indirect sensitivity through reference or coding decisions | Round5 all-event coding-source sample neutralization, preserving preprocessing analysis |
+| SSIM's extra variance weighting causes the severe loss | It changes block rate prices; removing it improves face/edges | Matched PSNR still loses 84%/49% of shirt/background HF and fails ACF | Interactions with other policies | Direct removal failed; do not repeat this contrast |
+| More local quantization precision solves the original-rate budget | Fixed-decision inverses retain information; verified lower quantization and 4x coding preserve target texture | Matched-budget precision arms damage other regions; broader controls remain necessary | A policy that preserves texture without displaced damage | Resolve source-boundary uncertainty before another allocation policy |
+| A slower or independent decision stack suffices | Preset0 and libaom improve several broad controls | Tested preset0, SSIM and PSNR arms all fail texture; preset0 was under-cap, not matched | Untested search/allocation strategies and interactions | Use measured mechanism to choose the next arm, not a settings sweep |
+| Legal grain safely replaces lost texture | Some E05 amplitude recovery; decoded bases can improve | Tested same-input quiet/texture conflict and E04 structure failure | Other legal models/bases with demonstrated representability | No estimator until a distinct representability discriminator is justified |
 
 - user: Practical repair must be at or below original actual video rate.
 - auto: Decisive source-matched calibration interval is99–100%; overshoot is not
@@ -234,3 +236,68 @@ from original input before prediction/quantization. Requested ARNR strength zero
 is insufficient proof either way: the filter path is reachable, but its integer
 weights can round the change away. Trace actual samples before another settings
 trial. The private build must preserve output before its evidence is admitted.
+
+
+## Round4 contract: original samples versus coding-source samples
+
+Hypothesis: material temporal preprocessing suppresses texture before libaom
+performs coding decisions, despite ARNR strength zero. Supporting evidence is
+only source-path reachability; integer weight truncation may make that path
+pixel-identical. Round3's similar severe deficit under both tune policies leaves
+this distinct mechanism unresolved. The cheapest decisive observation is an
+all-plane sample trace at the coding-source boundary, not another settings arm.
+
+Worker owns `worker/aom-source-trace-preflight/`: fresh copies of pinned upstream
+and Ubuntu patches, bounded four-job private builds, instrumentation patch,
+commands/toolchain/config manifests and later isolated runs. No install or edits
+to production, prior archives or the reviewer's audited source. Reviewer owns
+`reviewer/round4-coverage/` and independently parses actual AV1 frame headers.
+Parent owns contract, integration, analysis and the Git index. No recursion.
+
+Hook immediately before the SSIM scaling branch in `encoder.c`, after early
+show-existing and dropped-frame returns. Compare visible cropped Y/U/V samples
+of `cpi->source` and `cpi->unfiltered_source`, with raw little-endian 10-bit
+whole-frame and per-plane MD5, unequal-sample counts and maximum deltas. Bind
+unfiltered hashes to the 336 unique validated original frame hashes. Record
+geometry/bit depth, source-pointer equality and frame/update/GF/order/parallel
+metadata. Use stack-local state and one bounded atomic write to an inherited
+append descriptor; no shared counters, encoder-state changes or silent I/O loss.
+
+Before full encodes, review patch/build manifests. Then require exact elementary
+stream equality between private pristine and traced builds on the frozen PSNR
+pass2 command/stats. Compare the private pristine stream with the installed
+admitted output; if unequal, trace findings apply only to the private build until
+resolved. Record source and stats before/after, actual loaded library and complete
+commands. Instrumented runtime is diagnostic overhead, not candidate speed.
+
+Independent bitstream coverage already shows 490 frame headers in 336 packets:
+363 coded frames (154 hidden, 209 shown) and 127 show-existing headers. Require
+exact coded-event multiset equality using source index, frame type/show/showable,
+order hint and refresh flags after documented implicit-header normalization.
+The source-index map uses exact input hashes; displayed packet count is not
+an instrumentation completeness check. Parallel emission order may differ.
+
+An identity trace rejects material source preprocessing on the observed path.
+A nonidentity trace localizes changes but does not alone prove harmful texture
+loss or that disabling preprocessing repairs the window. Inspect changed samples
+and quantify amplitude/structure before choosing an intervention. Every candidate
+still faces the original packet-rate ceiling and unchanged quality gates.
+
+
+Round4 result: admitted installed/pristine/traced IVF identity; all 336 original
+whole/plane bindings and all 363 independent coded-event keys pass. There are
+32 changed events, 26 hidden and six shown keyframes, with maximum delta two
+10-bit levels. Across coded-event samples, changed Y/U/V fractions are 0.01019% /
+0.01850% / 0.01765%. Input 216 (scored midpoint 120) and input 120 are exactly
+unchanged. Direct preprocessing loss at the prescribed midpoint is excluded.
+Do not infer all TF-related decisions are inert: altered references and earlier
+analysis remain possible pathways. Independent outcome review accepts this scope.
+
+- auto: Select one all-event source-sample neutralization next. Keep the actual
+  preprocessing calculations but hand original samples to coding; no ROI-selected
+  patch or sample-outcome-dependent selection. This is cheaper and more causal
+  than another settings switch or deeper coefficient export. A byte-identical
+  result ends this measured-sample mechanism without rescoring. If bytes change,
+  validate achieved input replacement and actual packet rate before quality work.
+  Worker coefficient-path inventory is preserved as a conditional later tool,
+  not an automatically authorized optimization sweep.

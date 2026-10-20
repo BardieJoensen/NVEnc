@@ -151,3 +151,78 @@ its unchanged metrics are not rerun just to add the newer tune-policy field.
 Mode, partition, transform, reconstruction and later prediction choices are free
 to change with the tested policy. Requested TBRs and actual packets are both
 reported; this is a rate-calibrated contrast, not identical rate-control input.
+
+## Round4 source-boundary instrumentation
+
+`source_trace_input.py` binds the visible Y/U/V little-endian 16-bit serialization
+of all 336 original 10-bit frames to the historical whole-frame hashes, and
+exports all 1,008 plane hashes. The independent header parser is preserved at
+`reviewer/round4-coverage/parse_trace_headers.py` under the experiment root.
+It accounts for hidden frames and show-existing headers; 336 display packets
+contain 363 coded events, so display count is not the expected hook population.
+
+The portable [instrumentation patch](aom-source-boundary.patch) applies after
+all seven Ubuntu patches. It was dry-run checked on a fresh reconstruction.
+It observes samples only and is restricted to this exact 10-bit 1920x1080 4:2:0
+fixture. It requires an inherited writable append descriptor when enabled.
+Neither a library installation nor production replacement is involved.
+
+A private rebuild uses the preserved archives and the following recipe. The
+working directory must be fresh. Original configure/pristine-build stdout was
+not retained; this is a reproduction recipe, not a claim about missing logs.
+The final v3 rebuild has a captured command, exit code, timestamps and log in
+`worker/aom-source-trace-preflight/build.json`.
+
+```bash
+TRACE_WORK="$PANTHEON_SOURCEBUDGET_ROOT/rebuild-source-boundary"
+AOM_ARCHIVES="$PANTHEON_SOURCEBUDGET_ROOT/reviewer/aom-tune-source-v382"
+mkdir "$TRACE_WORK" "$TRACE_WORK/pristine"
+tar -xf "$AOM_ARCHIVES/aom-v3.8.2.tar.gz" -C "$TRACE_WORK/pristine"
+tar -xf "$AOM_ARCHIVES/aom_3.8.2-2ubuntu0.2.debian.tar.xz" -C "$TRACE_WORK/pristine"
+while IFS= read -r patch_name; do
+  patch -p1 --batch -d "$TRACE_WORK/pristine" \
+    -i "$TRACE_WORK/pristine/debian/patches/$patch_name"
+done < "$TRACE_WORK/pristine/debian/patches/series"
+cp -a "$TRACE_WORK/pristine" "$TRACE_WORK/trace"
+patch -p1 --batch -d "$TRACE_WORK/trace" -i "$REPORT/aom-source-boundary.patch"
+for mode in pristine trace; do
+  cmake -S "$TRACE_WORK/$mode" -B "$TRACE_WORK/$mode/build" -G Ninja \
+    -DBUILD_SHARED_LIBS=1 -DFORCE_HIGHBITDEPTH_DECODING=0 \
+    -DCONFIG_LIBYUV=0 -DCONFIG_WEBM_IO=0 -DCONFIG_MULTITHREAD=1 \
+    -DENABLE_TESTS=0 -DGIT_EXECUTABLE=/nonexistant-binary \
+    -DAOM_TARGET_CPU=x86_64 -DCONFIG_BIG_ENDIAN=0 -DCMAKE_BUILD_TYPE=Release
+  nice -n10 taskset -c 0-7 cmake --build "$TRACE_WORK/$mode/build" \
+    --target aom --parallel 4
+done
+```
+
+The two optional I/O/conversion dependencies were disabled because their
+system development libraries were absent. Encoding-byte equality, not a claim
+that those flags never matter, binds this private build to the installed arm.
+The fresh source reconstruction and patch logs are preserved in
+`worker/aom-source-verify-v3-20261020T100425Z/`. Its final
+`source-domain-receipt.json` explicitly compares the 1,294 upstream source files;
+Debian packaging and scratch metadata are listed separately. Earlier receipts
+and aggregate hashes are retained as historical attempts, not admitted proof.
+
+Using the preserved reviewed private libraries and build receipt:
+
+```bash
+nice -n10 taskset -c 8-11 "$PYTHON" "$REPORT/source_trace_input.py"
+"$PYTHON" "$REPORT/replay_aom_trace.py" pristine pristine-v3
+"$PYTHON" "$REPORT/replay_aom_trace.py" trace trace-v3
+"$PYTHON" "$REPORT/validate_aom_trace.py" pristine-v3 trace-v3
+```
+
+These scripts require fresh output paths. The replay copies the admitted PSNR
+pass-one statistics unchanged, clones its exact pass-two command except local
+stats/output paths, binds the private library through loader output and its
+reported configuration, and records input/stats/library hashes before and after.
+The trace descriptor is passed only to the traced process. Runtime measures
+only diagnostic pass two and must not replace the candidate's two-pass runtime.
+
+Admission requires private pristine = installed = traced IVF bytes, all 336
+original frame/plane bindings, and exact equality to the independently parsed
+363 coded-event keys. The validator pins the reviewed build and reconstruction
+receipts. A newly rebuilt binary or revised trace requires refreshed provenance
+and review before updating those pins; equality and coverage gates remain.

@@ -130,3 +130,53 @@ sample changes. At ARNR strength zero, noncentral weights can truncate to zero;
 `cpi->source` being allowed to point to a filtered buffer proves neither loss
 nor equality. The next trace compares all visible planes and requires exact
 private pristine-versus-instrumented output before causal interpretation.
+
+Round4 required two rejected instrumentation drafts before any encode. The first
+hook was inside the SSIM-only branch and would never run on the selected PSNR
+arm. It also treated libaom's tagged high-bit-depth pointers as ordinary byte
+addresses and hashed only the coding buffer. These defects could produce no
+events, invalid reads or an unbindable source comparison. Parent required an
+unconditional hook, `CONVERT_TO_SHORTPTR`, sample strides, and independent whole/
+plane hashes for both buffers. The reviewer independently found the buffer and
+hash defects; parent corrected its initially missed branch-coverage claim.
+
+The second draft fixed the branch but divided the already-sample-based strides
+by two, introduced a shared mutable static descriptor, omitted the six plane
+hashes, and left stale provenance fields. It was also rejected before encoding.
+Parent took ownership of the C instrumentation, retaining unmodified sample
+strides, stack-local mutable state, explicit 10-bit/crop/subsampling guards,
+all six plane hashes and append/write-access validation. Worker rebuilt the
+reviewed v3 patch with captured command/return code/timestamps/log. The independent
+review found no remaining C or replay-runner blocker. Rejected drafts remain
+preserved; neither generated scientific observations.
+
+Parent also replaced ambiguous active build fields with a clean manifest and
+preserved the stale receipt separately. Original configure, patch-application
+and pristine-build stdout had not been retained; the report labels reconstructed
+commands honestly. A fresh extraction plus all seven Ubuntu patches, with new
+execution logs, independently reconstructs the source tree. It matches all
+1,294 upstream source-domain files in pristine; traced differences are exactly
+`encoder.c` and `av1.cmake`. This verifies source provenance without pretending
+the missing historical logs exist. The reviewer caught an older aggregate hash
+file predating the final source-domain receipt; admission binds the final receipt,
+actual manifests and patch logs directly and excludes the stale aggregate.
+
+Independent validation review required concrete command-to-artifact path binds,
+private loader resolution and environment checks, reviewed runner/FFmpeg/build
+hashes, plus the source-reconstruction evidence. Parent added these before
+admission. The validator requires identical installed/pristine/traced IVF bytes,
+all original frame/plane identities, and exact coded-event multiset equality.
+The initial pristine replay passes installed-byte identity. Trace outcome review
+follows full completion; partial event counts are not accepted as coverage.
+
+
+Round4 outcome review independently validates all 363 coded events, all 336
+unfiltered whole/plane identities and installed/pristine/traced byte equality.
+It confirms 32 sparsely changed events with maximum delta two 10-bit levels;
+24 changed events lie in the scored source window. The prescribed midpoint is
+unchanged, though nearby hidden source frames 214 and 230 differ. The reviewer
+rejects an inference of zero decision influence or absence of earlier TF/GF/TPL,
+reference or border effects; the trace records visible samples, not coordinates,
+signed changes or frequency structure. Nor does it prove every change was caused
+by TF. Parent retains these limits and selects the recommended all-event source
+neutralization. Independent result files are `reviewer/round4-outcome-review.*`.

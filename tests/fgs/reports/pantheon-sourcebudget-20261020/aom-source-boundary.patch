@@ -1,0 +1,155 @@
+--- a/av1/encoder/encoder.c	2026-10-20 09:19:53.523000000 +0000
++++ b/av1/encoder/encoder.c	2026-10-20 10:01:50.408386308 +0000
+@@ -15,6 +15,8 @@
+ #include <stdio.h>
+ #include <time.h>
+ #include <stdlib.h>
++#include <fcntl.h>
++#include <unistd.h>
+ 
+ #include "av1/common/scale.h"
+ #include "config/aom_config.h"
+@@ -35,6 +37,7 @@
+ #include "aom_ports/aom_timer.h"
+ #include "aom_ports/mem.h"
+ #include "aom_scale/aom_scale.h"
++#include "common/md5_utils.h"
+ #if CONFIG_BITSTREAM_DEBUG
+ #include "aom_util/debug_util.h"
+ #endif  // CONFIG_BITSTREAM_DEBUG
+@@ -87,6 +90,117 @@
+ #include "av1/encoder/reconinter_enc.h"
+ #include "av1/encoder/var_based_part.h"
+ 
++/* Scratch-only observation. No encoder fields or process-global state are changed. */
++static void pantheon_digest_hex(MD5Context *ctx, char output[33]) {
++  unsigned char digest[16];
++  static const char alphabet[] = "0123456789abcdef";
++  MD5Final(digest, ctx);
++  for (int i = 0; i < 16; ++i) {
++    output[2 * i] = alphabet[digest[i] >> 4];
++    output[2 * i + 1] = alphabet[digest[i] & 15];
++  }
++  output[32] = 0;
++}
++
++static void trace_source_boundary(const AV1_COMP *cpi) {
++#if CONFIG_BIG_ENDIAN
++#error Pantheon trace serialization requires the measured little-endian build.
++#endif
++  const char *value = getenv("AOM_TRACE_FD");
++  if (value == NULL) return;
++  char *end = NULL;
++  const long parsed = strtol(value, &end, 10);
++  if (*value == 0 || end == NULL || *end != 0 || parsed < 3 || parsed > INT_MAX)
++    abort();
++  const int fd = (int)parsed;
++  const int flags = fcntl(fd, F_GETFL);
++  if (flags < 0 || !(flags & O_APPEND) ||
++      ((flags & O_ACCMODE) != O_WRONLY && (flags & O_ACCMODE) != O_RDWR))
++    abort();
++
++  const YV12_BUFFER_CONFIG *a = cpi->source;
++  const YV12_BUFFER_CONFIG *b = cpi->unfiltered_source;
++  if (!a || !b || cpi->common.seq_params->bit_depth != AOM_BITS_10) abort();
++  const YV12_BUFFER_CONFIG *buffers[2] = { a, b };
++  for (int i = 0; i < 2; ++i) {
++    const YV12_BUFFER_CONFIG *q = buffers[i];
++    if (!(q->flags & YV12_FLAG_HIGHBITDEPTH) ||
++        q->y_crop_width != 1920 || q->y_crop_height != 1080 ||
++        q->uv_crop_width != 960 || q->uv_crop_height != 540 ||
++        q->subsampling_x != 1 || q->subsampling_y != 1 ||
++        q->y_stride < 1920 || q->uv_stride < 960 ||
++        !q->y_buffer || !q->u_buffer || !q->v_buffer)
++      abort();
++  }
++  const uint16_t *ap[3] = { CONVERT_TO_SHORTPTR(a->y_buffer),
++                           CONVERT_TO_SHORTPTR(a->u_buffer),
++                           CONVERT_TO_SHORTPTR(a->v_buffer) };
++  const uint16_t *bp[3] = { CONVERT_TO_SHORTPTR(b->y_buffer),
++                           CONVERT_TO_SHORTPTR(b->u_buffer),
++                           CONVERT_TO_SHORTPTR(b->v_buffer) };
++  const int astride[3] = { a->y_stride, a->uv_stride, a->uv_stride };
++  const int bstride[3] = { b->y_stride, b->uv_stride, b->uv_stride };
++  const int width[3] = { a->y_crop_width, a->uv_crop_width, a->uv_crop_width };
++  const int height[3] = { a->y_crop_height, a->uv_crop_height, a->uv_crop_height };
++  MD5Context whole_a, whole_b;
++  MD5Init(&whole_a);
++  MD5Init(&whole_b);
++  char plane_a[3][33], plane_b[3][33], hash_a[33], hash_b[33];
++  unsigned long long unequal[3] = { 0, 0, 0 };
++  unsigned maximum[3] = { 0, 0, 0 };
++  for (int p = 0; p < 3; ++p) {
++    MD5Context ma, mb;
++    MD5Init(&ma);
++    MD5Init(&mb);
++    for (int y = 0; y < height[p]; ++y) {
++      /* YV12 highbd strides are sample counts, even though base pointers are tagged. */
++      const uint16_t *row_a = ap[p] + (size_t)y * astride[p];
++      const uint16_t *row_b = bp[p] + (size_t)y * bstride[p];
++      const unsigned bytes = (unsigned)width[p] * sizeof(uint16_t);
++      MD5Update(&whole_a, (const unsigned char *)row_a, bytes);
++      MD5Update(&whole_b, (const unsigned char *)row_b, bytes);
++      MD5Update(&ma, (const unsigned char *)row_a, bytes);
++      MD5Update(&mb, (const unsigned char *)row_b, bytes);
++      for (int x = 0; x < width[p]; ++x) {
++        const unsigned va = row_a[x], vb = row_b[x];
++        if (va > 1023 || vb > 1023) abort();
++        const unsigned delta = va > vb ? va - vb : vb - va;
++        unequal[p] += va != vb;
++        if (delta > maximum[p]) maximum[p] = delta;
++      }
++    }
++    pantheon_digest_hex(&ma, plane_a[p]);
++    pantheon_digest_hex(&mb, plane_b[p]);
++  }
++  pantheon_digest_hex(&whole_a, hash_a);
++  pantheon_digest_hex(&whole_b, hash_b);
++  char line[2048];
++  const int count = snprintf(
++      line, sizeof(line),
++      "{\"record_version\":3,\"frame_type\":%d,\"show_frame\":%d,"
++      "\"showable_frame\":%d,\"order_hint\":%u,\"refresh_frame_flags\":%d,"
++      "\"gf_frame_index\":%d,\"update_type\":%d,\"frame_parallel_level\":%d,"
++      "\"source_ptr_equal\":%d,\"bit_depth\":%d,\"highbd\":1,"
++      "\"width\":1920,\"height\":1080,\"uv_width\":960,\"uv_height\":540,"
++      "\"subsampling\":[1,1],\"strides_a\":[%d,%d],\"strides_b\":[%d,%d],"
++      "\"source_md5\":\"%s\",\"unfiltered_md5\":\"%s\","
++      "\"source_plane_md5\":[\"%s\",\"%s\",\"%s\"],"
++      "\"unfiltered_plane_md5\":[\"%s\",\"%s\",\"%s\"],"
++      "\"neq\":[%llu,%llu,%llu],\"maxabs\":[%u,%u,%u]}\n",
++      cpi->common.current_frame.frame_type, cpi->common.show_frame,
++      cpi->common.showable_frame, cpi->common.current_frame.order_hint,
++      cpi->common.current_frame.refresh_frame_flags, cpi->gf_frame_index,
++      cpi->ppi->gf_group.update_type[cpi->gf_frame_index],
++      cpi->ppi->gf_group.frame_parallel_level[cpi->gf_frame_index], a == b,
++      cpi->common.seq_params->bit_depth, a->y_stride, a->uv_stride,
++      b->y_stride, b->uv_stride, hash_a, hash_b,
++      plane_a[0], plane_a[1], plane_a[2], plane_b[0], plane_b[1], plane_b[2],
++      unequal[0], unequal[1], unequal[2], maximum[0], maximum[1], maximum[2]);
++  if (count < 0 || count >= (int)sizeof(line) ||
++      write(fd, line, (size_t)count) != count)
++    abort();
++}
++
+ #define DEFAULT_EXPLICIT_ORDER_HINT_BITS 7
+ 
+ // #define OUTPUT_YUV_REC
+@@ -3729,6 +3843,7 @@
+     }
+   }
+ 
++  trace_source_boundary(cpi);
+   if (oxcf->tune_cfg.tuning == AOM_TUNE_SSIM) {
+     av1_set_mb_ssim_rdmult_scaling(cpi);
+   }
+--- a/av1/av1.cmake	2026-10-20 09:19:53.163000000 +0000
++++ b/av1/av1.cmake	2026-10-20 09:55:57.382206513 +0000
+@@ -111,6 +111,7 @@
+             "${AOM_ROOT}/av1/decoder/obu.c")
+ 
+ list(APPEND AOM_AV1_ENCODER_SOURCES
++            "${AOM_ROOT}/common/md5_utils.c"
+             "${AOM_ROOT}/av1/av1_cx_iface.c"
+             "${AOM_ROOT}/av1/av1_cx_iface.h"
+             "${AOM_ROOT}/av1/encoder/aq_complexity.c"

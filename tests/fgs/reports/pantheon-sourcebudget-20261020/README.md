@@ -40,11 +40,13 @@ failed spatial structure. Quiet and flat-texture controls regress on several
 measures. [Direct comparison](aom-tune-comparison.json) and independent review
 reject this actual policy as a repair; they do not establish a codec limit.
 
-Next discriminator: observational tracing of libaom coding-source samples versus
-the exact original input, with unchanged encoded bytes required for admission.
-Source audit shows temporal preprocessing is reachable despite requested ARNR
-strength zero; only a sample comparison can establish whether it changes pixels.
-[Ledger](LEDGER.md) records the bounded contracts and conclusions.
+A byte-neutral [source-boundary trace](AOM_SOURCE_BOUNDARY.md) now shows that
+all visible samples of the prescribed midpoint frame enter coding unchanged.
+32 of 363 coded events have sparse differences elsewhere, at most two 10-bit
+levels. Direct midpoint source smoothing is excluded; indirect decision effects
+remain possible. Next: one causal neutralization of these coding-source sample
+changes, with the preprocessing analysis still executed. [Ledger](LEDGER.md)
+records the scope and unchanged acceptance criteria.
 
 Prior evidence: [causal and measured preservation report](../pantheon-rd-20261019/README.md).
 Prior source-budget ROI failure is accepted; it does not prove source-budget
