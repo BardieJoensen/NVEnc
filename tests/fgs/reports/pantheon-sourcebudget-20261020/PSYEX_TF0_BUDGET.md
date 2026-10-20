@@ -1,6 +1,6 @@
 # R16: temporal filtering disabled at the original packet budget
 
-Status: initial calibration completed; bounded rate refinement in preparation.
+Status: initial calibration completed; reviewed midpoint refinement running.
 No R16 quality conclusion.
 
 The [contract](ROUND16_TF0_BUDGET_CONTRACT.md) tests the admitted R8 policy with
@@ -31,6 +31,16 @@ remain fixed. Endpoint-equal rates are allowed as quantizer plateaus; they still
 narrow the request bracket and do not by themselves imply nonmonotonicity.
 The [completed calibration records](psyex-tf0/calibration-initial/manifest.json)
 retain both later attempts and the reviewed method correction.
+
+The [refinement preflight](psyex-tf0/refinement-preflight/manifest.json) freezes
+the corrected runner/replay, independent binder, observation/scoring wrappers,
+no-encode preview and synthetic validation controls. Review rejected an
+incomplete lineage validator and a replay incorrectly based on the old R8
+encode. The parent replaced them with explicit endpoint/predecessor validation
+and replay of the selected refinement's own pass-two command and statistics.
+Four valid synthetic states and five corrupted states behaved as prescribed;
+these are software controls, not measured encodes. The first real midpoint
+request is 10042. No quality gate was changed.
 
 The [preflight manifest](psyex-tf0/preflight/manifest.json) preserves the exact
 runner, provenance, packet records, commands, reviews and prepared validation

@@ -1,0 +1,15 @@
+{
+  "inputs": {
+    "encoder_sha": "5804a1a5985d0676975abe28fba2d8c7a8d6af71c2f70d39dab11436bf2941e4",
+    "replay_sha": "8491a376d6376aeb3f0cd2e3903c513b8f7bd0a300eaddd1d882a06917814cc6",
+    "binder_sha": "5d30f960504b12d840d9cd916140dac5b24ae2053852c88a5a66b87ae1b347dc"
+  },
+  "files": {
+    "validate_decoders.py": "f9bcdfca7e8782dda55e39770148c46a4d2ea7c2070c9c252040f166e4e3938a",
+    "replay_decoder.py": "d3fc7d7eb4ddcd295f87bd9083bfd6da01c082dae742924a4d249b0461b18a85",
+    "admit.py": "fd190fae6a20aa3cd2efd06e6d6fc9c32471d602272a214b7168667aab511cbb",
+    "stage_diagnostic.py": "b34651e7ac7b713d974ca2a1c58ef4a4f7998458c463f93d902f96365aae1ae5",
+    "score_r16.py": "53d4d9500de90af84a0c7e5f29652c46226a6493d87a84d6938b4e20d24f0058",
+    "compare_controls.py": "fa81653de9c35f93c77462ecb1310975225b522e6bdd58f0f4cf30a90e85bba3"
+  }
+}

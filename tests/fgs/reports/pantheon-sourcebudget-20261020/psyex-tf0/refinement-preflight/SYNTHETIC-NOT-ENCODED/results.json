@@ -1,0 +1,105 @@
+{
+  "status": "complete",
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/validator_controls.py",
+    "size": 4874,
+    "sha256": "92ecdfa276bf4e748a24bb3e76e0953d62256c16fbfa79e34f16b6cf9c2bbf5e"
+  },
+  "tested_encoder": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/encode_refine.py",
+    "size": 28105,
+    "sha256": "5804a1a5985d0676975abe28fba2d8c7a8d6af71c2f70d39dab11436bf2941e4"
+  },
+  "preview": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/parent-preview-10042/command.json",
+    "size": 21016,
+    "sha256": "ea19b811dc43788d85b5869baff306a740c5a92927d5eaf8520f02718b84a727"
+  },
+  "argv": [
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/validator_controls.py"
+  ],
+  "scope": "Synthetic receipt state-machine tests only; no encode or quality evidence.",
+  "cases": {
+    "initial-low": {
+      "status": "accepted_synthetic_control",
+      "request": 10042,
+      "receipt": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/SYNTHETIC-NOT-ENCODED/initial-low.json",
+        "size": 27200,
+        "sha256": "d1ef3b2034dc6de47bfd7e3c3b7bacfc4d2a06e82490d39bd3ba158d19b338a9"
+      }
+    },
+    "raise-low-match": {
+      "status": "accepted_synthetic_control",
+      "request": 10056,
+      "receipt": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/SYNTHETIC-NOT-ENCODED/raise-low-match.json",
+        "size": 27252,
+        "sha256": "93001689b7c7ac67270978f17eaae27c44a8a98b413ec4b84edebacfd1a51739"
+      }
+    },
+    "initial-high-plateau": {
+      "status": "accepted_synthetic_control",
+      "request": 10042,
+      "receipt": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/SYNTHETIC-NOT-ENCODED/initial-high-plateau.json",
+        "size": 27214,
+        "sha256": "1216c91aa822cfe56979392f156052fc0d939de1182548cf29b72744dc2b994d"
+      }
+    },
+    "lower-high-match": {
+      "status": "accepted_synthetic_control",
+      "request": 10028,
+      "receipt": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/SYNTHETIC-NOT-ENCODED/lower-high-match.json",
+        "size": 27296,
+        "sha256": "51a3a2b7c2702266add4d51e84b75757f2813a339014452181033ec7dc4594a6"
+      }
+    },
+    "wrong-midpoint": {
+      "status": "rejected_synthetic_control",
+      "error": "AssertionError()",
+      "receipt": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/SYNTHETIC-NOT-ENCODED/wrong-midpoint.json",
+        "size": 27200,
+        "sha256": "3d33e0dcbf2fd5222db5ed53347ecfb5c247da5ecd46c60ae113d432db8c84ae"
+      }
+    },
+    "wrong-phase": {
+      "status": "rejected_synthetic_control",
+      "error": "AssertionError()",
+      "receipt": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/SYNTHETIC-NOT-ENCODED/wrong-phase.json",
+        "size": 27193,
+        "sha256": "98b7f755ae3d140f90c4bc92eeecf39db0eae510fbedeb6446757363119ced1d"
+      }
+    },
+    "stale-endpoint-rate": {
+      "status": "rejected_synthetic_control",
+      "error": "AssertionError()",
+      "receipt": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/SYNTHETIC-NOT-ENCODED/stale-endpoint-rate.json",
+        "size": 27194,
+        "sha256": "3d557f0d949ddde8caa3eaf17cc62eedbc2933ba254c10f9b3f916565861d07a"
+      }
+    },
+    "wrong-initial-anchor": {
+      "status": "rejected_synthetic_control",
+      "error": "AssertionError()",
+      "receipt": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/SYNTHETIC-NOT-ENCODED/wrong-initial-anchor.json",
+        "size": 27200,
+        "sha256": "9947c9a760360832133749b456b49110f164f6ebd7cf4d4f3eaf834977d87461"
+      }
+    },
+    "identity-drift": {
+      "status": "rejected_synthetic_control",
+      "error": "AssertionError()",
+      "receipt": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/SYNTHETIC-NOT-ENCODED/identity-drift.json",
+        "size": 27291,
+        "sha256": "82157d20d9318aefd36dcb936ff7868cd1812285ed4ea4b0df585207a19e702a"
+      }
+    }
+  }
+}

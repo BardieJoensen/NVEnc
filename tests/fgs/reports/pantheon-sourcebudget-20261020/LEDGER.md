@@ -581,3 +581,9 @@ against prior tested policies; reviewer independently constrains the next test.
   valid quantizer plateau and still narrows the request bracket. Only an
   out-of-range measured response, exhausted integer bracket or trial limit
   requires reassessment. See ROUND16_RATE_REFINEMENT.md.
+- auto R16 refinement implementation: reject incomplete ancestry validation
+  and old-baseline replay; parent takes implementation ownership and corrects
+  both. Independent release and wrapper review pass after exact no-encode
+  preview and four-positive/five-negative synthetic controls. Start10042 with
+  unchanged TFoff policy and fresh two-pass stats. Frozen refinement-preflight
+  package contains scripts, reviews and controls; no quality conclusion yet.
