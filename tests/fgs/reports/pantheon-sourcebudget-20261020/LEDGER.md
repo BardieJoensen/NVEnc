@@ -1,5 +1,16 @@
 # Hypotheses and decisions
 
+- auto2026-10-20R8: independent source review establishes a distinct existing
+  texture-sensitive policy reaching coefficient optimization, actual residual
+  zero/skip costs and full mode decisions. Freeze the bundle in
+  `ROUND8_POLICY_CONTRACT.md`; requested bitrate alone may calibrate.
+- auto2026-10-20R8: use bounded per-picture/stage observational counters and
+  byte-identical streams to prove runtime delivery. Invocation counts are not
+  final pixel ownership. Do not build unnecessary raw pixel traces.
+- auto2026-10-20R8: correct documented defaults from source (psy1/noise norm1)
+  and private build options from CMake. Independent review accepted the corrected
+  runner; unmodified build completed12:51:58UTC without source changes.
+
 Starting clean master a246c353, coord pantheon-fix r8. User supplied the missing
 practicality constraint; investigation resumes under original-rate hard cap.
 

@@ -1,6 +1,6 @@
 # Current hypothesis ledger
 
-Updated after admitted Round7. No candidate qualifies; no technical blocker or
+Updated after admitted Round7 and Round8 source review. No candidate qualifies; no technical blocker or
 playback observation exists. Practical ceiling remains original video payload
 rate; all texture, clean-region, detail, banding and temporal gates are unchanged.
 
@@ -22,3 +22,11 @@ Independent design review favors an R3 decision-margin observation unless a
 pinned existing texture-sensitive policy reaches coefficient optimization,
 TU skip and mode decisions with a fixed setting. No original-rate redistribution
 of R7 is justified because preservation failed. No gate has been relaxed.
+
+Round8 source review supplies that distinct policy: pinned PSYEX has guarded
+zero-rate coefficient optimization and AC-energy distortion reaching actual
+zero/skip and full mode comparisons. Runtime delivery and preservation remain
+unknown. The cheapest next discriminator is one fixed bundled source-budget
+arm with observational counters, specified in `ROUND8_POLICY_CONTRACT.md`.
+The unmodified private build is complete; no quality inference follows from
+source reachability or successful compilation.
