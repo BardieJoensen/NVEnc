@@ -1,0 +1,933 @@
+--- a/av1/av1.cmake
++++ b/av1/av1.cmake
+@@ -144,6 +144,8 @@
+             "${AOM_ROOT}/av1/encoder/encodeframe_utils.c"
+             "${AOM_ROOT}/av1/encoder/encodeframe_utils.h"
+             "${AOM_ROOT}/av1/encoder/encodemb.c"
++            "${AOM_ROOT}/av1/encoder/tu_trace.c"
++            "${AOM_ROOT}/common/md5_utils.c"
+             "${AOM_ROOT}/av1/encoder/encodemb.h"
+             "${AOM_ROOT}/av1/encoder/encodemv.c"
+             "${AOM_ROOT}/av1/encoder/encodemv.h"
+--- a/av1/encoder/encodemb.c
++++ b/av1/encoder/encodemb.c
+@@ -34,6 +34,8 @@
+ #include "av1/encoder/txb_rdopt.h"
+ #include "av1/encoder/rd.h"
+ #include "av1/encoder/rdopt.h"
++#include "av1/encoder/tu_trace.h"
++#include "common/md5_utils.h"
+ 
+ void av1_subtract_block(BitDepthInfo bd_info, int rows, int cols, int16_t *diff,
+                         ptrdiff_t diff_stride, const uint8_t *src8,
+@@ -379,10 +381,175 @@
+       av1_get_iqmatrix(quant_params, xd, plane, tx_size, tx_type);
+ }
+ 
++
++static void trace_copy_plane(const uint8_t *src, ptrdiff_t stride, int hbd,
++                             int w, int h, uint16_t *dst) {
++  if (hbd) {
++    const uint16_t *s = CONVERT_TO_SHORTPTR(src);
++    for (int y = 0; y < h; ++y)
++      memcpy(dst + y * MAX_TX_SIZE, s + y * stride, (size_t)w * sizeof(*dst));
++  } else {
++    for (int y = 0; y < h; ++y) {
++      const uint8_t *s = src + y * stride;
++      for (int x = 0; x < w; ++x) dst[y * MAX_TX_SIZE + x] = s[x];
++    }
++  }
++}
++
++static void trace_md5_u16(const uint16_t *src, int w, int h, uint8_t out[16]) {
++  MD5Context m;
++  MD5Init(&m);
++  for (int y = 0; y < h; ++y)
++    MD5Update(&m, (const md5byte *)(src + y * MAX_TX_SIZE),
++              (unsigned)(w * sizeof(*src)));
++  MD5Final(out, &m);
++}
++
++static void trace_pack_rows(const uint16_t *src, int w, int h, uint16_t *dst) {
++  for (int y = 0; y < h; ++y) memcpy(dst + (size_t)y * w,
++                                      src + (size_t)y * MAX_TX_SIZE,
++                                      (size_t)w * sizeof(*dst));
++}
++static void trace_md5_bytes(const void *src, size_t n, uint8_t out[16]) {
++  MD5Context m; MD5Init(&m); MD5Update(&m, (const md5byte *)src, (unsigned)n); MD5Final(out, &m);
++}
++static void trace_inverse(const AV1_COMMON *cm, const MACROBLOCKD *xd,
++                          const uint16_t *pred, const tran_low_t *dq, int eob,
++                          TX_TYPE tx_type, TX_SIZE tx_size, int hbd,
++                          uint8_t *storage, uint16_t *out) {
++  if (hbd) {
++    uint16_t *v = (uint16_t *)storage;
++    for (int y = 0; y < MAX_TX_SIZE; ++y)
++      memcpy(v + (size_t)y * MAX_TX_SIZE, pred + (size_t)y * MAX_TX_SIZE,
++             MAX_TX_SIZE * sizeof(*v));
++    av1_inverse_transform_block(xd, dq, 0, tx_type, tx_size,
++                                CONVERT_TO_BYTEPTR(v), MAX_TX_SIZE, eob,
++                                cm->features.reduced_tx_set_used);
++  } else {
++    for (int y = 0; y < MAX_TX_SIZE; ++y)
++      for (int x = 0; x < MAX_TX_SIZE; ++x)
++        storage[(size_t)y * MAX_TX_SIZE + x] =
++            (uint8_t)AOMMIN(pred[(size_t)y * MAX_TX_SIZE + x], 255);
++    av1_inverse_transform_block(xd, dq, 0, tx_type, tx_size, storage,
++                                MAX_TX_SIZE, eob,
++                                cm->features.reduced_tx_set_used);
++  }
++  if (hbd) {
++    const uint16_t *v = (const uint16_t *)storage;
++    for (int y = 0; y < MAX_TX_SIZE; ++y)
++      memcpy(out + (size_t)y * MAX_TX_SIZE, v + (size_t)y * MAX_TX_SIZE,
++             MAX_TX_SIZE * sizeof(*out));
++  } else {
++    for (int y = 0; y < MAX_TX_SIZE; ++y)
++      for (int x = 0; x < MAX_TX_SIZE; ++x)
++        out[(size_t)y * MAX_TX_SIZE + x] = storage[(size_t)y * MAX_TX_SIZE + x];
++  }
++}
++static int trace_validate_eob(const tran_low_t *v, int n, uint16_t eob,
++                              const SCAN_ORDER *scan) {
++  uint16_t last = 0;
++  for (int i = 0; i < n; ++i) {
++    if (v[scan->scan[i]] != 0) last = (uint16_t)(i + 1);
++    if (i >= eob && v[scan->scan[i]] != 0) return 0;
++  }
++  return last == eob;
++}
++
++static void trace_tu(const AV1_COMP *cpi, MACROBLOCK *x, int block,
++                     int blk_row, int blk_col, BLOCK_SIZE plane_bsize,
++                     TX_SIZE tx_size, TX_TYPE tx_type, int status,
++                     const uint16_t *pred, const uint16_t *recon,
++                     const tran_low_t *raw, const tran_low_t *initial_q,
++                     const tran_low_t *initial_dq, const tran_low_t *final_q,
++                     const tran_low_t *final_dq, const int16_t *residual,
++                     int quant_idx, int quant_flags, uint16_t eob_initial,
++                     uint16_t eob_final, int n) {
++  if (raw && quant_idx != AV1_XFORM_QUANT_FP && quant_idx != AV1_XFORM_QUANT_B) {
++    av1_tu_trace_mark_failed((AV1_COMP *)cpi); return;
++  }
++  AOM_TU_TRACE_RECORD r; memset(&r, 0, sizeof(r));
++  const AV1_COMMON *cm = &cpi->common; const MACROBLOCKD *xd = &x->e_mbd;
++  r.generation = cpi->tu_trace.generation;
++  r.frame_number = cm->current_frame.frame_number;
++  r.order_hint = cm->current_frame.order_hint;
++  r.refresh_frame_flags = cm->current_frame.refresh_frame_flags;
++  r.show_frame = cm->show_frame;
++  r.bit_depth = cm->seq_params->bit_depth;
++  r.status = (uint32_t)status; r.plane = 0;
++  r.blk_row = xd->mi_row * MI_SIZE + blk_row * MI_SIZE;
++  r.blk_col = xd->mi_col * MI_SIZE + blk_col * MI_SIZE;
++  r.width = tx_size_wide[tx_size]; r.height = tx_size_high[tx_size];
++  r.tx_size = tx_size; r.tx_type = tx_type; r.block_size = plane_bsize;
++  r.qindex = raw ? x->qindex : -1; r.coded_qindex = raw ? xd->mi[0]->current_qindex : -1;
++  r.lossless = xd->lossless[xd->mi[0]->segment_id];
++  r.reduced_tx_set = cm->features.reduced_tx_set_used;
++  r.log_scale = av1_get_tx_scale(tx_size);
++  r.base_qindex = cm->quant_params.base_qindex;
++  r.segment_id = xd->mi[0]->segment_id; r.delta_q = x->delta_qindex;
++  r.quant_idx = (uint32_t)quant_idx; r.quant_flags = (uint32_t)quant_flags;
++  const struct macroblock_plane *qp = &x->plane[0];
++  r.dequant_dc = qp->dequant_QTX[0]; r.dequant_ac = qp->dequant_QTX[1];
++  r.zbin_dc = qp->zbin_QTX[0]; r.zbin_ac = qp->zbin_QTX[1];
++  r.round_dc = (quant_idx == AV1_XFORM_QUANT_B ? qp->round_QTX : qp->round_fp_QTX)[0];
++  r.round_ac = (quant_idx == AV1_XFORM_QUANT_B ? qp->round_QTX : qp->round_fp_QTX)[1];
++  r.quant_dc = (quant_idx == AV1_XFORM_QUANT_B ? qp->quant_QTX : qp->quant_fp_QTX)[0];
++  r.quant_ac = (quant_idx == AV1_XFORM_QUANT_B ? qp->quant_QTX : qp->quant_fp_QTX)[1];
++  r.quant_shift_dc = qp->quant_shift_QTX[0]; r.quant_shift_ac = qp->quant_shift_QTX[1];
++  r.delta_q = x->delta_qindex; r.eob_initial = eob_initial;
++  r.eob_final = eob_final; r.coeff_count = (uint32_t)n;
++  r.skip_flags = (uint32_t)(xd->mi[0]->skip_mode << 1);
++  r.source_index = cpi->tu_trace.source_index;
++  memcpy(r.source_md5, cpi->tu_trace.source_md5, sizeof(r.source_md5));
++  trace_md5_u16(pred, r.width, r.height, r.predictor_md5);
++  trace_md5_u16(recon, r.width, r.height, r.preloop_md5);
++  if (residual) trace_md5_bytes(residual, (size_t)r.width * r.height * sizeof(*residual), r.residual_md5);
++  DECLARE_ALIGNED(32, uint8_t, scratch_storage[2 * MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, uint16_t, scratch_maps[3][MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, uint16_t, packed_maps[4][MAX_TX_SQUARE]);
++  const int hbd = is_cur_buf_hbd(xd); uint16_t raw_eob = 0;
++  const SCAN_ORDER *scan = get_scan(tx_size, tx_type);
++  for (int i = 0; i < n; i++) {
++    if (scan->scan[i] < 0 || scan->scan[i] >= n) {
++      av1_tu_trace_mark_failed((AV1_COMP *)cpi); return;
++    }
++  }
++  if (raw) {
++    for (int i = 0; i < n; ++i)
++      if (raw[scan->scan[i]] != 0) raw_eob = (uint16_t)(i + 1);
++  }
++  if ((raw && !trace_validate_eob(raw, n, raw_eob, scan)) ||
++      (initial_q && !trace_validate_eob(initial_q, n, eob_initial, scan)) ||
++      (initial_dq && !trace_validate_eob(initial_dq, n, eob_initial, scan)) ||
++      (final_q && !trace_validate_eob(final_q, n, eob_final, scan)) ||
++      (final_dq && !trace_validate_eob(final_dq, n, eob_final, scan))) {
++    av1_tu_trace_mark_failed((AV1_COMP *)cpi);
++    return;
++  }
++  r.raw_eob = raw_eob;
++  const tran_low_t *domains[3] = { final_dq, initial_dq, raw };
++  for (int i=0;i<3;i++) {
++    if (domains[i]) trace_inverse(cm, xd, pred, domains[i], i==0?eob_final:(i==1?eob_initial:raw_eob), tx_type, tx_size, hbd, scratch_storage, scratch_maps[i]);
++    else memcpy(scratch_maps[i], pred, sizeof(scratch_maps[i]));
++    trace_pack_rows(scratch_maps[i], r.width, r.height, packed_maps[i]);
++  }
++  trace_pack_rows(pred, r.width, r.height, packed_maps[3]);
++  if (final_dq) {
++    for (int y=0;y<r.height;y++) if(memcmp(scratch_maps[0]+(size_t)y*MAX_TX_SIZE,recon+(size_t)y*MAX_TX_SIZE,(size_t)r.width*sizeof(uint16_t))) { av1_tu_trace_mark_failed((AV1_COMP *)cpi); return; }
++    r.flags |= AOM_TU_TRACE_HAS_SCRATCH;
++  }
++  if (!raw) { r.tx_size = r.tx_type = -1; }
++  r.flags |= AOM_TU_TRACE_HAS_MAPS | (raw?AOM_TU_TRACE_HAS_RAW:0) |
++             (initial_q?AOM_TU_TRACE_HAS_INITIAL:0) | (final_q?AOM_TU_TRACE_HAS_FINAL:0);
++  const size_t coeff_bytes=(size_t)n*sizeof(tran_low_t), map_bytes=(size_t)r.width*r.height*sizeof(uint16_t);
++  av1_tu_trace_write_tu((AV1_COMP *)cpi,&r,raw,initial_q,initial_dq,final_q,final_dq,
++                        packed_maps[0],packed_maps[1],packed_maps[2],packed_maps[3],residual,
++                        n ? scan->scan : NULL,coeff_bytes,map_bytes);
++  (void)block;
++}
++
+ static void encode_block(int plane, int block, int blk_row, int blk_col,
+                          BLOCK_SIZE plane_bsize, TX_SIZE tx_size, void *arg,
+                          RUN_TYPE dry_run) {
+-  (void)dry_run;
+   struct encode_b_args *const args = arg;
+   const AV1_COMP *const cpi = args->cpi;
+   const AV1_COMMON *const cm = &cpi->common;
+@@ -395,9 +562,34 @@
+   uint8_t *dst;
+   ENTROPY_CONTEXT *a, *l;
+   int dummy_rate_cost = 0;
++  DECLARE_ALIGNED(32, tran_low_t, trace_raw[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, tran_low_t, trace_initial_q[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, tran_low_t, trace_initial_dq[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, tran_low_t, trace_final_q[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, tran_low_t, trace_final_dq[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, int16_t, trace_residual[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, uint16_t, trace_pred[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, uint16_t, trace_recon[MAX_TX_SQUARE]);
++  const int trace_n = av1_get_max_eob(tx_size);
++  uint16_t trace_eob_initial = 0;
++  int trace_status = AOM_TU_TRACE_BLOCK_SKIP;
++  int trace_have_coeff = 0, trace_quant_idx = -1, trace_quant_flags = 0;
++  if (plane == 0 && dry_run == OUTPUT_ENABLED && cpi->tu_trace.active) {
++    memset(trace_raw, 0, sizeof(trace_raw));
++    memset(trace_initial_q, 0, sizeof(trace_initial_q));
++    memset(trace_initial_dq, 0, sizeof(trace_initial_dq));
++    memset(trace_final_q, 0, sizeof(trace_final_q));
++    memset(trace_final_dq, 0, sizeof(trace_final_dq));
++    memset(trace_residual, 0, sizeof(trace_residual));
++    memset(trace_pred, 0, sizeof(trace_pred));
++    memset(trace_recon, 0, sizeof(trace_recon));
++  }
+ 
+   const int bw = mi_size_wide[plane_bsize];
+   dst = &pd->dst.buf[(blk_row * pd->dst.stride + blk_col) << MI_SIZE_LOG2];
++  if (plane == 0 && dry_run == OUTPUT_ENABLED && cpi->tu_trace.active)
++    trace_copy_plane(dst, pd->dst.stride, is_cur_buf_hbd(xd),
++                     tx_size_wide[tx_size], tx_size_high[tx_size], trace_pred);
+ 
+   a = &args->ta[blk_col];
+   l = &args->tl[blk_row];
+@@ -417,13 +609,31 @@
+     else
+       quant_idx =
+           USE_B_QUANT_NO_TRELLIS ? AV1_XFORM_QUANT_B : AV1_XFORM_QUANT_FP;
++    trace_quant_idx = quant_idx;
++    trace_quant_flags = (use_trellis ? 1 : 0);
+     av1_setup_xform(cm, x, tx_size, tx_type, &txfm_param);
+     av1_setup_quant(tx_size, use_trellis, quant_idx,
+                     cpi->oxcf.q_cfg.quant_b_adapt, &quant_param);
+     av1_setup_qmatrix(&cm->quant_params, xd, plane, tx_size, tx_type,
+                       &quant_param);
++    trace_quant_flags |= quant_param.use_optimize_b ? 2 : 0;
+     av1_xform_quant(x, plane, block, blk_row, blk_col, plane_bsize, &txfm_param,
+                     &quant_param);
++    if (plane == 0 && dry_run == OUTPUT_ENABLED && cpi->tu_trace.active) {
++      memcpy(trace_raw, p->coeff + BLOCK_OFFSET(block), trace_n * sizeof(*trace_raw));
++      memcpy(trace_initial_q, p->qcoeff + BLOCK_OFFSET(block),
++             trace_n * sizeof(*trace_initial_q));
++      memcpy(trace_initial_dq, p->dqcoeff + BLOCK_OFFSET(block),
++             trace_n * sizeof(*trace_initial_dq));
++      const int trace_diff_stride = block_size_wide[plane_bsize];
++      const int16_t *trace_src_diff = &p->src_diff[(blk_row * trace_diff_stride + blk_col) << MI_SIZE_LOG2];
++      for (int trace_y = 0; trace_y < tx_size_high[tx_size]; ++trace_y)
++        memcpy(trace_residual + trace_y * tx_size_wide[tx_size],
++               trace_src_diff + trace_y * trace_diff_stride,
++               tx_size_wide[tx_size] * sizeof(*trace_residual));
++      trace_eob_initial = p->eobs[block];
++      trace_have_coeff = 1;
++    }
+ 
+     // Whether trellis or dropout optimization is required for inter frames.
+     const bool do_trellis = INTER_BLOCK_OPT_TYPE == TRELLIS_OPT ||
+@@ -432,12 +642,14 @@
+                             INTER_BLOCK_OPT_TYPE == TRELLIS_DROPOUT_OPT;
+ 
+     if (quant_param.use_optimize_b && do_trellis) {
++      trace_quant_flags |= 4;
+       TXB_CTX txb_ctx;
+       get_txb_ctx(plane_bsize, tx_size, plane, a, l, &txb_ctx);
+       av1_optimize_b(args->cpi, x, plane, block, tx_size, tx_type, &txb_ctx,
+                      &dummy_rate_cost);
+     }
+     if (!quant_param.use_optimize_b && do_dropout) {
++      trace_quant_flags |= 8;
+       av1_dropout_qcoeff(x, plane, block, tx_size, tx_type,
+                          cm->quant_params.base_qindex);
+     }
+@@ -448,6 +660,11 @@
+ 
+   av1_set_txb_context(x, plane, block, tx_size, a, l);
+ 
++  if (plane == 0 && dry_run == OUTPUT_ENABLED && cpi->tu_trace.active && trace_have_coeff) {
++    memcpy(trace_final_q, p->qcoeff + BLOCK_OFFSET(block), trace_n * sizeof(*trace_final_q));
++    memcpy(trace_final_dq, p->dqcoeff + BLOCK_OFFSET(block), trace_n * sizeof(*trace_final_dq));
++    trace_status = p->eobs[block] ? AOM_TU_TRACE_QUANTIZED : AOM_TU_TRACE_EOB_ZERO;
++  }
+   if (p->eobs[block]) {
+     // As long as any YUV plane has non-zero quantized transform coefficients,
+     // mbmi->skip_txfm flag is set to 0.
+@@ -459,6 +676,25 @@
+     // Only when YUV planes all have zero quantized transform coefficients,
+     // mbmi->skip_txfm flag is set to 1.
+     mbmi->skip_txfm &= 1;
++    if (plane == 0 && dry_run == OUTPUT_ENABLED && cpi->tu_trace.active)
++      trace_status = trace_have_coeff ? AOM_TU_TRACE_EOB_ZERO :
++                     (mbmi->skip_mode ? AOM_TU_TRACE_MB_SKIP :
++                      AOM_TU_TRACE_BLOCK_SKIP);
++  }
++
++  if (plane == 0 && dry_run == OUTPUT_ENABLED && cpi->tu_trace.active) {
++    trace_copy_plane(dst, pd->dst.stride, is_cur_buf_hbd(xd),
++                     tx_size_wide[tx_size], tx_size_high[tx_size], trace_recon);
++    trace_tu(cpi, x, block, blk_row, blk_col, plane_bsize, tx_size, tx_type,
++             trace_status, trace_pred, trace_recon,
++             trace_have_coeff ? trace_raw : NULL,
++             trace_have_coeff ? trace_initial_q : NULL,
++             trace_have_coeff ? trace_initial_dq : NULL,
++             trace_have_coeff ? trace_final_q : NULL,
++             trace_have_coeff ? trace_final_dq : NULL,
++             trace_have_coeff ? trace_residual : NULL,
++             trace_quant_idx, trace_quant_flags,
++             trace_eob_initial, p->eobs[block], trace_have_coeff ? trace_n : 0);
+   }
+ 
+   // TODO(debargha, jingning): Temporarily disable txk_type check for eob=0
+@@ -664,7 +900,37 @@
+   // mbmi->skip_txfm is init to 1, and will be modified in encode_block() based
+   // on transform, quantization, and (if exists) trellis optimization.
+   mbmi->skip_txfm = 1;
+-  if (x->txfm_search_info.skip_txfm) return;
++  if (x->txfm_search_info.skip_txfm) {
++    if (dry_run == OUTPUT_ENABLED && cpi->tu_trace.active) {
++      const struct macroblockd_plane *pd = &xd->plane[0];
++      if (pd->width <= 0 || pd->height <= 0 || pd->width > MAX_SB_SIZE ||
++          pd->height > MAX_SB_SIZE || !is_cur_buf_hbd(xd)) {
++        av1_tu_trace_mark_failed((AV1_COMP *)cpi); return;
++      }
++      DECLARE_ALIGNED(32, uint16_t, skip_map[MAX_SB_SQUARE]);
++      const int hbd = is_cur_buf_hbd(xd);
++      if (hbd) {
++        const uint16_t *src = CONVERT_TO_SHORTPTR(pd->dst.buf);
++        for (int sy = 0; sy < pd->height; ++sy)
++          memcpy(skip_map + (size_t)sy * pd->width,
++                 src + (size_t)sy * pd->dst.stride,
++                 (size_t)pd->width * sizeof(*skip_map));
++      } else {
++        for (int sy = 0; sy < pd->height; ++sy)
++          for (int sx = 0; sx < pd->width; ++sx)
++            skip_map[(size_t)sy * pd->width + sx] =
++                pd->dst.buf[(size_t)sy * pd->dst.stride + sx];
++      }
++      uint16_t *packed = (uint16_t *)aom_malloc((size_t)pd->width * pd->height * sizeof(*packed));
++      if (!packed) { av1_tu_trace_mark_failed((AV1_COMP *)cpi); return; }
++      memcpy(packed, skip_map, (size_t)pd->width * pd->height * sizeof(*packed));
++      av1_tu_trace_write_region((AV1_COMP *)cpi, xd->mi_row, xd->mi_col,
++                                pd->width, pd->height, bsize, packed,
++                                (size_t)pd->width * pd->height * sizeof(*packed));
++      aom_free(packed);
++    }
++    return;
++  }
+ 
+   struct optimize_ctx ctx;
+   struct encode_b_args arg = {
+@@ -748,8 +1014,33 @@
+   const int dst_stride = pd->dst.stride;
+   uint8_t *dst = &pd->dst.buf[(blk_row * dst_stride + blk_col) << MI_SIZE_LOG2];
+   int dummy_rate_cost = 0;
++  DECLARE_ALIGNED(32, tran_low_t, trace_raw[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, tran_low_t, trace_initial_q[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, tran_low_t, trace_initial_dq[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, tran_low_t, trace_final_q[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, tran_low_t, trace_final_dq[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, int16_t, trace_residual[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, uint16_t, trace_pred[MAX_TX_SQUARE]);
++  DECLARE_ALIGNED(32, uint16_t, trace_recon[MAX_TX_SQUARE]);
++  const int trace_n = av1_get_max_eob(tx_size);
++  uint16_t trace_eob_initial = 0;
++  int trace_status = AOM_TU_TRACE_BLOCK_SKIP;
++  int trace_have_coeff = 0, trace_quant_idx = -1, trace_quant_flags = 0;
++  if (plane == 0 && args->dry_run == OUTPUT_ENABLED && cpi->tu_trace.active) {
++    memset(trace_raw, 0, sizeof(trace_raw));
++    memset(trace_initial_q, 0, sizeof(trace_initial_q));
++    memset(trace_initial_dq, 0, sizeof(trace_initial_dq));
++    memset(trace_final_q, 0, sizeof(trace_final_q));
++    memset(trace_final_dq, 0, sizeof(trace_final_dq));
++    memset(trace_residual, 0, sizeof(trace_residual));
++    memset(trace_pred, 0, sizeof(trace_pred));
++    memset(trace_recon, 0, sizeof(trace_recon));
++  }
+ 
+   av1_predict_intra_block_facade(cm, xd, plane, blk_col, blk_row, tx_size);
++  if (plane == 0 && args->dry_run == OUTPUT_ENABLED && cpi->tu_trace.active)
++    trace_copy_plane(dst, dst_stride, is_cur_buf_hbd(xd),
++                     tx_size_wide[tx_size], tx_size_high[tx_size], trace_pred);
+ 
+   TX_TYPE tx_type = DCT_DCT;
+   const int bw = mi_size_wide[plane_bsize];
+@@ -775,14 +1066,32 @@
+       quant_idx =
+           USE_B_QUANT_NO_TRELLIS ? AV1_XFORM_QUANT_B : AV1_XFORM_QUANT_FP;
+ 
++    trace_quant_idx = quant_idx;
++    trace_quant_flags = (use_trellis ? 1 : 0);
+     av1_setup_xform(cm, x, tx_size, tx_type, &txfm_param);
+     av1_setup_quant(tx_size, use_trellis, quant_idx,
+                     cpi->oxcf.q_cfg.quant_b_adapt, &quant_param);
+     av1_setup_qmatrix(&cm->quant_params, xd, plane, tx_size, tx_type,
+                       &quant_param);
++    trace_quant_flags |= quant_param.use_optimize_b ? 2 : 0;
+ 
+     av1_xform_quant(x, plane, block, blk_row, blk_col, plane_bsize, &txfm_param,
+                     &quant_param);
++    if (plane == 0 && args->dry_run == OUTPUT_ENABLED && cpi->tu_trace.active) {
++      memcpy(trace_raw, p->coeff + BLOCK_OFFSET(block), trace_n * sizeof(*trace_raw));
++      memcpy(trace_initial_q, p->qcoeff + BLOCK_OFFSET(block),
++             trace_n * sizeof(*trace_initial_q));
++      memcpy(trace_initial_dq, p->dqcoeff + BLOCK_OFFSET(block),
++             trace_n * sizeof(*trace_initial_dq));
++      const int trace_diff_stride = block_size_wide[plane_bsize];
++      const int16_t *trace_src_diff = &p->src_diff[(blk_row * trace_diff_stride + blk_col) << MI_SIZE_LOG2];
++      for (int trace_y = 0; trace_y < tx_size_high[tx_size]; ++trace_y)
++        memcpy(trace_residual + trace_y * tx_size_wide[tx_size],
++               trace_src_diff + trace_y * trace_diff_stride,
++               tx_size_wide[tx_size] * sizeof(*trace_residual));
++      trace_eob_initial = *eob;
++      trace_have_coeff = 1;
++    }
+ 
+     // Whether trellis or dropout optimization is required for key frames and
+     // intra frames.
+@@ -800,21 +1109,48 @@
+                               INTRA_BLOCK_OPT_TYPE == TRELLIS_DROPOUT_OPT));
+ 
+     if (quant_param.use_optimize_b && do_trellis) {
++      trace_quant_flags |= 4;
+       TXB_CTX txb_ctx;
+       get_txb_ctx(plane_bsize, tx_size, plane, a, l, &txb_ctx);
+       av1_optimize_b(args->cpi, x, plane, block, tx_size, tx_type, &txb_ctx,
+                      &dummy_rate_cost);
+     }
+     if (do_dropout) {
++      trace_quant_flags |= 8;
+       av1_dropout_qcoeff(x, plane, block, tx_size, tx_type,
+                          cm->quant_params.base_qindex);
+     }
+   }
+ 
++  if (plane == 0 && args->dry_run == OUTPUT_ENABLED && cpi->tu_trace.active && trace_have_coeff) {
++    memcpy(trace_final_q, p->qcoeff + BLOCK_OFFSET(block), trace_n * sizeof(*trace_final_q));
++    memcpy(trace_final_dq, p->dqcoeff + BLOCK_OFFSET(block), trace_n * sizeof(*trace_final_dq));
++    trace_status = *eob ? AOM_TU_TRACE_QUANTIZED : AOM_TU_TRACE_EOB_ZERO;
++  }
+   if (*eob) {
+     av1_inverse_transform_block(xd, dqcoeff, plane, tx_type, tx_size, dst,
+                                 dst_stride, *eob,
+                                 cm->features.reduced_tx_set_used);
++  } else if (plane == 0 && args->dry_run == OUTPUT_ENABLED &&
++             cpi->tu_trace.active) {
++    trace_status = trace_have_coeff ? AOM_TU_TRACE_EOB_ZERO :
++                   (mbmi->skip_mode ? AOM_TU_TRACE_MB_SKIP :
++                    AOM_TU_TRACE_BLOCK_SKIP);
++  }
++
++  if (plane == 0 && args->dry_run == OUTPUT_ENABLED && cpi->tu_trace.active) {
++    trace_copy_plane(dst, dst_stride, is_cur_buf_hbd(xd),
++                     tx_size_wide[tx_size], tx_size_high[tx_size], trace_recon);
++    trace_tu(cpi, x, block, blk_row, blk_col, plane_bsize, tx_size, tx_type,
++             trace_status, trace_pred, trace_recon,
++             trace_have_coeff ? trace_raw : NULL,
++             trace_have_coeff ? trace_initial_q : NULL,
++             trace_have_coeff ? trace_initial_dq : NULL,
++             trace_have_coeff ? trace_final_q : NULL,
++             trace_have_coeff ? trace_final_dq : NULL,
++             trace_have_coeff ? trace_residual : NULL,
++             trace_quant_idx, trace_quant_flags,
++             trace_eob_initial, *eob, trace_have_coeff ? trace_n : 0);
+   }
+ 
+   // TODO(jingning): Temporarily disable txk_type check for eob=0 case.
+--- a/av1/encoder/encoder.c
++++ b/av1/encoder/encoder.c
+@@ -1357,6 +1357,7 @@
+   if (!cpi) return NULL;
+ 
+   av1_zero(*cpi);
++  av1_tu_trace_init(&cpi->tu_trace);
+ 
+   cpi->ppi = ppi;
+ 
+@@ -1661,6 +1662,7 @@
+ 
+ void av1_remove_compressor(AV1_COMP *cpi) {
+   if (!cpi) return;
++  av1_tu_trace_destroy(&cpi->tu_trace);
+ #if CONFIG_RATECTRL_LOG
+   if (cpi->oxcf.pass == 3) {
+     rc_log_show(&cpi->rc_log);
+@@ -2691,7 +2693,13 @@
+   if (!frame_is_intra_only(cm)) av1_pick_and_set_high_precision_mv(cpi, q);
+ 
+   // transform / motion compensation build reconstruction frame
++  const uint64_t tu_generation = ++cpi->tu_trace_generation;
++  av1_tu_trace_begin(cpi, tu_generation, cpi->tu_trace_exploratory);
++  if (av1_tu_trace_failed(cpi)) return AOM_CODEC_ERROR;
+   av1_encode_frame(cpi);
++  if (av1_tu_trace_failed(cpi)) return AOM_CODEC_ERROR;
++  av1_tu_trace_end_attempt(cpi, tu_generation);
++  if (av1_tu_trace_failed(cpi)) return AOM_CODEC_ERROR;
+ 
+   if (!cpi->rc.rtc_external_ratectrl && !frame_is_intra_only(cm))
+     update_motion_stat(cpi);
+@@ -2781,8 +2789,11 @@
+ 
+ #if !CONFIG_RD_COMMAND
+   // Determine whether to use screen content tools using two fast encoding.
+-  if (!cpi->sf.hl_sf.disable_extra_sc_testing && !cpi->use_ducky_encode)
++  if (!cpi->sf.hl_sf.disable_extra_sc_testing && !cpi->use_ducky_encode) {
++    cpi->tu_trace_exploratory = 1;
+     av1_determine_sc_tools_with_encoding(cpi, q);
++    cpi->tu_trace_exploratory = 0;
++  }
+ #endif  // !CONFIG_RD_COMMAND
+ 
+ #if CONFIG_TUNE_VMAF
+@@ -2974,7 +2985,12 @@
+     }
+ 
+     // transform / motion compensation build reconstruction frame
++    const uint64_t tu_generation = ++cpi->tu_trace_generation;
++    av1_tu_trace_begin(cpi, tu_generation, cpi->tu_trace_exploratory);
++    if (av1_tu_trace_failed(cpi)) return AOM_CODEC_ERROR;
+     av1_encode_frame(cpi);
++    av1_tu_trace_end_attempt(cpi, tu_generation);
++    if (av1_tu_trace_failed(cpi)) return AOM_CODEC_ERROR;
+ 
+     // Disable mv_stats collection for parallel frames based on update flag.
+     if (!cpi->do_frame_data_update) do_mv_stats_collection = 0;
+@@ -3217,6 +3233,8 @@
+     set_postproc_filter_default_params(&cpi->common);
+ 
+   if (!cm->features.allow_intrabc) {
++    av1_tu_trace_snapshot_preloop(cpi);
++    if (av1_tu_trace_failed(cpi)) return AOM_CODEC_ERROR;
+     loopfilter_frame(cpi, cm);
+   }
+ 
+@@ -3240,6 +3258,8 @@
+   cpi->rc.coefficient_size = 0;
+   if (av1_pack_bitstream(cpi, dest, size, largest_tile_id) != AOM_CODEC_OK)
+     return AOM_CODEC_ERROR;
++  av1_tu_trace_frame_final(cpi, cpi->tu_trace_generation, dest, *size);
++  if (av1_tu_trace_failed(cpi)) return AOM_CODEC_ERROR;
+ #if CONFIG_COLLECT_COMPONENT_TIMING
+   end_timing(cpi, av1_pack_bitstream_final_time);
+ #endif
+--- a/av1/encoder/encoder.h
++++ b/av1/encoder/encoder.h
+@@ -51,6 +51,7 @@
+ #include "av1/encoder/temporal_filter.h"
+ #include "av1/encoder/thirdpass.h"
+ #include "av1/encoder/tokenize.h"
++#include "av1/encoder/tu_trace.h"
+ #include "av1/encoder/tpl_model.h"
+ #include "av1/encoder/av1_noise_estimate.h"
+ #include "av1/encoder/bitstream.h"
+@@ -2886,6 +2887,11 @@
+    */
+   ThreadData td;
+ 
++  // Round6 private fixed-decision TU trace state.
++  AOM_TU_TRACE_STATE tu_trace;
++  uint64_t tu_trace_generation;
++  int tu_trace_exploratory;
++
+   /*!
+    * Statistics collected at frame level.
+    */
+--- /dev/null
++++ b/av1/encoder/tu_trace.c
+@@ -0,0 +1,291 @@
++#include "av1/encoder/tu_trace.h"
++#include <errno.h>
++#include <fcntl.h>
++#include <limits.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++#include "aom_ports/mem.h"
++#include "common/md5_utils.h"
++#include "av1/encoder/encoder.h"
++
++#if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
++#error "Private trace requires little endian"
++#endif
++_Static_assert(sizeof(tran_low_t) == 4, "coefficient ABI");
++_Static_assert(sizeof(AOM_TU_TRACE_RECORD) == 228, "TU metadata ABI");
++static const uint8_t target_md5[16] = {
++  0x94,0xfa,0x8b,0xde,0x34,0x6a,0x2a,0x52,
++  0xd4,0x0b,0x26,0xf8,0x18,0x3a,0xfe,0xa5
++};
++typedef struct __attribute__((packed)) Envelope {
++  uint32_t magic, schema, type, length;
++  uint64_t generation;
++} Envelope;
++typedef struct __attribute__((packed)) Header {
++  uint32_t width, height, bit_depth, subsampling;
++  uint64_t generation, source_index;
++  uint8_t source_md5[16], coding_source_md5[16];
++  uint32_t frame_type, show_frame, showable_frame, order_hint;
++  uint32_t refresh_frame_flags, gf_index, update_type, parallel_level;
++} Header;
++typedef struct __attribute__((packed)) Final {
++  uint64_t generation, packet_size, frame_number, order_hint;
++  uint32_t width, height, refresh_frame_flags, show_frame;
++  uint8_t source_md5[16], packet_md5[16], preloop_md5[16], postloop_md5[16];
++} Final;
++_Static_assert(sizeof(Envelope) == 24, "envelope ABI");
++_Static_assert(sizeof(Header) == 96, "header ABI");
++_Static_assert(sizeof(Final) == 112, "final ABI");
++
++static void digest(const void *p, size_t n, uint8_t out[16]) {
++  MD5Context m;
++  MD5Init(&m);
++  MD5Update(&m, (const md5byte *)p, (unsigned)n);
++  MD5Final(out, &m);
++}
++static int write_all(AOM_TU_TRACE_STATE *s, const void *buffer, size_t n) {
++  if (s->io_error || s->bytes > AOM_TU_TRACE_CAP ||
++      n > AOM_TU_TRACE_CAP - s->bytes) {
++    s->io_error = 1;
++    return 0;
++  }
++  const uint8_t *p = buffer;
++  while (n) {
++    ssize_t written = write(s->fd, p, n);
++    if (written < 0 && errno == EINTR) continue;
++    if (written <= 0) { s->io_error = 1; return 0; }
++    p += written;
++    n -= (size_t)written;
++    s->bytes += (uint64_t)written;
++  }
++  return 1;
++}
++static int record(AOM_TU_TRACE_STATE *s, uint32_t kind,
++                  uint64_t generation, const void *p, size_t n) {
++  if (n > UINT32_MAX || n + sizeof(Envelope) > AOM_TU_TRACE_CAP - s->bytes) {
++    s->io_error = 1;
++    return 0;
++  }
++  const Envelope e = { AOM_TU_TRACE_MAGIC, AOM_TU_TRACE_SCHEMA,
++                       kind, (uint32_t)n, generation };
++  return write_all(s, &e, sizeof(e)) && write_all(s, p, n);
++}
++static void update_plane(MD5Context *m, const uint8_t *p, int stride,
++                         int width, int height, int highbd) {
++  if (highbd) {
++    const uint16_t *samples = CONVERT_TO_SHORTPTR(p);
++    for (int y = 0; y < height; y++)
++      MD5Update(m, (const md5byte *)(samples + (ptrdiff_t)y * stride), width * 2);
++  } else {
++    for (int y = 0; y < height; y++)
++      MD5Update(m, p + (ptrdiff_t)y * stride, width);
++  }
++}
++static void frame_digest(const YV12_BUFFER_CONFIG *f, uint8_t out[16]) {
++  MD5Context m;
++  MD5Init(&m);
++  const int highbd = !!(f->flags & YV12_FLAG_HIGHBITDEPTH);
++  update_plane(&m, f->y_buffer, f->y_stride, f->y_crop_width, f->y_crop_height, highbd);
++  update_plane(&m, f->u_buffer, f->uv_stride, f->uv_crop_width, f->uv_crop_height, highbd);
++  update_plane(&m, f->v_buffer, f->uv_stride, f->uv_crop_width, f->uv_crop_height, highbd);
++  MD5Final(out, &m);
++}
++static void copy_luma(const YV12_BUFFER_CONFIG *f, uint16_t *out) {
++  const uint16_t *p = CONVERT_TO_SHORTPTR(f->y_buffer);
++  for (int y = 0; y < 1080; y++)
++    memcpy(out + (size_t)y * 1920, p + (ptrdiff_t)y * f->y_stride, 1920 * 2);
++}
++static int valid_geometry(const YV12_BUFFER_CONFIG *f) {
++  return f && f->y_crop_width == 1920 && f->y_crop_height == 1080 &&
++      f->uv_crop_width == 960 && f->uv_crop_height == 540 &&
++      f->subsampling_x == 1 && f->subsampling_y == 1 &&
++      (f->flags & YV12_FLAG_HIGHBITDEPTH) && f->y_stride >= 1920 && f->uv_stride >= 960;
++}
++void av1_tu_trace_init(AOM_TU_TRACE_STATE *s) {
++  memset(s, 0, sizeof(*s));
++  s->fd = -1;
++  if (pthread_mutex_init(&s->mutex, NULL)) abort();
++}
++void av1_tu_trace_destroy(AOM_TU_TRACE_STATE *s) {
++  free(s->preloop_plane);
++  pthread_mutex_destroy(&s->mutex);
++}
++void av1_tu_trace_begin(AV1_COMP *cpi, uint64_t generation, int exploratory) {
++  AOM_TU_TRACE_STATE *s = &cpi->tu_trace;
++  pthread_mutex_lock(&s->mutex);
++  s->active = s->target_active = 0;
++  s->generation = generation;
++  s->source_index = UINT64_MAX;
++  s->preloop_w = s->preloop_h = 0;
++  const char *env = getenv("AOM_TU_TRACE_FD");
++  if (exploratory || !env || !*env || !cpi->unscaled_source) goto done;
++  char *end = NULL;
++  errno = 0;
++  long fd = strtol(env, &end, 10);
++  if (errno || end == env || *end || fd < 0 || fd > INT_MAX) goto fail;
++  const int flags = fcntl((int)fd, F_GETFL);
++  if (flags < 0 || (flags & O_ACCMODE) == O_RDONLY || !(flags & O_APPEND)) goto fail;
++  s->fd = (int)fd;
++  frame_digest(cpi->unscaled_source, s->source_md5);
++  if (memcmp(s->source_md5, target_md5, 16)) goto done;
++  const AV1_COMMON *cm = &cpi->common;
++  const GF_GROUP *gf = &cpi->ppi->gf_group;
++  if (!valid_geometry(cpi->unscaled_source) || !valid_geometry(cpi->source) ||
++      !valid_geometry(&cm->cur_frame->buf) || cm->seq_params->bit_depth != 10 ||
++      cm->width != 1920 || cm->height != 1080 ||
++      cm->superres_scale_denominator != SCALE_NUMERATOR ||
++      cpi->oxcf.superres_cfg.superres_mode != AOM_SUPERRES_NONE ||
++      cpi->mt_info.pipeline_lpf_mt_with_enc || cm->quant_params.using_qmatrix ||
++      cm->features.allow_intrabc || gf->frame_parallel_level[cpi->gf_frame_index] != 0)
++    goto fail;
++  Header h = { 0 };
++  h.width = 1920; h.height = 1080; h.bit_depth = 10; h.subsampling = 257;
++  h.generation = generation; h.source_index = 216;
++  memcpy(h.source_md5, s->source_md5, 16);
++  frame_digest(cpi->source, h.coding_source_md5);
++  if (memcmp(h.source_md5, h.coding_source_md5, 16)) goto fail;
++  h.frame_type = cm->current_frame.frame_type;
++  h.show_frame = cm->show_frame; h.showable_frame = cm->showable_frame;
++  h.order_hint = cm->current_frame.order_hint;
++  h.refresh_frame_flags = cm->current_frame.refresh_frame_flags;
++  h.gf_index = cpi->gf_frame_index; h.update_type = gf->update_type[cpi->gf_frame_index];
++  h.parallel_level = gf->frame_parallel_level[cpi->gf_frame_index];
++  s->source_index = 216;
++  s->active = s->target_active = 1;
++  if (!record(s, AOM_TU_TRACE_HEADER, generation, &h, sizeof(h))) s->active = 0;
++  goto done;
++fail:
++  s->io_error = 1;
++done:
++  pthread_mutex_unlock(&s->mutex);
++}
++void av1_tu_trace_end_attempt(AV1_COMP *cpi, uint64_t generation) {
++  AOM_TU_TRACE_STATE *s = &cpi->tu_trace;
++  pthread_mutex_lock(&s->mutex);
++  if (s->active) {
++    if (s->generation != generation || !s->target_active) s->io_error = 1;
++    else record(s, AOM_TU_TRACE_ATTEMPT_END, generation, &generation, sizeof(generation));
++  }
++  s->active = 0;
++  pthread_mutex_unlock(&s->mutex);
++}
++void av1_tu_trace_snapshot_preloop(AV1_COMP *cpi) {
++  AOM_TU_TRACE_STATE *s = &cpi->tu_trace;
++  pthread_mutex_lock(&s->mutex);
++  if (s->target_active && !s->io_error) {
++    const YV12_BUFFER_CONFIG *f = &cpi->common.cur_frame->buf;
++    if (!valid_geometry(f) || s->active) s->io_error = 1;
++    else {
++      if (!s->preloop_plane) s->preloop_plane = malloc(1920 * 1080 * 2);
++      if (!s->preloop_plane) s->io_error = 1;
++      else {
++        copy_luma(f, s->preloop_plane);
++        digest(s->preloop_plane, 1920 * 1080 * 2, s->preloop_md5);
++        s->preloop_w = 1920; s->preloop_h = 1080;
++      }
++    }
++  }
++  pthread_mutex_unlock(&s->mutex);
++}
++void av1_tu_trace_frame_final(AV1_COMP *cpi, uint64_t generation,
++                            const uint8_t *packet, size_t packet_size) {
++  AOM_TU_TRACE_STATE *s = &cpi->tu_trace;
++  pthread_mutex_lock(&s->mutex);
++  if (!s->target_active || s->io_error) goto done;
++  const YV12_BUFFER_CONFIG *f = &cpi->common.cur_frame->buf;
++  if (s->generation != generation || s->active || !valid_geometry(f) ||
++      s->preloop_w != 1920 || s->preloop_h != 1080 || !s->preloop_plane ||
++      packet_size > UINT_MAX) { s->io_error = 1; goto done; }
++  const size_t plane_bytes = 1920 * 1080 * 2;
++  const size_t n = sizeof(Final) + 2 * plane_bytes + packet_size;
++  uint8_t *buffer = malloc(n);
++  if (!buffer) { s->io_error = 1; goto done; }
++  Final h = { 0 };
++  h.generation = generation; h.packet_size = packet_size;
++  h.frame_number = cpi->common.current_frame.frame_number;
++  h.order_hint = cpi->common.current_frame.order_hint;
++  h.width = 1920; h.height = 1080;
++  h.refresh_frame_flags = cpi->common.current_frame.refresh_frame_flags;
++  h.show_frame = cpi->common.show_frame;
++  memcpy(h.source_md5, s->source_md5, 16);
++  digest(packet, packet_size, h.packet_md5);
++  memcpy(h.preloop_md5, s->preloop_md5, 16);
++  memcpy(buffer + sizeof(h), s->preloop_plane, plane_bytes);
++  copy_luma(f, (uint16_t *)(buffer + sizeof(h) + plane_bytes));
++  digest(buffer + sizeof(h) + plane_bytes, plane_bytes, h.postloop_md5);
++  memcpy(buffer, &h, sizeof(h));
++  memcpy(buffer + sizeof(h) + 2 * plane_bytes, packet, packet_size);
++  record(s, AOM_TU_TRACE_FRAME_FINAL, generation, buffer, n);
++  free(buffer);
++done:
++  s->active = s->target_active = 0;
++  pthread_mutex_unlock(&s->mutex);
++}
++int av1_tu_trace_failed(const AV1_COMP *cpi) { return cpi->tu_trace.io_error; }
++void av1_tu_trace_mark_failed(AV1_COMP *cpi) {
++  pthread_mutex_lock(&cpi->tu_trace.mutex);
++  cpi->tu_trace.io_error = 1;
++  pthread_mutex_unlock(&cpi->tu_trace.mutex);
++}
++void av1_tu_trace_write_region(AV1_COMP *cpi, int mi_row, int mi_col,
++                              int width, int height, int block_size,
++                              const uint16_t *pred, size_t map_bytes) {
++  AOM_TU_TRACE_RECORD r = { 0 };
++  r.generation = cpi->tu_trace.generation;
++  r.frame_number = cpi->common.current_frame.frame_number;
++  r.order_hint = cpi->common.current_frame.order_hint;
++  r.refresh_frame_flags = cpi->common.current_frame.refresh_frame_flags;
++  r.show_frame = cpi->common.show_frame; r.bit_depth = 10;
++  r.status = AOM_TU_TRACE_CODING_BLOCK_SKIP;
++  r.blk_row = mi_row * MI_SIZE; r.blk_col = mi_col * MI_SIZE;
++  r.width = width; r.height = height;
++  r.tx_size = r.tx_type = r.qindex = r.coded_qindex = -1;
++  r.quant_idx = UINT32_MAX; r.block_size = block_size;
++  r.source_index = 216; r.flags = AOM_TU_TRACE_HAS_MAPS;
++  memcpy(r.source_md5, cpi->tu_trace.source_md5, 16);
++  digest(pred, map_bytes, r.predictor_md5);
++  memcpy(r.preloop_md5, r.predictor_md5, 16);
++  av1_tu_trace_write_tu(cpi, &r, NULL, NULL, NULL, NULL, NULL,
++                       pred, pred, pred, pred, NULL, NULL, 0, map_bytes);
++}
++void av1_tu_trace_write_tu(AV1_COMP *cpi, const AOM_TU_TRACE_RECORD *r,
++                          const void *raw, const void *iq, const void *idq,
++                          const void *fq, const void *fdq, const void *final,
++                          const void *initial, const void *rawmap,
++                          const void *pred, const void *residual, const int16_t *scan,
++                          size_t coeff_bytes, size_t map_bytes) {
++  AOM_TU_TRACE_STATE *s = &cpi->tu_trace;
++  pthread_mutex_lock(&s->mutex);
++  if (!s->active || s->io_error) goto done;
++  if (r->generation != s->generation || r->source_index != 216 ||
++      !r->width || !r->height || r->width > 128 || r->height > 128 ||
++      r->blk_col >= 1920 || r->blk_row >= 1080 ||
++      map_bytes != (size_t)r->width * r->height * 2 ||
++      coeff_bytes != r->coeff_count * sizeof(tran_low_t) ||
++      !final || !initial || !rawmap || !pred ||
++      (coeff_bytes && (!raw || !iq || !idq || !fq || !fdq || !residual || !scan))) {
++    s->io_error = 1; goto done;
++  }
++  const size_t scan_bytes = r->coeff_count * sizeof(int16_t);
++  const size_t residual_bytes = coeff_bytes ? map_bytes : 0;
++  const size_t n = sizeof(*r) + 5 * coeff_bytes + scan_bytes + 4 * map_bytes + residual_bytes;
++  uint8_t *buffer = malloc(n);
++  if (!buffer) { s->io_error = 1; goto done; }
++  memcpy(buffer, r, sizeof(*r));
++  size_t offset = sizeof(*r);
++  const void *vectors[5] = { raw, iq, idq, fq, fdq };
++  for (int i = 0; i < 5; i++) {
++    if (coeff_bytes) memcpy(buffer + offset, vectors[i], coeff_bytes);
++    offset += coeff_bytes;
++  }
++  if (scan_bytes) memcpy(buffer + offset, scan, scan_bytes);
++  offset += scan_bytes;
++  const void *maps[4] = { final, initial, rawmap, pred };
++  for (int i = 0; i < 4; i++) { memcpy(buffer + offset, maps[i], map_bytes); offset += map_bytes; }
++  if (residual_bytes) memcpy(buffer + offset, residual, residual_bytes);
++  record(s, AOM_TU_TRACE_TU, r->generation, buffer, n);
++  free(buffer);
++done:
++  pthread_mutex_unlock(&s->mutex);
++}
+--- /dev/null
++++ b/av1/encoder/tu_trace.h
+@@ -0,0 +1,64 @@
++#ifndef AOM_AV1_ENCODER_TU_TRACE_H_
++#define AOM_AV1_ENCODER_TU_TRACE_H_
++#include <pthread.h>
++#include <stdint.h>
++#include <stddef.h>
++#ifdef __cplusplus
++extern "C" {
++#endif
++#define AOM_TU_TRACE_SCHEMA 3u
++#define AOM_TU_TRACE_MAGIC 0x31525455u
++#define AOM_TU_TRACE_CAP (250u * 1000u * 1000u)
++#define AOM_TU_TRACE_SOURCE_INDEX 216u
++
++typedef struct AOM_TU_TRACE_STATE {
++  int fd, active, target_active, exploratory, io_error, unsupported;
++  uint64_t generation, bytes, source_index;
++  uint8_t source_md5[16], preloop_md5[16];
++  uint16_t *preloop_plane;
++  int preloop_w, preloop_h;
++  pthread_mutex_t mutex;
++} AOM_TU_TRACE_STATE;
++
++typedef struct __attribute__((packed)) AOM_TU_TRACE_RECORD {
++  uint64_t generation, frame_number, order_hint;
++  uint32_t status, plane, blk_row, blk_col, width, height;
++  int32_t tx_size, tx_type, block_size, qindex, base_qindex, segment_id, delta_q;
++  int16_t dequant_dc, dequant_ac, zbin_dc, zbin_ac;
++  int16_t round_dc, round_ac, quant_dc, quant_ac, quant_shift_dc, quant_shift_ac;
++  uint32_t quant_idx, quant_flags;
++  int32_t coded_qindex;
++  uint32_t lossless, reduced_tx_set, log_scale, raw_eob;
++  uint32_t eob_initial, eob_final, coeff_count, flags;
++  uint32_t refresh_frame_flags, show_frame, bit_depth, skip_flags;
++  uint8_t source_md5[16], predictor_md5[16], residual_md5[16], preloop_md5[16];
++  uint64_t source_index;
++} AOM_TU_TRACE_RECORD;
++
++enum { AOM_TU_TRACE_QUANTIZED = 1, AOM_TU_TRACE_BLOCK_SKIP = 2,
++       AOM_TU_TRACE_MB_SKIP = 3, AOM_TU_TRACE_CODING_BLOCK_SKIP = 4,
++       AOM_TU_TRACE_EOB_ZERO = 5 };
++enum { AOM_TU_TRACE_HAS_RAW = 1u << 0, AOM_TU_TRACE_HAS_INITIAL = 1u << 1,
++       AOM_TU_TRACE_HAS_FINAL = 1u << 2, AOM_TU_TRACE_HAS_SCRATCH = 1u << 3,
++       AOM_TU_TRACE_HAS_MAPS = 1u << 4 };
++enum { AOM_TU_TRACE_HEADER = 1, AOM_TU_TRACE_TU = 2,
++       AOM_TU_TRACE_ATTEMPT_END = 3, AOM_TU_TRACE_FRAME_FINAL = 4 };
++struct AV1_COMP;
++void av1_tu_trace_init(AOM_TU_TRACE_STATE *);
++void av1_tu_trace_destroy(AOM_TU_TRACE_STATE *);
++void av1_tu_trace_begin(struct AV1_COMP *, uint64_t, int);
++void av1_tu_trace_end_attempt(struct AV1_COMP *, uint64_t);
++void av1_tu_trace_snapshot_preloop(struct AV1_COMP *);
++void av1_tu_trace_frame_final(struct AV1_COMP *, uint64_t, const uint8_t *, size_t);
++int av1_tu_trace_failed(const struct AV1_COMP *);
++void av1_tu_trace_mark_failed(struct AV1_COMP *);
++void av1_tu_trace_write_region(struct AV1_COMP *, int, int, int, int, int,
++                               const uint16_t *, size_t);
++void av1_tu_trace_write_tu(struct AV1_COMP *, const AOM_TU_TRACE_RECORD *,
++                           const void *, const void *, const void *, const void *,
++                           const void *, const void *, const void *, const void *,
++                           const void *, const void *, const int16_t *, size_t, size_t);
++#ifdef __cplusplus
++}
++#endif
++#endif

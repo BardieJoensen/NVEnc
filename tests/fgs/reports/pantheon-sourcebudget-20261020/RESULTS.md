@@ -5,7 +5,7 @@ scored video rate is **9.5227592Mbps**,98.4110% of the9.6765224Mbps original.
 This is a valid under-cap practical screen, not a matched preset comparison.
 No perceptually qualified repair has been demonstrated.
 
-| Midpoint ROI | Source HF | Preset4 HF | Preset0 HF | Preset0 HF error | ACF1 error |
+| Five-frame midpoint average | Source HF | Preset4 HF | Preset0 HF | Preset0 HF error | ACF1 error |
 |---|---:|---:|---:|---:|---:|
 | E05 shirt |0.619353|0.071789|0.157202|−74.618%|0.001026|
 | E05 background |1.778495|0.624360|0.923415|−48.079%|0.044833|
@@ -65,7 +65,7 @@ SVT-B wall time with different declared worker settings. The first request
 undershot at8.319776Mbps; only TBR changed10003→11576 for calibration. Pass1
 statistics were byte-identical across requests and unchanged through pass2.
 
-| Midpoint ROI | Source HF | Libaom HF | HF error | ACF1 error | Source HF correlation |
+| Five-frame midpoint average | Source HF | Libaom HF | HF error | ACF1 error | Source HF correlation |
 |---|---:|---:|---:|---:|---:|
 | Shirt |0.619353|0.09680|−84.37%|0.10866|0.08676|
 | Background |1.778495|0.87477|−50.81%|0.12137|0.48419|
@@ -108,7 +108,7 @@ distortion metric; PSNR omits the additional normalized source-variance RDMULT
 weighting. Predictor, mode, partition, transform and later coding decisions can
 change. This is a rate-calibrated policy contrast, not a fixed-decision ablation.
 
-| Midpoint ROI | Source HF | SSIM HF | PSNR HF | PSNR HF error | PSNR ACF1 error |
+| Five-frame midpoint average | Source HF | SSIM HF | PSNR HF | PSNR HF error | PSNR ACF1 error |
 |---|---:|---:|---:|---:|---:|
 | Shirt | 0.619353 | 0.096799 | 0.098604 | −84.080% | 0.113094 |
 | Background | 1.778495 | 0.874773 | 0.909357 | −48.869% | 0.106166 |

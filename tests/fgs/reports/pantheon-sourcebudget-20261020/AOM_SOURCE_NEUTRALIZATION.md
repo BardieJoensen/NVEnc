@@ -28,7 +28,7 @@ These diagnostic replay times include tracing and reuse existing pass1 stats;
 they are not measured end-to-end candidate costs. The installed baseline's
 measured both-pass cost remains391.652s/336frames.
 
-| Midpoint diagnostic | Original | Parent PSNR | Original pixels at coding input |
+| Five-frame midpoint average | Original | Parent PSNR | Original pixels at coding input |
 |---|---:|---:|---:|
 | Shirt HF amplitude | 0.619353 | 0.098604 | 0.097788 |
 | Shirt ACF absolute error | 0 | 0.113094 | 0.074420 |

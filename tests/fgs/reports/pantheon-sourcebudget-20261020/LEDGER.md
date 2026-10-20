@@ -379,3 +379,34 @@ skip/EOB-zero handling and incomplete final-attempt/provenance checks. Correctio
 are engineering validity work, not negative texture results. Parent owns final
 C integration in fresh implementation-v3; worker supplied build support; reviewer
 checks independently. No Round6 reconstruction evidence is admitted yet.
+
+Round6 outcome: all7,382 records in final generation238 admitted, every visible
+pixel covered once, source/predictor/residual exact, final inverse and whole
+pre-loop exact, post-loop and packed OBU independently exact. Off and trace IVF
+both equal installed R3; reuse complete prior GPU evidence without rerunning.
+Observed small-transform raw reconstruction is faithful; shirt initialFPq65
+loses most texture, and later processing removes more. Background initial
+amplitude survives better but structure is altered; later processing removes
+most remaining amplitude. Shirt skip coverage53.12% and reduced64 support17.28%
+are separate limitations. Zero frozen quiet tiles exist in this single frame.
+No legal alternative encode, bit-cost inference or playback follows.
+
+Parent noticed apparent descriptor mismatch and required a same-frame audit.
+R6 frame120 agrees with the old per-frame data; earlier headline summaries average
+116,118,120,122,124. Labels are clarified without changing metrics or thresholds.
+Unexpected actual qindices led to a second correction: the earlier qmax
+inventory and review had read realtime defaults. The applicable non-realtime
+branch uses objective delta-Q; the preserved target header proves present1/res2.
+No new encode was needed to resolve this.
+
+- auto: Choose one real qmax8 contrast next, retaining request11671 and all
+  existing policy including objective delta-Q, with unconstrained measured rate.
+  Require actual shirt/background exercised-pixel mean qindex≤40 and at least
+  90%≤48, reporting all values above32 and all skipped pixels. This tests material
+  precision delivery, not a guaranteed block cap or fixed-decision causality.
+  The reviewer instead proposed a≤32 fixed-decision q32/coder study. Preserve it
+  as a conditional follow-up: current raw→initial→final evidence already isolates
+  local loss, while53.12% skipped plus17.28% reduced64 shirt coverage falls outside
+  that proposed study. A real encode also supplies actual packet cost. If delivered
+  finer quantization still fails, choose the next discriminator from its observed
+  stage/decision changes. A failure at q32 rejects that point, not all precision.

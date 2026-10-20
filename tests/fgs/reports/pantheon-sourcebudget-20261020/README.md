@@ -47,9 +47,19 @@ levels. The subsequent [sample neutralization](AOM_SOURCE_NEUTRALIZATION.md)
 proves every coding input sample original, yet fails at9.6256032Mbps (99.474% of
 source): shirt/background HF deficits84.21%/48.54% and ACF errors.07442/.09889.
 Changes affect coding feedback but their removal is insufficient. Full controls
-are mixed; no playback. Next: fixed-TU coefficient/reconstruction observation to
-separate scalar quantization, optimizer and skip choices. [Ledger](LEDGER.md)
-records scope and unchanged acceptance criteria.
+are mixed; no playback.
+
+The subsequent [coefficient observation](AOM_COEFFICIENT_OBSERVATION.md) is
+admitted and independently reviewed. On the single prescribed E05 frame, small
+transforms reconstruct source texture closely before quantization. Initial FP
+quantization at actual shirt qindex65 removes most of that texture, and later
+optimizer/dropout removes more. Over half the shirt uses no-transform skips;
+its selected64-pixel transform also loses texture before quantization. These
+local mosaics are diagnostics, not repair candidates. The next real contrast
+will request substantially finer quantization, prove actual delivery and measure
+rate without constraining it first. A practical repair still requires the
+original ceiling. [Current hypotheses](HYPOTHESES.md) and [ledger](LEDGER.md)
+record evidence, scope and unchanged acceptance criteria.
 
 Prior evidence: [causal and measured preservation report](../pantheon-rd-20261019/README.md).
 Prior source-budget ROI failure is accepted; it does not prove source-budget

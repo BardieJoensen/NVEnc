@@ -1,6 +1,6 @@
 # Round6: final-decision coefficient observation
 
-Status: implementation preparation; no Round6 result yet.
+Status: completed and admitted; see AOM_COEFFICIENT_OBSERVATION.md.
 
 Primary question: in the admitted libaom PSNR parent, how much of the observed
 midpoint texture loss occurs in initial quantization, later coefficient
@@ -12,9 +12,10 @@ original whole-frame MD5 `94fa8bde346a2a52d40b26f8183afea5`, not by a wrapped
 order hint. Export the entire visible luma plane, including every skip region.
 No new source region or acceptance threshold is selected from output quality.
 
-Worker owns a fresh private implementation under
-`worker/aom-tu-r6/implementation-v1`; parent owns replay, admission, analysis,
-report and Git index. Reviewer independently audits arithmetic, admission,
+Worker initially owned a fresh private implementation under
+`worker/aom-tu-r6/implementation-v1`. After rejected v1/v2 drafts, parent took
+final C/build integration in fresh implementation-v3, plus replay, admission,
+analysis, report and Git index. Reviewer independently audits arithmetic, admission,
 patch and results. No production changes, recursive delegation or changes to
 earlier evidence are authorized. Private build/encodes use four threads,
 nice10/CPU0–7; GPU work remains serialized.

@@ -261,3 +261,39 @@ reviewer/round6-patch-review.md and round6-patch-v2-review.md. No measurements f
 them exist or support a causal claim. Parent took over final C integration after
 focused worker revisions left required checks incomplete. The contract remains
 unchanged. Build and reconstruction admission remain pending.
+
+### Round6 admitted outcome
+
+Corrected v3 source/build and parent scripts passed independent review before
+execution. Same-binary off and trace exactly reproduce R3; final generation238
+has7,382 records and complete once-only visible coverage. Exact per-TU inverse,
+full pre-loop, decoded post-loop, source/residual and independent OBU bindings
+pass. Reviewer independently recomputed decisive support-stratified observations
+and accepted the compact result and unchanged-quality reuse.
+
+Outcome review `reviewer/round6-outcome-review.md` SHA256
+ec8c082e35813836cf50858346e0f49eb7a7aff3d595db518247b3c6a73678d9
+agrees that mechanisms are heterogeneous: initial quantization, optimizer/dropout,
+reduced64 support and no-transform skips. It prohibits treating local mosaics as
+coherent encodes, bit costs or a repair, and notes no quiet tiles in this frame.
+The current trace combines optimizer and dropout; it does not isolate them.
+
+The plot review required explicit native spatial grid, divided/clipped limited
+luma gray mapping, stage definitions and no-feedback counterfactual labels.
+Parent implemented both wording changes before plotting and inspected all three
+panels. No playback occurred.
+
+Two methodological corrections matter. First, frame120 descriptors match prior
+frame120 values; previous headlines are five-frame midpoint averages. Second,
+worker and reviewer initially inferred NO_DELTA_Q from the wrong conditional
+default branch. Parent required actual header evidence after observing per-TU
+qindices57–77 with base69. The preserved target header proves delta-Q present1,
+resolution2; the applicable non-realtime branch defaults to DELTA_Q_OBJECTIVE.
+The reviewer appended an erratum to its preserved qmax review. Requiring delta-Q
+off would have changed the baseline policy; that requirement is rejected.
+
+Reviewer recommends a fixed-decision q32 initial/post-optimizer/coder comparison.
+Parent chooses the bounded real finer-quantization arm first for the reasons in
+LEDGER.md, retaining the fixed-decision study as a subsequent discriminator.
+No acceptance criterion is weakened; initial real-arm rate may rise only because
+it is explicitly a preservation diagnostic, never a practical candidate.

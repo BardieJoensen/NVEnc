@@ -302,5 +302,67 @@ nice -n 10 taskset -c 8-11 python3 tests/fgs/reports/pantheon-sourcebudget-20261
 Use a fresh output directory on reproduction. The script binds complete IVF/OBU
 framing, original whole/per-plane samples, the preserved all-event reference
 history, R3 command/remux/decoder receipts and extracted display216 Y.
-`aom-tu-binding.json` is the accepted compact receipt. Full Round6 trace and
-analysis scripts are not yet admitted experimental evidence.
+`aom-tu-binding.json` is the accepted compact receipt.
+
+## Round6 coefficient observation
+
+The successful private build is
+`worker/aom-tu-r6/implementation-v3` under the experiment root. Its preserved
+`build.py`, `build_runner.sh`, `build.json`, complete baseline/reviewed/before/after
+manifests, configuration and build logs are authoritative. The reviewed source
+contains all1344 baseline files plus two instrumentation files; four existing
+files change. The portable `aom-tu-observation.patch` is byte-identical to the
+measured `trace-v3.patch`. `aom-tu-schema.json` and `AOM_TU_SCHEMA.md` are the
+measured schema3 files. Failed v1/v2 and superseded review drafts remain separate.
+The patch's blank context lines retain the required unified-diff leading space;
+Git's outer added-file whitespace check flags those lines. Preserve the exact
+reviewed patch bytes; ordinary script/report whitespace checks pass.
+
+To reproduce a private build, copy the complete verified baseline source from
+`reviewer/round4-full-source-audit/source` to a **fresh** implementation directory's
+`source/`, apply the patch there, and copy only the build inputs from measuredv3:
+`build.py`, `build_runner.sh`, `baseline-source-manifest.json`,
+`reviewed-source-manifest.json`, `trace-v3.patch`, `SCHEMA.json`, `SCHEMA.md`.
+Run `python3 build.py` from that fresh directory. The builder refuses existing
+outputs, verifies every source path before/after, requires the complete1346-file
+manifest, and retains commands/tool identities/logs/status/times. It uses the
+same Ninja/Release/shared configuration as R5, four threads/nice10/CPU0–7.
+Do not install the library or build in an evidence archive.
+
+Measured library SHA256 is
+`6b6e5a6c27f7d2c6df457b0cd6293c4ebc195d230dabdc3b683d236c2f749476`;
+configuration SHA256 is
+`b97f78baf39c6d05d105d915f60a3665a204cc1fd4b6d8032f76cf61177f2fec`.
+The replay expects the reviewed build at the abovev3 relative location in a
+fresh experiment root, with corresponding baseline/binding receipts prepared.
+Every output tag must be new:
+
+```sh
+python3 "$REPORT/replay_aom_tu.py" off off-1
+python3 "$REPORT/replay_aom_tu.py" trace trace-1 --control-tag off-1
+TU="$PANTHEON_SOURCEBUDGET_ROOT/parent/tu-observation"
+nice -n10 taskset -c 8-11 "$PYTHON" "$REPORT/validate_aom_tu.py" \
+  "$TU/runs/trace-1/command.json" "$TU/binding-v2/binding.json" \
+  "$TU/admission-trace-1"
+nice -n10 taskset -c 8-11 "$PYTHON" "$REPORT/analyze_aom_tu.py" \
+  "$TU/admission-trace-1/validation.json" "$TU/analysis-trace-1.json"
+nice -n10 taskset -c 8-11 "$PYTHON" "$REPORT/plot_aom_tu.py" \
+  "$TU/admission-trace-1/validation.json" "$TU/analysis-trace-1.json" \
+  "$TU/plots-trace-1"
+nice -n10 taskset -c 8-11 "$PYTHON" "$REPORT/summarize_aom_tu.py" \
+  "$TU/compact-result.json"
+```
+
+The measured compact result is `aom-tu-result.json` in this report. Admission
+requires exact installed IVF for both off and trace; only that identity permits
+reusing the complete R3 GPU campaign. No new video scores are assigned to the
+local raw/initial mosaics. Exact visible ownership, residual, final inverse,
+pre/post-loop and independent OBU checks run before analysis. The diagnostic
+has858 frozen single-frame tiles, including zero quiet tiles, and is distinct
+from the five-frame midpoint average and full-window repair criteria.
+
+Plot output preserves the native spatial grid with a common limited-range gray
+mapping, not native code values or full-color display. All three still panels
+were inspected; no playback observation is claimed. The first attempted
+validation command used invalid `taskset -c8-11`; taskset rejected it before
+Python ran. The corrected `-c 8-11` invocation above completed successfully.
