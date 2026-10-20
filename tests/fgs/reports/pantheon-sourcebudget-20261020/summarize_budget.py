@@ -43,14 +43,24 @@ assert a["all336_decoder_identity"] and a["all240_scored_planes_match"]
 assert 0 < a["relative_source_rate"] <= 1 and a["practical_rate_eligible"]
 matched = .99 <= a["relative_source_rate"] <= 1
 assert a["matched_comparison_eligible"] == matched
+stack = c.get("encoder_stack", "SVT4.2-preset0")
+assert stack in ("SVT4.2-preset0", "libaom-3.8.2-ffmpeg")
+contrast = "implementation" if stack == "libaom-3.8.2-ffmpeg" else "preset"
 assert a["comparison_kind"] == ("matched-source comparison" if matched else
-                                "under-cap practical screen; not a matched preset comparison")
+                                f"under-cap practical screen; not a matched {contrast} comparison")
 assert c["status"] == ("encoded" if matched else "rate_gate_failed") and c["returncode"] == 0
 assert (c["case"], c["tag"]) == (case, tag)
 assert sha(run / "out.mkv") == a["output"]["sha256"] == c["mkv_output"]["sha256"]
 assert data["decoder_validation"]["output"]["sha256"] == a["output"]["sha256"]
 assert data["decode_identity"]["input"]["sha256"] == a["output"]["sha256"]
-assert data["decoder_validation"]["all336_allplanes_app_dav1d_NVDEC_exact"]
+decoder_flag = ("all336_allplanes_libaom_dav1d_NVDEC_exact" if stack == "libaom-3.8.2-ffmpeg"
+                else "all336_allplanes_app_dav1d_NVDEC_exact")
+assert data["decoder_validation"][decoder_flag]
+if stack == "libaom-3.8.2-ffmpeg":
+    assert a["encoder_stack"] == stack
+    assert a["decoder_set"] == ["libdav1d", "libaom-av1", "av1_cuvid"]
+    assert sha(run / "dav1d-decoded.yuv") == data["decoder_validation"]["decoded_raw"]["sha256"]
+    assert c["passes"]["pass1"]["returncode"] == c["passes"]["pass2"]["returncode"] == 0
 assert data["metrics"]["encode"] == str(run / "out.mkv")
 assert abs(data["metrics"]["actual_mbps"] - a["actual_mbps"]) < 1e-10
 assert a["baseline_actual_mbps"] == data["baseline_metrics"]["actual_mbps"]
@@ -124,11 +134,12 @@ fig.savefig(out / "texture-temporal.png", dpi=140)
 plt.close(fig)
 
 result = {
-    "case": case, "tag": tag, "rate": a["actual_mbps"],
+    "case": case, "tag": tag, "encoder_stack": stack, "rate": a["actual_mbps"],
     "rate_ratio": a["relative_source_rate"],
     "baseline_rate_ratio": a["relative_baseline_rate"],
     "practical_rate_eligible": True, "matched_comparison_eligible": matched,
     "comparison_kind": a["comparison_kind"],
+    "decoder_set": a.get("decoder_set", ["SVT application reconstruction", "libdav1d", "av1_cuvid"]),
     "wall_seconds_336": c["wall_seconds"],
     "baseline_wall_seconds_336": data["baseline_command"]["seconds"],
     "runtime_ratio": c["wall_seconds"] / data["baseline_command"]["seconds"],
@@ -150,7 +161,7 @@ lines = [
     f"Rate status: {a['comparison_kind']}; "
     f"{100*a['relative_baseline_rate']:.4f}% of preserved preset4 packet rate.",
     f"Encode wall {c['wall_seconds']:.3f}s /336frames; "
-    f"{result['runtime_ratio']:.2f}x preserved preset4 wall time on one SVT worker.",
+    f"{result['runtime_ratio']:.2f}x preserved preset4 wall time; resource settings are in command.json.",
     "Host load was observed, not experimentally fixed. No playback was observed.",
     "",
     "| ROI | Source HF | Preset4 HF | Candidate HF | Source ACF1 | Preset4 ACF1 | Candidate ACF1 | HF/ACF screen |",

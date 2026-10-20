@@ -91,3 +91,12 @@ does not reject other scales or AR shapes. Similar ensemble magnitudes under the
 same decoded input support a local conflict; individual responses differ.
 The report states raw code192 means8-bit48, uses frozen texture class without
 claiming stochasticity, and makes no temporal or signaling-cost assertion.
+
+Round2 outcome review independently verified actual/source/B packet ratios,
+pass-statistics/input/provenance identities, all3decoder equality and scored
+sample selection. It confirmed both amplitude/ACF failures and retained face,
+VMAF/NEG, lower-tail and tilewise regressions despite broad mean improvements.
+The next recommended discriminator is libaom's PSNR versus SSIM tune policy with
+all other declared controls fixed and actual rates matched. Parent accepted this
+as a whole-encoder policy contrast, without asserting unchanged internal search,
+allocation or quantizer decisions. No playback was claimed.

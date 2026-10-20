@@ -18,7 +18,7 @@ mkdir -p "$PANTHEON_SOURCEBUDGET_ROOT"
 uv venv "$PANTHEON_SOURCEBUDGET_ROOT/analysis-venv"
 PYTHON="$PANTHEON_SOURCEBUDGET_ROOT/analysis-venv/bin/python"
 uv pip install --python "$PYTHON" numpy==2.5.4 scipy==1.18.1 matplotlib==3.11.2 pillow==13.0.0
-nice -n10 taskset -c8-11 "$PYTHON" "$REPORT/prepare.py" e05-1440
+nice -n10 taskset -c 8-11 "$PYTHON" "$REPORT/prepare.py" e05-1440
 "$PYTHON" "$REPORT/encode_svt.py" e05-1440 preset0-1x0 10003
 ```
 
@@ -54,7 +54,7 @@ receipt cannot be admitted. This correction does not alter encoding arguments.
 For a matched run, serialize GPU scoring:
 
 ```bash
-nice -n10 taskset -c8-11 "$PYTHON" "$REPORT/score_budget.py" e05-1440 TAG
+nice -n10 taskset -c 8-11 "$PYTHON" "$REPORT/score_budget.py" e05-1440 TAG
 "$PYTHON" "$REPORT/summarize_budget.py" e05-1440 TAG
 PANTHEON_RD_ROOT="$PANTHEON_SOURCEBUDGET_ROOT" \
   "$PYTHON" "$REPORT/../pantheon-rd-20261019/visuals.py" e05-1440 TAG
@@ -64,7 +64,7 @@ The measured `preset0-1x0` run finished at9.5227592Mbps, below the99% matching
 floor but within the practical cap. It was scored with the explicit command:
 
 ```bash
-nice -n10 taskset -c8-11 "$PYTHON" "$REPORT/score_budget.py" \
+nice -n10 taskset -c 8-11 "$PYTHON" "$REPORT/score_budget.py" \
   e05-1440 preset0-1x0 --under-cap-screen
 ```
 
@@ -87,3 +87,30 @@ binds all input evidence by SHA256, and plots full traces. The native-pixel
 visual script creates lossless10-bit synchronized crop clips with all240
 panel hashes checked; RGB stills explicitly convert limited BT709 to full range.
 No generated still or clip establishes actual playback.
+
+## Round2 libaom arm
+
+The independent implementation arm uses the installed system FFmpeg6.1.1 and
+linked libaom3.8.2, both hashed in its receipt. It uses the exact same336-frame
+Y4M input. Four threads, niceness10 and CPU affinity0–7 bound the CPU work.
+
+```bash
+"$PYTHON" "$REPORT/encode_aom.py" e05-1440 1x0 10003
+nice -n10 taskset -c 8-11 "$PYTHON" "$REPORT/score_aom.py" e05-1440 aom-1x0
+"$PYTHON" "$REPORT/summarize_budget.py" e05-1440 aom-1x0
+```
+
+The runner prefixes tags with `aom-`, creates an exclusive directory, and exits
+nonzero if the actual packet match fails. Preserve that receipt. A lower-rate
+arm can be screened explicitly with `--under-cap-screen`; an overshoot must be
+calibrated before it can be judged practical. Two-pass statistics, logs, exact
+commands, script snapshot, input before/after SHA, binary/library/probe hashes,
+stream color, zero PTS origins and both complete packet arrays are retained.
+The runtime is the sum of the two encode passes, excluding remux/validation.
+
+The same numerical/control gates apply. All336 frames/planes must match between
+dav1d, native libaom and NVDEC. The raw `dav1d-decoded.yuv` is separately validated
+against those hashes and is not an application reconstruction export. All240
+scored frames must equal display positions96:336. Required CUDA/FFVship campaign
+metrics and frozen whole-window controls reuse the established path. Native
+comparison clips use the same `visuals.py` command with the `aom-` tag.

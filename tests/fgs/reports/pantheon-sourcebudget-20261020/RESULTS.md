@@ -55,3 +55,45 @@ than another45.7-minute run intended only to calibrate the preset contrast.
 The matched preset effect remains unresolved. [Independent review](REVIEW.md)
 accepted that scope and retained quiet/edge regressions. No codec-limit or
 production-change claim follows.
+
+# Round2: independent libaom policy at matched source rate
+
+The calibrated two-pass libaom3.8.2 SSIM/variance-AQ arm also fails. Actual scored
+rate is **9.6243504Mbps**,99.4608% of source and99.4628% of the preserved SVT-B
+baseline. Total two-pass runtime is **389.179s/336frames**,5.63× the observed
+SVT-B wall time with different declared worker settings. The first request
+undershot at8.319776Mbps; only TBR changed10003→11576 for calibration. Pass1
+statistics were byte-identical across requests and unchanged through pass2.
+
+| Midpoint ROI | Source HF | Libaom HF | HF error | ACF1 error | Source HF correlation |
+|---|---:|---:|---:|---:|---:|
+| Shirt |0.619353|0.09680|−84.37%|0.10866|0.08676|
+| Background |1.778495|0.87477|−50.81%|0.12137|0.48419|
+
+Both amplitude and ACF fail the unchanged gates. Source-linked texture retention
+improves over SVT-B, but not enough to qualify. All336 decoded frames/planes match
+between libaom, dav1d and NVDEC; all240 scored positions match. The raw file is a
+dav1d decode, not an encoder reconstruction export. Exact source/hash/color/rate
+checks pass. [Machine result](aom-result.json) retains complete provenance.
+
+Broad controls improve: all-tile mean MSE9.314→6.978, HF absolute error
+0.915→0.714, ACF error0.252→0.174 and MSE p9531.13→24.52. CAMBI
+full-reference mean/max fall0.429/2.739→0.311/2.110. SSIMULACRA2 mean rises
+52.87→55.11 and Butteraugli p95 falls8.84→8.30. These are not uniform gains:
+23.3% of tiles worsen in MSE and37.7% in HF error.
+
+The face regresses: MSE6.840→8.523 (+24.6%), edge-gradient MAE4.067→5.110
+(+25.7%) and gradient ratio0.8849→0.8578. VMAF93.57→92.56 and NEG
+92.03→90.92 worsen, while VMAF p1 improves79.92→81.40. SSIMULACRA2 p5
+slips26.23→25.79. Quiet HF error rises slightly0.08861→0.08996, despite
+strong quiet MSE improvement. Shirt temporal HF correlation0.0936 is closer to
+source0.1186 than SVT-B0.2448; background0.00843 is slightly farther from source
+0.01711 than SVT-B0.01537. Fixed-coordinate temporal correlation is descriptive.
+
+Independent review accepts this failed matched-rate arm and all identity gates,
+retains the regressions, and rejects global-superiority or codec-limit claims.
+Parent inspected native shirt/face stills; all240 visual panels pass exact10-bit
+checks. No motion playback was observed. The next discriminator will change only
+libaom's public tune policy SSIM→PSNR plus necessary TBR calibration, retaining
+all other settings and gates. This tests whole-encoder objective policy; it does
+not hold mode/allocation/quantization decisions fixed.

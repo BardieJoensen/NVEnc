@@ -177,3 +177,20 @@ It emphasizes that scale16 overshoots even texture, so zero joint hits alone is
 weak evidence; same-input response coupling is the useful observation. Do not
 call the frozen flat_texture class proven stochastic grain, or infer exhaustive
 legal-model failure. [Bounded result](GRAIN_FIXED_INPUT.md) preserves the limits.
+
+Round2 result: calibrated9.6243504Mbps (99.4608%source),389.179s. All3decoder
+and scored-sample checks pass. Shirt/background HF deficits84.37%/50.81% and
+ACF errors .10866/.12137 fail. Broad tile controls, SSIMULACRA2 mean, Butteraugli
+and CAMBI improve versus SVT-B, but face MSE/gradient error and VMAF/NEG regress.
+Independent review accepts this actual failed policy and rejects global superiority.
+No motion playback. See RESULTS.md and aom-result.json for full scope/evidence.
+
+Round3 primary question: is libaom's SSIM tune policy responsible for the remaining
+texture suppression relative to its PSNR tune policy at the same source budget?
+Change only public tune=ssim→psnr and TBR calibration; retain exact input, binary,
+two-pass good/cpu-used4, variance AQ, worker/GOP/reference/ARNR/color settings.
+Require source99–100% and pairwise1%, all existing gates and direct pairing with
+aom-1x1 for controls, traces and tails. This is an encoder decision-policy
+contrast, not a fixed-predictor scalar-distortion or pure-quantizer ablation.
+No model fit or threshold change. A persistent severe deficit rejects this
+specific SSIM-policy explanation, not other encoder strategies or AV1.

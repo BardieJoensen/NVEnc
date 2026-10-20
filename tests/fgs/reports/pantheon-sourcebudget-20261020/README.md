@@ -27,12 +27,15 @@ wall time. No motion playback was observed.
 The ancillary [original H264 QP-state observation](ORIGINAL_QP.md) is validated;
 it does not equate original QP with re-encode preservation.
 
-Next discriminator: one independently implemented libaom AV1 policy at source
-budget. The large amplitude misses make that more informative for practical
-feasibility than calibrating the preset0 rate solely to estimate a clean preset
-effect. That matched preset effect remains unresolved. No inference of a codec
-limit follows. [Ledger](LEDGER.md) records contracts and decisions; no broad
-settings sweep, repeated manual ROI escalation or failed-base grain fitting.
+The independent libaom SSIM/variance-AQ arm also fails at9.6243504Mbps,
+99.4608% of source,389.179s/336frames. Shirt/background HF deficits84.37%/50.81%
+and ACF errors .10866/.12137 fail. Broad controls improve but face detail and
+VMAF/NEG regress. [Machine evidence](aom-result.json) and the same result/review
+reports preserve this mixed outcome. All3decoder/sample gates pass.
+
+Next discriminator: libaom PSNR versus SSIM tune policy at matched source budget,
+with all other declared controls fixed. This tests whole-encoder objective policy;
+no codec limit follows. [Ledger](LEDGER.md) records the bounded contract.
 
 Prior evidence: [causal and measured preservation report](../pantheon-rd-20261019/README.md).
 Prior source-budget ROI failure is accepted; it does not prove source-budget
