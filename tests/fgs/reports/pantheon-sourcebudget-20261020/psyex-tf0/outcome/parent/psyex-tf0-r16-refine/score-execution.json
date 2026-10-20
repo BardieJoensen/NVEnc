@@ -1,0 +1,80 @@
+{
+  "status": "complete",
+  "command": [
+    "/usr/bin/nice",
+    "-n",
+    "10",
+    "/usr/bin/taskset",
+    "-c",
+    "8-11",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/analysis-venv/bin/python",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/score_r16.py",
+    "r16-refine-tbr10042",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/admission.json",
+    "00bb9243453fb55f1c878842e2ecfd3760f8403144e1e5b507530477a03ef497",
+    "a86db1bcc3e4ff49b8e0aa66dfc601ac8bc7b67bb4415b3886263df7daaf50ab"
+  ],
+  "inputs_before": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/execute.py",
+      "size": 1855,
+      "sha256": "93c0740995afa0b6c1bf91c5c5bacbe620558e9a327493edf71406e8a68f4858"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/score_r16.py",
+      "size": 11911,
+      "sha256": "53d4d9500de90af84a0c7e5f29652c46226a6493d87a84d6938b4e20d24f0058"
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "size": 8020928,
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+    },
+    {
+      "path": "/usr/bin/nice",
+      "size": 35336,
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d"
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "size": 31104,
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b"
+    }
+  ],
+  "started_utc": "2026-10-20T19:11:00.593370+00:00",
+  "returncode": 0,
+  "seconds": 25.38622744998429,
+  "log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/score-execution.log",
+    "size": 6703,
+    "sha256": "f3decde4b9106c4dff5714794bd2597fb9cd9f5d3af8e1c93f79aae8b8cb2452"
+  },
+  "inputs_after": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/execute.py",
+      "size": 1855,
+      "sha256": "93c0740995afa0b6c1bf91c5c5bacbe620558e9a327493edf71406e8a68f4858"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/score_r16.py",
+      "size": 11911,
+      "sha256": "53d4d9500de90af84a0c7e5f29652c46226a6493d87a84d6938b4e20d24f0058"
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "size": 8020928,
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+    },
+    {
+      "path": "/usr/bin/nice",
+      "size": 35336,
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d"
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "size": 31104,
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b"
+    }
+  ],
+  "ended_utc": "2026-10-20T19:11:25.985072+00:00"
+}

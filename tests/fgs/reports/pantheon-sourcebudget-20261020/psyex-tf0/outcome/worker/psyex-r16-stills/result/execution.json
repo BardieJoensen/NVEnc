@@ -1,0 +1,56 @@
+{
+  "status": "complete",
+  "argv": [
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-stills/render.py",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-stills/result"
+  ],
+  "started_utc": "2026-10-20T19:14:15.397980+00:00",
+  "ended_utc": "2026-10-20T19:14:15.669911+00:00",
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-stills/render.py",
+    "sha256": "d07f9f81d1c266370252353f7a3ec6cf18bc57afa9c8d4491d875d9af7c73370",
+    "size": 4828
+  },
+  "manifest": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-stills/result/manifest.json",
+    "sha256": "9cef27d7f5346eab059c5949559f37da63423cc9de19e173a5a64dc4bf623bd7",
+    "size": 5077
+  },
+  "inputs": {
+    "original": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/original.yuv",
+      "sha256": "c2798d9c00f53bdbe7041575249b353a478a8f5557bc4dd5b61d9ae03f13ea12",
+      "size": 6220800
+    },
+    "r8_final": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/admitted-1/postloop.yuv",
+      "sha256": "8e540b11034f78a76c6a7b7732c2386eee2b3647137dffab9ab5f1930fcd1985",
+      "size": 6220800
+    },
+    "r16_final": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/postloop.yuv",
+      "sha256": "1ef3ad3dd6cce1b008fdc737a21f49d46f5fce4f708774dfdfc74093f2ca790b",
+      "size": 6220800
+    }
+  },
+  "admission": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/admission.json",
+    "sha256": "a86db1bcc3e4ff49b8e0aa66dfc601ac8bc7b67bb4415b3886263df7daaf50ab",
+    "size": 11494
+  },
+  "r8_admission": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/admitted-1/admission.json",
+    "sha256": "f6a7a6d3221f15fb789419a43cd3f1b61372ffb99e325cd1ee131962ed5be7fc",
+    "size": 12465
+  },
+  "selected_command": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/command.json",
+    "sha256": "00bb9243453fb55f1c878842e2ecfd3760f8403144e1e5b507530477a03ef497",
+    "size": 67624
+  },
+  "decoder_check": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/decoder-validation/decoder-validation.json",
+    "sha256": "fb4574fb7f601471956ffa0b7ea983f7235a25408c200cc1e5bd53f2c74ee304",
+    "size": 94517
+  }
+}

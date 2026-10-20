@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_quality.py", line 256, in <module>
+    main()
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_quality.py", line 208, in main
+    assert assessment['selected_packets'] == 240 and assessment['sorted_scored_positions'] == [96, 336]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

@@ -592,3 +592,19 @@ against prior tested policies; reviewer independently constrains the next test.
   bracket/outer identities/freshstats pass. Stop calibration and select this
   arm for complete observation/quality. All336 independent decoders and syntax
   mapping pass; no texture conclusion is inferred before remaining admission.
+- R16 completed: matched9.6698472Mbps,372.254131s; all336 decoder/neutrality,
+  2870owner/2130positive joins and observed frame120 original input pass. Shirt/background five-frame
+  HF−83.738%/−41.427%, ACF.17584/.11161 fail. SSIMU low tails and some edge/HF
+  tails regress despite quiet/CAMBI improvements. Single-frame shirt rawHF.52589
+  →scalar/preloop.12740→post.06866 versus.60632source; allshirtpositiveq71,
+  lateroptimizerchangesnone. Backgroundq79–87, face33.95%uninvoked remains separate.
+  Independent spatial support recomputation passes after parent rejected
+  aggregate-only verification. Parser/schema failures retained; no gate changed.
+  Native grayscale stills inspected, no playback/candidate/blocker.
+- auto R17: one nativeFPq4 replay on newly captured R16 choices, before another
+  allocation change. Exact baseline/table/DCdelta/C/runtime/packed64 controls,
+  complete arrays and additive support decomposition required. This is a new
+  TF-off policy population, not repetition of the old TF-on sweep. A fixed-choice
+  failure cannot reject real low-q decision feedback, already material in R15.
+  Initial worker drafts rejected for schema, scaling, scalar/final conflation
+  and incomplete artifacts before execution. No R17 outcome yet.

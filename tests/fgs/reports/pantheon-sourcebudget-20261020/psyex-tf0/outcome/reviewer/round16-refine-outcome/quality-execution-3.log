@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_quality_v3.py", line 256, in <module>
+    main()
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_quality_v3.py", line 222, in main
+    assert texture_new['path'] == assessment['output']['path']
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

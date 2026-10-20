@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/execute.py", line 33, in <module>
+    main()
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/execute.py", line 14, in main
+    log=a.receipt.with_suffix('.log');assert not log.exists()
+                                             ^^^^^^^^^^^^^^^^
+AssertionError

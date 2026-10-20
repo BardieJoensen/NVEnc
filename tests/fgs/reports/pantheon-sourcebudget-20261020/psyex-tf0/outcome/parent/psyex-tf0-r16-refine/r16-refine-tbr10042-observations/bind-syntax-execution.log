@@ -1,0 +1,61 @@
+{
+  "status": "bound",
+  "summary": {
+    "ivf_packets": 336,
+    "display_actions": 336,
+    "frame_headers": 502,
+    "coded_non_show_existing": 336,
+    "show_existing": 166,
+    "hidden_coded": 166,
+    "shown_coded": 170,
+    "packets_with_multiple_frame_headers": 84,
+    "max_frame_headers_per_packet": 5,
+    "order_hint_bits_minus_1_values": [
+      6
+    ],
+    "implicit_shown_KEY_refresh_events": [
+      0,
+      359
+    ],
+    "obu_type_counts": {
+      "1": 2,
+      "2": 336,
+      "3": 166,
+      "6": 336
+    },
+    "all_packets_exactly_one_display_action": true
+  },
+  "target_coded_event": {
+    "event_index": 314,
+    "coded_ordinal": 210,
+    "packet_index": 209,
+    "packet_pts": 209,
+    "packet_event_index": 1,
+    "frame_type": 1,
+    "show_frame": 0,
+    "showable_frame": 1,
+    "order_hint": 88,
+    "refresh_frame_flags_normalized": 16,
+    "refreshed_slots": [
+      4
+    ],
+    "obu": {
+      "type": 6,
+      "packet_start": 50192,
+      "packet_end": 102137,
+      "size": 51945,
+      "sha256": "e68353e010c09239253e1b9de07d481d452547d5c4a9e973b3df3d2dc9353ed3",
+      "file_offset": 10189254
+    }
+  },
+  "display_216_event": {
+    "kind": "show_existing",
+    "event_index": 325,
+    "slot": 4,
+    "coded_ordinal": 210,
+    "coded_event_index": 314,
+    "display_index": 216,
+    "packet_index": 216,
+    "packet_pts": 216
+  }
+}

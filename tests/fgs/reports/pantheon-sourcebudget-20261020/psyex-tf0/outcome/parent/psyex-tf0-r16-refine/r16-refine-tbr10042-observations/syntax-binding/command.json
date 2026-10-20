@@ -1,0 +1,42 @@
+{
+  "argv": [
+    "/usr/bin/ffmpeg",
+    "-hide_banner",
+    "-loglevel",
+    "trace",
+    "-i",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/out.ivf",
+    "-map",
+    "0:v:0",
+    "-c",
+    "copy",
+    "-bsf:v",
+    "trace_headers",
+    "-f",
+    "null",
+    "-"
+  ],
+  "returncode": 0,
+  "started_unix": 1792522730.194996,
+  "elapsed_seconds": 0.08714034198783338,
+  "input": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/out.ivf",
+    "sha256": "731dc2aae95eab5cc66e641debfc5366ae4bf2a75522b52b35850d50051775e7",
+    "size": 17506710
+  },
+  "encode_receipt": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/command.json",
+    "sha256": "00bb9243453fb55f1c878842e2ecfd3760f8403144e1e5b507530477a03ef497",
+    "size": 67624
+  },
+  "ffmpeg": {
+    "path": "/usr/bin/ffmpeg",
+    "sha256": "ed16af623947494a72e284b6eb8ff225f2da22b38b5d5069c2fd4b4ba3384e41",
+    "size": 342488
+  },
+  "log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/syntax-binding/trace_headers.log",
+    "sha256": "af82740d0c84a2a55c72aa9f1ba794e630431b3b2729618d5cf9ffd8fc2f5ee8",
+    "size": 3810119
+  }
+}

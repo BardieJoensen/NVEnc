@@ -1,0 +1,398 @@
+{
+  "status": "complete",
+  "admission": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/admission.json",
+    "sha256": "a86db1bcc3e4ff49b8e0aa66dfc601ac8bc7b67bb4415b3886263df7daaf50ab",
+    "size": 11494
+  },
+  "producer_sha": "fd190fae6a20aa3cd2efd06e6d6fc9c32471d602272a214b7168667aab511cbb",
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/analyze_support_v2.py",
+    "sha256": "639006d6aff92d15ea6a338dcfa256faf9510aa28c2616a6cebdf8d479403c5d",
+    "size": 8523
+  },
+  "parser": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/parsers.py",
+    "sha256": "45f11c246037e1a58a2762235a62db9a0bcb71e85fe992cfcc35897fa24983e3",
+    "size": 13134
+  },
+  "analyze_helper": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/analyze.py",
+    "sha256": "44b8037c2a922b7e893cd66c8488f3683c45b8859400ff6b082bd0910286f64e",
+    "size": 10682
+  },
+  "unit_helper": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/analyze_decoder_units.py",
+    "sha256": "d10bfb16859ad02f59ba876b7890f591fee592b690d4c65a6aa0f043a7ae3cb3",
+    "size": 12329
+  },
+  "source_boundaries": {
+    "original": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/original.yuv",
+      "sha256": "c2798d9c00f53bdbe7041575249b353a478a8f5557bc4dd5b61d9ae03f13ea12",
+      "size": 6220800
+    },
+    "coding_input": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/coding_input.yuv",
+      "sha256": "c2798d9c00f53bdbe7041575249b353a478a8f5557bc4dd5b61d9ae03f13ea12",
+      "size": 6220800
+    },
+    "preloop": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/preloop.yuv",
+      "sha256": "02b928e68af8a716d68238ce31edff9df4cfd631334f82f63e2be8858aa12407",
+      "size": 6220800
+    },
+    "postloop": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/postloop.yuv",
+      "sha256": "1ef3ad3dd6cce1b008fdc737a21f49d46f5fce4f708774dfdfc74093f2ca790b",
+      "size": 6220800
+    }
+  },
+  "token_manifest": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/tokens.json",
+    "sha256": "18e039f10470ac911a0094bece5de1d487b234c44d09c9a8d61407f48f258e44",
+    "size": 6285890
+  },
+  "trace": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/replays/r16-refine-tbr10042-on/coeff.bin",
+    "sha256": "9070e735f05654f416f224cb5c8d06ee9a569f50ff95178335ef906ba451d25f",
+    "size": 20020894
+  },
+  "terminal": {
+    "footer": {
+      "status": "complete",
+      "accepted_generation": 0,
+      "started": 2870,
+      "ended": 2870
+    },
+    "attempts": [
+      {
+        "generation": 0,
+        "recode": 0,
+        "routes": 510,
+        "started": 2870,
+        "ended": 2870
+      }
+    ],
+    "all_tokens": 2870
+  },
+  "rois": {
+    "shirt": {
+      "xywh": [
+        1200,
+        650,
+        200,
+        100
+      ],
+      "groups": {
+        "invoked_positive_eob": {
+          "pixels": 20000,
+          "units": 30,
+          "q_values": {
+            "71": 20000
+          },
+          "geometry": {
+            "64x64": 4624,
+            "32x32": 12880,
+            "16x16": 2496
+          },
+          "sse": {
+            "raw_executed": {
+              "vs_original": 3865.1875,
+              "vs_raw_executed": 0.0
+            },
+            "scalar": {
+              "vs_original": 29504.8125,
+              "vs_raw_executed": 26023.25
+            },
+            "final": {
+              "vs_original": 29504.8125,
+              "vs_raw_executed": 26023.25
+            },
+            "preloop": {
+              "vs_original": 29504.8125,
+              "vs_raw_executed": 26023.25
+            },
+            "postloop": {
+              "vs_original": 28160.5,
+              "vs_raw_executed": 24742.1875
+            }
+          }
+        },
+        "_totals": {
+          "pixels": 20000,
+          "units": 30
+        }
+      },
+      "coverage_pixels": 20000
+    },
+    "background": {
+      "xywh": [
+        950,
+        50,
+        250,
+        180
+      ],
+      "groups": {
+        "invoked_positive_eob": {
+          "pixels": 43912,
+          "units": 431,
+          "q_values": {
+            "79": 4620,
+            "83": 31388,
+            "87": 7904
+          },
+          "geometry": {
+            "32x32": 1292,
+            "64x64": 896,
+            "8x16": 2528,
+            "8x8": 19040,
+            "16x16": 16700,
+            "16x8": 3456
+          },
+          "sse": {
+            "raw_executed": {
+              "vs_original": 1347.75,
+              "vs_raw_executed": 0.0
+            },
+            "scalar": {
+              "vs_original": 253010.4375,
+              "vs_raw_executed": 251705.4375
+            },
+            "final": {
+              "vs_original": 253003.6875,
+              "vs_raw_executed": 251698.6875
+            },
+            "preloop": {
+              "vs_original": 253003.6875,
+              "vs_raw_executed": 251698.6875
+            },
+            "postloop": {
+              "vs_original": 234761.625,
+              "vs_raw_executed": 233462.0
+            }
+          }
+        },
+        "uninvoked_zero_eob": {
+          "pixels": 1040,
+          "units": 9,
+          "q_values": {},
+          "geometry": {
+            "8x8": 368,
+            "16x16": 672
+          },
+          "sse": {
+            "raw_executed": {
+              "vs_original": 5941.0625,
+              "vs_raw_executed": 0.0
+            },
+            "scalar": {
+              "vs_original": 5941.0625,
+              "vs_raw_executed": 0.0
+            },
+            "final": {
+              "vs_original": 5941.0625,
+              "vs_raw_executed": 0.0
+            },
+            "preloop": {
+              "vs_original": 5941.0625,
+              "vs_raw_executed": 0.0
+            },
+            "postloop": {
+              "vs_original": 5590.5,
+              "vs_raw_executed": 270.5625
+            }
+          }
+        },
+        "invoked_zero_eob": {
+          "pixels": 48,
+          "units": 1,
+          "q_values": {
+            "87": 48
+          },
+          "geometry": {
+            "8x8": 48
+          },
+          "sse": {
+            "raw_executed": {
+              "vs_original": 0.0,
+              "vs_raw_executed": 0.0
+            },
+            "scalar": {
+              "vs_original": 236.5,
+              "vs_raw_executed": 236.5
+            },
+            "final": {
+              "vs_original": 236.5,
+              "vs_raw_executed": 236.5
+            },
+            "preloop": {
+              "vs_original": 236.5,
+              "vs_raw_executed": 236.5
+            },
+            "postloop": {
+              "vs_original": 245.9375,
+              "vs_raw_executed": 245.9375
+            }
+          }
+        },
+        "_totals": {
+          "pixels": 45000,
+          "units": 441
+        }
+      },
+      "coverage_pixels": 45000
+    },
+    "face": {
+      "xywh": [
+        160,
+        600,
+        500,
+        480
+      ],
+      "groups": {
+        "invoked_positive_eob": {
+          "pixels": 154176,
+          "units": 1669,
+          "q_values": {
+            "79": 2176,
+            "71": 30304,
+            "91": 14464,
+            "99": 14528,
+            "87": 5120,
+            "83": 12960,
+            "111": 8064,
+            "95": 49856,
+            "115": 4992,
+            "103": 5888,
+            "107": 3328,
+            "75": 2496
+          },
+          "geometry": {
+            "16x16": 26752,
+            "32x32": 19488,
+            "16x32": 1024,
+            "8x8": 91936,
+            "16x8": 8192,
+            "8x16": 2944,
+            "64x64": 3840
+          },
+          "sse": {
+            "raw_executed": {
+              "vs_original": 2064.1875,
+              "vs_raw_executed": 0.0
+            },
+            "scalar": {
+              "vs_original": 1109966.375,
+              "vs_raw_executed": 1108438.0625
+            },
+            "final": {
+              "vs_original": 1109979.1875,
+              "vs_raw_executed": 1108449.875
+            },
+            "preloop": {
+              "vs_original": 1109979.1875,
+              "vs_raw_executed": 1108449.875
+            },
+            "postloop": {
+              "vs_original": 1027630.9375,
+              "vs_raw_executed": 1026155.5
+            }
+          }
+        },
+        "uninvoked_zero_eob": {
+          "pixels": 81472,
+          "units": 692,
+          "q_values": {},
+          "geometry": {
+            "16x16": 36544,
+            "32x32": 7936,
+            "8x8": 31488,
+            "8x16": 2048,
+            "16x8": 3456
+          },
+          "sse": {
+            "raw_executed": {
+              "vs_original": 1011847.875,
+              "vs_raw_executed": 0.0
+            },
+            "scalar": {
+              "vs_original": 1011847.875,
+              "vs_raw_executed": 0.0
+            },
+            "final": {
+              "vs_original": 1011847.875,
+              "vs_raw_executed": 0.0
+            },
+            "preloop": {
+              "vs_original": 1011847.875,
+              "vs_raw_executed": 0.0
+            },
+            "postloop": {
+              "vs_original": 997169.4375,
+              "vs_raw_executed": 12720.6875
+            }
+          }
+        },
+        "invoked_zero_eob": {
+          "pixels": 4352,
+          "units": 38,
+          "q_values": {
+            "79": 512,
+            "71": 1216,
+            "87": 256,
+            "111": 384,
+            "95": 64,
+            "115": 384,
+            "91": 320,
+            "99": 256,
+            "75": 512,
+            "83": 320,
+            "107": 128
+          },
+          "geometry": {
+            "16x16": 2368,
+            "8x8": 1600,
+            "16x8": 384
+          },
+          "sse": {
+            "raw_executed": {
+              "vs_original": 0.6875,
+              "vs_raw_executed": 0.0
+            },
+            "scalar": {
+              "vs_original": 11220.125,
+              "vs_raw_executed": 11219.4375
+            },
+            "final": {
+              "vs_original": 11220.125,
+              "vs_raw_executed": 11219.4375
+            },
+            "preloop": {
+              "vs_original": 11220.125,
+              "vs_raw_executed": 11219.4375
+            },
+            "postloop": {
+              "vs_original": 11200.0,
+              "vs_raw_executed": 11200.3125
+            }
+          }
+        },
+        "_totals": {
+          "pixels": 240000,
+          "units": 2399
+        }
+      },
+      "coverage_pixels": 240000
+    }
+  },
+  "limitations": [
+    "SSE is additive; no HF/ACF fraction is inferred.",
+    "This is support attribution, not a counterfactual repair or quality conclusion."
+  ],
+  "full_result": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/support-result-v2/result.json",
+    "size": 4574877,
+    "sha256": "f329a6416f3304130fb07a1cb153b88ad039b13e1392c868499cc70a4ad861bb"
+  }
+}

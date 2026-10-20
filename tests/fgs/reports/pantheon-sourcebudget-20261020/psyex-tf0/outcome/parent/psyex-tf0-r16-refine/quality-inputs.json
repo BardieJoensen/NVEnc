@@ -1,0 +1,52 @@
+{
+  "command": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/command.json",
+    "size": 67624,
+    "sha256": "00bb9243453fb55f1c878842e2ecfd3760f8403144e1e5b507530477a03ef497"
+  },
+  "admission": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/admission.json",
+    "size": 11494,
+    "sha256": "a86db1bcc3e4ff49b8e0aa66dfc601ac8bc7b67bb4415b3886263df7daaf50ab"
+  },
+  "assessment": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/assessment.json",
+    "size": 44852,
+    "sha256": "54535569b297d0b29e2ab2f00bc9ce0db14a0f49e62eb597c74abda588a8c514"
+  },
+  "controls": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/controls.json",
+    "size": 14051633,
+    "sha256": "f6ff394ce66e3d9e80a4f37196f52f761b031bff1e693daf972fed28b4faad34"
+  },
+  "texture": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/r16-refine-tbr10042-texture.json",
+    "size": 462454,
+    "sha256": "cfbdc6cbac7c0e55b181253fa36956c4d2ca525c272a2d28bd5ce2feeb458cd0"
+  },
+  "score_result": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/r16-refine-tbr10042-result.json",
+    "size": 7549,
+    "sha256": "bfdee21ee1a452990a312c43169f318d285b29f71f01a3e410075ad026df0c4a"
+  },
+  "metrics": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/metrics-cuda-r16-refine-tbr10042.json",
+    "size": 294788,
+    "sha256": "4e87e677db97b001afc6e6c7ddce98b521ab29ccfd41a985e445a79ba9ccf794"
+  },
+  "ssimu2": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/ssimu2-r16-refine-tbr10042.json",
+    "size": 4774,
+    "sha256": "ac9151ff2b1a7f55d396297a8181052f466660735bac5c3405286cfcbe0e4ec3"
+  },
+  "butter": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/butter-r16-refine-tbr10042.json",
+    "size": 13359,
+    "sha256": "c196a2483b2f7b7e8ab7ffbf7f34e43a97586f1db99b23b4c5113fb475df2d17"
+  },
+  "metrics_receipt": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/score-execution.json",
+    "size": 2906,
+    "sha256": "7e0f30deeadbc51973bcd56fd53da287aad7e847770ed5b8a54c9ffc502f570a"
+  }
+}

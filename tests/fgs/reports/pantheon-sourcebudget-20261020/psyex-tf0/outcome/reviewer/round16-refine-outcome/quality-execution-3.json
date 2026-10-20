@@ -1,0 +1,118 @@
+{
+  "status": "failed",
+  "command": [
+    "/usr/bin/nice",
+    "-n",
+    "10",
+    "/usr/bin/taskset",
+    "-c",
+    "8-11",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/analysis-venv/bin/python",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_quality_v3.py",
+    "--command",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/command.json",
+    "--command-sha",
+    "00bb9243453fb55f1c878842e2ecfd3760f8403144e1e5b507530477a03ef497",
+    "--admission",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/admission.json",
+    "--admission-sha",
+    "a86db1bcc3e4ff49b8e0aa66dfc601ac8bc7b67bb4415b3886263df7daaf50ab",
+    "--assessment",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/assessment.json",
+    "--assessment-sha",
+    "54535569b297d0b29e2ab2f00bc9ce0db14a0f49e62eb597c74abda588a8c514",
+    "--controls",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/controls.json",
+    "--controls-sha",
+    "f6ff394ce66e3d9e80a4f37196f52f761b031bff1e693daf972fed28b4faad34",
+    "--texture",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/r16-refine-tbr10042-texture.json",
+    "--texture-sha",
+    "cfbdc6cbac7c0e55b181253fa36956c4d2ca525c272a2d28bd5ce2feeb458cd0",
+    "--score-result",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/r16-refine-tbr10042-result.json",
+    "--score-result-sha",
+    "bfdee21ee1a452990a312c43169f318d285b29f71f01a3e410075ad026df0c4a",
+    "--metrics",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/metrics-cuda-r16-refine-tbr10042.json",
+    "--metrics-sha",
+    "4e87e677db97b001afc6e6c7ddce98b521ab29ccfd41a985e445a79ba9ccf794",
+    "--ssimu2",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/ssimu2-r16-refine-tbr10042.json",
+    "--ssimu2-sha",
+    "ac9151ff2b1a7f55d396297a8181052f466660735bac5c3405286cfcbe0e4ec3",
+    "--butter",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/butter-r16-refine-tbr10042.json",
+    "--butter-sha",
+    "c196a2483b2f7b7e8ab7ffbf7f34e43a97586f1db99b23b4c5113fb475df2d17",
+    "--metrics-receipt",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/score-execution.json",
+    "--metrics-receipt-sha",
+    "7e0f30deeadbc51973bcd56fd53da287aad7e847770ed5b8a54c9ffc502f570a",
+    "--output",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/quality-review.json"
+  ],
+  "inputs_before": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/execute.py",
+      "size": 1855,
+      "sha256": "93c0740995afa0b6c1bf91c5c5bacbe620558e9a327493edf71406e8a68f4858"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_quality_v3.py",
+      "size": 14632,
+      "sha256": "80e8ae02a452c33c1757dcdd797dced65759a492688f3e83a45d19c8927d286c"
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "size": 8020928,
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+    },
+    {
+      "path": "/usr/bin/nice",
+      "size": 35336,
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d"
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "size": 31104,
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b"
+    }
+  ],
+  "started_utc": "2026-10-20T19:14:07.956183+00:00",
+  "returncode": 1,
+  "seconds": 0.3174105719663203,
+  "log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/quality-execution-3.log",
+    "size": 467,
+    "sha256": "fbb95cf1b768aa61339676fb9e4b2fe8e17b4fee49267fac8796155feea3348b"
+  },
+  "inputs_after": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/execute.py",
+      "size": 1855,
+      "sha256": "93c0740995afa0b6c1bf91c5c5bacbe620558e9a327493edf71406e8a68f4858"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_quality_v3.py",
+      "size": 14632,
+      "sha256": "80e8ae02a452c33c1757dcdd797dced65759a492688f3e83a45d19c8927d286c"
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "size": 8020928,
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+    },
+    {
+      "path": "/usr/bin/nice",
+      "size": 35336,
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d"
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "size": 31104,
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b"
+    }
+  ],
+  "ended_utc": "2026-10-20T19:14:08.278697+00:00"
+}

@@ -1,0 +1,287 @@
+{
+  "status": "admitted",
+  "case": "e05-1440",
+  "tag": "r16-refine-tbr10042",
+  "scope": "R16 actual final encoder/native-decoder join on three traced ROIs; full-frame source/preloop/postloop boundaries and all336 output identity, no quality or playback acceptance",
+  "original_receipt": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/command.json",
+    "sha256": "00bb9243453fb55f1c878842e2ecfd3760f8403144e1e5b507530477a03ef497",
+    "size": 67624
+  },
+  "unmodified_ivf": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/out.ivf",
+    "sha256": "731dc2aae95eab5cc66e641debfc5366ae4bf2a75522b52b35850d50051775e7",
+    "size": 17506710
+  },
+  "commands": {
+    "off": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/replays/r16-refine-tbr10042-off/command.json",
+      "sha256": "2888ac5678d65ab14d5a08c86dd26412cc1c56e66a3cb482e7255452aaad4e16",
+      "size": 30559
+    },
+    "on": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/replays/r16-refine-tbr10042-on/command.json",
+      "sha256": "f9c4803bd935c28aecc20775ae38984a299a8b3b0261caba13aa76f668b72ef0",
+      "size": 31222
+    }
+  },
+  "artifacts": {
+    "original_receipt": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/command.json",
+      "sha256": "00bb9243453fb55f1c878842e2ecfd3760f8403144e1e5b507530477a03ef497",
+      "size": 67624
+    },
+    "syntax_binding": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/syntax-binding/result.json",
+      "sha256": "b0899657339511987e3753696ee50b0739fec07a8218f7d779b5bff86e7ee754",
+      "size": 18880
+    },
+    "outer_execution": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/encode-attempt1-execution.json",
+      "sha256": "e82ff2212660e0453797c5e2383ce910a27099f80252e9c79dc3d5f93517d7d2",
+      "size": 3182
+    },
+    "parser_control": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/parser-control.json",
+      "sha256": "afb324e1c891990816383bdfc0ecc281268692c96003adc9729e55163cf947e4",
+      "size": 2684
+    },
+    "parser_generator": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/prepare_parsers.py",
+      "sha256": "8a1f29866cfdecbebfbbac1b9b0df2c5cf6102e65c840634e4d77d4529b00b9d",
+      "size": 4282
+    },
+    "parser": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/parsers.py",
+      "sha256": "45f11c246037e1a58a2762235a62db9a0bcb71e85fe992cfcc35897fa24983e3",
+      "size": 13134
+    },
+    "all336_decoder_check": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/decoder-validation/decoder-validation.json",
+      "sha256": "fb4574fb7f601471956ffa0b7ea983f7235a25408c200cc1e5bd53f2c74ee304",
+      "size": 94517
+    },
+    "encoder_build": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/completed-build-pins.json",
+      "sha256": "f32ace44e5e449ce0898b6566cc9bb3195a8daa2fcb0b9d7f20b0e0d8b3c54d8",
+      "size": 4144
+    },
+    "encoder_off": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/replays/r16-refine-tbr10042-off/command.json",
+      "sha256": "2888ac5678d65ab14d5a08c86dd26412cc1c56e66a3cb482e7255452aaad4e16",
+      "size": 30559
+    },
+    "encoder_on": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/replays/r16-refine-tbr10042-on/command.json",
+      "sha256": "f9c4803bd935c28aecc20775ae38984a299a8b3b0261caba13aa76f668b72ef0",
+      "size": 31222
+    },
+    "prior_boundary_admission": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/admitted-1/admission.json",
+      "sha256": "f6a7a6d3221f15fb789419a43cd3f1b61372ffb99e325cd1ee131962ed5be7fc",
+      "size": 12465
+    },
+    "boundary_parser": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/validate_psyex_boundary.py",
+      "sha256": "763eeebf43017e79aba6c8ffdce531462f262000290ba9846ad7ae8065e70f8d",
+      "size": 15410
+    },
+    "decoder_off": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/decoder-off/command.json",
+      "sha256": "efb2f9a10f95ba509f5cd3f4947fc369b12d4c46b02909946e87e66391a86c44",
+      "size": 10062
+    },
+    "decoder_on": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/decoder-on/command.json",
+      "sha256": "1fe53945249a673a3dfd09d133463ebd6b1ae5955a5dfe190eebba2bb8da941e",
+      "size": 10795
+    }
+  },
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/admit.py",
+    "sha256": "fd190fae6a20aa3cd2efd06e6d6fc9c32471d602272a214b7168667aab511cbb",
+    "size": 19106
+  },
+  "trace": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/replays/r16-refine-tbr10042-on/coeff.bin",
+    "sha256": "9070e735f05654f416f224cb5c8d06ee9a569f50ff95178335ef906ba451d25f",
+    "size": 20020894
+  },
+  "boundary": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/replays/r16-refine-tbr10042-on/boundary.bin",
+    "sha256": "6d9e432b089f51931cc2e584b7e9a7d4e8bdd6d2e48bb32eca0ee9e20a24ba5a",
+    "size": 18763935
+  },
+  "decoder_admission": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/decoder-admission.json",
+    "sha256": "51f85bd921551f106c17acff75572e5a196ccaa97fef9ad6aa4c1607002b6382",
+    "size": 4959
+  },
+  "token_manifest": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/tokens.json",
+    "sha256": "18e039f10470ac911a0094bece5de1d487b234c44d09c9a8d61407f48f258e44",
+    "size": 6285890
+  },
+  "actual_committed_owner": true,
+  "all336_exact": true,
+  "all_traced_roi_owners_source_predictor_preloop_exact": true,
+  "all_traced_positive_units_dq_iqm_exact_with_all_traced_eob_q_exact": true,
+  "tokens": 2870,
+  "positive_units": 2130,
+  "quantization": {
+    "shirt": {
+      "xywh": [
+        1200,
+        650,
+        200,
+        100
+      ],
+      "invoked_pixels": 20000,
+      "uninvoked_pixels": 0,
+      "qindex_invoked_pixels": {
+        "71": 20000
+      },
+      "pixels_above_qindex1": 20000,
+      "pixels_above_qindex4": 20000,
+      "geometry_pixels": {
+        "invoked:64x64:type0": 4624,
+        "invoked:32x32:type0": 12880,
+        "invoked:16x16:type3": 1024,
+        "invoked:16x16:type0": 1472
+      }
+    },
+    "background": {
+      "xywh": [
+        950,
+        50,
+        250,
+        180
+      ],
+      "invoked_pixels": 43960,
+      "uninvoked_pixels": 1040,
+      "qindex_invoked_pixels": {
+        "79": 4620,
+        "83": 31388,
+        "87": 7952
+      },
+      "pixels_above_qindex1": 43960,
+      "pixels_above_qindex4": 43960,
+      "geometry_pixels": {
+        "invoked:32x32:type0": 1292,
+        "invoked:64x64:type0": 896,
+        "invoked:8x16:type0": 2016,
+        "invoked:8x8:type3": 2864,
+        "invoked:8x8:type0": 15328,
+        "invoked:16x16:type0": 12924,
+        "uninvoked:8x8:type0": 368,
+        "invoked:16x8:type0": 2432,
+        "invoked:16x16:type3": 3776,
+        "uninvoked:16x16:type0": 672,
+        "invoked:8x8:type10": 256,
+        "invoked:16x8:type1": 128,
+        "invoked:16x8:type2": 640,
+        "invoked:8x8:type2": 320,
+        "invoked:8x16:type1": 128,
+        "invoked:8x8:type1": 320,
+        "invoked:16x8:type3": 256,
+        "invoked:8x16:type2": 128,
+        "invoked:8x16:type3": 256
+      }
+    },
+    "face": {
+      "xywh": [
+        160,
+        600,
+        500,
+        480
+      ],
+      "invoked_pixels": 158528,
+      "uninvoked_pixels": 81472,
+      "qindex_invoked_pixels": {
+        "79": 2688,
+        "71": 31520,
+        "91": 14784,
+        "99": 14784,
+        "87": 5376,
+        "83": 13280,
+        "111": 8448,
+        "95": 49920,
+        "115": 5376,
+        "103": 5888,
+        "107": 3456,
+        "75": 3008
+      },
+      "pixels_above_qindex1": 158528,
+      "pixels_above_qindex4": 158528,
+      "geometry_pixels": {
+        "invoked:16x16:type0": 23936,
+        "uninvoked:16x16:type0": 36544,
+        "invoked:32x32:type0": 19488,
+        "invoked:16x32:type0": 1024,
+        "uninvoked:32x32:type0": 7936,
+        "uninvoked:8x8:type0": 31488,
+        "invoked:8x8:type0": 80896,
+        "invoked:8x8:type3": 9120,
+        "invoked:16x8:type2": 128,
+        "invoked:16x8:type0": 7040,
+        "invoked:8x8:type11": 128,
+        "uninvoked:8x16:type0": 2048,
+        "invoked:16x16:type3": 4672,
+        "invoked:8x8:type10": 832,
+        "uninvoked:16x8:type0": 3456,
+        "invoked:16x8:type3": 1280,
+        "invoked:8x8:type1": 1344,
+        "invoked:8x16:type3": 576,
+        "invoked:8x16:type0": 1856,
+        "invoked:8x8:type2": 1216,
+        "invoked:16x16:type11": 256,
+        "invoked:64x64:type0": 3840,
+        "invoked:8x16:type10": 256,
+        "invoked:16x16:type10": 256,
+        "invoked:8x16:type2": 256,
+        "invoked:16x8:type1": 128
+      }
+    }
+  },
+  "terminal": {
+    "footer": {
+      "status": "complete",
+      "accepted_generation": 0,
+      "started": 2870,
+      "ended": 2870
+    },
+    "attempts": [
+      {
+        "generation": 0,
+        "recode": 0,
+        "routes": 510,
+        "started": 2870,
+        "ended": 2870
+      }
+    ],
+    "all_tokens": 2870
+  },
+  "source_boundaries": {
+    "original": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/original.yuv",
+      "sha256": "c2798d9c00f53bdbe7041575249b353a478a8f5557bc4dd5b61d9ae03f13ea12",
+      "size": 6220800
+    },
+    "coding_input": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/coding_input.yuv",
+      "sha256": "c2798d9c00f53bdbe7041575249b353a478a8f5557bc4dd5b61d9ae03f13ea12",
+      "size": 6220800
+    },
+    "preloop": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/preloop.yuv",
+      "sha256": "02b928e68af8a716d68238ce31edff9df4cfd631334f82f63e2be8858aa12407",
+      "size": 6220800
+    },
+    "postloop": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/postloop.yuv",
+      "sha256": "1ef3ad3dd6cce1b008fdc737a21f49d46f5fce4f708774dfdfc74093f2ca790b",
+      "size": 6220800
+    }
+  },
+  "source_change_count": 0
+}

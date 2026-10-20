@@ -1,0 +1,133 @@
+{
+  "status": "complete",
+  "support_result": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/support-result-v2/result.json",
+    "sha256": "f329a6416f3304130fb07a1cb153b88ad039b13e1392c868499cc70a4ad861bb"
+  },
+  "admission_review": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/admission-review.json",
+    "sha256": "f693e8069524d3c471f15b4dd6022d33aa8e08253b6ae5ac2c95bccb1dff5777"
+  },
+  "stages": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/stages.json",
+    "sha256": "02007de9587f0ad958f49abbcc0b425ba40e5eb855e76a5f24400193f8b36106"
+  },
+  "verified": {
+    "shirt": {
+      "pixels": 20000,
+      "units": 30,
+      "invoked_pixels": 20000,
+      "uninvoked_pixels": 0,
+      "positive_eob_pixels": 20000,
+      "qindex_invoked_pixels": {
+        "71": 20000
+      },
+      "sse_closure": {
+        "raw_executed": {
+          "sse": 3865.1875,
+          "mse": 0.193259375
+        },
+        "scalar": {
+          "sse": 29504.8125,
+          "mse": 1.475240625
+        },
+        "final": {
+          "sse": 29504.8125,
+          "mse": 1.475240625
+        },
+        "preloop": {
+          "sse": 29504.8125,
+          "mse": 1.475240625
+        },
+        "postloop": {
+          "sse": 28160.5,
+          "mse": 1.408025
+        }
+      }
+    },
+    "background": {
+      "pixels": 45000,
+      "units": 441,
+      "invoked_pixels": 43960,
+      "uninvoked_pixels": 1040,
+      "positive_eob_pixels": 43912,
+      "qindex_invoked_pixels": {
+        "79": 4620,
+        "83": 31388,
+        "87": 7952
+      },
+      "sse_closure": {
+        "raw_executed": {
+          "sse": 7288.8125,
+          "mse": 0.1619736111111111
+        },
+        "scalar": {
+          "sse": 259188.0,
+          "mse": 5.759733333333333
+        },
+        "final": {
+          "sse": 259181.25,
+          "mse": 5.7595833333333335
+        },
+        "preloop": {
+          "sse": 259181.25,
+          "mse": 5.7595833333333335
+        },
+        "postloop": {
+          "sse": 240598.0625,
+          "mse": 5.346623611111111
+        }
+      }
+    },
+    "face": {
+      "pixels": 240000,
+      "units": 2399,
+      "invoked_pixels": 158528,
+      "uninvoked_pixels": 81472,
+      "positive_eob_pixels": 154176,
+      "qindex_invoked_pixels": {
+        "79": 2688,
+        "71": 31520,
+        "91": 14784,
+        "99": 14784,
+        "87": 5376,
+        "83": 13280,
+        "111": 8448,
+        "95": 49920,
+        "115": 5376,
+        "103": 5888,
+        "107": 3456,
+        "75": 3008
+      },
+      "sse_closure": {
+        "raw_executed": {
+          "sse": 1013912.75,
+          "mse": 4.224636458333333
+        },
+        "scalar": {
+          "sse": 2133034.375,
+          "mse": 8.887643229166667
+        },
+        "final": {
+          "sse": 2133047.1875,
+          "mse": 8.887696614583334
+        },
+        "preloop": {
+          "sse": 2133047.1875,
+          "mse": 8.887696614583334
+        },
+        "postloop": {
+          "sse": 2036000.375,
+          "mse": 8.483334895833334
+        }
+      }
+    }
+  },
+  "checks": [
+    "full fixed-ROI coverage and group partition",
+    "invoked/uninvoked/EOB/qindex counts equal independent admission derivation",
+    "additive per-group SSE closes exactly to every native stage MSE",
+    "native final equals independently admitted preloop at the aggregate surface",
+    "uninvoked scalar/final/preloop retain the raw predictor surface"
+  ]
+}

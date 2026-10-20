@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_admission.py", line 214, in <module>
+    main()
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_admission.py", line 164, in main
+    spec.loader.exec_module(helper)
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/analyze_psyex_boundary.py", line 17, in <module>
+    import analyze as analyze_mod  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-rd-20261019/analyze.py", line 10, in <module>
+    from scipy.ndimage import minimum_filter
+ModuleNotFoundError: No module named 'scipy'

@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/analyze_support.py", line 78, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/analyze_support.py", line 50, in main
+    assert (bool(t['stages']) and isinstance(t['info'].get('actual_qindex'),int)) or (not t['stages'] and t['end']['eob']==0 and t['info'] is None)
+                                                                                                                                 ~^^^^^^^^
+KeyError: 'info'

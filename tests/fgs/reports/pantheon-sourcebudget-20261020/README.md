@@ -130,3 +130,13 @@ tile MSEs improve, with small local HF/ACF regressions retained. The cost is
 disqualified as a practical repair and has no playback acceptance.
 The [R16 contract](ROUND16_TF0_BUDGET_CONTRACT.md) selects the missing original-
 budget TF-off policy comparison with normal allocation and no QP bounds.
+
+The completed [R16 matched-rate comparison](PSYEX_TF0_BUDGET.md) fails both
+texture screens at9.6698472Mbps (99.9310%source),372.254s. New native evidence
+proves original coding input on observed frame120 and allshirtpositive residual support, then large
+loss at actual scalarq71. Raw fixed-choice shirt reconstruction still retains
+only86.74%sourceHF; later filtering adds loss. Full-window tails are mixed, with
+material SSIMULACRA2 low-tail regressions. Independent derivations, corrections,
+GPU metrics and stills are frozen in the linked outcome package. R17 selects
+one q4 fixed-choice diagnostic on these new captures; no practical candidate,
+playback acceptance or technical blocker exists.

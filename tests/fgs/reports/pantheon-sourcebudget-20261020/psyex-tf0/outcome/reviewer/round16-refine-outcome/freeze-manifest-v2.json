@@ -1,0 +1,158 @@
+{
+  "status": "complete",
+  "accepted": {
+    "admission_script": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_admission.py",
+      "sha256": "aa6186576eaa0f856bd046d7ca4f203053b9d90e16f54a4efe62686a48926b0b",
+      "size": 10135
+    },
+    "admission_execution": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/admission-execution-3.json",
+      "sha256": "64ae17a84b20deb96df9538b296d83cad3c714dd63b93939714046da46dda015",
+      "size": 3281
+    },
+    "admission_log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/admission-execution-3.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "admission_result": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/admission-review.json",
+      "sha256": "f693e8069524d3c471f15b4dd6022d33aa8e08253b6ae5ac2c95bccb1dff5777",
+      "size": 6068
+    },
+    "quality_script": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_quality_v4.py",
+      "sha256": "47fe6b0a1d828f3edfd1c91f7337c5d4c3a0caba2efca3653b67436c5388d1be",
+      "size": 14701
+    },
+    "quality_execution": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/quality-execution-4.json",
+      "sha256": "82fac5829dae5a0e621ee40539e475c6ca86e0b43e7a441156011bf77cfc0495",
+      "size": 5203
+    },
+    "quality_log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/quality-execution-4.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "quality_result": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/quality-review.json",
+      "sha256": "d00bd654ba6805cbf6a1a7459542cfec9cfc1d844c682d811a7aa388ff2ae173",
+      "size": 65640
+    },
+    "support_check_script": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/verify_support_v2.py",
+      "sha256": "7d668d4b98cdbae21f19897aab6e4a0e53ee4220c7870356545bc4573daed1bc",
+      "size": 8451
+    },
+    "support_check_result": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/support-review-v2.json",
+      "sha256": "f77732332f4c0c163d1562e4940e1d5205a56ce57dcb63eec438475eb8d5e324",
+      "size": 7374
+    },
+    "outcome_review": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/OUTCOME_REVIEW.md",
+      "sha256": "1cb9a6951aa15bac52eb05b95be55b6d14daaddc0c587b71cbf3a91a55293d33",
+      "size": 6078
+    },
+    "support_check_outer_execution": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/support-review-v2-execution.json",
+      "sha256": "0bf6cacb1c41dc5e5f19db9632ff65384d4d003ef2406f53d6f4d10afde941ae",
+      "size": 3350
+    },
+    "support_check_outer_log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/support-review-v2-execution.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "support_check_inner_receipt": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/support-review-v2-receipt.json",
+      "sha256": "f9e970e977fd60523816fbe6c0d391e5e4b91a3bdf8882acc411fb511dcb5bc8",
+      "size": 6432
+    },
+    "outcome_review_addendum": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/OUTCOME_REVIEW_ADDENDUM.md",
+      "sha256": "ba6492f766c16e160247568222cc6524139ea925e6546a068fb99218feb78bce",
+      "size": 2694
+    }
+  },
+  "preserved_failures_and_superseded": {
+    "admission_preflight_collision_log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/admission-execution.log",
+      "sha256": "dd2eb7ac4dfe585a53477792e463c16436cc6c56886ebf7ca88ec768eb915f5f",
+      "size": 423
+    },
+    "admission_system_python_execution": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/admission-execution-2.json",
+      "sha256": "36a3a9cb871d97bde80c3ebb06a02951eb8de06d21570eb805aef12132e6e637",
+      "size": 3215
+    },
+    "admission_system_python_log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/admission-execution-2.log",
+      "sha256": "12ee9f8354fd1e3a7c8e98b86ea417adf99205a26a74ff8c8e53fa6038137cd0",
+      "size": 930
+    },
+    "quality_original_script": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_quality.py",
+      "sha256": "f6be5278e5cdb5fa05cf1e7316e30d80ef67c007e10c0c5a5c92409718c8d722",
+      "size": 14622
+    },
+    "quality_first_execution": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/quality-execution.json",
+      "sha256": "752b211cd125a483b263daa78bbe83ffe604e59c71ab07c2c23e057b8c493db8",
+      "size": 5193
+    },
+    "quality_first_log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/quality-execution.log",
+      "sha256": "7eda8c6dfe146fe33547ec510bd7df72859e20068b3f08ed09334d3c4f24f71b",
+      "size": 543
+    },
+    "quality_v2_script": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_quality_v2.py",
+      "sha256": "baa6a29c3852296a76166ee83218e4bff1556e16ca3da0e960ca274e5a70f997",
+      "size": 14627
+    },
+    "quality_v2_execution": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/quality-execution-2.json",
+      "sha256": "280ecb9a63da9e2b08506c38e804cb28f24070f670a810a1c3a53b5aaaf58bdb",
+      "size": 5203
+    },
+    "quality_v2_log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/quality-execution-2.log",
+      "sha256": "8f3aa8078a6e66f53522edfbf5624e853175681bb548c54095a3fa6ae038f687",
+      "size": 443
+    },
+    "quality_v3_script": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/derive_quality_v3.py",
+      "sha256": "80e8ae02a452c33c1757dcdd797dced65759a492688f3e83a45d19c8927d286c",
+      "size": 14632
+    },
+    "quality_v3_execution": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/quality-execution-3.json",
+      "sha256": "9efb98ff5f943b95d478103b3fe63c38a2238eb6a255b121457914d8fa57d2c6",
+      "size": 5203
+    },
+    "quality_v3_log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/quality-execution-3.log",
+      "sha256": "fbb95cf1b768aa61339676fb9e4b2fe8e17b4fee49267fac8796155feea3348b",
+      "size": 467
+    },
+    "support_check_v1_script": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/verify_support.py",
+      "sha256": "e6b87f3b14f82d7f65ecd709695b86b19cb42c388a279350243a9aa9bf0b13bb",
+      "size": 4280
+    },
+    "support_check_v1_result": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/support-review.json",
+      "sha256": "4e1baad1bbd02ecee84cb0083a416623afe6da1634348557561ca72028d116fc",
+      "size": 3600
+    }
+  },
+  "note": "V2 independently reconstructs admitted token group masks and recomputes native preloop/postloop group SSE. V1 aggregate-only support check is superseded. Preliminary admission and quality failures remain preserved.",
+  "supersedes_manifest": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/freeze-manifest.json",
+    "sha256": "33bcc7d6865d218c10545b345ace2e7c6202acde244e4bad25e1efa5dcac389f",
+    "size": 6481
+  }
+}

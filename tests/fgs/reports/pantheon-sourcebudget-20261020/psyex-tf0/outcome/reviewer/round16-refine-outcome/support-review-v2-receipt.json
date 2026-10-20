@@ -1,0 +1,127 @@
+{
+  "status": "complete",
+  "argv": [
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/verify_support_v2.py",
+    "--admission-review",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/admission-review.json",
+    "--stages",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/stages.json",
+    "--support",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/support-result-v2/result.json",
+    "--output",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/support-review-v2.json",
+    "--receipt",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/support-review-v2-receipt.json"
+  ],
+  "python": {
+    "path": "/usr/bin/python3.12",
+    "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+    "size": 8020928
+  },
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/verify_support_v2.py",
+    "sha256": "7d668d4b98cdbae21f19897aab6e4a0e53ee4220c7870356545bc4573daed1bc",
+    "size": 8451
+  },
+  "inputs_before": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/verify_support_v2.py",
+      "sha256": "7d668d4b98cdbae21f19897aab6e4a0e53ee4220c7870356545bc4573daed1bc",
+      "size": 8451
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/admission-review.json",
+      "sha256": "f693e8069524d3c471f15b4dd6022d33aa8e08253b6ae5ac2c95bccb1dff5777",
+      "size": 6068
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/stages.json",
+      "sha256": "02007de9587f0ad958f49abbcc0b425ba40e5eb855e76a5f24400193f8b36106",
+      "size": 38592
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/support-result-v2/result.json",
+      "sha256": "f329a6416f3304130fb07a1cb153b88ad039b13e1392c868499cc70a4ad861bb",
+      "size": 4574877
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/admission.json",
+      "sha256": "a86db1bcc3e4ff49b8e0aa66dfc601ac8bc7b67bb4415b3886263df7daaf50ab",
+      "size": 11494
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/tokens.json",
+      "sha256": "18e039f10470ac911a0094bece5de1d487b234c44d09c9a8d61407f48f258e44",
+      "size": 6285890
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/original.yuv",
+      "sha256": "c2798d9c00f53bdbe7041575249b353a478a8f5557bc4dd5b61d9ae03f13ea12",
+      "size": 6220800
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/preloop.yuv",
+      "sha256": "02b928e68af8a716d68238ce31edff9df4cfd631334f82f63e2be8858aa12407",
+      "size": 6220800
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/postloop.yuv",
+      "sha256": "1ef3ad3dd6cce1b008fdc737a21f49d46f5fce4f708774dfdfc74093f2ca790b",
+      "size": 6220800
+    }
+  ],
+  "started_utc": "2026-10-20T19:20:21.399814+00:00",
+  "inputs_after": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/verify_support_v2.py",
+      "sha256": "7d668d4b98cdbae21f19897aab6e4a0e53ee4220c7870356545bc4573daed1bc",
+      "size": 8451
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/admission-review.json",
+      "sha256": "f693e8069524d3c471f15b4dd6022d33aa8e08253b6ae5ac2c95bccb1dff5777",
+      "size": 6068
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/stages.json",
+      "sha256": "02007de9587f0ad958f49abbcc0b425ba40e5eb855e76a5f24400193f8b36106",
+      "size": 38592
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/support-result-v2/result.json",
+      "sha256": "f329a6416f3304130fb07a1cb153b88ad039b13e1392c868499cc70a4ad861bb",
+      "size": 4574877
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/admission.json",
+      "sha256": "a86db1bcc3e4ff49b8e0aa66dfc601ac8bc7b67bb4415b3886263df7daaf50ab",
+      "size": 11494
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/tokens.json",
+      "sha256": "18e039f10470ac911a0094bece5de1d487b234c44d09c9a8d61407f48f258e44",
+      "size": 6285890
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/original.yuv",
+      "sha256": "c2798d9c00f53bdbe7041575249b353a478a8f5557bc4dd5b61d9ae03f13ea12",
+      "size": 6220800
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/preloop.yuv",
+      "sha256": "02b928e68af8a716d68238ce31edff9df4cfd631334f82f63e2be8858aa12407",
+      "size": 6220800
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/admitted/postloop.yuv",
+      "sha256": "1ef3ad3dd6cce1b008fdc737a21f49d46f5fce4f708774dfdfc74093f2ca790b",
+      "size": 6220800
+    }
+  ],
+  "output": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-outcome/support-review-v2.json",
+    "sha256": "f77732332f4c0c163d1562e4940e1d5205a56ce57dcb63eec438475eb8d5e324",
+    "size": 7374
+  },
+  "ended_utc": "2026-10-20T19:20:21.472731+00:00"
+}
