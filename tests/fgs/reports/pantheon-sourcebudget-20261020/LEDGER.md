@@ -623,3 +623,10 @@ against prior tested policies; reviewer independently constrains the next test.
   lambda refresh and actualfinalq/skip/bypass evidence. First-passstatsroute
   unchanged butfresh; capsecondpassonly. No extra TX/search control or rate
   calibration before preservation. Design review precedes implementation.
+- auto R18 implementation: parent corrected selected-only active TPL refresh,
+  then duplicate target skip dispatch; independent source/harness release
+  accepted patch5f03edf1/sourcef405193d. Private Release build and exact command
+  preview passed; frozen preflight preserves commands, manifests and reviews.
+  Cap-disabled baseline is running. No runtime cap delivery, quality or rate
+  conclusion yet. New trace admission is being strengthened for every-attempt
+  q/skip/pixel denominators, lambda population and parent invocation ancestry.

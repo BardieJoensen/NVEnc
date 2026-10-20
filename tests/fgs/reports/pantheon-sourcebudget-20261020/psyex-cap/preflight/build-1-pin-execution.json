@@ -1,0 +1,82 @@
+{
+  "status": "complete",
+  "command": [
+    "/usr/bin/nice",
+    "-n",
+    "10",
+    "/usr/bin/taskset",
+    "-c",
+    "8-11",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/analysis-venv/bin/python",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/pin_build.py",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1",
+    "2785ef58fe327230d879a42a92d5220e44e9e598a1034be711fa1a9175486ec2",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-freeze-1/r18-cap.patch",
+    "5f03edf1ba320c84006e65484e88742ffb60b2de422b73b10346ea90ca9ed5d0",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round18-source-release.md",
+    "5406b49c7adf70f5b1261f46d701186f15c0e17b89a87fddc32fc539e2b88e2c"
+  ],
+  "inputs_before": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/execute.py",
+      "size": 1855,
+      "sha256": "93c0740995afa0b6c1bf91c5c5bacbe620558e9a327493edf71406e8a68f4858"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/pin_build.py",
+      "size": 4682,
+      "sha256": "dd5093a3cddd6e309e36e51f329dea2937c2591c8524c5659b55896655f84d9a"
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "size": 8020928,
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+    },
+    {
+      "path": "/usr/bin/nice",
+      "size": 35336,
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d"
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "size": 31104,
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b"
+    }
+  ],
+  "started_utc": "2026-10-20T20:22:03.814845+00:00",
+  "returncode": 0,
+  "seconds": 0.21100842591840774,
+  "log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1-pin-execution.log",
+    "size": 216,
+    "sha256": "c90a86508d27fe607eee87832959b7cba3cf04c6f3c9c087f197d72dadd3d8a2"
+  },
+  "inputs_after": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/execute.py",
+      "size": 1855,
+      "sha256": "93c0740995afa0b6c1bf91c5c5bacbe620558e9a327493edf71406e8a68f4858"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/pin_build.py",
+      "size": 4682,
+      "sha256": "dd5093a3cddd6e309e36e51f329dea2937c2591c8524c5659b55896655f84d9a"
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "size": 8020928,
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+    },
+    {
+      "path": "/usr/bin/nice",
+      "size": 35336,
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d"
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "size": 31104,
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b"
+    }
+  ],
+  "ended_utc": "2026-10-20T20:22:04.030868+00:00"
+}

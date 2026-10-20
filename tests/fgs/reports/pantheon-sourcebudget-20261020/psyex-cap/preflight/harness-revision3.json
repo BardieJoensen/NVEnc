@@ -1,0 +1,31 @@
+{
+  "scope": "review corrections plus post-run resource record; not executed",
+  "files": {
+    "run.py": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/run.py",
+      "size": 14607,
+      "sha256": "ebfce2b97bd8002db2e866086ed44ac8dece936d64bfeaa01062f29dc5bf6bb3"
+    },
+    "prepare_build.py": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/prepare_build.py",
+      "size": 2582,
+      "sha256": "f0c29f5be5bd910f7bf7ea04b021005fbdeb7dbfeb4730937386f4d6510b58e8"
+    },
+    "pin_build.py": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/pin_build.py",
+      "size": 4682,
+      "sha256": "dd5093a3cddd6e309e36e51f329dea2937c2591c8524c5659b55896655f84d9a"
+    },
+    "execute_build.py": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/execute_build.py",
+      "size": 1923,
+      "sha256": "7f366b22bcd3d38bd87e32c7af58753925a4efd99920280fc7b47248531b6a32"
+    },
+    "README.md": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/README.md",
+      "size": 1949,
+      "sha256": "49aa03f310684ab5ccdec1137f82d8625f257686f6be963cdec861fa873604bd"
+    }
+  },
+  "required_outer": "parent/psyex-real-r15/execute.py SHA93c0740995afa0b6c1bf91c5c5bacbe620558e9a327493edf71406e8a68f4858"
+}

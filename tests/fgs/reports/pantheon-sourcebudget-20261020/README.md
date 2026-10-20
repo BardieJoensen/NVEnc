@@ -146,3 +146,8 @@ The completed [R17 fixed-choice q4 diagnostic](PSYEX_Q4.md) restores shirt HF
 reconstruction controls. Shirt remains deficient, concentrated in64x64 support.
 It supplies no encoded rate or playback result. The next question is whether a
 delivered spatial cap changes real encoder decisions at an affordable packet cost.
+
+The [R18 private cap implementation](PSYEX_CAP.md) has passed independent
+source/harness review, a private build and exact command preview. Runtime
+controls and outcome admission are in progress; this preparation establishes no
+new preservation or rate result.

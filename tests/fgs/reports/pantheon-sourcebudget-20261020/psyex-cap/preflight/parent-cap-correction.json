@@ -1,0 +1,13 @@
+{
+  "file": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r18-cap/source/Source/Lib/Codec/rc_process.c",
+  "sha256": "8d10a565bb7cc70568a796d95d19e8436c5658f5cadc604eded929d7e1b2bafe",
+  "scope": "parent-owned geometry and selected-only active-TPL refresh; no build/encode yet",
+  "changes": [
+    "exact1920x1080/10bit/64SB/510IDs",
+    "min(pre,4) selected q; global delta resolution1",
+    "refresh only preexisting active lambda path",
+    "full original/unselected factor byte invariance",
+    "selected factor before/after/original records",
+    "unchanged frame/public q and lambda activation"
+  ]
+}

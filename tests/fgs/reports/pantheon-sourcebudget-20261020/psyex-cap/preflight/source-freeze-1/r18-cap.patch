@@ -1,0 +1,597 @@
+--- a/Source/Lib/Codec/coding_loop.c
++++ b/Source/Lib/Codec/coding_loop.c
+@@ -2249,7 +2249,7 @@
+             BlkStruct   *src_cu = &md_ctx->md_blk_arr_nsq[d1_itr];
+             EcBlkStruct *dst_cu = &sb_ptr->final_blk_arr[final_blk_itr];
+             svt_aom_move_blk_data(pcs, ctx, src_cu, dst_cu);
+-            pc_commit(pcs,ctx,sb_addr,final_blk_itr,dst_cu);
++            pc_commit(pcs,ctx,sb_addr,final_blk_itr,dst_cu,src_cu);
+             sb_ptr->final_blk_arr[final_blk_itr++].av1xd = sb_ptr->av1xd;
+             // MFMV Update
+             if (scs->mfmv_enabled && pcs->slice_type != I_SLICE && pcs->ppcs->is_ref) {
+--- a/Source/Lib/Codec/enc_dec_process.c
++++ b/Source/Lib/Codec/enc_dec_process.c
+@@ -2687,6 +2687,7 @@
+ void svt_variance_adjust_qp(PictureControlSet *pcs, bool readjust_base_q_idx);
+ void svt_aom_sb_qp_derivation_tpl_la(PictureControlSet *pcs);
+ void normalize_sb_delta_q(PictureControlSet *pcs);
++void r18_apply_selected_sb_cap(PictureControlSet *pcs, unsigned recode);
+ void mode_decision_configuration_init_qp_update(PictureControlSet *pcs);
+ void svt_aom_init_enc_dec_segement(PictureParentControlSet *ppcs);
+ 
+@@ -2752,12 +2753,14 @@
+         if (scs->static_config.enable_adaptive_quantization == 2 && ppcs->tpl_ctrls.enable && ppcs->r0 != 0)
+             svt_aom_sb_qp_derivation_tpl_la(pcs);
+ 
+-        if (scs->static_config.enable_variance_boost && pcs->ppcs->frm_hdr.delta_q_params.delta_q_present)
+-        {
++            if (scs->static_config.enable_variance_boost && pcs->ppcs->frm_hdr.delta_q_params.delta_q_present)
++            {
+             // adjust delta q res and normalize superblock delta q values to reduce signaling overhead
+-            normalize_sb_delta_q(pcs);
+-        }
+-    } else {
++                normalize_sb_delta_q(pcs);
++            }
++
++            r18_apply_selected_sb_cap(pcs, 1);
++        } else {
+         ppcs->loop_count = 0;
+     }
+ }
+@@ -3393,6 +3396,7 @@
+                             pcs,
+                             sb_ptr->qindex,
+                             svt_aom_get_me_qindex(pcs, sb_ptr, scs->seq_header.sb_size == BLOCK_128X128));
++                        pb_r18_md_q(pcs, ed_ctx, sb_index);
+                         // signals set once per SB (i.e. not per PD)
+                         svt_aom_sig_deriv_enc_dec_common(scs, pcs, ed_ctx->md_ctx);
+ 
+@@ -3535,6 +3539,7 @@
+                         }
+ 
+                         svt_aom_encdec_update(scs, pcs, sb_ptr, sb_index, sb_origin_x, sb_origin_y, ed_ctx);
++                        pb_r18_final_sb(pcs, sb_index, sb_ptr);
+ 
+                         ed_ctx->coded_sb_count++;
+                     }
+@@ -3553,12 +3558,15 @@
+ 
+             if (last_sb_flag) {
+                 bool do_recode = false;
++                unsigned r18_generation = pcs->ppcs->loop_count;
+                 if ((scs->static_config.rate_control_mode == SVT_AV1_RC_MODE_VBR ||
+                      scs->static_config.max_bit_rate != 0) &&
+                     scs->enc_ctx->recode_loop != DISALLOW_RECODE) {
+                     recode_loop_decision_maker(pcs, scs, &do_recode);
+                 }
+ 
++                if (!do_recode)
++                    pb_r18_accept(pcs, r18_generation);
+                 if (pcs->ppcs->picture_number == 216) {
+                     EbPictureBufferDesc *pb_recon;
+                     svt_aom_get_recon_pic(pcs, &pb_recon, ed_ctx->is_16bit);
+--- a/Source/Lib/Codec/pb_trace.c
++++ b/Source/Lib/Codec/pb_trace.c
+@@ -1,5 +1,6 @@
+ /* Scratch-only observation. No encoder state is modified. */
+ #include "pb_trace.h"
++#include "enc_dec_process.h"
+ #include "sequence_control_set.h"
+ #include <errno.h>
+ #include <fcntl.h>
+@@ -25,10 +26,59 @@
+ static uint64_t sequence, bytes_written;
+ static PictureControlSet *owner;
+ static uint64_t decode_order;
++static pthread_once_t r18_once = PTHREAD_ONCE_INIT;
++static pthread_mutex_t r18_lock = PTHREAD_MUTEX_INITIALIZER;
++static int r18_fd = -1;
++static uint64_t r18_bytes, r18_sequence;
+ static void pc_attempt(int recode);
+ static void pc_finish(void);
+ static void die(const char *s) { fprintf(stderr, "PANTHEON_BOUNDARY_FATAL: %s\n", s); _Exit(86); }
+ #define REQUIRE(c) do { if (!(c)) die(#c); } while (0)
++static void r18_init(void) {
++    const char *s = getenv("SVT_PANTHEON_R18_FD");
++    if (!s) return;
++    char *end; errno = 0; long n = strtol(s, &end, 10);
++    REQUIRE(!errno && *s && !*end && n >= 3 && n < 1048576 && n != fd);
++    struct stat st; int flags = fcntl((int)n, F_GETFL);
++    REQUIRE(flags >= 0 && (flags & O_APPEND) && (flags & O_ACCMODE) != O_RDONLY);
++    REQUIRE(!fstat((int)n, &st) && S_ISREG(st.st_mode) && st.st_size == 0);
++    r18_fd = fcntl((int)n, F_DUPFD_CLOEXEC, 3); REQUIRE(r18_fd >= 3);
++}
++static int r18_active(void) { REQUIRE(!pthread_once(&r18_once, r18_init)); return r18_fd >= 0; }
++int pb_r18_is_active(void) { return r18_active(); }
++static void r18_write(const void *v, size_t n) {
++    REQUIRE(r18_bytes + n <= UINT64_C(512) * 1024 * 1024);
++    const unsigned char *p = v;
++    while (n) { ssize_t z = write(r18_fd, p, n); if (z < 0 && errno == EINTR) continue;
++        REQUIRE(z > 0); p += z; n -= (size_t)z; r18_bytes += (uint64_t)z; }
++}
++static void r18_header(unsigned type, uint64_t picture, unsigned generation,
++                       const char *meta, uint64_t payload) {
++    uint64_t h[8] = {PB_MAGIC, 2, type, generation, picture, r18_sequence++, strlen(meta), payload};
++    REQUIRE(h[6] < 8192); r18_write(h, sizeof(h)); r18_write(meta, (size_t)h[6]);
++}
++static int r18_policy(void) {
++    const char *s = getenv("SVT_PANTHEON_R18_CAP");
++    return s && !strcmp(s, "1");
++}
++static int r18_selected(unsigned x, unsigned y) {
++    return (x < 1400 && x + 64 > 1200 && y < 750 && y + 64 > 650) ||
++           (x < 1200 && x + 64 > 950 && y < 230 && y + 64 > 50);
++}
++typedef struct {
++    int active, skipped, qinfo_count;
++    PictureControlSet *pcs;
++    EncDecContext *ed;
++    BlkStruct *blk;
++    unsigned sb, tu, x, y, offset, tx, typ, requested;
++    int actual, seg;
++} R18Tu;
++static _Thread_local R18Tu r18_tu;
++static void r18_emit(unsigned type, PictureControlSet *pcs, unsigned generation, const char *meta) {
++    REQUIRE(!pthread_mutex_lock(&r18_lock));
++    r18_header(type, pcs->ppcs->picture_number, generation, meta, 0);
++    REQUIRE(!pthread_mutex_unlock(&r18_lock));
++}
+ static void init(void) {
+     const char *s = getenv("SVT_PANTHEON_BOUNDARY_FD");
+     if (!s) return;
+@@ -49,9 +99,12 @@
+         REQUIRE(z > 0); p += z; n -= (size_t)z; bytes_written += (uint64_t)z;
+     }
+ }
++static void header_for_picture(unsigned type, uint64_t picture, const char *meta, uint64_t payload) {
++    uint64_t h[8] = {PB_MAGIC, 1, type, generation, picture, sequence++, strlen(meta), payload};
++    REQUIRE(h[6] < 4096); write_all(h, sizeof(h)); write_all(meta, (size_t)h[6]);
++}
+ static void header(unsigned type, const char *meta, uint64_t payload) {
+-    uint64_t h[8] = {PB_MAGIC, 1, type, generation, PB_TARGET, sequence++, strlen(meta), payload};
+-    REQUIRE(h[6] < 4096); write_all(h, sizeof(h)); write_all(meta, (size_t)h[6]);
++    header_for_picture(type, PB_TARGET, meta, payload);
+ }
+ static void checks(PictureControlSet *pcs) {
+     SequenceControlSet *scs = pcs->scs;
+@@ -137,6 +190,181 @@
+     header(3,meta,(uint64_t)PB_W*PB_H*3); rows(recon,0,0,PB_W,PB_H,1); ++post_count;
+     REQUIRE(!pthread_mutex_unlock(&lock));
+ }
++
++void pb_cap_application(PictureControlSet *pcs, unsigned attempt, unsigned recode,
++                        unsigned delta_q_res, const PbCapEntry *entries, unsigned count,
++                        unsigned old_delta_q_present, unsigned old_delta_q_res,
++                        unsigned old_base_qindex, unsigned old_lambda_active) {
++    if (!r18_active()) return;
++    REQUIRE(r18_policy());
++    REQUIRE(pcs->scs->static_config.pass == 2 && pcs->scs->sb_size == 64);
++    REQUIRE(count == 28 && delta_q_res == 1);
++    REQUIRE(!pthread_mutex_lock(&r18_lock));
++    char meta[4096];
++    int n = snprintf(meta, sizeof(meta),
++        "{\"picture\":%" PRIu64 ",\"decode_order\":%" PRIu64 ",\"order_hint\":%u,\"attempt\":%u,\"recode\":%u,\"delta_q_res\":%u,\"old_delta_q_present\":%u,\"old_delta_q_res\":%u,\"old_base_qindex\":%u,\"old_lambda_active\":%u,\"count\":%u,\"entries\":[",
++        (uint64_t)pcs->ppcs->picture_number, (uint64_t)pcs->ppcs->decode_order,
++        pcs->ppcs->cur_order_hint, attempt, recode, delta_q_res,
++        old_delta_q_present, old_delta_q_res, old_base_qindex, old_lambda_active, count);
++    REQUIRE(n > 0 && (size_t)n < sizeof(meta));
++    for (unsigned i = 0; i < count; ++i) {
++        int z = snprintf(meta + n, sizeof(meta) - (size_t)n,
++            "%s{\"sb\":%u,\"x\":%u,\"y\":%u,\"pre\":%u,\"post\":%u,\"selected\":%u,\"lambda_refreshed\":%u}",
++            i ? "," : "", entries[i].sb, entries[i].x, entries[i].y,
++            entries[i].pre_qindex, entries[i].post_qindex, entries[i].selected,
++            entries[i].lambda_refreshed);
++        REQUIRE(z > 0 && (size_t)n + (size_t)z < sizeof(meta)); n += z;
++    }
++    REQUIRE(n + 2 < (int)sizeof(meta)); meta[n++] = ']'; meta[n++] = '}'; meta[n] = 0;
++    r18_header(1, pcs->ppcs->picture_number, pcs->ppcs->loop_count, meta, 0);
++    REQUIRE(!pthread_mutex_unlock(&r18_lock));
++}
++void pb_r18_lambda(PictureControlSet *pcs, unsigned index, double before, double after, double original) {
++    if (!r18_active()) return;
++    REQUIRE(r18_policy() && pcs->scs->static_config.pass == 2);
++    const unsigned synth = pcs->ppcs->tpl_ctrls.synth_blk_size;
++    REQUIRE(synth == 16 || synth == 32);
++    const unsigned cols = (1920 + synth - 1) / synth;
++    const unsigned rows = (1080 + synth - 1) / synth;
++    char meta[512]; int n = snprintf(meta, sizeof(meta),
++        "{\"picture\":%" PRIu64 ",\"generation\":%u,\"factor_index\":%u,\"synth_blk_size\":%u,\"factor_cols\":%u,\"factor_rows\":%u,\"lambda_before\":%.17g,\"lambda_after\":%.17g,\"lambda_original\":%.17g}",
++        (uint64_t)pcs->ppcs->picture_number, pcs->ppcs->loop_count, index,
++        synth, cols, rows, before, after, original);
++    REQUIRE(n > 0 && (size_t)n < sizeof(meta)); r18_emit(8, pcs, pcs->ppcs->loop_count, meta);
++}
++void pb_r18_final_commit(PictureControlSet *pcs, void *ctx, unsigned sb, unsigned ordinal,
++                         const void *dest, const void *src, unsigned offset) {
++    if (!r18_active()) return;
++    REQUIRE(r18_policy());
++    REQUIRE(pcs->scs->static_config.pass == 2 && !pcs->pic_bypass_encdec);
++    REQUIRE(ctx && dest && src && sb < pcs->sb_total_count);
++    EncDecContext *ed = (EncDecContext *)ctx;
++    const EcBlkStruct *d = (const EcBlkStruct *)dest;
++    const BlkStruct *b = (const BlkStruct *)src;
++    const SuperBlock *s = pcs->sb_ptr_array[sb];
++    if (!r18_selected(s->org_x, s->org_y)) return;
++    REQUIRE(s->qindex <= 4 && d->qindex == s->qindex && b->qindex == s->qindex);
++    const BlockGeom *g = ed->blk_geom;
++    REQUIRE(g && b->tx_depth < MAX_TX_DEPTH);
++    unsigned n = g->txb_count[b->tx_depth]; REQUIRE(n <= MAX_TXB_COUNT);
++    char meta[4096]; int used = snprintf(meta, sizeof(meta),
++        "{\"picture\":%" PRIu64 ",\"generation\":%u,\"sb\":%u,\"ordinal\":%u,\"coeff_offset\":%u,"
++        "\"x\":%u,\"y\":%u,\"sb_qindex\":%u,\"block_qindex\":%u,"
++        "\"block_has_coeff\":%u,\"skip_mode\":%u,\"mds_idx\":%u,\"block_x\":%u,\"block_y\":%u,\"block_w\":%u,\"block_h\":%u,\"tx_w\":%u,\"tx_h\":%u,\"tx_depth\":%u,\"txb_count\":%u,\"eob_y\":[",
++        (uint64_t)pcs->ppcs->picture_number, pcs->ppcs->loop_count, sb, ordinal, offset,
++        s->org_x, s->org_y, s->qindex, d->qindex, b->block_has_coeff, b->skip_mode,
++        b->mds_idx, ed->blk_org_x, ed->blk_org_y, g->bwidth, g->bheight,
++        g->tx_width[b->tx_depth], g->tx_height[b->tx_depth], b->tx_depth, n);
++    REQUIRE(used > 0 && (size_t)used < sizeof(meta));
++    for (unsigned t = 0; t < n; ++t) {
++        int z = snprintf(meta + used, sizeof(meta) - (size_t)used, "%s%u",
++                         t ? "," : "", d->eob.y[t]);
++        REQUIRE(z > 0 && (size_t)used + (size_t)z < sizeof(meta)); used += z;
++    }
++    int z = snprintf(meta + used, sizeof(meta) - (size_t)used, "],\"tx_type\":[");
++    REQUIRE(z > 0 && (size_t)used + (size_t)z < sizeof(meta)); used += z;
++    for (unsigned t = 0; t < n; ++t) {
++        z = snprintf(meta + used, sizeof(meta) - (size_t)used, "%s%u",
++                     t ? "," : "", (unsigned)d->tx_type[t]);
++        REQUIRE(z > 0 && (size_t)used + (size_t)z < sizeof(meta)); used += z;
++    }
++    z = snprintf(meta + used, sizeof(meta) - (size_t)used, "]}");
++    REQUIRE(z > 0 && (size_t)used + (size_t)z < sizeof(meta)); used += z;
++    REQUIRE(!pthread_mutex_lock(&r18_lock)); r18_header(2, pcs->ppcs->picture_number,
++        pcs->ppcs->loop_count, meta, 0); REQUIRE(!pthread_mutex_unlock(&r18_lock));
++}
++void pb_r18_final_sb(PictureControlSet *pcs, unsigned sb, const SuperBlock *s) {
++    if (!r18_active()) return;
++    REQUIRE(r18_policy()); REQUIRE(pcs->scs->static_config.pass == 2 && !pcs->pic_bypass_encdec);
++    REQUIRE(sb < pcs->sb_total_count && s == pcs->sb_ptr_array[sb]);
++    if (!r18_selected(s->org_x, s->org_y)) return;
++    REQUIRE(s->qindex <= 4);
++    char meta[512]; int n = snprintf(meta, sizeof(meta),
++        "{\"picture\":%" PRIu64 ",\"generation\":%u,\"sb\":%u,\"x\":%u,\"y\":%u,\"qindex\":%u,\"final_blk_cnt\":%u}",
++        (uint64_t)pcs->ppcs->picture_number, pcs->ppcs->loop_count, sb,
++        s->org_x, s->org_y, s->qindex, s->final_blk_cnt);
++    REQUIRE(n > 0 && (size_t)n < sizeof(meta)); REQUIRE(!pthread_mutex_lock(&r18_lock));
++    r18_header(3, pcs->ppcs->picture_number, pcs->ppcs->loop_count, meta, 0);
++    REQUIRE(!pthread_mutex_unlock(&r18_lock));
++}
++void pb_r18_route(PictureControlSet *pcs, void *ctx, unsigned sb, unsigned x, unsigned y) {
++    if (!r18_active()) return;
++    REQUIRE(r18_policy()); REQUIRE(pcs->scs->static_config.pass == 2);
++    REQUIRE(ctx && sb < pcs->sb_total_count);
++    EncDecContext *ed = (EncDecContext *)ctx;
++    if (!r18_selected(x, y)) return;
++    REQUIRE(ed->md_ctx && !pcs->pic_bypass_encdec && !ed->md_ctx->bypass_encdec);
++    char meta[768]; int n = snprintf(meta, sizeof(meta),
++        "{\"picture\":%" PRIu64 ",\"generation\":%u,\"sb\":%u,\"x\":%u,\"y\":%u,\"picture_bypass\":%u,\"md_bypass\":%u,\"fixed_partition\":%u}",
++        (uint64_t)pcs->ppcs->picture_number, pcs->ppcs->loop_count, sb, x, y,
++        pcs->pic_bypass_encdec, ed->md_ctx->bypass_encdec, ed->md_ctx->fixed_partition);
++    REQUIRE(n > 0 && (size_t)n < sizeof(meta)); r18_emit(4, pcs, pcs->ppcs->loop_count, meta);
++}
++void pb_r18_md_q(PictureControlSet *pcs, void *ctx, unsigned sb) {
++    if (!r18_active()) return;
++    REQUIRE(r18_policy()); REQUIRE(ctx && sb < pcs->sb_total_count);
++    EncDecContext *ed = (EncDecContext *)ctx; const SuperBlock *s = pcs->sb_ptr_array[sb];
++    if (!r18_selected(s->org_x, s->org_y)) return;
++    REQUIRE(pcs->scs->static_config.pass == 2 && !pcs->pic_bypass_encdec && ed->md_ctx && !ed->md_ctx->bypass_encdec);
++    REQUIRE(ed->md_ctx->qp_index == s->qindex);
++    char meta[512]; int n = snprintf(meta, sizeof(meta),
++        "{\"picture\":%" PRIu64 ",\"generation\":%u,\"sb\":%u,\"x\":%u,\"y\":%u,\"sb_qindex\":%u,\"md_qindex\":%u}",
++        (uint64_t)pcs->ppcs->picture_number, pcs->ppcs->loop_count, sb, s->org_x, s->org_y,
++        s->qindex, ed->md_ctx->qp_index);
++    REQUIRE(n > 0 && (size_t)n < sizeof(meta)); r18_emit(7, pcs, pcs->ppcs->loop_count, meta);
++}
++void pb_r18_begin(PictureControlSet *pcs, void *ctx, unsigned x, unsigned y) {
++    if (r18_tu.active) REQUIRE(0);
++    memset(&r18_tu, 0, sizeof(r18_tu));
++    if (!r18_active()) return;
++    REQUIRE(r18_policy()); REQUIRE(pcs->scs->static_config.pass == 2);
++    REQUIRE(ctx); EncDecContext *ed = (EncDecContext *)ctx;
++    REQUIRE(ed->sb_index < pcs->sb_total_count && ed->blk_ptr && ed->blk_geom);
++    const SuperBlock *s = pcs->sb_ptr_array[ed->sb_index];
++    if (!r18_selected(s->org_x, s->org_y)) return;
++    REQUIRE(ed->md_ctx && !pcs->pic_bypass_encdec && !ed->md_ctx->bypass_encdec);
++    r18_tu.active = 1; r18_tu.pcs = pcs; r18_tu.ed = ed; r18_tu.blk = ed->blk_ptr;
++    r18_tu.skipped = ed->md_skip_blk || ed->blk_ptr->skip_mode;
++    r18_tu.sb = ed->sb_index; r18_tu.tu = ed->txb_itr; r18_tu.x = x; r18_tu.y = y;
++    r18_tu.offset = ed->coded_area_sb; r18_tu.tx = ed->blk_geom->txsize[ed->blk_ptr->tx_depth];
++    r18_tu.typ = ed->blk_ptr->tx_type[ed->txb_itr];
++}
++void pb_r18_skip(PictureControlSet *pcs, void *ctx, unsigned x, unsigned y) {
++    if (!r18_tu.active) pb_r18_begin(pcs, ctx, x, y);
++    if (!r18_tu.active) return;
++    REQUIRE(r18_tu.pcs == pcs && r18_tu.ed == (EncDecContext *)ctx);
++    r18_tu.skipped = 1;
++}
++void pb_r18_qinfo(PictureControlSet *pcs, void *md, unsigned requested, int actual, int seg, unsigned tx, unsigned typ) {
++    if (!r18_tu.active) return;
++    REQUIRE(r18_tu.pcs == pcs && r18_tu.ed->md_ctx == md && !r18_tu.skipped);
++    REQUIRE(seg == 0 && actual >= 0 && actual <= 255 && tx == r18_tu.tx && typ == r18_tu.typ);
++    REQUIRE(actual == pcs->sb_ptr_array[r18_tu.sb]->qindex);
++    r18_tu.requested = requested; r18_tu.actual = actual; r18_tu.seg = seg;
++    REQUIRE(++r18_tu.qinfo_count == 1);
++}
++void pb_r18_end(PictureControlSet *pcs, void *ctx, unsigned eob) {
++    if (!r18_tu.active) return;
++    REQUIRE(r18_tu.pcs == pcs && r18_tu.ed == (EncDecContext *)ctx);
++    REQUIRE(r18_tu.skipped ? !r18_tu.qinfo_count : r18_tu.qinfo_count == 1);
++    char meta[1024]; int n = snprintf(meta, sizeof(meta),
++        "{\"picture\":%" PRIu64 ",\"generation\":%u,\"sb\":%u,\"tu\":%u,\"offset\":%u,\"x\":%u,\"y\":%u,\"qindex\":%u,\"requested_qindex\":%u,\"actual_qindex\":%d,\"seg_delta\":%d,\"invoked\":%d,\"qinfo_count\":%d,\"skipped\":%d,\"eob\":%u,\"tx\":%u,\"type\":%u,\"mds_idx\":%u}",
++        (uint64_t)pcs->ppcs->picture_number, pcs->ppcs->loop_count, r18_tu.sb, r18_tu.tu,
++        r18_tu.offset, r18_tu.x, r18_tu.y, pcs->sb_ptr_array[r18_tu.sb]->qindex,
++        r18_tu.requested, r18_tu.actual, r18_tu.seg, r18_tu.qinfo_count > 0,
++        r18_tu.qinfo_count, r18_tu.skipped, eob, r18_tu.tx,
++        r18_tu.typ, r18_tu.blk->mds_idx);
++    REQUIRE(n > 0 && (size_t)n < sizeof(meta)); r18_emit(5, pcs, pcs->ppcs->loop_count, meta); memset(&r18_tu, 0, sizeof(r18_tu));
++}
++void pb_r18_accept(PictureControlSet *pcs, unsigned generation) {
++    if (!r18_active()) return;
++    REQUIRE(r18_policy()); REQUIRE(pcs->scs->static_config.pass == 2 && !pcs->pic_bypass_encdec);
++    char meta[512]; int n = snprintf(meta, sizeof(meta),
++        "{\"picture\":%" PRIu64 ",\"decode_order\":%" PRIu64 ",\"order_hint\":%u,\"generation\":%u,\"accepted\":1,\"expected_selected_sb\":28,\"sb_total_count\":%u}",
++        (uint64_t)pcs->ppcs->picture_number, (uint64_t)pcs->ppcs->decode_order,
++        pcs->ppcs->cur_order_hint, generation, pcs->sb_total_count);
++    REQUIRE(n > 0 && (size_t)n < sizeof(meta)); r18_emit(6, pcs, generation, meta);
++}
+ void pb_finish(const EbSvtAv1EncConfiguration *cfg, unsigned instances) {
+     if (!active()) return;
+     REQUIRE(!pthread_mutex_lock(&lock));
+--- a/Source/Lib/Codec/pb_trace.h
++++ b/Source/Lib/Codec/pb_trace.h
+@@ -14,6 +14,27 @@
+ int pc_qinfo(PictureControlSet *,void *,const int32_t *,unsigned,int,int,unsigned,unsigned,unsigned,unsigned,int,int,int,int,const void *,const void *);
+ void pc_stage(const char *,const int32_t *,const int32_t *,unsigned,int);
+ void pc_end(PictureControlSet *,void *,unsigned,unsigned,EbPictureBufferDesc *,unsigned);
+-void pc_commit(PictureControlSet *,void *,unsigned,unsigned,const void *);
++void pc_commit(PictureControlSet *,void *,unsigned,unsigned,const void *,const void *);
++
++typedef struct {
++    unsigned sb, x, y, pre_qindex, post_qindex;
++    unsigned selected, lambda_refreshed;
++} PbCapEntry;
++void pb_cap_application(PictureControlSet *, unsigned attempt, unsigned recode,
++                        unsigned delta_q_res, const PbCapEntry *, unsigned count,
++                        unsigned old_delta_q_present, unsigned old_delta_q_res,
++                        unsigned old_base_qindex, unsigned old_lambda_active);
++void pb_r18_final_commit(PictureControlSet *, void *, unsigned, unsigned,
++                         const void *, const void *, unsigned);
++void pb_r18_final_sb(PictureControlSet *, unsigned, const SuperBlock *);
++int pb_r18_is_active(void);
++void pb_r18_route(PictureControlSet *, void *, unsigned, unsigned, unsigned);
++void pb_r18_md_q(PictureControlSet *, void *, unsigned);
++void pb_r18_begin(PictureControlSet *, void *, unsigned, unsigned);
++void pb_r18_skip(PictureControlSet *, void *, unsigned, unsigned);
++void pb_r18_qinfo(PictureControlSet *, void *, unsigned, int, int, unsigned, unsigned);
++void pb_r18_end(PictureControlSet *, void *, unsigned);
++void pb_r18_accept(PictureControlSet *, unsigned);
++void pb_r18_lambda(PictureControlSet *, unsigned, double, double, double);
+ 
+ #endif
+--- a/Source/Lib/Codec/pc_impl.h
++++ b/Source/Lib/Codec/pc_impl.h
+@@ -75,6 +75,7 @@
+     return 0;
+ }
+ void pc_route(PictureControlSet *pcs,void *ctx,unsigned sb,unsigned x,unsigned y) {
++    pb_r18_route(pcs,ctx,sb,x,y);
+     if(pcs->ppcs->picture_number!=216 || !pc_active())return;
+     EncDecContext *ed=ctx;
+     REQUIRE(!pthread_mutex_lock(&pc_lock));
+@@ -90,6 +91,7 @@
+ void pc_begin(PictureControlSet *pcs,void *ctx,unsigned x,unsigned y,
+               EbPictureBufferDesc *source,unsigned source_offset,
+               EbPictureBufferDesc *pred,unsigned pred_offset) {
++    pb_r18_begin(pcs,ctx,x,y);
+     if(pcs->ppcs->picture_number!=216 || !pc_active())return;
+     EncDecContext *ed=ctx; const BlockGeom *g=ed->blk_geom; BlkStruct *b=ed->blk_ptr;
+     unsigned w=g->tx_width[b->tx_depth],h=g->tx_height[b->tx_depth];
+@@ -117,7 +119,10 @@
+     REQUIRE(!pthread_mutex_unlock(&pc_lock));
+ }
+ void pc_skip(PictureControlSet *pcs,void *ctx,unsigned x,unsigned y,EbPictureBufferDesc *pred) {
+-    if(pcs->ppcs->picture_number!=216 || !pc_active())return;
++    if(pcs->ppcs->picture_number!=216 || !pc_active()) {
++        pb_r18_skip(pcs,ctx,x,y);
++        return;
++    }
+     EncDecContext *ed=ctx;const BlockGeom *g=ed->blk_geom;BlkStruct *b=ed->blk_ptr;
+     REQUIRE(b->skip_mode && ed->is_16bit);
+     unsigned ix=g->tx_org_x[1][b->tx_depth][ed->txb_itr];
+@@ -154,6 +159,7 @@
+ int pc_qinfo(PictureControlSet *pcs,void *md,const int32_t *raw,unsigned requested,int actual,int seg,
+              unsigned tx,unsigned typ,unsigned depth,unsigned lambda,int skipctx,int dcctx,
+              int rdoq,int qmlevel,const void *mp,const void *qp) {
++    pb_r18_qinfo(pcs,md,requested,actual,seg,tx,typ);
+     if(!pc.live)return 0;
+     REQUIRE(pc.pcs==pcs && pc.ed->md_ctx==md && pc.raw && !pc.info && raw==pc.raw_ptr);
+     REQUIRE(tx==pc.tx && typ==pc.typ && depth==10 && actual>=0 && actual<=255);
+@@ -185,6 +191,7 @@
+     }
+ }
+ void pc_end(PictureControlSet *pcs,void *ctx,unsigned x,unsigned y,EbPictureBufferDesc *recon,unsigned eob) {
++    pb_r18_end(pcs,ctx,eob);
+     if(!pc.live)return;
+     REQUIRE(pc.pcs==pcs && pc.ed==ctx && pc.x==x && pc.y==y);
+     REQUIRE((pc.skip && !pc.raw && !pc.info && !pc.final && !eob) || (!pc.skip && pc.raw && pc.info && pc.final));
+@@ -200,7 +207,17 @@
+     pc.owner->eob=eob;pc.owner->typ=pc.ed->blk_ptr->tx_type[pc.ed->txb_itr];pc.owner->done=1;
+     REQUIRE(!pthread_mutex_unlock(&pc_lock));
+ }
+-void pc_commit(PictureControlSet *pcs,void *ctx,unsigned sb,unsigned ordinal,const void *dest) {
++void pc_commit(PictureControlSet *pcs,void *ctx,unsigned sb,unsigned ordinal,const void *dest,const void *src) {
++    if (pb_r18_is_active() && sb < 510 && ctx && dest && src) {
++        EncDecContext *r18ed = ctx;
++        BlkStruct *r18b = r18ed->blk_ptr;
++        unsigned r18off = 0;
++        REQUIRE(r18ed->blk_geom && r18b && r18b->tx_depth < MAX_TX_DEPTH);
++        for (unsigned r18t = 0; r18t < r18ed->blk_geom->txb_count[r18b->tx_depth]; ++r18t)
++            r18off += r18ed->blk_geom->tx_width[r18b->tx_depth] * r18ed->blk_geom->tx_height[r18b->tx_depth];
++        REQUIRE(r18ed->coded_area_sb >= r18off);
++        pb_r18_final_commit(pcs,ctx,sb,ordinal,dest,src,r18ed->coded_area_sb-r18off);
++    }
+     if(pcs->ppcs->picture_number!=216 || !pc_active())return;
+     EncDecContext *ed=ctx;const BlockGeom *g=ed->blk_geom;BlkStruct *b=ed->blk_ptr;
+     const EcBlkStruct *d=dest;
+--- a/Source/Lib/Codec/rc_process.c
++++ b/Source/Lib/Codec/rc_process.c
+@@ -10,6 +10,7 @@
+ * PATENTS file, you can obtain it at https://www.aomedia.org/license/patent-license.
+ */
+ #include <stdlib.h>
++#include <stdio.h>
+ 
+ #include "definitions.h"
+ #include "enc_handle.h"
+@@ -39,6 +40,7 @@
+ #include "resize.h"
+ #include "src_ops_process.h"
+ #include "enc_mode_config.h"
++#include "pb_trace.h"
+ 
+ // Specifies the weights of the ref frame in calculating qindex of non base layer frames
+ static const int non_base_qindex_weight_ref[EB_MAX_TEMPORAL_LAYERS] = {100, 100, 100, 100, 100, 100};
+@@ -1718,6 +1720,134 @@
+     }
+ }
+ 
++static void r18_fail(const char *why) {
++    fprintf(stderr, "PANTHEON_R18_CAP_FATAL: %s\n", why);
++    _Exit(86);
++}
++
++static void r18_require(bool condition, const char *why) {
++    if (!condition) r18_fail(why);
++}
++
++static bool r18_cap_enabled(const PictureControlSet *pcs) {
++    const char *v = getenv("SVT_PANTHEON_R18_CAP");
++    if (!v || strcmp(v, "1")) return false;
++    r18_require(pcs && pcs->scs, "missing picture/sequence control");
++    r18_require(pcs->scs->static_config.pass == ENC_SECOND_PASS,
++                "cap requested outside second pass");
++    r18_require(!pcs->pic_bypass_encdec, "cap requested on bypass EncDec picture");
++    return true;
++}
++
++void r18_apply_selected_sb_cap(PictureControlSet *pcs, unsigned recode) {
++    if (!r18_cap_enabled(pcs)) return;
++    SequenceControlSet *scs = pcs->scs;
++    PictureParentControlSet *ppcs = pcs->ppcs;
++    r18_require(scs->sb_size == 64 && scs->seq_header.sb_size == BLOCK_64X64,
++                "unsupported SB geometry");
++    r18_require(scs->static_config.source_width == 1920 &&
++                scs->static_config.source_height == 1080 &&
++                scs->static_config.encoder_bit_depth == 10 &&
++                scs->static_config.encoder_color_format == 1 &&
++                pcs->frame_width == 1920 && pcs->sb_total_count == 510 &&
++                ppcs->av1_cm->frm_size.frame_width == 1920 &&
++                ppcs->av1_cm->frm_size.frame_height == 1080,
++                "fixture geometry/depth changed");
++    r18_require(pcs->ppcs->frame_superres_enabled == 0 && pcs->ppcs->frame_resize_enabled == 0,
++                "resize or superres enabled");
++    r18_require(pcs->ppcs->frm_hdr.segmentation_params.segmentation_enabled == 0,
++                "segmentation ALT-Q is enabled");
++    const unsigned old_present = ppcs->frm_hdr.delta_q_params.delta_q_present;
++    const unsigned old_res = ppcs->frm_hdr.delta_q_params.delta_q_res;
++    const unsigned old_base = ppcs->frm_hdr.quantization_params.base_q_idx;
++    const unsigned old_lambda = ppcs->blk_lambda_tuning;
++    const unsigned old_picture_qp = pcs->picture_qp;
++    const unsigned old_parent_qp = ppcs->picture_qp;
++    const unsigned old_public_qp = scs->static_config.qp;
++    PbCapEntry entries[28]; unsigned count = 0; uint8_t before[510];
++    bool selected[510] = {false};
++    for (unsigned i = 0; i < pcs->sb_total_count; ++i) {
++        r18_require(pcs->sb_ptr_array[i] &&
++                    pcs->sb_ptr_array[i]->org_x == (i % 30) * 64 &&
++                    pcs->sb_ptr_array[i]->org_y == (i / 30) * 64,
++                    "SB geometry/ID mismatch");
++        before[i] = pcs->sb_ptr_array[i]->qindex;
++    }
++    for (unsigned i = 0; i < pcs->sb_total_count; ++i) {
++        SuperBlock *sb = pcs->sb_ptr_array[i];
++        const unsigned x = sb->org_x, y = sb->org_y;
++        const bool hit = (x < 1400 && x + 64 > 1200 && y < 750 && y + 64 > 650) ||
++                         (x < 1200 && x + 64 > 950 && y < 230 && y + 64 > 50);
++        const unsigned pre = sb->qindex;
++        if (!hit) continue;
++        r18_require(count < 28, "selected SB count exceeds 28");
++        entries[count++] = (PbCapEntry){.sb=i,.x=x,.y=y,.pre_qindex=pre,
++            .post_qindex=pre > 4 ? 4 : pre,.selected=1,.lambda_refreshed=0};
++        r18_require(entries[count-1].post_qindex != 0, "selected SB normalized to lossless qindex");
++        selected[i] = true;
++        sb->qindex = (uint8_t)entries[count-1].post_qindex;
++    }
++    r18_require(count == 28, "fixed ROI did not select exactly 28 SBs");
++    for (unsigned i = 0; i < pcs->sb_total_count; ++i) {
++        if (!selected[i]) r18_require(pcs->sb_ptr_array[i]->qindex == before[i],
++                                    "unselected SB qindex changed");
++    }
++    pcs->ppcs->frm_hdr.delta_q_params.delta_q_present = 1;
++    pcs->ppcs->frm_hdr.delta_q_params.delta_q_res = 1;
++    /* Refresh an already active TPL lambda path. Do not enable a previously
++       inactive whole-picture path merely because the outer TPL gate was true. */
++    if (old_lambda) {
++        r18_require(scs->static_config.enable_adaptive_quantization == 2 &&
++                    ppcs->tpl_ctrls.enable && ppcs->r0 != 0 &&
++                    ppcs->r0_based_qps_qpm && ppcs->tpl_is_valid == 1 &&
++                    ppcs->pa_me_data && ppcs->enhanced_unscaled_pic &&
++                    ppcs->enhanced_unscaled_pic->width == 1920,
++                    "active lambda path lacks expected original TPL factors");
++        const unsigned step = ppcs->tpl_ctrls.synth_blk_size == 32 ? 32 : 16;
++        const unsigned cols = 1920 / step;
++        const unsigned rows = (ppcs->av1_cm->mi_rows * 4 + step - 1) / step;
++        const unsigned n = rows * cols;
++        r18_require(n && n <= 8160 && rows * step <= 1088, "TPL factor geometry");
++        double *const factors = ppcs->pa_me_data->tpl_sb_rdmult_scaling_factors;
++        double *const original = ppcs->pa_me_data->tpl_rdmult_scaling_factors;
++        r18_require(factors && original, "missing TPL arrays");
++        double *old_factors = malloc(n * sizeof(*old_factors));
++        double *old_original = malloc(n * sizeof(*old_original));
++        r18_require(old_factors && old_original, "TPL snapshot allocation");
++        memcpy(old_factors, factors, n * sizeof(*old_factors));
++        memcpy(old_original, original, n * sizeof(*old_original));
++        for (unsigned i = 0; i < count; ++i) {
++            sb_setup_lambda(pcs, pcs->sb_ptr_array[entries[i].sb]);
++            entries[i].lambda_refreshed = 1;
++        }
++        r18_require(!memcmp(old_original, original, n * sizeof(*old_original)),
++                    "original TPL factors changed");
++        for (unsigned i = 0; i < n; ++i) {
++            const unsigned x = (i % cols) * step, y = (i / cols) * step;
++            const unsigned sb = (y / 64) * 30 + x / 64;
++            r18_require(sb < 510, "TPL factor outside SB domain");
++            if (selected[sb]) {
++                r18_require(isfinite(factors[i]) && factors[i] > 0 &&
++                            isfinite(original[i]) && original[i] > 0,
++                            "invalid selected TPL factor");
++                pb_r18_lambda(pcs, i, old_factors[i], factors[i], original[i]);
++            } else {
++                r18_require(!memcmp(&old_factors[i], &factors[i], sizeof(double)),
++                            "unselected TPL factor changed");
++            }
++        }
++        free(old_factors);
++        free(old_original);
++    }
++    r18_require(ppcs->blk_lambda_tuning == old_lambda &&
++                ppcs->frm_hdr.quantization_params.base_q_idx == old_base &&
++                pcs->picture_qp == old_picture_qp && ppcs->picture_qp == old_parent_qp &&
++                scs->static_config.qp == old_public_qp,
++                "cap changed frame/public QP or lambda activation");
++    pb_cap_application(pcs, ppcs->loop_count, recode, 1, entries, count,
++                       old_present, old_res, old_base, old_lambda);
++}
++
+ void lowq_taper(PictureControlSet *pcs) {
+     PictureParentControlSet *ppcs_ptr = pcs->ppcs;
+     SequenceControlSet      *scs      = pcs->ppcs->scs;
+@@ -3728,6 +3858,8 @@
+                 // adjust delta q res and normalize superblock delta q values to reduce signaling overhead
+                 normalize_sb_delta_q(pcs);
+             }
++
++            r18_apply_selected_sb_cap(pcs, 0);
+ 			
+             if (scs->static_config.rate_control_mode && !is_superres_recode_task) {
+                 svt_aom_update_rc_counts(pcs->ppcs);

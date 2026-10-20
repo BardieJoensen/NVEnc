@@ -1,0 +1,2 @@
+SVT-AV1-PSYEX v3.0.2-B-9-g59d1a0256-dirty (release)
+PSYEX Release: [32mB[0m

@@ -1,0 +1,35 @@
+{
+  "status": "source_prepared_not_built",
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/freeze_source.py",
+    "size": 2980,
+    "sha256": "99549bdc048a98cd4f14b3c6593cacab1b4602a4f62e8ce6b9e5c1596bb8b0e2"
+  },
+  "base_manifest": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/source-manifest.json",
+    "size": 249089,
+    "sha256": "c4a264dfa50cf24e5411c27719cf9e7ac118357ee8f0ee133e5a371854065b55"
+  },
+  "base": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/source",
+  "source": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r18-cap/source",
+  "manifest": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-freeze-1/source-manifest.json",
+    "size": 249090,
+    "sha256": "f405193d6b35d74919d452457e9b8c93e52938ebbf184dda07c7622180af75ca"
+  },
+  "patch": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-freeze-1/r18-cap.patch",
+    "size": 32673,
+    "sha256": "5f03edf1ba320c84006e65484e88742ffb60b2de422b73b10346ea90ca9ed5d0"
+  },
+  "changed_files": [
+    "Source/Lib/Codec/coding_loop.c",
+    "Source/Lib/Codec/enc_dec_process.c",
+    "Source/Lib/Codec/pb_trace.c",
+    "Source/Lib/Codec/pb_trace.h",
+    "Source/Lib/Codec/pc_impl.h",
+    "Source/Lib/Codec/rc_process.c"
+  ],
+  "files": 1790,
+  "reproduction": "Copy the verified R11 source, then apply r18-cap.patch with patch -p1 in that copy. Verify the entire manifest before building."
+}
