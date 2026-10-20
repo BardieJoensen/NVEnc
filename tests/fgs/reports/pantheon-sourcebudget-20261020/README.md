@@ -113,3 +113,10 @@ but still fails shirt texture:62.79%sourceHF,ACFerror.0821. Independent arrays
 and metrics pass; q1 remains nonlossless and has no encoded-rate claim. Stop
 local precision sweeps. The [R14 source contract](ROUND14_SOURCE_CONTRACT.md)
 isolates original input samples from retained transform/skip decisions next.
+
+The [R14 original-source replay](PSYEX_SOURCE.md) recovers shirt amplitude to
+86.50% of source and passes local ACF, but still misses the amplitude gate.
+Every new native path and independent reconstruction passes. It identifies
+material input-processing loss while retaining decision/support limitations.
+The next discriminator is a real source-off, near-fine precision bundle with
+actual quantizer and packet-cost verification; no practical candidate exists.

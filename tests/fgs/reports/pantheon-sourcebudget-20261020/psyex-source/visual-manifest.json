@@ -1,0 +1,86 @@
+{
+  "status": "complete",
+  "generated_utc": "2026-10-20T17:07:58.672737+00:00",
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-source-r14/package.py",
+    "sha256": "453ee2abae2fddf0a2c793b1874cdf042592fc1d106f4dcf03328989e935fb3c",
+    "size": 5919
+  },
+  "result": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-source-r14/run-1/result.json",
+    "sha256": "0dcfb0f808ae9a34d0c707de828a4dd5ad88cc23a2bda3c0971585a0476008b8",
+    "size": 3499616
+  },
+  "arrays": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-source-r14/run-1/native-arrays.npz",
+    "sha256": "c8bdbaf904334a00c710ae89d34d65272af0b50be5898b2c18c8679226821592",
+    "size": 1518090
+  },
+  "units": "8bit luma rounded from exact native10bit/4; native-size, no resampling",
+  "playback": false,
+  "rois": {
+    "shirt": {
+      "xywh": [
+        1200,
+        650,
+        200,
+        100
+      ],
+      "panel": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-source-r14/package-1/shirt-6panel.png",
+        "sha256": "9402038c0e6fbd47c0a6f0c384a5b499c2dcf55a760f66e679866b9ab78e54bf",
+        "size": 34180
+      },
+      "stages": [
+        "original",
+        "coding_input",
+        "captured_raw",
+        "captured_q1",
+        "original_raw",
+        "original_q1"
+      ]
+    },
+    "background": {
+      "xywh": [
+        950,
+        50,
+        250,
+        180
+      ],
+      "panel": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-source-r14/package-1/background-6panel.png",
+        "sha256": "0e6441e465e1cb96eb30757da8ffd595399cbbf07c75a7848710b8910b654988",
+        "size": 62472
+      },
+      "stages": [
+        "original",
+        "coding_input",
+        "captured_raw",
+        "captured_q1",
+        "original_raw",
+        "original_q1"
+      ]
+    },
+    "face": {
+      "xywh": [
+        160,
+        600,
+        500,
+        480
+      ],
+      "panel": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-source-r14/package-1/face-6panel.png",
+        "sha256": "d509a10798c1a4ff3bfff506a44ab3b0c571312908451dbdd1db33fcee7bb7e7",
+        "size": 400086
+      },
+      "stages": [
+        "original",
+        "coding_input",
+        "captured_raw",
+        "captured_q1",
+        "original_raw",
+        "original_q1"
+      ]
+    }
+  }
+}

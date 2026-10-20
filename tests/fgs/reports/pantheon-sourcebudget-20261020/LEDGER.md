@@ -537,3 +537,15 @@ against prior tested policies; reviewer independently constrains the next test.
   sameq1/predictor/partition/TX/QM and720unchangedowners. Newforward/newlibrary
   controls require allcapturedcoefficients and R13q1arrays exactlybeforeintervention.
   Sourceonlydistinction comesbefore realTF-off policy (whichalsochangesreferences).
+
+- R14 completed and independently accepted: all captured/new native controls
+  exact. Original-source q1 raises shirtHF62.79→86.50%source and ACFerror
+  .08207→.04132; raw88.89% still fails amplitude. No legal encode/rate claim.
+  Unchanged support and retained64TX remain specific suspects. Full original
+  and coding-input references retained; no quiet/playback inference.
+- auto R15: choose one actual TF-off plus near-fine public-QP bundle before
+  new candidate-RD instrumentation. It measures legal preservation and actual
+  cost with changing decisions, addressing a gap local replays cannot close.
+  Observe actual target quantizers; fresh two-pass statistics; new decoder,
+  color, packet and GPU/full-window validation. Overshoot is diagnostic only;
+  practical ceiling remains original rate. No acceptance criterion changes.

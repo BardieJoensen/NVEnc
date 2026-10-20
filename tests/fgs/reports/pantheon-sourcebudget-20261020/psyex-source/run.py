@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+"""Execute R14 with bounded CPU and cross-bound inner/outer receipts."""
+import datetime as dt,hashlib,json,subprocess,time,sys
+from pathlib import Path
+P=Path(__file__).resolve().parent;ROOT=P.parents[1];PY=ROOT/'analysis-venv/bin/python'
+CONTRACT=Path('/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/ROUND14_SOURCE_CONTRACT.md')
+EXPECTED='181ce1e3c9d9c2b55497da12bcbf10c56ce79f1c3f35fa2d0dca91f0f6d7ad59'
+def ident(p):
+ p=Path(p).resolve()
+ with p.open('rb') as f:s=hashlib.file_digest(f,'sha256').hexdigest()
+ return dict(path=str(p),sha256=s,size=p.stat().st_size)
+def main():
+ out=P/'run-1';log=P/'run-1.log';rp=P/'run-1-execution.json'
+ assert not any(p.exists() for p in (out,log,rp))
+ assert ident(P/'experiment.py')['sha256']==EXPECTED
+ paths=[Path(__file__),P/'experiment.py',P/'native.c',P/'build.py',P/'build-1/native.so',P/'build-1/receipt.json',CONTRACT,PY,Path('/usr/bin/nice'),Path('/usr/bin/taskset'),ROOT/'worker/psyex-r13-fine/run-1/result.json',ROOT/'worker/psyex-r13-fine/run-1/q1-arrays.npz']
+ argv=['/usr/bin/nice','-n','10','/usr/bin/taskset','-c','8-11',str(PY),str(P/'experiment.py'),str(out)]
+ rec=dict(status='prepared',argv=argv,wrapper_argv=sys.argv,inputs_before=[ident(p) for p in paths],started_utc=dt.datetime.now(dt.timezone.utc).isoformat())
+ def save():rp.write_text(json.dumps(rec,indent=2)+'\n')
+ save();start=time.monotonic()
+ try:
+  with log.open('x') as f:r=subprocess.run(argv,stdout=f,stderr=subprocess.STDOUT)
+  rec.update(returncode=r.returncode,seconds=time.monotonic()-start,log=ident(log));save();assert r.returncode==0
+  after=[ident(p) for p in paths];assert rec['inputs_before']==after
+  inner=json.loads((out/'receipt.json').read_text());result=json.loads((out/'result.json').read_text())
+  assert inner['status']=='complete' and result['status']=='admitted_diagnostic'
+  assert inner['result']==ident(out/'result.json') and inner['arrays']==ident(out/'native-arrays.npz')==result['array_file']
+  for k,p in [('script',P/'experiment.py'),('library',P/'build-1/native.so'),('contract',CONTRACT),('build',P/'build-1/receipt.json')]:assert result[k]==ident(p)
+  rec.update(status='complete',inputs_after=after,inner_receipt=ident(out/'receipt.json'),result=inner['result'],arrays=inner['arrays'])
+ except BaseException as e:rec.update(status='failed',error=repr(e));raise
+ finally:rec.update(ended_utc=dt.datetime.now(dt.timezone.utc).isoformat());save()
+ print(json.dumps({k:rec[k] for k in ('status','seconds','result','arrays')}))
+if __name__=='__main__':
+ if not __debug__:raise SystemExit('optimized Python prohibited')
+ main()

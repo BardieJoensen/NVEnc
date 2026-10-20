@@ -1,0 +1,9 @@
+{
+  "status": "exact_baseline",
+  "tokens": 2907,
+  "invoked": 2187,
+  "unchanged": 720,
+  "all_forward_C_runtime_capture_exact": true,
+  "all_raw_inverse_exact": true,
+  "all_q1_C_runtime_R13_exact": true
+}
