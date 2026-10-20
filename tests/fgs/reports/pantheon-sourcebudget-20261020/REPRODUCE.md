@@ -230,3 +230,50 @@ original frame/plane bindings, and exact equality to the independently parsed
 363 coded-event keys. The validator pins the reviewed build and reconstruction
 receipts. A newly rebuilt binary or revised trace requires refreshed provenance
 and review before updating those pins; equality and coverage gates remain.
+
+
+## Round5 controlled source-pixel contrast
+
+The complete source/build is `worker/aom-neutralize-r5b`, constructed from all
+1344 official regular archive paths plus the seven pinned Ubuntu patches.
+Apply [aom-source-neutralize.patch](aom-source-neutralize.patch) to that patched
+baseline. It includes dual-stage trace instrumentation and the source-pointer
+contrast; do not apply the Round4 trace patch first. Keep generated build output
+outside source. The preserved `build_runner.sh` captures exact configure/build
+commands and requires reviewed-source equality before/after, the R4 generated
+configuration hash and the versioned library. Failed preparation `r5` is kept
+separately; its1294-file subset is insufficient to build.
+
+The reviewed successful build receipt is SHA256
+`4ce837abcd6ffc55a1e8a17520dfb2c6079732899d035266a01955d0e21d0a8d`;
+private library SHA256
+`1f800a96318b7bcd5e824e923eb01e55f2ddfa89a7995da81bef2ac4beea8b25`.
+Both arms use this same library. The environment switch is process-local;
+no system library or production binary is replaced. Replay uses the preserved
+installed first-pass stats and reports only actual instrumented pass-two time.
+The full two-pass production cost is not inferred from this replay.
+
+Using the preserved build/receipt and fresh unused run tags:
+
+```bash
+python3 "$REPORT/replay_aom_neutralize.py" off off-1
+python3 "$REPORT/validate_aom_neutralize.py" off-1 \
+  "$PANTHEON_SOURCEBUDGET_ROOT/parent/source-neutralize/parser-control"
+python3 "$REPORT/replay_aom_neutralize.py" on on-1
+python3 "$REPORT/parse_aom_headers.py" \
+  "$PANTHEON_SOURCEBUDGET_ROOT/parent/source-neutralize/runs/on-1/command.json" \
+  "$PANTHEON_SOURCEBUDGET_ROOT/parent/source-neutralize/coverage-on-1"
+python3 "$REPORT/validate_aom_neutralize.py" on-1 \
+  "$PANTHEON_SOURCEBUDGET_ROOT/parent/source-neutralize/coverage-on-1" off-1
+```
+
+`parser-control` was generated with the reviewed generic parser against the
+byte-identical Round4 stream; all336 packet identities and490 semantic header
+records match the independent original parse. The validator requires off stream
+identity before reusing that population. On coverage is freshly bound to its
+own run receipt. The initial contrast requires unchanged request11671. A later
+rate-calibrated arm would need separately labeled admission; current validation
+does not silently permit a different TBR.
+
+The disabled control completed and passed all363 coded-event/source bindings.
+The enabled arm remains under investigation until its separate result is saved.

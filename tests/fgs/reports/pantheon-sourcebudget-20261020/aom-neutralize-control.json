@@ -1,0 +1,73 @@
+{
+  "status": "admitted",
+  "arm": "off",
+  "summary": {
+    "selected": {
+      "events": 363,
+      "changed_events": 32,
+      "different_pointer_events": 33,
+      "unequal_samples": [
+        76672,
+        34822,
+        33222
+      ],
+      "maxabs": [
+        2,
+        2,
+        2
+      ]
+    },
+    "effective": {
+      "events": 363,
+      "changed_events": 32,
+      "different_pointer_events": 33,
+      "unequal_samples": [
+        76672,
+        34822,
+        33222
+      ],
+      "maxabs": [
+        2,
+        2,
+        2
+      ]
+    }
+  },
+  "exact_installed_ivf": true,
+  "all336_source_indices_bound": true,
+  "all_coded_events_matched": true,
+  "selected_effective_bijection": true,
+  "provenance": {
+    "script": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/validate_aom_neutralize.py",
+      "sha256": "0de67b3d8666e620054c76b3a904ec98219bac123eb1c1e7c4bd2bf26e737d74"
+    },
+    "run": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/runs/off-1/command.json",
+      "sha256": "01b601372a094a58813b7be2b090f5b2f8e6b894d4f5d5b84b933f370ff91234"
+    },
+    "build": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-neutralize-r5b/build.json",
+      "sha256": "4ce837abcd6ffc55a1e8a17520dfb2c6079732899d035266a01955d0e21d0a8d"
+    },
+    "inputs": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-boundary/input-planes.json",
+      "sha256": "d4e7e47ac1c042bd3bbfcba559b55964e8389999cddd6c1b330c9a9c706146de"
+    },
+    "coverage_receipt": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/parser-control/receipt.json",
+      "sha256": "6b6cff664fc9d60849ac5054531358855e8dbb631cffb71d736b3235b4c8a31d"
+    },
+    "coverage": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/parser-control/parsed-events.json",
+      "sha256": "34958123add027a4bd649c6212d0cb9184bf31117b5c19dc117730d2ed9ff0d0"
+    }
+  },
+  "scope": "Disabled control admission only; on-arm and quality result pending.",
+  "playback_observed": false,
+  "full_validation": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/off-1-validated.json",
+    "sha256": "470cbbb1665197ec321bc88282545ea846fa2754dd563333b48a9c0cd2cf581e"
+  },
+  "pass2_wall_seconds": 371.44367058499483
+}

@@ -200,3 +200,22 @@ Parent checked every bound artifact and manifest identity. The measured stream
 neutrality and source-boundary observations are unaffected; source provenance
 and reproduction instructions are now complete. R5 uses all1344 archive paths
 and build output outside its source tree.
+
+
+### Round5 preflight and disabled control
+
+Independent review accepted the source-pointer substitution and stack-local
+dual trace design. Parent corrected a worker build draft missing Ninja and the
+required high-bitdepth-decoder flag; reviewer then required exact pre/post source
+manifests and a mandatory versioned library. The first configure failed on the
+incomplete1294-file inventory. The full1344-file correction and supplemental R4
+source audit are described above; successful r5b build/config/source hashes were
+independently verified. No failed draft generated encode evidence.
+
+Reviewer required the initial on/off TBR equality, pinned original frame/plane
+map, reviewed dynamic-header parser and FFmpeg identities, and current on-run
+coverage provenance. Parent implemented them before admission. The off control
+produces the exact installed IVF and363 uniquely paired selected/effective
+records, with the original32 changed-source events and unchanged sample counts.
+Thus the instrumentation/control transport is neutral for this fixed command.
+The enabled sample intervention and quality outcome are separately pending.

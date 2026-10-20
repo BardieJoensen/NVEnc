@@ -301,3 +301,46 @@ analysis remain possible pathways. Independent outcome review accepts this scope
   validate achieved input replacement and actual packet rate before quality work.
   Worker coefficient-path inventory is preserved as a conditional later tool,
   not an automatically authorized optimization sweep.
+
+
+### Round5: coding-source pixel neutralization
+
+Primary question: do the measured sparse source-sample changes indirectly cause
+material texture loss through reference/coding feedback? Preserve filtering,
+GF/TPL/show-existing analysis, public PSNR policy and installed first-pass stats.
+Immediately before `av1_encode`, pass a stack copy of `EncodeFrameInput`; the
+on arm substitutes the saved original source pointer. No sample-buffer writes.
+The same binary's off arm retains selected source, and must exactly reproduce
+the admitted installed IVF. Both arms trace selected and effective samples.
+
+Pre-hook order/refresh fields are not yet current. Pair the two stages by unique
+(original whole MD5, GF index, update type, parallel level), requiring a dynamic
+bijection. Only effective records match the independently parsed bitstream
+header population. All336 original frames and every coded event must bind;
+all on-arm effective planes must be exact originals, and pre-selected changes
+must show a nontrivial intervention. A changed population is allowed and must
+be derived afresh. Invalid pairing or bypass coverage stops interpretation.
+
+Fresh tree/build is worker-owned `worker/aom-neutralize-r5b`; parent owns the C
+patch, replay and validator; reviewer independently audits implementation,
+coverage and outcome. R4 sources/receipts stay immutable. Build/encodes are
+bounded to nice10 CPU0–7/four threads, with serialized GPU scoring if needed.
+Worker initially omitted two required CMake options; parent required correction
+before building. No production changes or recursive delegation are authorized.
+
+First compare exact IVF at unchanged request11671. If identical, reuse quality
+and close this sample route for this policy. If changed, enforce actual MKV
+source99–100% and pairwise1% before decisive quality comparison; calibrate only
+rate if necessary. All frozen texture/control/playback gates remain unchanged.
+This is a source-pixel contrast with downstream decision feedback, not fixed
+prediction/partition, not all temporal filtering disabled, and not yet a repair.
+
+
+Round5 preparation correction: first configure failed before compilation because
+the prior source-domain manifest excluded upstream `build/cmake` files along
+with generated build output. The archive contains1344 regular files; the1294
+subset omitted44 build-support files and6 README files. Preserve failed r5;
+reconstruct r5b from all archive member paths with no name-based exclusions,
+apply the same7 Ubuntu patches and unchanged reviewed intervention. Independent
+review audits the50 omitted files against R4 trees. This fixes provenance and
+reproduction completeness; it does not alter the measured R4 bitstream evidence.
