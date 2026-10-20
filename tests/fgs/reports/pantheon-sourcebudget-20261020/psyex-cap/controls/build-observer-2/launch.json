@@ -1,0 +1,53 @@
+{
+  "status": "complete",
+  "argv": [
+    "/usr/bin/bash",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/build_runner.sh"
+  ],
+  "inputs_before": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/execute_build.py",
+      "size": 1923,
+      "sha256": "7f366b22bcd3d38bd87e32c7af58753925a4efd99920280fc7b47248531b6a32"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/preparation.json",
+      "size": 1255,
+      "sha256": "9e76dd20d762bf2270ec19cbc8c874d829dccbc0d1c31a45eaf913919d9e9cef"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/build_runner.sh",
+      "size": 8689,
+      "sha256": "221b6b4de6bbe71dd608275bec324a9f96ea83430f821abc675c30c73b20b778"
+    },
+    {
+      "path": "/usr/bin/bash",
+      "size": 1446024,
+      "sha256": "bc5945feb8bd26203ebfafea5ce1878bb2e32cb8fb50ab7ae395cfb1e1aaaef1"
+    }
+  ],
+  "returncode": 0,
+  "seconds": 52.32351351995021,
+  "inputs_after": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/execute_build.py",
+      "size": 1923,
+      "sha256": "7f366b22bcd3d38bd87e32c7af58753925a4efd99920280fc7b47248531b6a32"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/preparation.json",
+      "size": 1255,
+      "sha256": "9e76dd20d762bf2270ec19cbc8c874d829dccbc0d1c31a45eaf913919d9e9cef"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/build_runner.sh",
+      "size": 8689,
+      "sha256": "221b6b4de6bbe71dd608275bec324a9f96ea83430f821abc675c30c73b20b778"
+    },
+    {
+      "path": "/usr/bin/bash",
+      "size": 1446024,
+      "sha256": "bc5945feb8bd26203ebfafea5ce1878bb2e32cb8fb50ab7ae395cfb1e1aaaef1"
+    }
+  ]
+}

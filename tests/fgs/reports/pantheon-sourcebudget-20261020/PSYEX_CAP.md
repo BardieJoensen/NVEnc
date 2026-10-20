@@ -1,8 +1,8 @@
 # R18 absolute local quantizer cap
 
-Status: private source/build preparation verified; encode controls and outcome
-admission remain in progress. **No preservation, packet-cost, rate feasibility,
-playback or repair result is claimed here.**
+Status: policy controls, actual packet accounting, all-frame decoder/color
+validation and independent display binding pass. Quantizer-trace and quality
+admission remain in progress. **No preservation or repair result is claimed.**
 
 The [contract](ROUND18_ABSOLUTE_CAP_CONTRACT.md) tests a real qindex cap of4 on28
 fixed64x64 superblocks intersecting the E05 shirt and background regions. The
@@ -46,9 +46,43 @@ The parent corrected the lambda-path activation gate and the final skip branch;
 the reviewer verified the final source. Rejected drafts remain in active scratch
 for later archival. No production source, installed binary or configuration changed.
 
-Next controls: cap-disabled byte identity against R16; exact fresh first-pass
-statistics; capped output; observer-neutral replay. Then require all-picture,
-all-attempt delivered-q/committed geometry/lambda evidence, independently bound
-native coefficients and decoder identity, actual remuxed packet rates, and the
-full established quality/temporal/control window. A successful process alone
-does not admit the intervention or its quality.
+The [completed control package](psyex-cap/controls/manifest.json) preserves
+baseline/pass1/cap receipts, the failed first trace, media validation, syntax
+binding and the separately reviewed observer correction/build.
+
+| Measurement | Result |
+|---|---:|
+| Cap-disabled control | Exact R16 IVF and all 336 reconstruction frames |
+| Fresh first-pass statistics | Exact prior statistics |
+| Fresh first pass | 65.209987 s |
+| Cap second pass, observer disabled | 149.134597 s |
+| Total two-pass encoding time | 214.344583 s |
+| Full 336-frame remuxed video packet rate | 14.0277971 Mbps |
+| Scored 240-frame packet rate | 12.6716968 Mbps |
+| Original scored packet rate | 9.6765224 Mbps |
+| Scored rate relative to original | 1.3095300 (30.9530% above ceiling) |
+
+All 336 whole-YUV frame hashes agree between encoder reconstruction, dav1d,
+libaom and NVDEC. Dimensions, limited BT.709, 10-bit planes, timestamps and
+packet counts pass. Independent header/ref-slot mapping finds 502 frame headers,
+336 coded pictures and 166 show-existing events. Display 216 resolves to coded
+ordinal 210, event 314, order hint 88; this permits reuse of the existing native
+coefficient observer. It does not yet establish native coefficient agreement.
+
+The faster observed cap pass is recorded without a causal explanation; decision
+and recode behavior can change under this intervention. The rate exceeds the
+user's practical ceiling and is diagnostic only. No requested-rate inference or
+coefficient count is used as coded-bit evidence.
+
+The first observer replay failed after 4.199 s with an invalid coefficient-cursor
+subtraction. Its partial trace is rejected. The [control addendum](ROUND18_OBSERVER_CORRECTION.md)
+explains why the cursor is conditional, specifies a committed-layout prefix
+correction and separates policy-build from observer-build provenance. Independent
+review verified the observer-only three-file diff. The corrected private build
+completed; its fresh replay is now required to reproduce the immutable cap IVF,
+all 336 reconstruction frames and statistics exactly. No acceptance gate changed.
+
+Next require all-picture/all-attempt delivered-q, committed geometry and lambda
+evidence; native coefficient joins; and the established full quality, temporal
+and control window. Source-budget redistribution is conditional on preservation.
+No playback has been observed and no production change is proposed.

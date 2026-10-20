@@ -630,3 +630,12 @@ against prior tested policies; reviewer independently constrains the next test.
   Cap-disabled baseline is running. No runtime cap delivery, quality or rate
   conclusion yet. New trace admission is being strengthened for every-attempt
   q/skip/pixel denominators, lambda population and parent invocation ancestry.
+
+- R18 controls: cap-disabled IVF/all336 recon and fresh first-pass stats exact.
+  Cap1 completed in 65.209987+149.134597=214.344583s. Actual remux scored rate
+  12.6716968Mbps, 130.9530% of source; above-ceiling diagnostic, no quality claim.
+  All336 app/dav1d/libaom/NVDEC/color/packet checks and independent display mapping
+  pass. First trace failed on conditional coefficient cursor subtraction; partial
+  trace rejected. Auto correction uses prior committed-block geometry in a fresh
+  observer-only build, with exact cap1 output neutrality required. Separate build
+  provenance and original control reuse independently reviewed; no gate weakened.

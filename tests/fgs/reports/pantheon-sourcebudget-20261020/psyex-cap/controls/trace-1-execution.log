@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/run.py", line 292, in <module>
+    main()
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/run.py", line 251, in main
+    assert process.returncode == 0
+           ^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

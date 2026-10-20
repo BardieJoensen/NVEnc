@@ -1,0 +1,24 @@
+{
+  "pins": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/completed-build-pins.json",
+    "size": 4936,
+    "sha256": "b8f5e1353621974462b9d8840faaa53282c77312e470816932c80c6aae8cce82"
+  },
+  "chain": {
+    "prepare": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2-preparation-execution.json",
+      "size": 2993,
+      "sha256": "a6fe5e20200e6e22b14473eab9efccf1b5eeb95ceb5cc60c876d06aedd522073"
+    },
+    "build": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2-execution.json",
+      "size": 2768,
+      "sha256": "31d6dc458e9479729b88510acb90a6a575d7e1a718d09503bde95faa2cb858fa"
+    },
+    "pin": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2-pin-execution.json",
+      "size": 3121,
+      "sha256": "d722b0fb32cea12db3534f5204fe8a45c8ea0559ddb27720d59e2711bdc88bbd"
+    }
+  }
+}

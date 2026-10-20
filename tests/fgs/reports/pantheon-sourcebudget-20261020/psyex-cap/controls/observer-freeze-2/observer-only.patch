@@ -1,0 +1,73 @@
+--- a/Source/Lib/Codec/pb_trace.c
++++ b/Source/Lib/Codec/pb_trace.c
+@@ -2,6 +2,7 @@
+ #include "pb_trace.h"
+ #include "enc_dec_process.h"
+ #include "sequence_control_set.h"
++#include "utility.h"
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <inttypes.h>
+@@ -233,7 +234,7 @@
+     REQUIRE(n > 0 && (size_t)n < sizeof(meta)); r18_emit(8, pcs, pcs->ppcs->loop_count, meta);
+ }
+ void pb_r18_final_commit(PictureControlSet *pcs, void *ctx, unsigned sb, unsigned ordinal,
+-                         const void *dest, const void *src, unsigned offset) {
++                         const void *dest, const void *src) {
+     if (!r18_active()) return;
+     REQUIRE(r18_policy());
+     REQUIRE(pcs->scs->static_config.pass == 2 && !pcs->pic_bypass_encdec);
+@@ -246,6 +247,22 @@
+     REQUIRE(s->qindex <= 4 && d->qindex == s->qindex && b->qindex == s->qindex);
+     const BlockGeom *g = ed->blk_geom;
+     REQUIRE(g && b->tx_depth < MAX_TX_DEPTH);
++    /* EncDec's later CDF-update cursor may stay zero. Derive this final
++       block's coefficient-layout start from its committed predecessors.
++       This array prefix belongs to this SB and this attempt; no cross-frame
++       observer state or encoder state is written. Actual TU offsets remain
++       independently observed on the encoding path. */
++    REQUIRE(ordinal < 256 && d == &s->final_blk_arr[ordinal]);
++    unsigned offset = 0;
++    for (unsigned prior = 0; prior < ordinal; ++prior) {
++        const EcBlkStruct *committed = &s->final_blk_arr[prior];
++        REQUIRE(committed->mds_idx < pcs->scs->max_block_cnt);
++        const BlockGeom *pg = get_blk_geom_mds(committed->mds_idx);
++        REQUIRE(pg && pg->bwidth && pg->bheight);
++        offset += pg->bwidth * pg->bheight;
++        REQUIRE(offset <= 4096);
++    }
++    REQUIRE(offset + g->bwidth * g->bheight <= 4096);
+     unsigned n = g->txb_count[b->tx_depth]; REQUIRE(n <= MAX_TXB_COUNT);
+     char meta[4096]; int used = snprintf(meta, sizeof(meta),
+         "{\"picture\":%" PRIu64 ",\"generation\":%u,\"sb\":%u,\"ordinal\":%u,\"coeff_offset\":%u,"
+--- a/Source/Lib/Codec/pb_trace.h
++++ b/Source/Lib/Codec/pb_trace.h
+@@ -25,7 +25,7 @@
+                         unsigned old_delta_q_present, unsigned old_delta_q_res,
+                         unsigned old_base_qindex, unsigned old_lambda_active);
+ void pb_r18_final_commit(PictureControlSet *, void *, unsigned, unsigned,
+-                         const void *, const void *, unsigned);
++                         const void *, const void *);
+ void pb_r18_final_sb(PictureControlSet *, unsigned, const SuperBlock *);
+ int pb_r18_is_active(void);
+ void pb_r18_route(PictureControlSet *, void *, unsigned, unsigned, unsigned);
+--- a/Source/Lib/Codec/pc_impl.h
++++ b/Source/Lib/Codec/pc_impl.h
+@@ -208,16 +208,7 @@
+     REQUIRE(!pthread_mutex_unlock(&pc_lock));
+ }
+ void pc_commit(PictureControlSet *pcs,void *ctx,unsigned sb,unsigned ordinal,const void *dest,const void *src) {
+-    if (pb_r18_is_active() && sb < 510 && ctx && dest && src) {
+-        EncDecContext *r18ed = ctx;
+-        BlkStruct *r18b = r18ed->blk_ptr;
+-        unsigned r18off = 0;
+-        REQUIRE(r18ed->blk_geom && r18b && r18b->tx_depth < MAX_TX_DEPTH);
+-        for (unsigned r18t = 0; r18t < r18ed->blk_geom->txb_count[r18b->tx_depth]; ++r18t)
+-            r18off += r18ed->blk_geom->tx_width[r18b->tx_depth] * r18ed->blk_geom->tx_height[r18b->tx_depth];
+-        REQUIRE(r18ed->coded_area_sb >= r18off);
+-        pb_r18_final_commit(pcs,ctx,sb,ordinal,dest,src,r18ed->coded_area_sb-r18off);
+-    }
++    pb_r18_final_commit(pcs,ctx,sb,ordinal,dest,src);
+     if(pcs->ppcs->picture_number!=216 || !pc_active())return;
+     EncDecContext *ed=ctx;const BlockGeom *g=ed->blk_geom;BlkStruct *b=ed->blk_ptr;
+     const EcBlkStruct *d=dest;

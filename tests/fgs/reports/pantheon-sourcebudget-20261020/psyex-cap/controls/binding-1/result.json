@@ -1,0 +1,258 @@
+{
+  "status": "bound",
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/bind_headers.py",
+    "sha256": "2fcce467cbd6ef3a09f5adb076db47289472ed93441cabc3e89bcc08e05e235d",
+    "size": 8504
+  },
+  "scope": "Dynamic bitstream/reference-slot mapping; no quality or source-sample claim.",
+  "argv": [
+    "/usr/bin/ffmpeg",
+    "-hide_banner",
+    "-loglevel",
+    "trace",
+    "-i",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/cap-1/out.ivf",
+    "-map",
+    "0:v:0",
+    "-c",
+    "copy",
+    "-bsf:v",
+    "trace_headers",
+    "-f",
+    "null",
+    "-"
+  ],
+  "inputs_before": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/bind_headers.py",
+      "sha256": "2fcce467cbd6ef3a09f5adb076db47289472ed93441cabc3e89bcc08e05e235d",
+      "size": 8504
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/provenance.py",
+      "sha256": "b6c923ec919c27e55c3be1a432bce225f582064212ad68ac1590388c00e95d8f",
+      "size": 7187
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/read_cap_trace.py",
+      "sha256": "08fe4c552b576e30b91f000246f3a6f39235383f0cb6aa1c19991af3323561d8",
+      "size": 3887
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-binding/bind_refine_headers.py",
+      "sha256": "5d30f960504b12d840d9cd916140dac5b24ae2053852c88a5a66b87ae1b347dc",
+      "size": 26125
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/run.py",
+      "sha256": "ebfce2b97bd8002db2e866086ed44ac8dece936d64bfeaa01062f29dc5bf6bb3",
+      "size": 14607
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/cap-1/command.json",
+      "sha256": "6c90d0a52582d82fd6c0697848aad9cdcfd1c7cc84b72c4643321342ec660587",
+      "size": 56092
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/cap-1-execution.json",
+      "sha256": "a3650328b7a792080c0a3eeead0214165c88951b54543c6b5fbb75f1dd959207",
+      "size": 3197
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/cap-1/out.ivf",
+      "sha256": "e141c7ac67476320b76f96c505a809a15cde126721b9a5b45d6f8ecfab6cbd96",
+      "size": 24553381
+    },
+    {
+      "path": "/usr/bin/ffmpeg",
+      "sha256": "ed16af623947494a72e284b6eb8ff225f2da22b38b5d5069c2fd4b4ba3384e41",
+      "size": 342488
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/completed-build-pins.json",
+      "sha256": "c0e389a6ca98513c5b4117b48dab02552b7f21ea978585974243f747803e1fe7",
+      "size": 4765
+    }
+  ],
+  "inputs_after": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/bind_headers.py",
+      "sha256": "2fcce467cbd6ef3a09f5adb076db47289472ed93441cabc3e89bcc08e05e235d",
+      "size": 8504
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/provenance.py",
+      "sha256": "b6c923ec919c27e55c3be1a432bce225f582064212ad68ac1590388c00e95d8f",
+      "size": 7187
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/read_cap_trace.py",
+      "sha256": "08fe4c552b576e30b91f000246f3a6f39235383f0cb6aa1c19991af3323561d8",
+      "size": 3887
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-binding/bind_refine_headers.py",
+      "sha256": "5d30f960504b12d840d9cd916140dac5b24ae2053852c88a5a66b87ae1b347dc",
+      "size": 26125
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/run.py",
+      "sha256": "ebfce2b97bd8002db2e866086ed44ac8dece936d64bfeaa01062f29dc5bf6bb3",
+      "size": 14607
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/cap-1/command.json",
+      "sha256": "6c90d0a52582d82fd6c0697848aad9cdcfd1c7cc84b72c4643321342ec660587",
+      "size": 56092
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/cap-1-execution.json",
+      "sha256": "a3650328b7a792080c0a3eeead0214165c88951b54543c6b5fbb75f1dd959207",
+      "size": 3197
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/cap-1/out.ivf",
+      "sha256": "e141c7ac67476320b76f96c505a809a15cde126721b9a5b45d6f8ecfab6cbd96",
+      "size": 24553381
+    },
+    {
+      "path": "/usr/bin/ffmpeg",
+      "sha256": "ed16af623947494a72e284b6eb8ff225f2da22b38b5d5069c2fd4b4ba3384e41",
+      "size": 342488
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/completed-build-pins.json",
+      "sha256": "c0e389a6ca98513c5b4117b48dab02552b7f21ea978585974243f747803e1fe7",
+      "size": 4765
+    }
+  ],
+  "helper": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round16-refine-binding/bind_refine_headers.py",
+    "sha256": "5d30f960504b12d840d9cd916140dac5b24ae2053852c88a5a66b87ae1b347dc",
+    "size": 26125
+  },
+  "encode_receipt": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/cap-1/command.json",
+    "sha256": "6c90d0a52582d82fd6c0697848aad9cdcfd1c7cc84b72c4643321342ec660587",
+    "size": 56092
+  },
+  "outer_execution": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/cap-1-execution.json",
+    "sha256": "a3650328b7a792080c0a3eeead0214165c88951b54543c6b5fbb75f1dd959207",
+    "size": 3197
+  },
+  "input_ivf": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/cap-1/out.ivf",
+    "sha256": "e141c7ac67476320b76f96c505a809a15cde126721b9a5b45d6f8ecfab6cbd96",
+    "size": 24553381
+  },
+  "ffmpeg": {
+    "path": "/usr/bin/ffmpeg",
+    "sha256": "ed16af623947494a72e284b6eb8ff225f2da22b38b5d5069c2fd4b4ba3384e41",
+    "size": 342488
+  },
+  "command": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/binding-1/command.json",
+    "sha256": "571e5968c7e8fd3e459d3e15b08c7d79f590dd35bab40bcf004a8a49707be43b",
+    "size": 1239
+  },
+  "trace_log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/binding-1/trace_headers.log",
+    "sha256": "b6576a9e10a481bbe9cca18834b1c707586454e418246d33e527ddb1ed614476",
+    "size": 3696605
+  },
+  "events": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/binding-1/events.json",
+    "sha256": "24dc2b0bfc639c154776d9b9e514e12a452be2aca21f53e3ef7ec8cb4dcb3a65",
+    "size": 442787
+  },
+  "target_frame_obu": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/binding-1/target-frame.obu",
+    "sha256": "1dc11205285bf68dbe8839bcc0e405f0838b4334a8af06022a93c6ebd6b9640d",
+    "size": 74307
+  },
+  "target_coded_event": {
+    "event_index": 314,
+    "coded_ordinal": 210,
+    "packet_index": 209,
+    "packet_pts": 209,
+    "packet_event_index": 1,
+    "frame_type": 1,
+    "show_frame": 0,
+    "showable_frame": 1,
+    "order_hint": 88,
+    "refresh_frame_flags_normalized": 16,
+    "refreshed_slots": [
+      4
+    ],
+    "obu": {
+      "type": 6,
+      "packet_start": 77501,
+      "packet_end": 151808,
+      "size": 74307,
+      "sha256": "1dc11205285bf68dbe8839bcc0e405f0838b4334a8af06022a93c6ebd6b9640d",
+      "file_offset": 15601294
+    }
+  },
+  "summary": {
+    "ivf_packets": 336,
+    "display_actions": 336,
+    "frame_headers": 502,
+    "coded_non_show_existing": 336,
+    "show_existing": 166,
+    "hidden_coded": 166,
+    "shown_coded": 170,
+    "packets_with_multiple_frame_headers": 84,
+    "max_frame_headers_per_packet": 5,
+    "order_hint_bits_minus_1_values": [
+      6
+    ],
+    "implicit_shown_KEY_refresh_events": [
+      0,
+      359
+    ],
+    "all_packets_exactly_one_display_action": true
+  },
+  "display_216_event": {
+    "display_action": {
+      "kind": "show_existing",
+      "event_index": 325,
+      "slot": 4,
+      "coded_ordinal": 210,
+      "coded_event_index": 314,
+      "display_index": 216,
+      "packet_index": 216,
+      "packet_pts": 216
+    },
+    "header": {
+      "event_index": 325,
+      "packet_index": 216,
+      "packet_pts": 216,
+      "packet_event_index": 0,
+      "header_log_line": 22481,
+      "show_existing_frame": 1,
+      "frame_to_show_map_idx": 4,
+      "obu": {
+        "type": 3,
+        "packet_start": 2,
+        "packet_end": 5,
+        "size": 3,
+        "sha256": "60595adbda69a8b6b7edbf29c5cfd8b17a96b808b4ac2a4d25feec79fc9ce174",
+        "file_offset": 16159849
+      },
+      "resolved_coded_ordinal": 210,
+      "resolved_event_index": 314
+    }
+  },
+  "target_to_display_link": {
+    "kind": "show_existing",
+    "refreshed_slot": 4,
+    "coded_event_index": 314,
+    "display_event_index": 325
+  },
+  "limits": [
+    "No old coded ordinal, packet, order hint or reference slot is assumed.",
+    "Encoder all-picture trace identities and decoder/sample agreement are separate admission joins."
+  ]
+}

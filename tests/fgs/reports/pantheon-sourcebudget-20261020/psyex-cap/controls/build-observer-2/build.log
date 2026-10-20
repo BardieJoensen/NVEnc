@@ -1,0 +1,418 @@
+[1/285] Building C object CMakeFiles/safestringlib.dir/third_party/safestringlib/ignore_handler_s.c.o
+[2/285] Building C object CMakeFiles/safestringlib.dir/third_party/safestringlib/strncpy_s.c.o
+[3/285] Building C object CMakeFiles/safestringlib.dir/third_party/safestringlib/strnlen_s.c.o
+[4/285] Building C object CMakeFiles/safestringlib.dir/third_party/safestringlib/safe_str_constraint.c.o
+[5/285] Building C object CMakeFiles/safestringlib.dir/third_party/safestringlib/strcpy_s.c.o
+[6/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/cache.c.o
+[7/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/maininit.c.o
+[8/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/x86/info.c.o
+[9/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/log.c.o
+[10/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/x86/x86init.c.o
+[11/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/x86/vendor.c.o
+[12/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/x86/uarch.c.o
+[13/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/api.c.o
+[14/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/x86/x86topology.c.o
+[15/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/x86/cache/cacheinit.c.o
+[16/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/x86/cache/descriptor.c.o
+[17/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/x86/name.c.o
+[18/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/x86/isa.c.o
+[19/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/x86/cache/deterministic.c.o
+[20/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/x86/linux/cpuinfo.c.o
+[21/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/linux/smallfile.c.o
+[22/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/linux/multiline.c.o
+[23/285] Building C object Source/Lib/C_DEFAULT/CMakeFiles/C_DEFAULT.dir/blend_a64_mask_c.c.o
+[24/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/linux/cpulist.c.o
+[25/285] Building C object Source/Lib/C_DEFAULT/CMakeFiles/C_DEFAULT.dir/cfl_c.c.o
+[26/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/linux/processors.c.o
+[27/285] Building C object _deps/cpuinfo-build/CMakeFiles/cpuinfo.dir/src/x86/linux/init.c.o
+[28/285] Building C object Source/Lib/C_DEFAULT/CMakeFiles/C_DEFAULT.dir/inter_prediction_c.c.o
+[29/285] Building C object Source/Lib/C_DEFAULT/CMakeFiles/C_DEFAULT.dir/filterintra_c.c.o
+[30/285] Building C object Source/Lib/C_DEFAULT/CMakeFiles/C_DEFAULT.dir/intra_prediction_c.c.o
+[31/285] Building C object Source/Lib/C_DEFAULT/CMakeFiles/C_DEFAULT.dir/compute_sad_c.c.o
+[32/285] Building C object Source/Lib/C_DEFAULT/CMakeFiles/C_DEFAULT.dir/pack_unpack_c.c.o
+[33/285] Building C object Source/Lib/C_DEFAULT/CMakeFiles/C_DEFAULT.dir/encode_txb_ref_c.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/C_DEFAULT/encode_txb_ref_c.c:13:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[34/285] Building C object Source/Lib/C_DEFAULT/CMakeFiles/C_DEFAULT.dir/sad_av1.c.o
+[35/285] Building C object Source/Lib/C_DEFAULT/CMakeFiles/C_DEFAULT.dir/picture_operators_c.c.o
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/C_DEFAULT/picture_operators_c.c: In function ‘svt_spatial_full_distortion_kernel_facade’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/C_DEFAULT/picture_operators_c.c:153:18: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+  153 |         if (mode >= INTRA_MODE_START && mode < INTRA_MODE_END) {
+      |                  ^~
+[36/285] Building C object Source/Lib/C_DEFAULT/CMakeFiles/C_DEFAULT.dir/variance.c.o
+[37/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/av1me.c.o
+[38/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/adaptive_mv_pred.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/adaptive_mv_pred.c:19:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[39/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/block_structures.c.o
+[40/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/bitstream_unit.c.o
+[41/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/blend_a64_mask.c.o
+[42/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/aom_dsp_rtcd.c.o
+[43/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/cdef.c.o
+[44/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/cabac_context_model.c.o
+[45/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/cdef_process.c.o
+[46/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/coding_unit.c.o
+[47/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/corner_detect.c.o
+[48/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/convolve.c.o
+[49/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/coding_loop.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/full_loop.h:16,
+                 from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/coding_loop.c:29:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[50/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/deblocking_common.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/deblocking_common.c:14:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[51/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/corner_match.c.o
+[52/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/dwt.c.o
+[53/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/deblocking_filter.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/deblocking_filter.c:22:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[54/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/dlf_process.c.o
+[55/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/enc_dec_results.c.o
+[56/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/common_dsp_rtcd.c.o
+[57/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/enc_dec_tasks.c.o
+[58/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/enc_dec_segments.c.o
+[59/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/enc_cdef.c.o
+[60/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/enc_intra_prediction.c.o
+[61/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/enc_warped_motion.c.o
+[62/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/enc_dec_process.c.o
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/enc_dec_process.c: In function ‘recode_loop_decision_maker’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/enc_dec_process.c:2753:9: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+ 2753 |         if (scs->static_config.enable_adaptive_quantization == 2 && ppcs->tpl_ctrls.enable && ppcs->r0 != 0)
+      |         ^~
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/enc_dec_process.c:2756:13: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+ 2756 |             if (scs->static_config.enable_variance_boost && pcs->ppcs->frm_hdr.delta_q_params.delta_q_present)
+      |             ^~
+[63/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/enc_inter_prediction.c.o
+[64/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/encode_context.c.o
+[65/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/ec_results.c.o
+[66/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/ec_process.c.o
+[67/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/fft.c.o
+[68/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/enc_mode_config.c.o
+[69/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/firstpass.c.o
+[70/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/global_motion.c.o
+[71/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/entropy_coding.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/entropy_coding.c:22:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[72/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pb_trace.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/full_loop.h:16,
+                 from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/pc_impl.h:3,
+                 from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/pb_trace.c:399:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[73/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/full_loop.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/full_loop.h:16,
+                 from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/full_loop.c:15:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[74/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/grainSynthesis.c.o
+[75/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/global_me.c.o
+[76/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/global_me_cost.c.o
+[77/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/hash.c.o
+[78/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/initial_rc_results.c.o
+[79/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/initial_rc_reorder_queue.c.o
+[80/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/hash_motion.c.o
+[81/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/initial_rc_process.c.o
+[82/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/inter_prediction.c.o
+[83/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/mcomp.c.o
+[84/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/me_sad_calculation.c.o
+[85/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/md_rate_estimation.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/md_rate_estimation.c:16:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[86/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/intra_prediction.c.o
+[87/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/inv_transforms.c.o
+[88/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/md_process.c.o
+[89/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/motion_estimation.c.o
+[90/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/me_context.c.o
+[91/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/md_config_process.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/md_config_process.c:27:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[92/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/me_results.c.o
+[93/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/mode_decision.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/mode_decision.c:20:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[94/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/neighbor_arrays.c.o
+[95/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/noise_util.c.o
+[96/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/me_process.c.o
+[97/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/packetization_reorder_queue.c.o
+[98/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/packetization_process.c.o
+[99/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/noise_model.c.o
+[100/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pic_analysis_results.c.o
+[101/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/palette.c.o
+[102/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pass2_strategy.c.o
+[103/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pic_buffer_desc.c.o
+[104/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pd_queue.c.o
+[105/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pd_reorder_queue.c.o
+[106/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pic_analysis_process.c.o
+[107/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pic_demux_results.c.o
+[108/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pd_results.c.o
+[109/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pic_manager_queue.c.o
+[110/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pcs.c.o
+[111/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pic_operators.c.o
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/pic_operators.c: In function ‘svt_aom_picture_full_distortion32_bits_single_facade’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/pic_operators.c:270:18: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+  270 |         if (mode >= INTRA_MODE_START && mode < INTRA_MODE_END) {
+      |                  ^~
+[112/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pd_process.c.o
+[113/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pic_manager_process.c.o
+[114/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/psy_rd.c.o
+[115/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/pred_structure.c.o
+[116/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/rc_results.c.o
+[117/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/rc_tasks.c.o
+[118/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/ransac.c.o
+[119/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/reference_object.c.o
+[120/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/rc_process.c.o
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/rc_process.c: In function ‘lowq_taper’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/rc_process.c:1852:30: warning: unused variable ‘ppcs_ptr’ [-Wunused-variable]
+ 1852 |     PictureParentControlSet *ppcs_ptr = pcs->ppcs;
+      |                              ^~~~~~~~
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/rc_process.c:20:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/rc_process.c: In function ‘svt_aom_rate_control_kernel’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/utility.h:219:42: warning: comparison is always false due to limited range of data type [-Wtype-limits]
+  219 | #define CLIP3(min_val, max_val, a) (((a) < (min_val)) ? (min_val) : (((a) > (max_val)) ? (max_val) : (a)))
+      |                                          ^
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/rc_process.c:3624:38: note: in expansion of macro ‘CLIP3’
+ 3624 |                     chroma_qindex -= CLIP3(0, 8, chroma_qindex_adjustment / 2);
+      |                                      ^~~~~
+[121/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/rd_cost.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/rd_cost.c:17:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[122/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/resource_coordination_results.c.o
+[123/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/resource_coordination_process.c.o
+[124/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/resize.c.o
+[125/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/rest_process.c.o
+[126/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/product_coding_loop.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/full_loop.h:16,
+                 from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/product_coding_loop.c:20:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[127/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/restoration.c.o
+[128/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/segmentation_params.c.o
+[129/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/segmentation.c.o
+[130/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/restoration_pick.c.o
+[131/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/svt_log.c.o
+[132/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/svt_malloc.c.o
+[133/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/sequence_control_set.c.o
+[134/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/super_res.c.o
+[135/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/svt_time.c.o
+[136/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/svt_threads.c.o
+[137/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/svt_psnr.c.o
+[138/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/sys_resource_manager.c.o
+[139/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/src_ops_process.c.o
+[140/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/vector.c.o
+[141/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/warped_motion.c.o
+[142/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/temporal_filtering.c.o
+[143/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/avc_style_mcp_intrin_sse.c.o
+[144/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/compute_mean_intrin_sse2.c.o
+[145/285] Generating version header
+-- Configured version: v3.0.2-B-9-g59d1a0256-dirty
+[146/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/transforms.c.o
+[147/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/convolve_2d_sse2.c.o
+[148/285] Building C object Source/Lib/Globals/CMakeFiles/GLOBALS.dir/metadata_handle.c.o
+[149/285] Building C object Source/Lib/Codec/CMakeFiles/CODEC.dir/utility.c.o
+[150/285] Building C object Source/Lib/Globals/CMakeFiles/GLOBALS.dir/enc_settings.c.o
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Globals/enc_settings.c: In function ‘svt_av1_verify_settings’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Globals/enc_settings.c:921:24: warning: comparison is always false due to limited range of data type [-Wtype-limits]
+  921 |     if (config->spy_rd < 0 || config->spy_rd > 2) {
+      |                        ^
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Globals/enc_settings.c: In function ‘svt_av1_print_lib_params’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Globals/enc_settings.c:1260:41: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+ 1260 |         if (config->noise_norm_strength >= 0) {
+      |                                         ^~
+[151/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/encodetxb_sse2.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/ASM_SSE2/encodetxb_sse2.c:17:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[152/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/fft_sse2.c.o
+[153/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/convolve_sse2.c.o
+[154/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/highbd_intrapred_sse2.c.o
+[155/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/highbd_subtract_sse2.c.o
+[156/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/dlf_intrin_sse2.c.o
+[157/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/highbd_variance_sse2.c.o
+[158/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/jnt_convolve_2d_sse2.c.o
+[159/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/intra_pred_av1_intrin_sse2.c.o
+[160/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/me_sad_calc_intrin_sse2.c.o
+[161/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/jnt_convolve_sse2.c.o
+[162/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/pack_unpack_intrin_sse2.c.o
+[163/285] Building C object Source/Lib/Globals/CMakeFiles/GLOBALS.dir/enc_handle.c.o
+[164/285] Building ASM_NASM object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/aom_subpixel_8t_sse2.asm.o
+[165/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/wiener_convolve_sse2.c.o
+[166/285] Building ASM_NASM object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/highbd_variance_impl_sse2.asm.o
+[167/285] Building ASM_NASM object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/highbd_intrapred_sse2_.asm.o
+[168/285] Building ASM_NASM object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/picture_operators_sse2.asm.o
+[169/285] Building ASM_NASM object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/intrapred_sse2.asm.o
+[170/285] Building ASM_NASM object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/subtract_sse2.asm.o
+[171/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/pic_operators_intrin_sse2.c.o
+[172/285] Building C object Source/Lib/ASM_SSSE3/CMakeFiles/ASM_SSSE3.dir/aom_subpixel_8t_intrin_ssse3.c.o
+[173/285] Building C object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/variance_sse2.c.o
+[174/285] Building C object Source/Lib/ASM_SSSE3/CMakeFiles/ASM_SSSE3.dir/highbd_convolve_2d_ssse3.c.o
+[175/285] Building C object Source/Lib/ASM_SSSE3/CMakeFiles/ASM_SSSE3.dir/highbd_convolve_ssse3.c.o
+[176/285] Building C object Source/Lib/ASM_SSSE3/CMakeFiles/ASM_SSSE3.dir/highbd_wiener_convolve_ssse3.c.o
+[177/285] Building C object Source/Lib/ASM_SSSE3/CMakeFiles/ASM_SSSE3.dir/highbd_intrapred_intrin_ssse3.c.o
+[178/285] Building C object Source/Lib/ASM_SSSE3/CMakeFiles/ASM_SSSE3.dir/jnt_convolve_ssse3.c.o
+[179/285] Building C object Source/Lib/ASM_SSSE3/CMakeFiles/ASM_SSSE3.dir/intrapred_ssse3.c.o
+[180/285] Building C object Source/Lib/ASM_SSSE3/CMakeFiles/ASM_SSSE3.dir/av1_inv_txfm_ssse3.c.o
+[181/285] Building ASM_NASM object Source/Lib/ASM_SSSE3/CMakeFiles/ASM_SSSE3.dir/aom_subpixel_bilinear_ssse3.asm.o
+[182/285] Building ASM_NASM object Source/Lib/ASM_SSSE3/CMakeFiles/ASM_SSSE3.dir/aom_subpixel_8t_ssse3.asm.o
+[183/285] Building ASM_NASM object Source/Lib/ASM_SSE2/CMakeFiles/ASM_SSE2.dir/subpel_variance_sse2.asm.o
+[184/285] Building C object Source/Lib/ASM_SSSE3/CMakeFiles/ASM_SSSE3.dir/reconinter_ssse3.c.o
+[185/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/av1_convolve_scale_sse4.c.o
+[186/285] Building C object Source/Lib/ASM_SSSE3/CMakeFiles/ASM_SSSE3.dir/variance_impl_ssse3.c.o
+[187/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/cdef_block_sse4_1.c.o
+[188/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/av1_quantize_sse4_1.c.o
+[189/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/blend_a64_mask_sse4.c.o
+[190/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/cdef_sse4.c.o
+[191/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/corner_match_sse4.c.o
+[192/285] Building ASM_NASM object Source/Lib/ASM_SSSE3/CMakeFiles/ASM_SSSE3.dir/subpel_variance_ssse3.asm.o
+[193/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/highbd_convolve_2d_sse4.c.o
+[194/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/compute_sad_intrin_sse4_1.c.o
+[195/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/filterintra_sse4.c.o
+[196/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/highbd_jnt_convolve_sse4.c.o
+[197/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/encodetxb_sse4.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/full_loop.h:16,
+                 from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/ASM_SSE4_1/encodetxb_sse4.c:19:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[198/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/intrapred_16bit_intrin_sse4_1.c.o
+[199/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/highbd_inv_txfm_sse4.c.o
+[200/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/obmc_variance_sse4.c.o
+[201/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/pickrst_sse4.c.o
+[202/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/reconinter_sse4.c.o
+[203/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/temporal_filtering_sse4_1.c.o
+[204/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/pic_operators_intrin_sse4_1.c.o
+[205/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/warp_plane_sse4.c.o
+[206/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/selfguided_sse4.c.o
+[207/285] Building C object Source/Lib/ASM_SSE4_1/CMakeFiles/ASM_SSE4_1.dir/highbd_fwd_txfm_sse4.c.o
+[208/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/aom_subpixel_8t_intrin_avx2.c.o
+[209/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/av1_quantize_avx2.c.o
+[210/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/blend_a64_mask_avx2.c.o
+[211/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/av1_inv_txfm_avx2.c.o
+[212/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/cdef_avx2.c.o
+[213/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/cdef_block_avx2.c.o
+[214/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/cfl_avx2.c.o
+[215/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/comb_avg_sad_intrin_avx2.c.o
+[216/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/convolve_2d_avx2.c.o
+[217/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/corner_match_avx2.c.o
+[218/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/convolve_avx2.c.o
+[219/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/compute_sad_intrin_avx2.c.o
+[220/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/dwt_avx2.c.o
+[221/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/encodetxb_avx2.c.o
+In file included from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/full_loop.h:16,
+                 from /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/ASM_AVX2/encodetxb_avx2.c:19:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h: In function ‘get_uv_mode_cfl_aware’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/common_utils.h:70:14: warning: comparison is always true due to limited range of data type [-Wtype-limits]
+   70 |     if (mode >= UV_DC_PRED && mode < UV_INTRA_MODES) {
+      |              ^~
+[222/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/fft_avx2.c.o
+[223/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/highbd_convolve_2d_avx2.c.o
+[224/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/highbd_convolve_avx2.c.o
+[225/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/highbd_intra_pred_avx2.c.o
+[226/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/highbd_jnt_convolve_avx2.c.o
+[227/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/highbd_quantize_intrin_avx2.c.o
+[228/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/highbd_variance_avx2.c.o
+[229/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/highbd_inv_txfm_avx2.c.o
+[230/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/highbd_warp_affine_avx2.c.o
+[231/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/inter_prediction_com_avx2.c.o
+[232/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/highbd_fwd_txfm_avx2.c.o
+[233/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/noise_model_avx2.c.o
+[234/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/intra_pred_intrin_avx2.c.o
+[235/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/jnt_convolve_2d_avx2.c.o
+[236/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/jnt_convolve_avx2.c.o
+[237/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/obmc_sad_avx2.c.o
+[238/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/obmc_variance_avx2.c.o
+[239/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/pack_unpack_intrinsic_avx2.c.o
+[240/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/palette_avx2.c.o
+[241/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/pic_operators_intrin_avx2.c.o
+[242/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/restoration_pick_avx2.c.o
+[243/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/pickrst_avx2.c.o
+[244/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/resize_avx2.c.o
+[245/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/ssim_avx2.c.o
+[246/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/sse_avx2.c.o
+[247/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/selfguided_avx2.c.o
+[248/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/temporal_filtering_avx2.c.o
+[249/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/variance_avx2.c.o
+[250/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/variance_impl_avx2.c.o
+[251/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/transforms_intrin_avx2.c.o
+[252/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/warp_plane_avx2.c.o
+[253/285] Building ASM_NASM object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/mc_avx2.asm.o
+[254/285] Building C object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/wiener_convolve_avx2.c.o
+[255/285] Building ASM_NASM object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/mc16_avx2.asm.o
+[256/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/cdef_avx512.c.o
+[257/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/cdef_block_avx512.c.o
+[258/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/convolve_2d_avx512.c.o
+[259/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/compute_sad_intrin_avx512.c.o
+[260/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/encodetxb_avx512.c.o
+[261/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/convolve_avx512.c.o
+[262/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/highbd_intra_pred_avx512.c.o
+[263/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/highbd_fwd_txfm_AVX512.c.o
+[264/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/highbd_inv_txfm_avx512.c.o
+[265/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/jnt_convolve_2d_avx512.c.o
+[266/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/jnt_convolve_avx512.c.o
+[267/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/pic_operators_intrin_avx512.c.o
+[268/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/pickrst_avx512.c.o
+[269/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/variance_avx512.c.o
+[270/285] Building C object Source/Lib/ASM_AVX512/CMakeFiles/ASM_AVX512.dir/wiener_convolve_avx512.c.o
+[271/285] Building C object Source/App/CMakeFiles/SvtAv1EncApp.dir/app_config.c.o
+[272/285] Building C object Source/App/CMakeFiles/SvtAv1EncApp.dir/app_context.c.o
+[273/285] Building C object Source/App/CMakeFiles/SvtAv1EncApp.dir/app_input_y4m.c.o
+[274/285] Building C object Source/App/CMakeFiles/SvtAv1EncApp.dir/app_output_ivf.c.o
+[275/285] Building C object Source/App/CMakeFiles/SvtAv1EncApp.dir/app_main.c.o
+[276/285] Building C object Source/App/CMakeFiles/SvtAv1EncApp.dir/svt_time.c.o
+[277/285] Building C object third_party/fastfeat/CMakeFiles/FASTFEAT.dir/fast.c.o
+[278/285] Building C object Source/App/CMakeFiles/SvtAv1EncApp.dir/app_process_cmd.c.o
+[279/285] Building C object third_party/fastfeat/CMakeFiles/FASTFEAT.dir/nonmax.c.o
+[280/285] Building C object third_party/fastfeat/CMakeFiles/FASTFEAT.dir/fast_9.c.o
+[281/285] Building ASM_NASM object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/itx_avx2.asm.o
+[282/285] Building ASM_NASM object Source/Lib/ASM_AVX2/CMakeFiles/ASM_AVX2.dir/itx16_avx2.asm.o
+[283/285] Linking C shared library bin/libSvtAv1Enc.so.3.0.2
+In function ‘memcpy’,
+    inlined from ‘svt_aom_set_nsq_geom_ctrls’ at /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/enc_mode_config.c:4918:9,
+    inlined from ‘svt_aom_sig_deriv_enc_dec_common’ at /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/enc_mode_config.c:7034:5:
+/usr/include/x86_64-linux-gnu/bits/string_fortified.h:29:10: warning: ‘nsq_geom_ctrls_struct’ may be used uninitialized [-Wmaybe-uninitialized]
+   29 |   return __builtin___memcpy_chk (__dest, __src, __len,
+      |          ^
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/enc_mode_config.c: In function ‘svt_aom_sig_deriv_enc_dec_common’:
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2/Source/Lib/Codec/enc_mode_config.c:4872:19: note: ‘nsq_geom_ctrls_struct’ declared here
+ 4872 |     NsqGeomCtrls  nsq_geom_ctrls_struct;
+      |                   ^
+[284/285] Creating library symlink bin/libSvtAv1Enc.so.3 bin/libSvtAv1Enc.so
+[285/285] Linking C executable bin/SvtAv1EncApp

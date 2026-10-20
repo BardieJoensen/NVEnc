@@ -1,0 +1,92 @@
+-- The C compiler identification is GNU 13.3.0
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Performing Test HAVE_X86_PLATFORM
+-- Performing Test HAVE_X86_PLATFORM - Success
+-- Performing Test HAVE_ARM_PLATFORM
+-- Performing Test HAVE_ARM_PLATFORM - Failed
+-- Looking for a ASM_NASM compiler
+-- Looking for a ASM_NASM compiler - /usr/bin/nasm
+-- The ASM_NASM compiler identification is NASM
+-- Found assembler: /usr/bin/nasm
+-- BUILD_SHARED_LIBS: ON
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE  
+-- cpuinfo not found and will be built locally
+-- Checking C flag support for: [-Wformat-security] - Yes
+-- Checking C flag support for: [-Wformat] - Yes
+-- Checking C flag support for: [-Wextra] - Yes
+-- Checking CXX flag support for: [-Wformat-security] - Yes
+-- Checking CXX flag support for: [-Wformat] - Yes
+-- Checking CXX flag support for: [-Wextra] - Yes
+-- Checking C flag support for: [-Wall] - Yes
+-- Checking CXX flag support for: [-Wall] - Yes
+-- Checking C flag support for: [-fstack-protector-strong] - Yes
+-- Checking CXX flag support for: [-fstack-protector-strong] - Yes
+-- Checking C flag support for: [-fno-stack-clash-protection] - Yes
+-- Checking CXX flag support for: [-fno-stack-clash-protection] - Yes
+-- Checking C flag support for: [-mno-avx] - Yes
+-- Checking CXX flag support for: [-mno-avx] - Yes
+-- Performing Test HAS_AVX512
+-- Performing Test HAS_AVX512 - Success
+-- Looking for strnlen_s
+-- Looking for strnlen_s - not found
+-- Looking for strncpy_s
+-- Looking for strncpy_s - not found
+-- Looking for strcpy_s
+-- Looking for strcpy_s - not found
+-- Looking for valgrind/valgrind.h
+-- Looking for valgrind/valgrind.h - not found
+-- Performing Test HAVE_BUILTIN_EXPECT
+-- Performing Test HAVE_BUILTIN_EXPECT - Success
+-- Looking for elf_aux_info
+-- Looking for elf_aux_info - not found
+-- Checking C flag support for: [-msse2] - Yes
+-- Checking CXX flag support for: [-msse2] - Yes
+-- Checking C flag support for: [-mssse3] - Yes
+-- Checking CXX flag support for: [-mssse3] - Yes
+-- Checking C flag support for: [-msse4.1] - Yes
+-- Checking CXX flag support for: [-msse4.1] - Yes
+-- Checking C flag support for: [-mavx2] - Yes
+-- Checking CXX flag support for: [-mavx2] - Yes
+-- Checking C flag support for: [-mavx512f] - Yes
+-- Checking C flag support for: [-mavx512bw] - Yes
+-- Checking C flag support for: [-mavx512dq] - Yes
+-- Checking C flag support for: [-mavx512vl] - Yes
+-- Checking CXX flag support for: [-mavx512f] - Yes
+-- Checking CXX flag support for: [-mavx512bw] - Yes
+-- Checking CXX flag support for: [-mavx512dq] - Yes
+-- Checking CXX flag support for: [-mavx512vl] - Yes
+-- Found PkgConfig: /usr/bin/pkg-config (found version "1.8.1") 
+-- Building with dovi support - No
+-- Building with hdr10plus support - No
+-- Configuring done (2.3s)
+CMake Warning (dev) at third_party/cpuinfo/CMakeLists.txt:261 (ADD_LIBRARY):
+  Policy CMP0069 is not set: INTERPROCEDURAL_OPTIMIZATION is enforced when
+  enabled.  Run "cmake --help-policy CMP0069" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  INTERPROCEDURAL_OPTIMIZATION property will be ignored for target 'cpuinfo'.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at third_party/cpuinfo/CMakeLists.txt:269 (ADD_LIBRARY):
+  Policy CMP0069 is not set: INTERPROCEDURAL_OPTIMIZATION is enforced when
+  enabled.  Run "cmake --help-policy CMP0069" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  INTERPROCEDURAL_OPTIMIZATION property will be ignored for target
+  'cpuinfo_internals'.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/build

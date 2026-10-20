@@ -1,0 +1,57 @@
+{
+  "runs": {
+    "baseline": {
+      "inner": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/command.json",
+        "size": 54688,
+        "sha256": "b912affabfc3dce44b63675b7a7fd68b92decb9d876a293d09509c7e9c4b5887"
+      },
+      "outer": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/baseline-1-execution.json",
+        "size": 2769,
+        "sha256": "3831ac151bd20c34e7f8eb4ed1d36e3543a6b2388dcdff81b416d86faa3edfc3"
+      }
+    },
+    "pass1": {
+      "inner": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/pass1-1/command.json",
+        "size": 34119,
+        "sha256": "b5f32616ab2122863b09e40df1fcc18ac6f19dffba7c430a4ff086b0579bef2a"
+      },
+      "outer": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/pass1-1-execution.json",
+        "size": 2760,
+        "sha256": "95e9e5642013d0d25f66200d11505ed092a0f2916c68297d79192ec38c005440"
+      }
+    },
+    "cap": {
+      "inner": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/cap-1/command.json",
+        "size": 56092,
+        "sha256": "6c90d0a52582d82fd6c0697848aad9cdcfd1c7cc84b72c4643321342ec660587"
+      },
+      "outer": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/cap-1-execution.json",
+        "size": 3197,
+        "sha256": "a3650328b7a792080c0a3eeead0214165c88951b54543c6b5fbb75f1dd959207"
+      }
+    }
+  },
+  "build": {
+    "prepare": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1-preparation-execution.json",
+      "size": 2962,
+      "sha256": "b82971dd1213454ccfb1df8cdc50c65f29102485aa714914b8594028fec4e9d7"
+    },
+    "build": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1-execution.json",
+      "size": 2749,
+      "sha256": "487a302c8e01eee3fbc12e6e7a3dc3d2679be6d16e3c4514e6a5e58764718bc9"
+    },
+    "pin": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1-pin-execution.json",
+      "size": 3086,
+      "sha256": "ac83f93fccb0222a8e411d1c294ae2983fa58c32964ee5bb55aa2abd9ae4cb2c"
+    }
+  }
+}

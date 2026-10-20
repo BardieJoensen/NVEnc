@@ -1,0 +1,2187 @@
+{
+  "status": "complete",
+  "mode": "baseline",
+  "tag": "baseline-1",
+  "argv": [
+    "/usr/bin/nice",
+    "-n",
+    "10",
+    "/usr/bin/taskset",
+    "-c",
+    "0-7",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build/bin/SvtAv1EncApp",
+    "-i",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/fixtures/e05-1440/input10.y4m",
+    "-n",
+    "336",
+    "--preset",
+    "4",
+    "--tune",
+    "0",
+    "--psy-rd",
+    "1.0",
+    "--sharp-tx",
+    "1",
+    "--sharpness",
+    "1",
+    "--spy-rd",
+    "0",
+    "--hbd-mds",
+    "1",
+    "--complex-hvs",
+    "0",
+    "--noise-norm-strength",
+    "1",
+    "--noise-adaptive-filtering",
+    "0",
+    "--rc",
+    "1",
+    "--pred-struct",
+    "2",
+    "--keyint",
+    "240",
+    "--irefresh-type",
+    "2",
+    "--hierarchical-levels",
+    "4",
+    "--scd",
+    "0",
+    "--lp",
+    "1",
+    "--aq-mode",
+    "2",
+    "--enable-variance-boost",
+    "1",
+    "--variance-boost-strength",
+    "2",
+    "--variance-octile",
+    "5",
+    "--variance-boost-curve",
+    "0",
+    "--enable-qm",
+    "1",
+    "--qm-min",
+    "4",
+    "--qm-max",
+    "15",
+    "--chroma-qm-min",
+    "10",
+    "--chroma-qm-max",
+    "15",
+    "--qp-scale-compress-strength",
+    "1",
+    "--enable-tf",
+    "0",
+    "--tf-strength",
+    "1",
+    "--kf-tf-strength",
+    "1",
+    "--enable-overlays",
+    "0",
+    "--enable-dlf",
+    "1",
+    "--enable-cdef",
+    "-1",
+    "--enable-restoration",
+    "-1",
+    "--film-grain",
+    "0",
+    "--film-grain-denoise",
+    "0",
+    "--color-range",
+    "0",
+    "--color-primaries",
+    "1",
+    "--transfer-characteristics",
+    "1",
+    "--matrix-coefficients",
+    "1",
+    "--input-depth",
+    "10",
+    "--fps-num",
+    "24",
+    "--fps-denom",
+    "1",
+    "--progress",
+    "0",
+    "--tbr",
+    "10042",
+    "--stats",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/pass.stats",
+    "--pass",
+    "2",
+    "-b",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/out.ivf",
+    "-o",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/recon.yuv"
+  ],
+  "case": "e05-1440",
+  "started_utc": "2026-10-20T20:23:00.468972+00:00",
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/run.py",
+    "size": 14607,
+    "sha256": "ebfce2b97bd8002db2e866086ed44ac8dece936d64bfeaa01062f29dc5bf6bb3"
+  },
+  "pins": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/completed-build-pins.json",
+    "size": 4765,
+    "sha256": "c0e389a6ca98513c5b4117b48dab02552b7f21ea978585974243f747803e1fe7"
+  },
+  "original_receipt": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/command.json",
+    "size": 67624,
+    "sha256": "00bb9243453fb55f1c878842e2ecfd3760f8403144e1e5b507530477a03ef497"
+  },
+  "contract": {
+    "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/ROUND18_ABSOLUTE_CAP_CONTRACT.md",
+    "size": 7968,
+    "sha256": "97d68ee39c6ad1922c1025143583fffc02d480b3370f4aaa1c58817029f7b4bf"
+  },
+  "settings": {
+    "--preset": "4",
+    "--tune": "0",
+    "--psy-rd": "1.0",
+    "--sharp-tx": "1",
+    "--sharpness": "1",
+    "--spy-rd": "0",
+    "--hbd-mds": "1",
+    "--complex-hvs": "0",
+    "--noise-norm-strength": "1",
+    "--noise-adaptive-filtering": "0",
+    "--rc": "1",
+    "--pred-struct": "2",
+    "--keyint": "240",
+    "--irefresh-type": "2",
+    "--hierarchical-levels": "4",
+    "--scd": "0",
+    "--lp": "1",
+    "--aq-mode": "2",
+    "--enable-variance-boost": "1",
+    "--variance-boost-strength": "2",
+    "--variance-octile": "5",
+    "--variance-boost-curve": "0",
+    "--enable-qm": "1",
+    "--qm-min": "4",
+    "--qm-max": "15",
+    "--chroma-qm-min": "10",
+    "--chroma-qm-max": "15",
+    "--qp-scale-compress-strength": "1",
+    "--enable-tf": "0",
+    "--tf-strength": "1",
+    "--kf-tf-strength": "1",
+    "--enable-overlays": "0",
+    "--enable-dlf": "1",
+    "--enable-cdef": "-1",
+    "--enable-restoration": "-1",
+    "--film-grain": "0",
+    "--film-grain-denoise": "0",
+    "--color-range": "0",
+    "--color-primaries": "1",
+    "--transfer-characteristics": "1",
+    "--matrix-coefficients": "1",
+    "--input-depth": "10",
+    "--fps-num": "24",
+    "--fps-denom": "1",
+    "--progress": "0"
+  },
+  "request_kbps": 10042,
+  "input": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/fixtures/e05-1440/input10.y4m",
+    "sha256": "232abb5ffee869be4bedf682aa103c166eb473bb3fdad5daf28956cca60148d4",
+    "size": 2090190894
+  },
+  "validity": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/fixtures/e05-1440/validity.json",
+    "sha256": "48acc932cf17fa90b6a7d2306018fb9d593522d5fcf01786f9c8bf82afef618c",
+    "size": 79075
+  },
+  "source_mbps": 9.6765224,
+  "outputs": {
+    "out.ivf": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/out.ivf",
+      "size": 17506710,
+      "sha256": "731dc2aae95eab5cc66e641debfc5366ae4bf2a75522b52b35850d50051775e7"
+    },
+    "recon.yuv": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/recon.yuv",
+      "size": 2090188800,
+      "sha256": "84b5280ec372c3003ae448f1cb67c050510df23933aeabdfab978b13eadd1a94"
+    },
+    "pass.stats": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/pass.stats",
+      "size": 18872,
+      "sha256": "6114f3cd907246cf1aa6fc6654ff63f59e8be72ba5aa4663a4e98b46804b1007"
+    },
+    "encode.log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/encode.log",
+      "size": 1807,
+      "sha256": "ae66b07e914c57ba0d1007150dfd26a9bf0d034c5575e270ffcc720f50044d60"
+    }
+  },
+  "scope": "Scratch policy/control only; native delivery, decoder admission and quality remain separate.",
+  "identity_before": [
+    {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/ROUND16_RATE_REFINEMENT.md",
+      "size": 2583,
+      "sha256": "9ea9b3bd9dcf4c5a7f994e0eb12508448a93142ad9d7b7baec27f5ea21597d82"
+    },
+    {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/ROUND16_TF0_BUDGET_CONTRACT.md",
+      "size": 4291,
+      "sha256": "5ed81849c12af6daeb206e2184fa7ad0ddacb4b6d7d3ec35fab3b845c9901c71"
+    },
+    {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/ROUND18_ABSOLUTE_CAP_CONTRACT.md",
+      "size": 7968,
+      "sha256": "97d68ee39c6ad1922c1025143583fffc02d480b3370f4aaa1c58817029f7b4bf"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/fixtures/e05-1440/historical-input-validation.json",
+      "size": 15127,
+      "sha256": "9fbbf15da51d1b4d334de620e2f276dde051158ef027cad27c773b1b130930f0"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/fixtures/e05-1440/input10.y4m",
+      "size": 2090190894,
+      "sha256": "232abb5ffee869be4bedf682aa103c166eb473bb3fdad5daf28956cca60148d4"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/fixtures/e05-1440/validity.json",
+      "size": 79075,
+      "sha256": "48acc932cf17fa90b6a7d2306018fb9d593522d5fcf01786f9c8bf82afef618c"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/app-ldd.txt",
+      "size": 379,
+      "sha256": "ee164475660112d1cc4cef704083c720d74d5756eca11585fdae0f525013a8df"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/app-version.txt",
+      "size": 78,
+      "sha256": "ea3fc2305ef027fc53245fb358fb8af5fd91a5f85a1089f3d5f00e9b503c3a52"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build/CMakeCache.txt",
+      "size": 27791,
+      "sha256": "5863560cbd4537b87bf19655d92ecc58d04162b80dd61ad4d9b3b25afb60abe0"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build/bin/SvtAv1EncApp",
+      "size": 129688,
+      "sha256": "2288851074fd31fd4ddf26519f48bcdd301b99c9a918c60fc7f74641985ef45f"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build/bin/libSvtAv1Enc.so.3.0.2",
+      "size": 8441736,
+      "sha256": "a7ef2217cff8237130d0efc60c973af7685c524b64239a11c7b28a22e08d294d"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build/build.ninja",
+      "size": 682224,
+      "sha256": "be55e756df1915140b058a777192c5bcb813904068c66132aa5310dba6fdd075"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build-artifact-hashes.txt",
+      "size": 2758,
+      "sha256": "333b98e507175618fd00e2fc6010bbd9ec205bf60572e8f4b1683528ed3ff65c"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build-receipt.log",
+      "size": 51351,
+      "sha256": "29c5631f1be9c664b767db8ad4410a9d2331f147671ad11c42d1efc12f18c7d4"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build.log",
+      "size": 41746,
+      "sha256": "b5b8e393a83752fe627ff8954ae356d3d827e9b0ff3c828a85154475d2c5a8ff"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/completed-build-pins.json",
+      "size": 4765,
+      "sha256": "c0e389a6ca98513c5b4117b48dab02552b7f21ea978585974243f747803e1fe7"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/configure.log",
+      "size": 4333,
+      "sha256": "44b0bd272e9c26ea135b45da18ad30f78ec608593a4a54b5cfa7a262a9808fb6"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/measured-runner.sh",
+      "size": 8678,
+      "sha256": "83ed079e604833cd596c0605a3afd3d6dae7b6574216b4d831c4d960522c148e"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/preparation.json",
+      "size": 1233,
+      "sha256": "2785ef58fe327230d879a42a92d5220e44e9e598a1034be711fa1a9175486ec2"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/source-manifest-after.json",
+      "size": 249090,
+      "sha256": "f405193d6b35d74919d452457e9b8c93e52938ebbf184dda07c7622180af75ca"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/source-manifest-before.json",
+      "size": 249090,
+      "sha256": "f405193d6b35d74919d452457e9b8c93e52938ebbf184dda07c7622180af75ca"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/source-manifest.json",
+      "size": 249090,
+      "sha256": "f405193d6b35d74919d452457e9b8c93e52938ebbf184dda07c7622180af75ca"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/tool-identities.txt",
+      "size": 636,
+      "sha256": "f1166c6482b92233d53933eb20b5bb9f56fdd2f586135470721c60e0f607e332"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/pin_build.py",
+      "size": 4682,
+      "sha256": "dd5093a3cddd6e309e36e51f329dea2937c2591c8524c5659b55896655f84d9a"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/run.py",
+      "size": 14607,
+      "sha256": "ebfce2b97bd8002db2e866086ed44ac8dece936d64bfeaa01062f29dc5bf6bb3"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/measured-runner.py",
+      "size": 14607,
+      "sha256": "ebfce2b97bd8002db2e866086ed44ac8dece936d64bfeaa01062f29dc5bf6bb3"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/pass.stats",
+      "size": 18872,
+      "sha256": "6114f3cd907246cf1aa6fc6654ff63f59e8be72ba5aa4663a4e98b46804b1007"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-freeze-1/r18-cap.patch",
+      "size": 32673,
+      "sha256": "5f03edf1ba320c84006e65484e88742ffb60b2de422b73b10346ea90ca9ed5d0"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round18-source-release.md",
+      "size": 4082,
+      "sha256": "5406b49c7adf70f5b1261f46d701186f15c0e17b89a87fddc32fc539e2b88e2c"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/README.md",
+      "size": 1842,
+      "sha256": "a4af1b641a5d1aee9357969e18e322e6d9bed192fd412cb02522165bef2590e0"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/encode_refine.py",
+      "size": 28105,
+      "sha256": "5804a1a5985d0676975abe28fba2d8c7a8d6af71c2f70d39dab11436bf2941e4"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/command.json",
+      "size": 67624,
+      "sha256": "00bb9243453fb55f1c878842e2ecfd3760f8403144e1e5b507530477a03ef497"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/measured-runner.py",
+      "size": 28105,
+      "sha256": "5804a1a5985d0676975abe28fba2d8c7a8d6af71c2f70d39dab11436bf2941e4"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/packet-window.json",
+      "size": 89117,
+      "sha256": "c7c0c12b7e1e0f4017252406143117fedd5184f2670db0afee6d1d6e46a1578b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/source-audit.md",
+      "size": 506,
+      "sha256": "e44c980f16174ef805b454606eecdb0eefc5d33cf8244b0c85952f11e4c433db"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/README.md",
+      "size": 2846,
+      "sha256": "3654655136470188055fdcd3c17b6f51bda8016c7635f58fcf01fa2313df585b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/encode_r16.py",
+      "size": 22300,
+      "sha256": "2c14604755be12ae1f8fe996cc93ea9486963f629e44bc3a1a7d21d40076469b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10014/command.json",
+      "size": 63295,
+      "sha256": "02bc209310beb0c88d72c9ca40deb621ce07b2694dfd52bc9ddc5db5219deadd"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10014/measured-runner.py",
+      "size": 22300,
+      "sha256": "2c14604755be12ae1f8fe996cc93ea9486963f629e44bc3a1a7d21d40076469b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10014/packet-window.json",
+      "size": 89122,
+      "sha256": "1ec16a12c7fc92602a8d294772da5364ea0042c3263a6eaca90a9c779a485912"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10070/command.json",
+      "size": 62646,
+      "sha256": "690beb605f882ddb9748f4e23f4aabc604cca1027f019b5ad09004b9b31b442a"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10070/measured-runner.py",
+      "size": 22300,
+      "sha256": "2c14604755be12ae1f8fe996cc93ea9486963f629e44bc3a1a7d21d40076469b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10070/packet-window.json",
+      "size": 89110,
+      "sha256": "2c8ea0ed16a84ebd1959db1ebeeaeee0ab2e3bf7f69fe9a554035971afa2bfaa"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10313/command.json",
+      "size": 60579,
+      "sha256": "90b6df06c93ae6e048ee37f0584f17b658f38c674af81fb03ccc785c34271a33"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10313/measured-runner.py",
+      "size": 22300,
+      "sha256": "2c14604755be12ae1f8fe996cc93ea9486963f629e44bc3a1a7d21d40076469b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10313/packet-window.json",
+      "size": 89129,
+      "sha256": "a87bbf3fb29bcfa3cab34df48861842986ead984439a15227bb91cf9b7c278f2"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/source-audit.md",
+      "size": 2252,
+      "sha256": "44ff2908d47143d3d30394ecabe20dac857503c32bf5d6e3349672575c6cec11"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/build/bin/SvtAv1EncApp",
+      "size": 129688,
+      "sha256": "f4867ae287fa34cc50f927b7aa52611973adbc7231785117e5d32ce077b2461c"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/build/bin/libSvtAv1Enc.so.3.0.2",
+      "size": 8279544,
+      "sha256": "cd408a2f31f871cf9da924dd943607e2b8aa2e5366e513fc82d959434414f20b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/build-artifact-hashes.txt",
+      "size": 2548,
+      "sha256": "d3a707bbb8851bb02ea34d0b1f0397ad70bb17b730d4477750775e878042443e"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/build-receipt.log",
+      "size": 48807,
+      "sha256": "501b0d3d257305d78429af350ab80296607921109273d927425fb335b1e5dfef"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/cpuinfo-audit.json",
+      "size": 1320,
+      "sha256": "697dd77268d11f1f8a1a5003f6f6e05e1206d3686904fa3b1f05e5b499a43190"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/cpuinfo-manifest.json",
+      "size": 71166,
+      "sha256": "2374575a0aba9b941152770a2374ec048eb540868366bbbb46df846896a4a63f"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/runs/e05-1440/psyex-1x1/command.json",
+      "size": 58442,
+      "sha256": "ceea9943cb7b0fd31331a7505089ac72bb06dc78c7e150589f0972d469cfa138"
+    },
+    {
+      "path": "/usr/bin/ffmpeg",
+      "size": 342488,
+      "sha256": "ed16af623947494a72e284b6eb8ff225f2da22b38b5d5069c2fd4b4ba3384e41"
+    },
+    {
+      "path": "/usr/bin/ffprobe",
+      "size": 191888,
+      "sha256": "272f6ebc634a63d9c8b4ca68e964119d980f25154e5aa2c35e5487da48e9a58f"
+    },
+    {
+      "path": "/usr/bin/ldd",
+      "size": 5382,
+      "sha256": "752803b8baa217b821bd4566c4fbdaec50c01cb32d2796ec056d22d190d4290f"
+    },
+    {
+      "path": "/usr/bin/nice",
+      "size": 35336,
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d"
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "size": 31104,
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b"
+    }
+  ],
+  "ldd": {
+    "returncode": 0,
+    "stdout": "\tlinux-vdso.so.1 (0x00007dafd6816000)\n\tlibSvtAv1Enc.so.3 => /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build/bin/libSvtAv1Enc.so.3 (0x00007dafd5c00000)\n\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007dafd66f2000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007dafd5800000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007dafd6818000)\n",
+    "stderr": ""
+  },
+  "environment": {
+    "LD_LIBRARY_PATH": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build/bin"
+  },
+  "resource_before": {
+    "free_bytes": 642646847488,
+    "loadavg": "4.98 5.00 4.29 5/5020 3509064\n"
+  },
+  "returncode": 0,
+  "seconds": 309.2634206949733,
+  "ivf_payload": {
+    "packets": [
+      {
+        "pts": 0,
+        "bytes": 109935
+      },
+      {
+        "pts": 1,
+        "bytes": 437673
+      },
+      {
+        "pts": 2,
+        "bytes": 5
+      },
+      {
+        "pts": 3,
+        "bytes": 62076
+      },
+      {
+        "pts": 4,
+        "bytes": 5
+      },
+      {
+        "pts": 5,
+        "bytes": 99499
+      },
+      {
+        "pts": 6,
+        "bytes": 5
+      },
+      {
+        "pts": 7,
+        "bytes": 43426
+      },
+      {
+        "pts": 8,
+        "bytes": 5
+      },
+      {
+        "pts": 9,
+        "bytes": 184465
+      },
+      {
+        "pts": 10,
+        "bytes": 5
+      },
+      {
+        "pts": 11,
+        "bytes": 55392
+      },
+      {
+        "pts": 12,
+        "bytes": 5
+      },
+      {
+        "pts": 13,
+        "bytes": 88352
+      },
+      {
+        "pts": 14,
+        "bytes": 5
+      },
+      {
+        "pts": 15,
+        "bytes": 22132
+      },
+      {
+        "pts": 16,
+        "bytes": 5
+      },
+      {
+        "pts": 17,
+        "bytes": 338436
+      },
+      {
+        "pts": 18,
+        "bytes": 5
+      },
+      {
+        "pts": 19,
+        "bytes": 35152
+      },
+      {
+        "pts": 20,
+        "bytes": 5
+      },
+      {
+        "pts": 21,
+        "bytes": 101550
+      },
+      {
+        "pts": 22,
+        "bytes": 5
+      },
+      {
+        "pts": 23,
+        "bytes": 35781
+      },
+      {
+        "pts": 24,
+        "bytes": 5
+      },
+      {
+        "pts": 25,
+        "bytes": 176333
+      },
+      {
+        "pts": 26,
+        "bytes": 5
+      },
+      {
+        "pts": 27,
+        "bytes": 38158
+      },
+      {
+        "pts": 28,
+        "bytes": 5
+      },
+      {
+        "pts": 29,
+        "bytes": 120381
+      },
+      {
+        "pts": 30,
+        "bytes": 5
+      },
+      {
+        "pts": 31,
+        "bytes": 52738
+      },
+      {
+        "pts": 32,
+        "bytes": 5
+      },
+      {
+        "pts": 33,
+        "bytes": 322417
+      },
+      {
+        "pts": 34,
+        "bytes": 5
+      },
+      {
+        "pts": 35,
+        "bytes": 23638
+      },
+      {
+        "pts": 36,
+        "bytes": 5
+      },
+      {
+        "pts": 37,
+        "bytes": 59488
+      },
+      {
+        "pts": 38,
+        "bytes": 5
+      },
+      {
+        "pts": 39,
+        "bytes": 23989
+      },
+      {
+        "pts": 40,
+        "bytes": 5
+      },
+      {
+        "pts": 41,
+        "bytes": 150845
+      },
+      {
+        "pts": 42,
+        "bytes": 5
+      },
+      {
+        "pts": 43,
+        "bytes": 33952
+      },
+      {
+        "pts": 44,
+        "bytes": 5
+      },
+      {
+        "pts": 45,
+        "bytes": 65438
+      },
+      {
+        "pts": 46,
+        "bytes": 5
+      },
+      {
+        "pts": 47,
+        "bytes": 34939
+      },
+      {
+        "pts": 48,
+        "bytes": 5
+      },
+      {
+        "pts": 49,
+        "bytes": 318203
+      },
+      {
+        "pts": 50,
+        "bytes": 5
+      },
+      {
+        "pts": 51,
+        "bytes": 22212
+      },
+      {
+        "pts": 52,
+        "bytes": 5
+      },
+      {
+        "pts": 53,
+        "bytes": 66557
+      },
+      {
+        "pts": 54,
+        "bytes": 5
+      },
+      {
+        "pts": 55,
+        "bytes": 22775
+      },
+      {
+        "pts": 56,
+        "bytes": 5
+      },
+      {
+        "pts": 57,
+        "bytes": 134329
+      },
+      {
+        "pts": 58,
+        "bytes": 5
+      },
+      {
+        "pts": 59,
+        "bytes": 17249
+      },
+      {
+        "pts": 60,
+        "bytes": 5
+      },
+      {
+        "pts": 61,
+        "bytes": 69438
+      },
+      {
+        "pts": 62,
+        "bytes": 5
+      },
+      {
+        "pts": 63,
+        "bytes": 19540
+      },
+      {
+        "pts": 64,
+        "bytes": 5
+      },
+      {
+        "pts": 65,
+        "bytes": 510754
+      },
+      {
+        "pts": 66,
+        "bytes": 5
+      },
+      {
+        "pts": 67,
+        "bytes": 49624
+      },
+      {
+        "pts": 68,
+        "bytes": 5
+      },
+      {
+        "pts": 69,
+        "bytes": 169031
+      },
+      {
+        "pts": 70,
+        "bytes": 5
+      },
+      {
+        "pts": 71,
+        "bytes": 1648
+      },
+      {
+        "pts": 72,
+        "bytes": 5
+      },
+      {
+        "pts": 73,
+        "bytes": 284290
+      },
+      {
+        "pts": 74,
+        "bytes": 5
+      },
+      {
+        "pts": 75,
+        "bytes": 71904
+      },
+      {
+        "pts": 76,
+        "bytes": 5
+      },
+      {
+        "pts": 77,
+        "bytes": 163224
+      },
+      {
+        "pts": 78,
+        "bytes": 5
+      },
+      {
+        "pts": 79,
+        "bytes": 88411
+      },
+      {
+        "pts": 80,
+        "bytes": 5
+      },
+      {
+        "pts": 81,
+        "bytes": 360844
+      },
+      {
+        "pts": 82,
+        "bytes": 5
+      },
+      {
+        "pts": 83,
+        "bytes": 25866
+      },
+      {
+        "pts": 84,
+        "bytes": 5
+      },
+      {
+        "pts": 85,
+        "bytes": 73827
+      },
+      {
+        "pts": 86,
+        "bytes": 5
+      },
+      {
+        "pts": 87,
+        "bytes": 18286
+      },
+      {
+        "pts": 88,
+        "bytes": 5
+      },
+      {
+        "pts": 89,
+        "bytes": 105938
+      },
+      {
+        "pts": 90,
+        "bytes": 5
+      },
+      {
+        "pts": 91,
+        "bytes": 15946
+      },
+      {
+        "pts": 92,
+        "bytes": 5
+      },
+      {
+        "pts": 93,
+        "bytes": 64302
+      },
+      {
+        "pts": 94,
+        "bytes": 5
+      },
+      {
+        "pts": 95,
+        "bytes": 24239
+      },
+      {
+        "pts": 96,
+        "bytes": 5
+      },
+      {
+        "pts": 97,
+        "bytes": 416111
+      },
+      {
+        "pts": 98,
+        "bytes": 5
+      },
+      {
+        "pts": 99,
+        "bytes": 50550
+      },
+      {
+        "pts": 100,
+        "bytes": 5
+      },
+      {
+        "pts": 101,
+        "bytes": 130652
+      },
+      {
+        "pts": 102,
+        "bytes": 5
+      },
+      {
+        "pts": 103,
+        "bytes": 39302
+      },
+      {
+        "pts": 104,
+        "bytes": 5
+      },
+      {
+        "pts": 105,
+        "bytes": 191496
+      },
+      {
+        "pts": 106,
+        "bytes": 5
+      },
+      {
+        "pts": 107,
+        "bytes": 69982
+      },
+      {
+        "pts": 108,
+        "bytes": 5
+      },
+      {
+        "pts": 109,
+        "bytes": 37798
+      },
+      {
+        "pts": 110,
+        "bytes": 5
+      },
+      {
+        "pts": 111,
+        "bytes": 15026
+      },
+      {
+        "pts": 112,
+        "bytes": 5
+      },
+      {
+        "pts": 113,
+        "bytes": 263376
+      },
+      {
+        "pts": 114,
+        "bytes": 5
+      },
+      {
+        "pts": 115,
+        "bytes": 15498
+      },
+      {
+        "pts": 116,
+        "bytes": 5
+      },
+      {
+        "pts": 117,
+        "bytes": 65064
+      },
+      {
+        "pts": 118,
+        "bytes": 5
+      },
+      {
+        "pts": 119,
+        "bytes": 15564
+      },
+      {
+        "pts": 120,
+        "bytes": 5
+      },
+      {
+        "pts": 121,
+        "bytes": 106227
+      },
+      {
+        "pts": 122,
+        "bytes": 5
+      },
+      {
+        "pts": 123,
+        "bytes": 15005
+      },
+      {
+        "pts": 124,
+        "bytes": 5
+      },
+      {
+        "pts": 125,
+        "bytes": 56389
+      },
+      {
+        "pts": 126,
+        "bytes": 5
+      },
+      {
+        "pts": 127,
+        "bytes": 22264
+      },
+      {
+        "pts": 128,
+        "bytes": 5
+      },
+      {
+        "pts": 129,
+        "bytes": 445216
+      },
+      {
+        "pts": 130,
+        "bytes": 5
+      },
+      {
+        "pts": 131,
+        "bytes": 37502
+      },
+      {
+        "pts": 132,
+        "bytes": 5
+      },
+      {
+        "pts": 133,
+        "bytes": 81738
+      },
+      {
+        "pts": 134,
+        "bytes": 5
+      },
+      {
+        "pts": 135,
+        "bytes": 43189
+      },
+      {
+        "pts": 136,
+        "bytes": 5
+      },
+      {
+        "pts": 137,
+        "bytes": 185707
+      },
+      {
+        "pts": 138,
+        "bytes": 5
+      },
+      {
+        "pts": 139,
+        "bytes": 37901
+      },
+      {
+        "pts": 140,
+        "bytes": 5
+      },
+      {
+        "pts": 141,
+        "bytes": 114109
+      },
+      {
+        "pts": 142,
+        "bytes": 5
+      },
+      {
+        "pts": 143,
+        "bytes": 45911
+      },
+      {
+        "pts": 144,
+        "bytes": 5
+      },
+      {
+        "pts": 145,
+        "bytes": 273676
+      },
+      {
+        "pts": 146,
+        "bytes": 5
+      },
+      {
+        "pts": 147,
+        "bytes": 28313
+      },
+      {
+        "pts": 148,
+        "bytes": 5
+      },
+      {
+        "pts": 149,
+        "bytes": 62664
+      },
+      {
+        "pts": 150,
+        "bytes": 5
+      },
+      {
+        "pts": 151,
+        "bytes": 20893
+      },
+      {
+        "pts": 152,
+        "bytes": 5
+      },
+      {
+        "pts": 153,
+        "bytes": 116023
+      },
+      {
+        "pts": 154,
+        "bytes": 5
+      },
+      {
+        "pts": 155,
+        "bytes": 19849
+      },
+      {
+        "pts": 156,
+        "bytes": 5
+      },
+      {
+        "pts": 157,
+        "bytes": 44932
+      },
+      {
+        "pts": 158,
+        "bytes": 5
+      },
+      {
+        "pts": 159,
+        "bytes": 15314
+      },
+      {
+        "pts": 160,
+        "bytes": 5
+      },
+      {
+        "pts": 161,
+        "bytes": 236726
+      },
+      {
+        "pts": 162,
+        "bytes": 5
+      },
+      {
+        "pts": 163,
+        "bytes": 17582
+      },
+      {
+        "pts": 164,
+        "bytes": 5
+      },
+      {
+        "pts": 165,
+        "bytes": 58118
+      },
+      {
+        "pts": 166,
+        "bytes": 5
+      },
+      {
+        "pts": 167,
+        "bytes": 20477
+      },
+      {
+        "pts": 168,
+        "bytes": 5
+      },
+      {
+        "pts": 169,
+        "bytes": 126167
+      },
+      {
+        "pts": 170,
+        "bytes": 5
+      },
+      {
+        "pts": 171,
+        "bytes": 21701
+      },
+      {
+        "pts": 172,
+        "bytes": 5
+      },
+      {
+        "pts": 173,
+        "bytes": 67973
+      },
+      {
+        "pts": 174,
+        "bytes": 5
+      },
+      {
+        "pts": 175,
+        "bytes": 27111
+      },
+      {
+        "pts": 176,
+        "bytes": 5
+      },
+      {
+        "pts": 177,
+        "bytes": 236184
+      },
+      {
+        "pts": 178,
+        "bytes": 5
+      },
+      {
+        "pts": 179,
+        "bytes": 17857
+      },
+      {
+        "pts": 180,
+        "bytes": 5
+      },
+      {
+        "pts": 181,
+        "bytes": 43292
+      },
+      {
+        "pts": 182,
+        "bytes": 5
+      },
+      {
+        "pts": 183,
+        "bytes": 19905
+      },
+      {
+        "pts": 184,
+        "bytes": 5
+      },
+      {
+        "pts": 185,
+        "bytes": 126438
+      },
+      {
+        "pts": 186,
+        "bytes": 5
+      },
+      {
+        "pts": 187,
+        "bytes": 23210
+      },
+      {
+        "pts": 188,
+        "bytes": 5
+      },
+      {
+        "pts": 189,
+        "bytes": 55665
+      },
+      {
+        "pts": 190,
+        "bytes": 5
+      },
+      {
+        "pts": 191,
+        "bytes": 38324
+      },
+      {
+        "pts": 192,
+        "bytes": 5
+      },
+      {
+        "pts": 193,
+        "bytes": 183858
+      },
+      {
+        "pts": 194,
+        "bytes": 5
+      },
+      {
+        "pts": 195,
+        "bytes": 19708
+      },
+      {
+        "pts": 196,
+        "bytes": 5
+      },
+      {
+        "pts": 197,
+        "bytes": 55831
+      },
+      {
+        "pts": 198,
+        "bytes": 5
+      },
+      {
+        "pts": 199,
+        "bytes": 18359
+      },
+      {
+        "pts": 200,
+        "bytes": 5
+      },
+      {
+        "pts": 201,
+        "bytes": 123745
+      },
+      {
+        "pts": 202,
+        "bytes": 5
+      },
+      {
+        "pts": 203,
+        "bytes": 25068
+      },
+      {
+        "pts": 204,
+        "bytes": 5
+      },
+      {
+        "pts": 205,
+        "bytes": 59230
+      },
+      {
+        "pts": 206,
+        "bytes": 5
+      },
+      {
+        "pts": 207,
+        "bytes": 15598
+      },
+      {
+        "pts": 208,
+        "bytes": 5
+      },
+      {
+        "pts": 209,
+        "bytes": 244118
+      },
+      {
+        "pts": 210,
+        "bytes": 5
+      },
+      {
+        "pts": 211,
+        "bytes": 24948
+      },
+      {
+        "pts": 212,
+        "bytes": 5
+      },
+      {
+        "pts": 213,
+        "bytes": 86720
+      },
+      {
+        "pts": 214,
+        "bytes": 5
+      },
+      {
+        "pts": 215,
+        "bytes": 30121
+      },
+      {
+        "pts": 216,
+        "bytes": 5
+      },
+      {
+        "pts": 217,
+        "bytes": 120040
+      },
+      {
+        "pts": 218,
+        "bytes": 5
+      },
+      {
+        "pts": 219,
+        "bytes": 27007
+      },
+      {
+        "pts": 220,
+        "bytes": 5
+      },
+      {
+        "pts": 221,
+        "bytes": 78007
+      },
+      {
+        "pts": 222,
+        "bytes": 5
+      },
+      {
+        "pts": 223,
+        "bytes": 27929
+      },
+      {
+        "pts": 224,
+        "bytes": 5
+      },
+      {
+        "pts": 225,
+        "bytes": 166527
+      },
+      {
+        "pts": 226,
+        "bytes": 5
+      },
+      {
+        "pts": 227,
+        "bytes": 25956
+      },
+      {
+        "pts": 228,
+        "bytes": 5
+      },
+      {
+        "pts": 229,
+        "bytes": 68121
+      },
+      {
+        "pts": 230,
+        "bytes": 5
+      },
+      {
+        "pts": 231,
+        "bytes": 23250
+      },
+      {
+        "pts": 232,
+        "bytes": 5
+      },
+      {
+        "pts": 233,
+        "bytes": 61809
+      },
+      {
+        "pts": 234,
+        "bytes": 5
+      },
+      {
+        "pts": 235,
+        "bytes": 8833
+      },
+      {
+        "pts": 236,
+        "bytes": 5
+      },
+      {
+        "pts": 237,
+        "bytes": 52394
+      },
+      {
+        "pts": 238,
+        "bytes": 5
+      },
+      {
+        "pts": 239,
+        "bytes": 21086
+      },
+      {
+        "pts": 240,
+        "bytes": 86186
+      },
+      {
+        "pts": 241,
+        "bytes": 334253
+      },
+      {
+        "pts": 242,
+        "bytes": 5
+      },
+      {
+        "pts": 243,
+        "bytes": 19623
+      },
+      {
+        "pts": 244,
+        "bytes": 5
+      },
+      {
+        "pts": 245,
+        "bytes": 70771
+      },
+      {
+        "pts": 246,
+        "bytes": 5
+      },
+      {
+        "pts": 247,
+        "bytes": 40899
+      },
+      {
+        "pts": 248,
+        "bytes": 5
+      },
+      {
+        "pts": 249,
+        "bytes": 234306
+      },
+      {
+        "pts": 250,
+        "bytes": 5
+      },
+      {
+        "pts": 251,
+        "bytes": 50914
+      },
+      {
+        "pts": 252,
+        "bytes": 5
+      },
+      {
+        "pts": 253,
+        "bytes": 108789
+      },
+      {
+        "pts": 254,
+        "bytes": 5
+      },
+      {
+        "pts": 255,
+        "bytes": 38135
+      },
+      {
+        "pts": 256,
+        "bytes": 5
+      },
+      {
+        "pts": 257,
+        "bytes": 390140
+      },
+      {
+        "pts": 258,
+        "bytes": 5
+      },
+      {
+        "pts": 259,
+        "bytes": 29229
+      },
+      {
+        "pts": 260,
+        "bytes": 5
+      },
+      {
+        "pts": 261,
+        "bytes": 79526
+      },
+      {
+        "pts": 262,
+        "bytes": 5
+      },
+      {
+        "pts": 263,
+        "bytes": 29708
+      },
+      {
+        "pts": 264,
+        "bytes": 5
+      },
+      {
+        "pts": 265,
+        "bytes": 234034
+      },
+      {
+        "pts": 266,
+        "bytes": 5
+      },
+      {
+        "pts": 267,
+        "bytes": 44275
+      },
+      {
+        "pts": 268,
+        "bytes": 5
+      },
+      {
+        "pts": 269,
+        "bytes": 125849
+      },
+      {
+        "pts": 270,
+        "bytes": 5
+      },
+      {
+        "pts": 271,
+        "bytes": 36212
+      },
+      {
+        "pts": 272,
+        "bytes": 5
+      },
+      {
+        "pts": 273,
+        "bytes": 457897
+      },
+      {
+        "pts": 274,
+        "bytes": 5
+      },
+      {
+        "pts": 275,
+        "bytes": 30346
+      },
+      {
+        "pts": 276,
+        "bytes": 5
+      },
+      {
+        "pts": 277,
+        "bytes": 115526
+      },
+      {
+        "pts": 278,
+        "bytes": 5
+      },
+      {
+        "pts": 279,
+        "bytes": 27051
+      },
+      {
+        "pts": 280,
+        "bytes": 5
+      },
+      {
+        "pts": 281,
+        "bytes": 200778
+      },
+      {
+        "pts": 282,
+        "bytes": 5
+      },
+      {
+        "pts": 283,
+        "bytes": 25742
+      },
+      {
+        "pts": 284,
+        "bytes": 5
+      },
+      {
+        "pts": 285,
+        "bytes": 126791
+      },
+      {
+        "pts": 286,
+        "bytes": 5
+      },
+      {
+        "pts": 287,
+        "bytes": 80128
+      },
+      {
+        "pts": 288,
+        "bytes": 5
+      },
+      {
+        "pts": 289,
+        "bytes": 495788
+      },
+      {
+        "pts": 290,
+        "bytes": 5
+      },
+      {
+        "pts": 291,
+        "bytes": 28634
+      },
+      {
+        "pts": 292,
+        "bytes": 5
+      },
+      {
+        "pts": 293,
+        "bytes": 105862
+      },
+      {
+        "pts": 294,
+        "bytes": 5
+      },
+      {
+        "pts": 295,
+        "bytes": 33010
+      },
+      {
+        "pts": 296,
+        "bytes": 5
+      },
+      {
+        "pts": 297,
+        "bytes": 172897
+      },
+      {
+        "pts": 298,
+        "bytes": 5
+      },
+      {
+        "pts": 299,
+        "bytes": 24480
+      },
+      {
+        "pts": 300,
+        "bytes": 5
+      },
+      {
+        "pts": 301,
+        "bytes": 83354
+      },
+      {
+        "pts": 302,
+        "bytes": 5
+      },
+      {
+        "pts": 303,
+        "bytes": 27485
+      },
+      {
+        "pts": 304,
+        "bytes": 5
+      },
+      {
+        "pts": 305,
+        "bytes": 650043
+      },
+      {
+        "pts": 306,
+        "bytes": 5
+      },
+      {
+        "pts": 307,
+        "bytes": 60407
+      },
+      {
+        "pts": 308,
+        "bytes": 5
+      },
+      {
+        "pts": 309,
+        "bytes": 134902
+      },
+      {
+        "pts": 310,
+        "bytes": 5
+      },
+      {
+        "pts": 311,
+        "bytes": 53703
+      },
+      {
+        "pts": 312,
+        "bytes": 5
+      },
+      {
+        "pts": 313,
+        "bytes": 270436
+      },
+      {
+        "pts": 314,
+        "bytes": 5
+      },
+      {
+        "pts": 315,
+        "bytes": 55247
+      },
+      {
+        "pts": 316,
+        "bytes": 5
+      },
+      {
+        "pts": 317,
+        "bytes": 162501
+      },
+      {
+        "pts": 318,
+        "bytes": 5
+      },
+      {
+        "pts": 319,
+        "bytes": 68813
+      },
+      {
+        "pts": 320,
+        "bytes": 5
+      },
+      {
+        "pts": 321,
+        "bytes": 327999
+      },
+      {
+        "pts": 322,
+        "bytes": 5
+      },
+      {
+        "pts": 323,
+        "bytes": 25961
+      },
+      {
+        "pts": 324,
+        "bytes": 5
+      },
+      {
+        "pts": 325,
+        "bytes": 117308
+      },
+      {
+        "pts": 326,
+        "bytes": 5
+      },
+      {
+        "pts": 327,
+        "bytes": 67165
+      },
+      {
+        "pts": 328,
+        "bytes": 5
+      },
+      {
+        "pts": 329,
+        "bytes": 144921
+      },
+      {
+        "pts": 330,
+        "bytes": 5
+      },
+      {
+        "pts": 331,
+        "bytes": 12579
+      },
+      {
+        "pts": 332,
+        "bytes": 5
+      },
+      {
+        "pts": 333,
+        "bytes": 104831
+      },
+      {
+        "pts": 334,
+        "bytes": 5
+      },
+      {
+        "pts": 335,
+        "bytes": 53526
+      }
+    ],
+    "full_mbps": 10.001512,
+    "scored_mbps": 9.6702312,
+    "scope": "IVF coded packet payload; remux packet accounting is separately required."
+  },
+  "exact_r16_ivf_and_all336_reconstruction": true,
+  "identity_after": [
+    {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/ROUND16_RATE_REFINEMENT.md",
+      "size": 2583,
+      "sha256": "9ea9b3bd9dcf4c5a7f994e0eb12508448a93142ad9d7b7baec27f5ea21597d82"
+    },
+    {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/ROUND16_TF0_BUDGET_CONTRACT.md",
+      "size": 4291,
+      "sha256": "5ed81849c12af6daeb206e2184fa7ad0ddacb4b6d7d3ec35fab3b845c9901c71"
+    },
+    {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/ROUND18_ABSOLUTE_CAP_CONTRACT.md",
+      "size": 7968,
+      "sha256": "97d68ee39c6ad1922c1025143583fffc02d480b3370f4aaa1c58817029f7b4bf"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/fixtures/e05-1440/historical-input-validation.json",
+      "size": 15127,
+      "sha256": "9fbbf15da51d1b4d334de620e2f276dde051158ef027cad27c773b1b130930f0"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/fixtures/e05-1440/input10.y4m",
+      "size": 2090190894,
+      "sha256": "232abb5ffee869be4bedf682aa103c166eb473bb3fdad5daf28956cca60148d4"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/fixtures/e05-1440/validity.json",
+      "size": 79075,
+      "sha256": "48acc932cf17fa90b6a7d2306018fb9d593522d5fcf01786f9c8bf82afef618c"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/app-ldd.txt",
+      "size": 379,
+      "sha256": "ee164475660112d1cc4cef704083c720d74d5756eca11585fdae0f525013a8df"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/app-version.txt",
+      "size": 78,
+      "sha256": "ea3fc2305ef027fc53245fb358fb8af5fd91a5f85a1089f3d5f00e9b503c3a52"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build/CMakeCache.txt",
+      "size": 27791,
+      "sha256": "5863560cbd4537b87bf19655d92ecc58d04162b80dd61ad4d9b3b25afb60abe0"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build/bin/SvtAv1EncApp",
+      "size": 129688,
+      "sha256": "2288851074fd31fd4ddf26519f48bcdd301b99c9a918c60fc7f74641985ef45f"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build/bin/libSvtAv1Enc.so.3.0.2",
+      "size": 8441736,
+      "sha256": "a7ef2217cff8237130d0efc60c973af7685c524b64239a11c7b28a22e08d294d"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build/build.ninja",
+      "size": 682224,
+      "sha256": "be55e756df1915140b058a777192c5bcb813904068c66132aa5310dba6fdd075"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build-artifact-hashes.txt",
+      "size": 2758,
+      "sha256": "333b98e507175618fd00e2fc6010bbd9ec205bf60572e8f4b1683528ed3ff65c"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build-receipt.log",
+      "size": 51351,
+      "sha256": "29c5631f1be9c664b767db8ad4410a9d2331f147671ad11c42d1efc12f18c7d4"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/build.log",
+      "size": 41746,
+      "sha256": "b5b8e393a83752fe627ff8954ae356d3d827e9b0ff3c828a85154475d2c5a8ff"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/completed-build-pins.json",
+      "size": 4765,
+      "sha256": "c0e389a6ca98513c5b4117b48dab02552b7f21ea978585974243f747803e1fe7"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/configure.log",
+      "size": 4333,
+      "sha256": "44b0bd272e9c26ea135b45da18ad30f78ec608593a4a54b5cfa7a262a9808fb6"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/measured-runner.sh",
+      "size": 8678,
+      "sha256": "83ed079e604833cd596c0605a3afd3d6dae7b6574216b4d831c4d960522c148e"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/preparation.json",
+      "size": 1233,
+      "sha256": "2785ef58fe327230d879a42a92d5220e44e9e598a1034be711fa1a9175486ec2"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/source-manifest-after.json",
+      "size": 249090,
+      "sha256": "f405193d6b35d74919d452457e9b8c93e52938ebbf184dda07c7622180af75ca"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/source-manifest-before.json",
+      "size": 249090,
+      "sha256": "f405193d6b35d74919d452457e9b8c93e52938ebbf184dda07c7622180af75ca"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/source-manifest.json",
+      "size": 249090,
+      "sha256": "f405193d6b35d74919d452457e9b8c93e52938ebbf184dda07c7622180af75ca"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-1/tool-identities.txt",
+      "size": 636,
+      "sha256": "f1166c6482b92233d53933eb20b5bb9f56fdd2f586135470721c60e0f607e332"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/pin_build.py",
+      "size": 4682,
+      "sha256": "dd5093a3cddd6e309e36e51f329dea2937c2591c8524c5659b55896655f84d9a"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/run.py",
+      "size": 14607,
+      "sha256": "ebfce2b97bd8002db2e866086ed44ac8dece936d64bfeaa01062f29dc5bf6bb3"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/measured-runner.py",
+      "size": 14607,
+      "sha256": "ebfce2b97bd8002db2e866086ed44ac8dece936d64bfeaa01062f29dc5bf6bb3"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/pass.stats",
+      "size": 18872,
+      "sha256": "6114f3cd907246cf1aa6fc6654ff63f59e8be72ba5aa4663a4e98b46804b1007"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-freeze-1/r18-cap.patch",
+      "size": 32673,
+      "sha256": "5f03edf1ba320c84006e65484e88742ffb60b2de422b73b10346ea90ca9ed5d0"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round18-source-release.md",
+      "size": 4082,
+      "sha256": "5406b49c7adf70f5b1261f46d701186f15c0e17b89a87fddc32fc539e2b88e2c"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/README.md",
+      "size": 1842,
+      "sha256": "a4af1b641a5d1aee9357969e18e322e6d9bed192fd412cb02522165bef2590e0"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/encode_refine.py",
+      "size": 28105,
+      "sha256": "5804a1a5985d0676975abe28fba2d8c7a8d6af71c2f70d39dab11436bf2941e4"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/command.json",
+      "size": 67624,
+      "sha256": "00bb9243453fb55f1c878842e2ecfd3760f8403144e1e5b507530477a03ef497"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/measured-runner.py",
+      "size": 28105,
+      "sha256": "5804a1a5985d0676975abe28fba2d8c7a8d6af71c2f70d39dab11436bf2941e4"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/packet-window.json",
+      "size": 89117,
+      "sha256": "c7c0c12b7e1e0f4017252406143117fedd5184f2670db0afee6d1d6e46a1578b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/source-audit.md",
+      "size": 506,
+      "sha256": "e44c980f16174ef805b454606eecdb0eefc5d33cf8244b0c85952f11e4c433db"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/README.md",
+      "size": 2846,
+      "sha256": "3654655136470188055fdcd3c17b6f51bda8016c7635f58fcf01fa2313df585b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/encode_r16.py",
+      "size": 22300,
+      "sha256": "2c14604755be12ae1f8fe996cc93ea9486963f629e44bc3a1a7d21d40076469b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10014/command.json",
+      "size": 63295,
+      "sha256": "02bc209310beb0c88d72c9ca40deb621ce07b2694dfd52bc9ddc5db5219deadd"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10014/measured-runner.py",
+      "size": 22300,
+      "sha256": "2c14604755be12ae1f8fe996cc93ea9486963f629e44bc3a1a7d21d40076469b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10014/packet-window.json",
+      "size": 89122,
+      "sha256": "1ec16a12c7fc92602a8d294772da5364ea0042c3263a6eaca90a9c779a485912"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10070/command.json",
+      "size": 62646,
+      "sha256": "690beb605f882ddb9748f4e23f4aabc604cca1027f019b5ad09004b9b31b442a"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10070/measured-runner.py",
+      "size": 22300,
+      "sha256": "2c14604755be12ae1f8fe996cc93ea9486963f629e44bc3a1a7d21d40076469b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10070/packet-window.json",
+      "size": 89110,
+      "sha256": "2c8ea0ed16a84ebd1959db1ebeeaeee0ab2e3bf7f69fe9a554035971afa2bfaa"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10313/command.json",
+      "size": 60579,
+      "sha256": "90b6df06c93ae6e048ee37f0584f17b658f38c674af81fb03ccc785c34271a33"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10313/measured-runner.py",
+      "size": 22300,
+      "sha256": "2c14604755be12ae1f8fe996cc93ea9486963f629e44bc3a1a7d21d40076469b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10313/packet-window.json",
+      "size": 89129,
+      "sha256": "a87bbf3fb29bcfa3cab34df48861842986ead984439a15227bb91cf9b7c278f2"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/source-audit.md",
+      "size": 2252,
+      "sha256": "44ff2908d47143d3d30394ecabe20dac857503c32bf5d6e3349672575c6cec11"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/build/bin/SvtAv1EncApp",
+      "size": 129688,
+      "sha256": "f4867ae287fa34cc50f927b7aa52611973adbc7231785117e5d32ce077b2461c"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/build/bin/libSvtAv1Enc.so.3.0.2",
+      "size": 8279544,
+      "sha256": "cd408a2f31f871cf9da924dd943607e2b8aa2e5366e513fc82d959434414f20b"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/build-artifact-hashes.txt",
+      "size": 2548,
+      "sha256": "d3a707bbb8851bb02ea34d0b1f0397ad70bb17b730d4477750775e878042443e"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/build-receipt.log",
+      "size": 48807,
+      "sha256": "501b0d3d257305d78429af350ab80296607921109273d927425fb335b1e5dfef"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/cpuinfo-audit.json",
+      "size": 1320,
+      "sha256": "697dd77268d11f1f8a1a5003f6f6e05e1206d3686904fa3b1f05e5b499a43190"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/cpuinfo-manifest.json",
+      "size": 71166,
+      "sha256": "2374575a0aba9b941152770a2374ec048eb540868366bbbb46df846896a4a63f"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/runs/e05-1440/psyex-1x1/command.json",
+      "size": 58442,
+      "sha256": "ceea9943cb7b0fd31331a7505089ac72bb06dc78c7e150589f0972d469cfa138"
+    },
+    {
+      "path": "/usr/bin/ffmpeg",
+      "size": 342488,
+      "sha256": "ed16af623947494a72e284b6eb8ff225f2da22b38b5d5069c2fd4b4ba3384e41"
+    },
+    {
+      "path": "/usr/bin/ffprobe",
+      "size": 191888,
+      "sha256": "272f6ebc634a63d9c8b4ca68e964119d980f25154e5aa2c35e5487da48e9a58f"
+    },
+    {
+      "path": "/usr/bin/ldd",
+      "size": 5382,
+      "sha256": "752803b8baa217b821bd4566c4fbdaec50c01cb32d2796ec056d22d190d4290f"
+    },
+    {
+      "path": "/usr/bin/nice",
+      "size": 35336,
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d"
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "size": 31104,
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b"
+    }
+  ],
+  "resource_after": {
+    "free_bytes": 640209059840,
+    "loadavg": "4.39 5.13 4.59 1/5016 3519455\n"
+  },
+  "ended_utc": "2026-10-20T20:28:13.620950+00:00"
+}

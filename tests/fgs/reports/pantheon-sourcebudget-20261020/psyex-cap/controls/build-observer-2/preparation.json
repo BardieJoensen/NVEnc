@@ -1,0 +1,29 @@
+{
+  "status": "prepared_not_built",
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/prepare_build.py",
+    "size": 2582,
+    "sha256": "f0c29f5be5bd910f7bf7ea04b021005fbdeb7dbfeb4730937386f4d6510b58e8"
+  },
+  "seed": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/build_runner.sh",
+    "size": 8606,
+    "sha256": "088d599f60a022828105f83555eaf7273a1e3360f8824540ca2340dcc8bc3fd2"
+  },
+  "source": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2",
+  "manifest": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/observer-freeze-2/source-manifest.json",
+    "size": 249090,
+    "sha256": "305f06b51bf94988bd9d6c1002cfa880736071799f52d38f3bc7c25f5248a22b"
+  },
+  "runner": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/build_runner.sh",
+    "size": 8689,
+    "sha256": "221b6b4de6bbe71dd608275bec324a9f96ea83430f821abc675c30c73b20b778"
+  },
+  "changes": [
+    "explicit fresh source path",
+    "reviewed new manifest pin",
+    "160GB free-space gate covers 120GB floor plus 40GB allowance"
+  ]
+}

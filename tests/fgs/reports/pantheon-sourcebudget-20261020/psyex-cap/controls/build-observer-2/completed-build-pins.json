@@ -1,0 +1,100 @@
+{
+  "status": "build_complete",
+  "returncode": 0,
+  "source_root": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/source-observer-2",
+  "pin_script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/pin_build.py",
+    "size": 4682,
+    "sha256": "dd5093a3cddd6e309e36e51f329dea2937c2591c8524c5659b55896655f84d9a"
+  },
+  "preparation": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/preparation.json",
+    "size": 1255,
+    "sha256": "9e76dd20d762bf2270ec19cbc8c874d829dccbc0d1c31a45eaf913919d9e9cef"
+  },
+  "source_manifest": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/source-manifest.json",
+    "size": 249090,
+    "sha256": "305f06b51bf94988bd9d6c1002cfa880736071799f52d38f3bc7c25f5248a22b"
+  },
+  "manifest_before": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/source-manifest-before.json",
+    "size": 249090,
+    "sha256": "305f06b51bf94988bd9d6c1002cfa880736071799f52d38f3bc7c25f5248a22b"
+  },
+  "manifest_after": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/source-manifest-after.json",
+    "size": 249090,
+    "sha256": "305f06b51bf94988bd9d6c1002cfa880736071799f52d38f3bc7c25f5248a22b"
+  },
+  "patch": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/observer-freeze-2/observer-only.patch",
+    "size": 3779,
+    "sha256": "a53d222914c87e20cbedd12497774a93a375448c53a3fe78c60a93e616505024"
+  },
+  "implementation_review": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round18-observer2-source-review.md",
+    "size": 3893,
+    "sha256": "566197111539997ad89180f6db36c969dc87fdf1aa9fcb4ff9e67adf058393ff"
+  },
+  "app": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/build/bin/SvtAv1EncApp",
+    "size": 129688,
+    "sha256": "893cf5fc01027878c30b1979db01d79f57b8efe731f983eaaf79055bef585dfb"
+  },
+  "library": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/build/bin/libSvtAv1Enc.so.3.0.2",
+    "size": 8441888,
+    "sha256": "23eeb24aff56d809f78250803ce63c3137bf0facec1e2e5b151de3bba7461716"
+  },
+  "build_receipt": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/build-receipt.log",
+    "size": 52425,
+    "sha256": "21d545759581ba0b7c75b286cb26122412f625f6edcf1ff852e8e612c3ba0371"
+  },
+  "runner": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/measured-runner.sh",
+    "size": 8689,
+    "sha256": "221b6b4de6bbe71dd608275bec324a9f96ea83430f821abc675c30c73b20b778"
+  },
+  "cmakecache": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/build/CMakeCache.txt",
+    "size": 27916,
+    "sha256": "9939901f380ce5e1b5175e09ea20d5f016632446bed21048dff3186eda0e03d1"
+  },
+  "build_ninja": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/build/build.ninja",
+    "size": 715987,
+    "sha256": "064cc401c445dec692ade7ac61e9a676ba0bf2b80e4c433d209e19afb6bb4fc9"
+  },
+  "artifact_hashes": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/build-artifact-hashes.txt",
+    "size": 2902,
+    "sha256": "467caba9e32d1b09856d37f2a93a564b30803761aa772ffc6497b54008f6d485"
+  },
+  "tools": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/tool-identities.txt",
+    "size": 636,
+    "sha256": "f1166c6482b92233d53933eb20b5bb9f56fdd2f586135470721c60e0f607e332"
+  },
+  "configure_log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/configure.log",
+    "size": 4342,
+    "sha256": "f66099074c346687e26d8dfe96cc26061bacd19473cb6b804884b01cee744db8"
+  },
+  "build_log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/build.log",
+    "size": 42582,
+    "sha256": "006b584ab1de8d25cb1f0d8962fb92fc458ae356df5f8c3dbbec2940c1c4c845"
+  },
+  "ldd": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/app-ldd.txt",
+    "size": 388,
+    "sha256": "00e464c2319460b47ef069b3da97715d8e08bee7d0a81494847215655cdf58af"
+  },
+  "version": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/build-observer-2/app-version.txt",
+    "size": 78,
+    "sha256": "ea3fc2305ef027fc53245fb358fb8af5fd91a5f85a1089f3d5f00e9b503c3a52"
+  }
+}
