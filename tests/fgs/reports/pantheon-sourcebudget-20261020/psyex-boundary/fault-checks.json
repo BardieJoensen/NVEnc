@@ -1,0 +1,138 @@
+{
+  "status": "passed",
+  "argv": [
+    "tests/fgs/reports/pantheon-sourcebudget-20261020/check_psyex_boundary_admission.py",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/runs/on-1/boundary.bin",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/runs/e05-1440/psyex-1x1/recon.yuv",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/fault-checks-1"
+  ],
+  "script": {
+    "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/check_psyex_boundary_admission.py",
+    "sha256": "17fc09635c7aee7e82c580b4fee08c9d1ec303ec08fe16622e0ca00adc3100cb",
+    "size": 4732
+  },
+  "validator": {
+    "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/validate_psyex_boundary.py",
+    "sha256": "763eeebf43017e79aba6c8ffdce531462f262000290ba9846ad7ae8065e70f8d",
+    "size": 15410
+  },
+  "python": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/analysis-venv/bin/python",
+    "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+    "size": 8020928
+  },
+  "trace": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/runs/on-1/boundary.bin",
+    "sha256": "023247030b240a0ec68d88c39d5aef365fb06bb9e64a411aabdbbc6c8c491b8b",
+    "size": 18763935
+  },
+  "original_recon": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/runs/e05-1440/psyex-1x1/recon.yuv",
+    "sha256": "162c2eb85dc9d036912aa5c3a20e613d4ce0fe2ecbc0505ea96bd6d0288d7099",
+    "size": 2090188800
+  },
+  "unaltered_attempt_count": 1,
+  "cases": [
+    {
+      "case": "truncated_payload_or_end",
+      "parser_rejected": true,
+      "error": "AssertionError()",
+      "mutation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/fault-checks-1/synthetic-mutation.bin",
+        "sha256": "71ceefd54d65d8ca85dbb7ceefd06f96b0f06d87f96f25acbf9f5e2e36efe2d8",
+        "size": 18763934
+      }
+    },
+    {
+      "case": "trailing_byte",
+      "parser_rejected": true,
+      "error": "AssertionError()",
+      "mutation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/fault-checks-1/synthetic-mutation.bin",
+        "sha256": "9be72ab93f9eb5f0794a2933e3c90a866ec6689fbc5746eaf6bd9723371fc0f2",
+        "size": 18763936
+      }
+    },
+    {
+      "case": "wrong_first_sequence",
+      "parser_rejected": true,
+      "error": "AssertionError()",
+      "mutation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/fault-checks-1/synthetic-mutation.bin",
+        "sha256": "ed6ed5873745e1fe22081a98bcf6049a890a8f09110af5ce87362c0dc0f68551",
+        "size": 18763935
+      }
+    },
+    {
+      "case": "wrong_first_generation",
+      "parser_rejected": true,
+      "error": "AssertionError()",
+      "mutation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/fault-checks-1/synthetic-mutation.bin",
+        "sha256": "46e3a85627e48323f8654985cef196fa4ae26da8b8249b130f5ec4b45e7c56d8",
+        "size": 18763935
+      }
+    },
+    {
+      "case": "duplicate_SB_ownership",
+      "parser_rejected": true,
+      "error": "AssertionError()",
+      "mutation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/fault-checks-1/synthetic-mutation.bin",
+        "sha256": "b657a5d4543be3c7b6fdff6a110e450ab7a075518b2542a6545abe0716d3503f",
+        "size": 18763934
+      }
+    },
+    {
+      "case": "missing_SB_renumbered_sequence",
+      "parser_rejected": true,
+      "error": "AssertionError()",
+      "mutation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/fault-checks-1/synthetic-mutation.bin",
+        "sha256": "c5fc3b9a6fada2917143205b2a16e276c217c449cc21c98c4e0fa548fbfc6858",
+        "size": 18751456
+      }
+    },
+    {
+      "case": "invalid_10bit_sample",
+      "parser_rejected": true,
+      "error": "AssertionError()",
+      "mutation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/fault-checks-1/synthetic-mutation.bin",
+        "sha256": "612b4e515da0ab849ba3b73c124daf31eb85015e7399143b00df4b096ccbf8ac",
+        "size": 18763935
+      }
+    },
+    {
+      "case": "accepted_changed_to_recode",
+      "parser_rejected": true,
+      "error": "AssertionError()",
+      "mutation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/fault-checks-1/synthetic-mutation.bin",
+        "sha256": "18399de203ab0217273265ab9c707ef89822124915f7cccbb229b5b0fa61518a",
+        "size": 18763935
+      }
+    },
+    {
+      "case": "wrong_terminal_attempt_count",
+      "parser_rejected": true,
+      "error": "AssertionError()",
+      "mutation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/fault-checks-1/synthetic-mutation.bin",
+        "sha256": "cc078cfd876ddf60e7e3822926707ee5be3ac67d5bf97d729df6b8abf791b63c",
+        "size": 18763936
+      }
+    },
+    {
+      "case": "in_range_postloop_pixel_change",
+      "parser_rejected": false,
+      "would_fail_exact_postloop_binding": true,
+      "mutation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/fault-checks-1/synthetic-mutation.bin",
+        "sha256": "73f053c0558cafb0b776d3443153ee38e195876d6abe9c54dabcc708d9380752",
+        "size": 18763935
+      }
+    }
+  ],
+  "scope": "Synthetic fault probes of framing and sample-binding checks; no encode observations."
+}

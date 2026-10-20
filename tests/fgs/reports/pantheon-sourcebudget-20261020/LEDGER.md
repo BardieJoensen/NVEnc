@@ -467,3 +467,25 @@ against prior tested policies; reviewer independently constrains the next test.
   partitions. Resolve that boundary before another policy or precision arm.
   R3 native one-step margins remain a possible later discriminator; their
   context-dependent sequential costs cannot predict a global optimizer flip.
+
+- R9 scope was narrowed before implementation to packed coding input and
+  complete pre/post-loop boundaries. Final-TU state was deferred because MD
+  reuse and stale buffers require separate provenance. Reviewed implementation,
+  decoder binding, complete510-SB coverage and exact off/on whole336 outputs
+  all pass. A Boolean/DPB-slot metadata interpretation error was corrected
+  against source and independent review; no trace or quality gate changed.
+
+- R9 admitted, independently reviewed: single-frame shirt HF
+  .60632→.44132→.09367→.05454; background1.67639→1.66549→1.28050→.84776.
+  Coding loss and filtering both matter; upstream shirt loss is also present.
+  Postloop improves MSE and shirt ACF while reducing HF further. All858 frozen
+  tiles retained; zero quiet tiles in this frame. Parent inspected rounded luma
+  stills only. Exact R8 bytes reuse prior GPU/full-window evidence and rate/cost.
+  See PSYEX_BOUNDARIES.md and psyex-boundary-result.json.
+
+- auto R10: choose final committed block/TU ownership and residual-state map
+  before another policy arm. The worker's TF-off source audit is preserved:
+  it changes reference/analysis behavior as well as samples, and does not
+  isolate coding-input→preloop loss. Reviewer requires explicit skip/EOB
+  categories, no stale-buffer reads, exact preloop assembly and provenance for
+  actual q; unproven q/predictor fields must remain unknown, not inferred.

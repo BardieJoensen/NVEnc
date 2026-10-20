@@ -72,8 +72,13 @@ Tdarr, torrents and library changes remain unauthorized.
 The [fixed PSYEX policy](PSYEX.md) also fails at 9.62790 Mbps, 99.4976% of source,
 with 370.336 s across both passes. Neutral observation proves the texture policy
 executes in search, but shirt/background texture and face/edge/quiet controls
-remain inadequate. The next discriminator observes final coding decisions and
-the filter boundary; no settings sweep or production change is authorized.
+remain inadequate. The admitted [boundary observation](PSYEX_BOUNDARIES.md)
+shows shirt HF .606→.441 entering coding→.094 pre-loop→.055 final on frame120.
+Background enters coding nearly unchanged, then loses amplitude and structure
+across both coding and filtering. Post filtering improves some pixel/ACF errors;
+it is not uniformly harmful. No quiet controls occur in that single frame.
+The next discriminator maps final committed blocks/TUs and residual ownership,
+with explicit quantizer provenance; no production change is authorized.
 
 A reviewed [fixed-input grain diagnostic](GRAIN_FIXED_INPUT.md) on the improved
 preset0 base preserves a local quiet/texture input conflict. It rejects the

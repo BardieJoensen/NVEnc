@@ -1,0 +1,27 @@
+{
+  "validator_sha256": "4541f88cb2d399491843b8824018bb963beb7be4f550eb8089f708cc28e35814",
+  "observed_failures": [
+    {
+      "invocation": "validate_psyex_boundary.py off-1 on-1 completed-build-pins.json admitted-1",
+      "returncode": 1,
+      "assertion": "parse_trace line136: assert m[k] in (0,1)"
+    },
+    {
+      "invocation": "check_psyex_boundary_admission.py on-1/boundary.bin original-R8/recon.yuv fault-checks-1",
+      "returncode": 1,
+      "assertion": "same nominal parser boolean assertion before mutation tests"
+    }
+  ],
+  "actual_metadata": {
+    "show_frame": 0,
+    "show_existing_frame": 6,
+    "showable_frame": 1,
+    "is_ref": 1
+  },
+  "source_evidence": [
+    "av1_structs.h:405 misleadingbooleancomment",
+    "pd_process.c:2159-2173 stores DPBslot",
+    "entropy_coding.c:3258 writes separate flag and member as3bit slot"
+  ],
+  "interpretation": "Parser metadata type error; no trace corruption or quality failure established. No output admission/analysis written."
+}
