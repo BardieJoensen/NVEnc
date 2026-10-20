@@ -127,3 +127,16 @@ quantization, predictor/search, partition/transform feedback and selected TPL
 refresh remains incomplete. No confidence is assigned to R18 preservation or
 source-budget feasibility without the missing measurements; E04 was not tested
 in this round.
+
+Independent review and corrections: the first observation failure came from
+subtracting block area from a conditional coefficient cursor. The parent replaced
+that calculation in a fresh observer-only build with a committed-block prefix;
+the reviewer verified its scope, and the completed replay proved output neutrality.
+The initial decoder-adapter draft selected the wrong binary, failed to enable
+observation and used circular/incomplete provenance checks. Revision retained the
+previously admitted native decoder, reconstructed the expected parent command,
+bound exact lifecycle guards and recorded both trace/payload plus script/runtime
+identities. Independent release preceded the successful off/on runs. The later
+native coefficient/source join is a distinct draft whose review was interrupted
+by the usage limit; neither adapter review nor byte equality substitutes for it.
+See the [frozen review records](psyex-cap/observations/manifest.json).
