@@ -1,0 +1,32 @@
+{
+  "status": "parent_verified_complete",
+  "verified_utc": "2026-10-20T16:55:29.341419+00:00",
+  "manifest": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/visuals-1/manifest.json",
+    "sha256": "e34a2db2f21b776285543946843f977657c1b1226ed309491433dcbba6e939f7",
+    "size": 6663
+  },
+  "renderer": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/render.py",
+    "sha256": "18a7a0713f87d9d1727ff1e67ba8eab6ae4fb6fe0c67c60d3f9afb630855fb5b",
+    "size": 5863
+  },
+  "panels": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/visuals-1/shirt-6panel.png",
+      "sha256": "295774e17ce1644c85e4c7cd60e864677b0de86e8340fce49a23a7e71d56b03d",
+      "size": 34509
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/visuals-1/background-6panel.png",
+      "sha256": "2eb876a2915412d180108ca98a87a1c41d646469fc67320185bb55192b5937fd",
+      "size": 97928
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/visuals-1/face-6panel.png",
+      "sha256": "bafafe6e2b1180435f17592c59dde5dcdd755a6f5036ab1f9821c5f676983c1d",
+      "size": 536205
+    }
+  ],
+  "note": "Original visual manifest retained status prepared; all listed PNGs exist with exact hashes. This is a verification receipt, not a reconstructed execution clock. Parent viewed shirt/background stills only."
+}

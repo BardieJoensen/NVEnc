@@ -1,0 +1,281 @@
+{
+  "status": "prepared",
+  "source_fields": {
+    "original": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/admitted-1/original.yuv",
+      "sha256": "c2798d9c00f53bdbe7041575249b353a478a8f5557bc4dd5b61d9ae03f13ea12",
+      "size": 6220800
+    },
+    "coding_input": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/admitted-1/coding_input.yuv",
+      "sha256": "b8ad2257c0bab9febd99eeefc05156f64c059bf028a19e72443a24af7af92b68",
+      "size": 6220800
+    },
+    "r11_trace": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/runs/on-1/coeff.bin",
+      "sha256": "2fdc5c48a702ce107712fe1bb08b1009b096c8093cce6207f7288f8facc04dd3",
+      "size": 19581687
+    },
+    "r13_result": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/run-1/result.json",
+      "sha256": "4511e7223f5c9b8b721e5d2f8c5d01d062ffb5d981bd106ae85ff59e0e1dbb93",
+      "size": 7288957
+    },
+    "r13_arrays": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/run-1/q1-arrays.npz",
+      "sha256": "11927240f6279d39f491885ab5b50ccd1b89da57ff59830b7265c8372719af09",
+      "size": 783450
+    },
+    "r12_result": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/run-1/result.json",
+      "sha256": "9caf06214e249306788a6e58a22d134ed86284b4183fb38f815d8ccf236029d9",
+      "size": 37133254
+    },
+    "r12_arrays": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/run-1/native-arrays.npz",
+      "sha256": "aaee0f9c89623023e5c0d541c38241092950e99e3f48e46de4544bc5caf9799c",
+      "size": 1029348
+    }
+  },
+  "stages": [
+    "original",
+    "coding_input",
+    "raw",
+    "baseline_fp",
+    "q32_fp",
+    "q1_fp"
+  ],
+  "rois": {
+    "shirt": {
+      "xywh": [
+        1200,
+        650,
+        200,
+        100
+      ],
+      "panel": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/visuals-1/shirt-6panel.png",
+        "sha256": "295774e17ce1644c85e4c7cd60e864677b0de86e8340fce49a23a7e71d56b03d",
+        "size": 34509
+      },
+      "entries": [
+        {
+          "stage": "original",
+          "xywh": [
+            18,
+            38,
+            200,
+            100
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "coding_input",
+          "xywh": [
+            236,
+            38,
+            200,
+            100
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "raw",
+          "xywh": [
+            454,
+            38,
+            200,
+            100
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "baseline_fp",
+          "xywh": [
+            18,
+            176,
+            200,
+            100
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "q32_fp",
+          "xywh": [
+            236,
+            176,
+            200,
+            100
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "q1_fp",
+          "xywh": [
+            454,
+            176,
+            200,
+            100
+          ],
+          "pixels_native": true
+        }
+      ],
+      "rounding": "np.rint then uint8; source arrays already /4",
+      "resized": false
+    },
+    "background": {
+      "xywh": [
+        950,
+        50,
+        250,
+        180
+      ],
+      "panel": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/visuals-1/background-6panel.png",
+        "sha256": "2eb876a2915412d180108ca98a87a1c41d646469fc67320185bb55192b5937fd",
+        "size": 97928
+      },
+      "entries": [
+        {
+          "stage": "original",
+          "xywh": [
+            18,
+            38,
+            250,
+            180
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "coding_input",
+          "xywh": [
+            286,
+            38,
+            250,
+            180
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "raw",
+          "xywh": [
+            554,
+            38,
+            250,
+            180
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "baseline_fp",
+          "xywh": [
+            18,
+            256,
+            250,
+            180
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "q32_fp",
+          "xywh": [
+            286,
+            256,
+            250,
+            180
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "q1_fp",
+          "xywh": [
+            554,
+            256,
+            250,
+            180
+          ],
+          "pixels_native": true
+        }
+      ],
+      "rounding": "np.rint then uint8; source arrays already /4",
+      "resized": false
+    },
+    "face": {
+      "xywh": [
+        160,
+        600,
+        500,
+        480
+      ],
+      "panel": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/visuals-1/face-6panel.png",
+        "sha256": "bafafe6e2b1180435f17592c59dde5dcdd755a6f5036ab1f9821c5f676983c1d",
+        "size": 536205
+      },
+      "entries": [
+        {
+          "stage": "original",
+          "xywh": [
+            18,
+            38,
+            500,
+            480
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "coding_input",
+          "xywh": [
+            536,
+            38,
+            500,
+            480
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "raw",
+          "xywh": [
+            1054,
+            38,
+            500,
+            480
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "baseline_fp",
+          "xywh": [
+            18,
+            556,
+            500,
+            480
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "q32_fp",
+          "xywh": [
+            536,
+            556,
+            500,
+            480
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "q1_fp",
+          "xywh": [
+            1054,
+            556,
+            500,
+            480
+          ],
+          "pixels_native": true
+        }
+      ],
+      "rounding": "np.rint then uint8; source arrays already /4",
+      "resized": false
+    }
+  }
+}

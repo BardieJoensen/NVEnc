@@ -1,0 +1,278 @@
+[
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/experiment.py",
+      "sha256": "dd5dd4ae87a7101be0d580997dd125190f250f2363a0c0b2f894a03482966e11",
+      "size": 13909
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/experiment.py",
+      "sha256": "dd5dd4ae87a7101be0d580997dd125190f250f2363a0c0b2f894a03482966e11",
+      "size": 13909
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/run.py",
+      "sha256": "65384f748006f3c705a67a8c9a6c642156597b0c9c1b8d5623e1a3f61f19aeac",
+      "size": 3086
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/run.py",
+      "sha256": "65384f748006f3c705a67a8c9a6c642156597b0c9c1b8d5623e1a3f61f19aeac",
+      "size": 3086
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/render.py",
+      "sha256": "18a7a0713f87d9d1727ff1e67ba8eab6ae4fb6fe0c67c60d3f9afb630855fb5b",
+      "size": 5863
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/render.py",
+      "sha256": "18a7a0713f87d9d1727ff1e67ba8eab6ae4fb6fe0c67c60d3f9afb630855fb5b",
+      "size": 5863
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/summarize.py",
+      "sha256": "5cae080109fd1d8ae646c04ab6948953ab798669d85ec9aeeebad9aa0dfd2635",
+      "size": 1895
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/summarize.py",
+      "sha256": "5cae080109fd1d8ae646c04ab6948953ab798669d85ec9aeeebad9aa0dfd2635",
+      "size": 1895
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/experiment.py.v1-rejected",
+      "sha256": "cf2bd3e15a298951e2f8ba913abab333a779d26024b794819a096a674eb240b0",
+      "size": 16320
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/experiment.py.v1-rejected",
+      "sha256": "cf2bd3e15a298951e2f8ba913abab333a779d26024b794819a096a674eb240b0",
+      "size": 16320
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/experiment.py.v2-rejected",
+      "sha256": "8bd546141797d4559a5d919b0a103b84dd1a7bb4184ab7cb10b5a33ad1bdcdd4",
+      "size": 10282
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/experiment.py.v2-rejected",
+      "sha256": "8bd546141797d4559a5d919b0a103b84dd1a7bb4184ab7cb10b5a33ad1bdcdd4",
+      "size": 10282
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/experiment.py.v3-reviewed",
+      "sha256": "5a4330d22c3d7ff824b71f4530e57e125109a3d15b8a312b941a361c47f539d3",
+      "size": 12027
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/experiment.py.v3-reviewed",
+      "sha256": "5a4330d22c3d7ff824b71f4530e57e125109a3d15b8a312b941a361c47f539d3",
+      "size": 12027
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/run.py.v1-rejected",
+      "sha256": "6a91cc82f3145971b019b4231ad59b9cd1da67979960c5c3308197b62147b9c8",
+      "size": 2418
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/run.py.v1-rejected",
+      "sha256": "6a91cc82f3145971b019b4231ad59b9cd1da67979960c5c3308197b62147b9c8",
+      "size": 2418
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/run.py.v2-rejected",
+      "sha256": "d97457414941d20f634aeef657725933b74672d43fd687aa11135fa2fc93256a",
+      "size": 2451
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/run.py.v2-rejected",
+      "sha256": "d97457414941d20f634aeef657725933b74672d43fd687aa11135fa2fc93256a",
+      "size": 2451
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/run.py.v3-reviewed",
+      "sha256": "b1721985bfb50237e897500e97cb2edbb0f8be76dc7f6881b0d5b8c09ca0af19",
+      "size": 3062
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/run.py.v3-reviewed",
+      "sha256": "b1721985bfb50237e897500e97cb2edbb0f8be76dc7f6881b0d5b8c09ca0af19",
+      "size": 3062
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/run-1-execution.json",
+      "sha256": "bc3be781839e5329e95b43094d0ee1d907967509685b59900160bc0a26efa5be",
+      "size": 5583
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/run-1-execution.json",
+      "sha256": "bc3be781839e5329e95b43094d0ee1d907967509685b59900160bc0a26efa5be",
+      "size": 5583
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/run-1/receipt.json",
+      "sha256": "4d2c2378fc2ae80b2bd998b80bda8481ad0ad659636b220ea4efc61d5aa8cd9e",
+      "size": 11378
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/run-1/receipt.json",
+      "sha256": "4d2c2378fc2ae80b2bd998b80bda8481ad0ad659636b220ea4efc61d5aa8cd9e",
+      "size": 11378
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/visuals-1/manifest.json",
+      "sha256": "e34a2db2f21b776285543946843f977657c1b1226ed309491433dcbba6e939f7",
+      "size": 6663
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/visuals-1/manifest.json",
+      "sha256": "e34a2db2f21b776285543946843f977657c1b1226ed309491433dcbba6e939f7",
+      "size": 6663
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r13-fine/visuals-completion.json",
+      "sha256": "cb2c56a961ee1d3b843cf74cf5f7342f542151c44aee9b6838ec5c7fb45d1f25",
+      "size": 1520
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/visuals-completion.json",
+      "sha256": "cb2c56a961ee1d3b843cf74cf5f7342f542151c44aee9b6838ec5c7fb45d1f25",
+      "size": 1520
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round13-design-review.md",
+      "sha256": "6370558d561d4f9c09f66a912e55d4b8cd4764ee3f0e544da06bedf3f07fac9b",
+      "size": 3502
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/round13-design-review.md",
+      "sha256": "6370558d561d4f9c09f66a912e55d4b8cd4764ee3f0e544da06bedf3f07fac9b",
+      "size": 3502
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round13-implementation-review.md",
+      "sha256": "c28a349ad17a3bb933984344310a8904ba528cc2f78155d0f8907eb934c3a0cf",
+      "size": 4017
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/round13-implementation-review.md",
+      "sha256": "c28a349ad17a3bb933984344310a8904ba528cc2f78155d0f8907eb934c3a0cf",
+      "size": 4017
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round13-implementation-addendum.md",
+      "sha256": "cdeb61aecd47f7405494a4acc28e23f37e937a1f8575f05a2ce09944db465f3b",
+      "size": 2232
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/round13-implementation-addendum.md",
+      "sha256": "cdeb61aecd47f7405494a4acc28e23f37e937a1f8575f05a2ce09944db465f3b",
+      "size": 2232
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round13-v4-preflight-review.md",
+      "sha256": "6cce5fc7933bf51cc911649f3b184d02d130e72b4183f6d212139097ab1891f8",
+      "size": 2100
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/round13-v4-preflight-review.md",
+      "sha256": "6cce5fc7933bf51cc911649f3b184d02d130e72b4183f6d212139097ab1891f8",
+      "size": 2100
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round13-outcome-review.md",
+      "sha256": "4bdf29aa9839b75cde7d65c9567f286d93e74063b4ad7eb4a8fd506651999b4c",
+      "size": 5776
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/round13-outcome-review.md",
+      "sha256": "4bdf29aa9839b75cde7d65c9567f286d93e74063b4ad7eb4a8fd506651999b4c",
+      "size": 5776
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round13-outcome/derive.py",
+      "sha256": "e5c350baf8ae34f5216096f8db6360d01dbcd9607973a9f0ec1976b6d09ca08a",
+      "size": 10564
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/round13-outcome/derive.py",
+      "sha256": "e5c350baf8ae34f5216096f8db6360d01dbcd9607973a9f0ec1976b6d09ca08a",
+      "size": 10564
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round13-outcome/derived.json",
+      "sha256": "b213c615a4d05606f491f3470798db43ba77c5b01831c93dbd0599a6e20f9de1",
+      "size": 40667
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/round13-outcome/derived.json",
+      "sha256": "b213c615a4d05606f491f3470798db43ba77c5b01831c93dbd0599a6e20f9de1",
+      "size": 40667
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/absolute-quantizer-route.md",
+      "sha256": "c79fe186bf34d9d8728f72ddd8d899095059579ece9dee28c0acaaef03ca0b41",
+      "size": 6411
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/absolute-quantizer-route.md",
+      "sha256": "c79fe186bf34d9d8728f72ddd8d899095059579ece9dee28c0acaaef03ca0b41",
+      "size": 6411
+    }
+  },
+  {
+    "source": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/finalize_r13.py",
+      "sha256": "a47b8ed45fbb83d453333b47323b72c746ed1a0d6910e8a9b99c581b930370b0",
+      "size": 4354
+    },
+    "frozen": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-fine/finalize_r13.py",
+      "sha256": "a47b8ed45fbb83d453333b47323b72c746ed1a0d6910e8a9b99c581b930370b0",
+      "size": 4354
+    }
+  }
+]

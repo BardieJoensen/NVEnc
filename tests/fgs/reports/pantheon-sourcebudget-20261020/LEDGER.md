@@ -526,3 +526,14 @@ against prior tested policies; reviewer independently constrains the next test.
   explicit distances to raw. No repeated baseline encode/build or localq sweep.
   Afterwards choose upstream/decision policy from evidence. Contract preserves
   original-rate ceiling and all acceptance gates.
+
+- R13 completed: all2187 q1 C/runtime pairs and inheritedreference parity pass.
+  q1 shirtHF.38072,ACFerror.08207 fails versus.60632source. Primaryinvoked MSE
+  toraw.02063shirt/.02229background/.02769face; nearraw butnotlossless.
+  Independentreconstruction agrees<1e-12. Workerpreparations correctedbefore
+  sole2.466528s run; reference-scale oversight explicitlycorrected inreview.
+  No encode/rate/fullwindow/quiet/temporal/playback inference.
+- auto R14: choose original-visible-source replay through exactnativeforward,
+  sameq1/predictor/partition/TX/QM and720unchangedowners. Newforward/newlibrary
+  controls require allcapturedcoefficients and R13q1arrays exactlybeforeintervention.
+  Sourceonlydistinction comesbefore realTF-off policy (whichalsochangesreferences).

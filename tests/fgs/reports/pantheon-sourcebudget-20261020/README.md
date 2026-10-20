@@ -107,3 +107,9 @@ native arm matches directC exactly; independent metrics agree<1e-12. These
 fixed-decision local images have no bitrate or repair claim. The
 [R13 contract](ROUND13_FINE_CONTRACT.md) chooses one q1 precision closure before
 upstream/decision-policy work; no candidate or playback acceptance exists.
+
+The [R13 near-fine replay](PSYEX_FINE.md) nearly reaches the raw local inverse
+but still fails shirt texture:62.79%sourceHF,ACFerror.0821. Independent arrays
+and metrics pass; q1 remains nonlossless and has no encoded-rate claim. Stop
+local precision sweeps. The [R14 source contract](ROUND14_SOURCE_CONTRACT.md)
+isolates original input samples from retained transform/skip decisions next.

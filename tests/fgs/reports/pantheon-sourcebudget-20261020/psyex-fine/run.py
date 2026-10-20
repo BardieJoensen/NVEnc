@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+"""Record the actual bounded R13 q1 subprocess command and immutable identities."""
+import datetime as dt, hashlib, json, subprocess, time
+from pathlib import Path
+P=Path(__file__).resolve().parent
+ROOT=P.parents[1]
+PY=P.parents[1]/"analysis-venv/bin/python"
+EXPECTED="dd5dd4ae87a7101be0d580997dd125190f250f2363a0c0b2f894a03482966e11"
+def ident(p):
+    p=Path(p).resolve()
+    with p.open("rb") as f: sha=hashlib.file_digest(f,"sha256").hexdigest()
+    return dict(path=str(p),sha256=sha,size=p.stat().st_size)
+def main():
+    out=P/"run-1";log=P/"run-1.log";receipt_path=P/"run-1-execution.json"
+    assert not out.exists() and not log.exists() and not receipt_path.exists()
+    assert ident(P/"experiment.py")["sha256"]==EXPECTED
+    paths=[Path(__file__),P/"experiment.py",ROOT/"parent/psyex-scalar-r12/build-2/receipt.json",
+           ROOT/"parent/psyex-scalar-r12/build-2/native.so",ROOT/"parent/psyex-scalar-r12/run-1/result.json",
+           ROOT/"parent/psyex-scalar-r12/run-1/native-arrays.npz",ROOT/"parent/psyex-scalar-r12/run-1-execution.json",PY,
+           Path("/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/ROUND13_FINE_CONTRACT.md")]
+    argv=["/usr/bin/nice","-n","10","/usr/bin/taskset","-c","8-11",str(PY),str(P/"experiment.py"),str(out)]
+    receipt=dict(status="prepared",argv=argv,started_utc=dt.datetime.now(dt.timezone.utc).isoformat(),
+                 inputs_before=[ident(p) for p in paths])
+    def save():receipt_path.write_text(json.dumps(receipt,indent=2)+"\n")
+    save();start=time.monotonic()
+    try:
+        with log.open("x") as f:r=subprocess.run(argv,stdout=f,stderr=subprocess.STDOUT)
+        receipt.update(returncode=r.returncode,seconds=time.monotonic()-start,log=ident(log))
+        assert r.returncode==0
+        receipt["inputs_after"]=[ident(p) for p in paths];assert receipt["inputs_before"]==receipt["inputs_after"]
+        inner=json.loads((out/"receipt.json").read_text());assert inner["status"]=="complete"
+        inner_id=ident(out/"receipt.json");result_id=ident(out/"result.json");arrays_id=ident(out/"q1-arrays.npz")
+        result=json.loads((out/"result.json").read_text());assert result["status"]=="admitted_diagnostic"
+        assert inner["result"]==result_id and inner["q1_arrays"]==arrays_id
+        assert result["script"]==ident(P/"experiment.py") and result["library"]["sha256"]==ident(ROOT/"parent/psyex-scalar-r12/build-2/native.so")["sha256"]
+        assert result["contract"]==ident("/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/ROUND13_FINE_CONTRACT.md")
+        assert result["q1_arrays"]==arrays_id
+        receipt.update(status="complete",inner_receipt=inner_id,result=result_id,q1_arrays=arrays_id)
+    except BaseException as e:
+        receipt.update(status="failed",error=repr(e));raise
+    finally:
+        receipt["ended_utc"]=dt.datetime.now(dt.timezone.utc).isoformat();save()
+    print(json.dumps(receipt))
+if __name__=="__main__":
+    if not __debug__:raise SystemExit("optimized Python prohibited")
+    main()
