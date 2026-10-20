@@ -1,0 +1,6 @@
+{
+  "build-receipt.log": "4c4871c9b0c236e5343305fdb4fc2e6e1ceb5c9574ac01fa2fc8a75c6bd61394",
+  "build-artifact-hashes.txt": "f60a450dded786cd70e147bbdb48b2ec80595a9938ca21afeedaf22b71d24aea",
+  "build/bin/SvtAv1EncApp": "bcb5321635dd391199eb9b440015ad3061f042023a45bab31f37f5791fb9ff69",
+  "build/bin/libSvtAv1Enc.so.3.0.2": "481c93f01a807d2c73ba73678946d1f0809cd9207ee873ae9ff53674374767bf"
+}

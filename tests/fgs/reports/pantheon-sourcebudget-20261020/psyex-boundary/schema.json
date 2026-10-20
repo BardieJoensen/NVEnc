@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "envelope": "8 little-endian uint64: magic,version,type,generation,picture_number,sequence,JSON_bytes,payload_bytes",
+  "magic": 3555947332879930448,
+  "target_input_picture": 216,
+  "target_scored_frame": 120,
+  "visible_dimensions": [
+    1920,
+    1080
+  ],
+  "payload": "planar YUV420P10LE, tightly serialized visible rows, Y then U then V",
+  "max_trace_bytes": 536870912,
+  "max_attempts": 16,
+  "types": {
+    "1": "packed coding-input SB, cropped to visible full frame",
+    "2": "whole pre-loop frame at complete attempt before recode branch; JSON do_recode marks rejection/acceptance",
+    "3": "actual postloop frame from recon output, accepted generation only",
+    "4": "terminal completion, no payload"
+  },
+  "checks": [
+    "allSB nonoverlapping exact visible coverage per attempt",
+    "sequence contiguous from0",
+    "complete attempts with recode true until exactly one accepted generation",
+    "source coding input retained even if different from original",
+    "postloop exact admitted original R8 app frame216, allplanes",
+    "off/on full336 IVF and app recon exactly original R8",
+    "SB_DLF disabled at runtime before target processing",
+    "FGS resize superres unsupported and failclosed"
+  ],
+  "scope": "One-frame boundary observation only. No actual per-TU qindex, final skip/execution, search-route survival, coded-bit, repair or playback inference."
+}

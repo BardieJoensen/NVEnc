@@ -1,0 +1,30 @@
+{
+  "source_commit": "59d1a025698f2ca7b4c4b0e833937dd15e382494",
+  "patch_sha256": "69c61c844532966496bc313cb2beaeb6d867bae5f93b5139c2774f4f0d069f3e",
+  "files": {
+    "Source/Lib/Codec/CMakeLists.txt": {
+      "before_sha256": "3ce9c0cecec8b6d6c1f1893a55361b0fbab546748f4953f69bfc91610cfa730d",
+      "after_sha256": "2252926ffcd60920059dd085fae7bdfc75461eb14e29d64c5e9dff0b5a6b9870"
+    },
+    "Source/Lib/Codec/coding_loop.c": {
+      "before_sha256": "8362144eb7f3196345be80ea3ac7b9dc9c71163f4978192df170f8f274a5fa14",
+      "after_sha256": "4afd1053457bb13250ceaed45ef4a08b25bf8675919e3b4060d63243df7ed147"
+    },
+    "Source/Lib/Codec/enc_dec_process.c": {
+      "before_sha256": "a5233ac2ed205502e7d6a9c829841119a7e73a83eddf068596cf57ac47e12dc1",
+      "after_sha256": "69b90b46d21cbe5acbe407a3ecd17e1cd399811127949ccf8d88edd26e92f467"
+    },
+    "Source/Lib/Globals/enc_handle.c": {
+      "before_sha256": "fa2a0b22120c4ac50872c23d48c63e1ce09d1bd1439e7f72cb6652212bbd9bd3",
+      "after_sha256": "c17403d9c5ca8e606e8ec6e26874a672c2e9a13a8a10063f952bce5d4c8d5eb5"
+    },
+    "Source/Lib/Codec/pb_trace.c": {
+      "before_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "after_sha256": "2beee0be4f20f448c6b5c4da8967d8980956f71915d190ec47c43c84a86345de"
+    },
+    "Source/Lib/Codec/pb_trace.h": {
+      "before_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "after_sha256": "ac8b3153477b601417665ce7782cf294594ade150b97a84136b2325e06f8170e"
+    }
+  }
+}

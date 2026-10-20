@@ -1,0 +1,148 @@
+/* Scratch-only observation. No encoder state is modified. */
+#include "pb_trace.h"
+#include "sequence_control_set.h"
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
+#error "Trace sample serialization requires little endian"
+#endif
+#define PB_W 1920u
+#define PB_H 1080u
+#define PB_TARGET 216u
+#define PB_MAGIC UINT64_C(0x31594342504e5450)
+static pthread_once_t once = PTHREAD_ONCE_INIT;
+static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+static int fd = -1;
+static unsigned generation, accepted, post_count, seen_count, sb_size, attempts;
+static unsigned char seen[510];
+static uint64_t sequence, bytes_written;
+static PictureControlSet *owner;
+static uint64_t decode_order;
+static void die(const char *s) { fprintf(stderr, "PANTHEON_BOUNDARY_FATAL: %s\n", s); _Exit(86); }
+#define REQUIRE(c) do { if (!(c)) die(#c); } while (0)
+static void init(void) {
+    const char *s = getenv("SVT_PANTHEON_BOUNDARY_FD");
+    if (!s) return;
+    char *end; errno = 0; long n = strtol(s, &end, 10);
+    REQUIRE(!errno && *s && !*end && n >= 3 && n < 1048576);
+    struct stat st; int flags = fcntl((int)n, F_GETFL);
+    REQUIRE(flags >= 0 && (flags & O_APPEND) && (flags & O_ACCMODE) != O_RDONLY);
+    REQUIRE(!fstat((int)n, &st) && S_ISREG(st.st_mode) && st.st_size == 0);
+    fd = fcntl((int)n, F_DUPFD_CLOEXEC, 3); REQUIRE(fd >= 3);
+}
+static int active(void) { REQUIRE(!pthread_once(&once, init)); return fd >= 0; }
+static void write_all(const void *v, size_t n) {
+    REQUIRE(bytes_written + n <= UINT64_C(512)*1024*1024);
+    const unsigned char *p = v;
+    while (n) {
+        ssize_t z = write(fd, p, n);
+        if (z < 0 && errno == EINTR) continue;
+        REQUIRE(z > 0); p += z; n -= (size_t)z; bytes_written += (uint64_t)z;
+    }
+}
+static void header(unsigned type, const char *meta, uint64_t payload) {
+    uint64_t h[8] = {PB_MAGIC, 1, type, generation, PB_TARGET, sequence++, strlen(meta), payload};
+    REQUIRE(h[6] < 4096); write_all(h, sizeof(h)); write_all(meta, (size_t)h[6]);
+}
+static void checks(PictureControlSet *pcs) {
+    SequenceControlSet *scs = pcs->scs;
+    REQUIRE(pcs->ppcs->picture_number == PB_TARGET);
+    REQUIRE(scs->static_config.encoder_bit_depth == 10 && scs->static_config.encoder_color_format == 1);
+    REQUIRE(scs->static_config.source_width == PB_W && scs->static_config.source_height == PB_H);
+    REQUIRE(scs->static_config.pass == 2 && scs->static_config.recon_enabled);
+    REQUIRE(!scs->static_config.film_grain_denoise_strength && !scs->seq_header.film_grain_params_present);
+    REQUIRE(scs->static_config.resize_mode == RESIZE_NONE && scs->static_config.superres_mode == SUPERRES_NONE);
+    REQUIRE(!pcs->ppcs->superres_total_recode_loop && !pcs->ppcs->is_alt_ref);
+    REQUIRE(!pcs->ppcs->dlf_ctrls.sb_based_dlf);
+    REQUIRE(pcs->ppcs->aligned_width == PB_W && pcs->ppcs->aligned_height >= PB_H);
+    REQUIRE(scs->sb_size == 64 || scs->sb_size == 128);
+    if (!owner) { owner = pcs; decode_order = pcs->ppcs->decode_order; sb_size = scs->sb_size; }
+    REQUIRE(owner == pcs && decode_order == pcs->ppcs->decode_order && sb_size == scs->sb_size);
+}
+static void rows(EbPictureBufferDesc *b, unsigned x, unsigned y, unsigned w, unsigned h, int padded) {
+    REQUIRE(b->color_format == 1 && w && h && !(x%2) && !(y%2) && !(w%2) && !(h%2));
+    REQUIRE(b->bit_depth == EB_TEN_BIT || b->bit_depth == EB_SIXTEEN_BIT);
+    REQUIRE(!padded || (!(b->org_x%2) && !(b->org_y%2)));
+    for (unsigned p = 0; p < 3; ++p) {
+        unsigned sh = p != 0, ww = w >> sh, hh = h >> sh;
+        unsigned stride = p == 0 ? b->stride_y : p == 1 ? b->stride_cb : b->stride_cr;
+        unsigned ox = (x + (padded ? b->org_x : 0)) >> sh;
+        unsigned oy = (y + (padded ? b->org_y : 0)) >> sh;
+        const uint16_t *base = (const uint16_t *)(p == 0 ? b->buffer_y : p == 1 ? b->buffer_cb : b->buffer_cr);
+        uint64_t capacity = p == 0 ? b->luma_size : b->chroma_size;
+        uint64_t end = ((uint64_t)oy + hh - 1)*stride + ox + ww;
+        REQUIRE(base && (uint64_t)stride >= (uint64_t)ox + ww && end <= capacity);
+        for (unsigned j = 0; j < hh; ++j) write_all(base + (oy+j)*stride + ox, ww*sizeof(*base));
+    }
+}
+static void picture_meta(char *out, size_t capacity, PictureControlSet *pcs, EbPictureBufferDesc *b, int recode) {
+    int n = snprintf(out, capacity,
+        "{\"picture\":216,\"decode_order\":%" PRIu64 ",\"order_hint\":%u,\"frame_type\":%u,"
+        "\"show_frame\":%u,\"show_existing_frame\":%u,\"showable_frame\":%u,\"is_ref\":%u,"
+        "\"width\":1920,\"height\":1080,\"bit_depth\":10,\"planes\":3,\"subsampling\":[1,1],"
+        "\"origin\":[%u,%u],\"strides\":[%u,%u,%u],\"buffer_dimensions\":[%u,%u],"
+        "\"sb_size\":%u,\"sb_count\":%u,\"sb_total_count\":%u,\"do_recode\":%d,"
+        "\"dlf_enabled\":%u,\"sb_based_dlf\":%u}",
+        (uint64_t)pcs->ppcs->decode_order, pcs->ppcs->cur_order_hint,
+        (unsigned)pcs->ppcs->frm_hdr.frame_type, pcs->ppcs->frm_hdr.show_frame,
+        pcs->ppcs->frm_hdr.show_existing_frame, pcs->ppcs->frm_hdr.showable_frame,
+        pcs->ppcs->is_ref, b->org_x, b->org_y, b->stride_y, b->stride_cb, b->stride_cr,
+        b->width, b->height, sb_size, seen_count, pcs->sb_total_count, recode,
+        pcs->ppcs->dlf_ctrls.enabled, pcs->ppcs->dlf_ctrls.sb_based_dlf);
+    REQUIRE(n > 0 && (size_t)n < capacity);
+}
+void pb_source(PictureControlSet *pcs, EbPictureBufferDesc *src, unsigned x, unsigned y, int is16) {
+    if (pcs->ppcs->picture_number != PB_TARGET || !active()) return;
+    REQUIRE(!pthread_mutex_lock(&lock)); checks(pcs);
+    REQUIRE(is16 && !accepted && generation < 16 && x < PB_W && y < PB_H);
+    REQUIRE(!(x%sb_size) && !(y%sb_size));
+    unsigned cols = (PB_W+sb_size-1)/sb_size, id = (y/sb_size)*cols+x/sb_size;
+    unsigned w = PB_W-x < sb_size ? PB_W-x : sb_size, h = PB_H-y < sb_size ? PB_H-y : sb_size;
+    REQUIRE(id < sizeof(seen) && !seen[id]); seen[id] = 1; ++seen_count;
+    char meta[512]; int n = snprintf(meta, sizeof(meta),
+        "{\"sb_id\":%u,\"x\":%u,\"y\":%u,\"width\":%u,\"height\":%u,\"sb_size\":%u,"
+        "\"bit_depth\":10,\"planes\":3,\"origin_used\":[0,0],\"strides\":[%u,%u,%u]}",
+        id,x,y,w,h,sb_size,src->stride_y,src->stride_cb,src->stride_cr);
+    REQUIRE(n > 0 && (size_t)n < sizeof(meta)); header(1,meta,(uint64_t)w*h*3); rows(src,0,0,w,h,0);
+    REQUIRE(!pthread_mutex_unlock(&lock));
+}
+void pb_attempt(PictureControlSet *pcs, EbPictureBufferDesc *recon, int recode) {
+    if (pcs->ppcs->picture_number != PB_TARGET || !active()) return;
+    REQUIRE(!pthread_mutex_lock(&lock)); checks(pcs);
+    unsigned total = ((PB_W+sb_size-1)/sb_size)*((PB_H+sb_size-1)/sb_size);
+    REQUIRE(!accepted && pcs->enc_dec_coded_sb_count == pcs->sb_total_count && seen_count == total && total == pcs->sb_total_count);
+    for (unsigned i = 0; i < total; ++i) REQUIRE(seen[i]);
+    REQUIRE(recon->width >= PB_W && recon->height >= PB_H && generation < 16);
+    char meta[2048]; picture_meta(meta,sizeof(meta),pcs,recon,recode);
+    header(2,meta,(uint64_t)PB_W*PB_H*3); rows(recon,0,0,PB_W,PB_H,1); ++attempts;
+    if (recode) { ++generation; memset(seen,0,sizeof(seen)); seen_count=0; }
+    else accepted=1;
+    REQUIRE(!pthread_mutex_unlock(&lock));
+}
+void pb_post(PictureControlSet *pcs, EbPictureBufferDesc *recon) {
+    if (pcs->ppcs->picture_number != PB_TARGET || !active()) return;
+    REQUIRE(!pthread_mutex_lock(&lock)); checks(pcs);
+    REQUIRE(accepted && !post_count && recon->width >= PB_W && recon->height >= PB_H);
+    char meta[2048]; picture_meta(meta,sizeof(meta),pcs,recon,0);
+    header(3,meta,(uint64_t)PB_W*PB_H*3); rows(recon,0,0,PB_W,PB_H,1); ++post_count;
+    REQUIRE(!pthread_mutex_unlock(&lock));
+}
+void pb_finish(const EbSvtAv1EncConfiguration *cfg, unsigned instances) {
+    if (!active()) return;
+    REQUIRE(!pthread_mutex_lock(&lock));
+    REQUIRE(instances == 1 && cfg->pass == 2 && cfg->active_channel_count == 1 && cfg->channel_id == 0);
+    REQUIRE(accepted == 1 && post_count == 1 && attempts == generation+1);
+    char meta[256]; int n=snprintf(meta,sizeof(meta),
+        "{\"status\":\"complete\",\"accepted_generation\":%u,\"attempts\":%u,\"post_count\":%u,\"records_before_end\":%" PRIu64 "}",
+        generation,attempts,post_count,sequence);
+    REQUIRE(n>0 && (size_t)n<sizeof(meta)); header(4,meta,0);
+    REQUIRE(!fsync(fd)); REQUIRE(!close(fd)); fd=-1;
+    REQUIRE(!pthread_mutex_unlock(&lock));
+}
