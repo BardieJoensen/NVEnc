@@ -440,3 +440,5 @@ of all finer precision or a codec limit. See AOM_QMAX.md and bound machine data.
 Auto decision: do not redistribute a non-preserving arm or repeat qmax blindly.
 Inventory a genuinely different texture-sensitive decision policy, source-first,
 against prior tested policies; reviewer independently constrains the next test.
+
+- auto2026-10-20R8: first real two-pass arm requests10000kbps, scores9.3361368Mbps (96.4824% source), full-window9.959614857Mbps,369.290s. Before quality inspection, calibrate request to10313 using observed rate response and99.5% target; fixed policy unchanged.

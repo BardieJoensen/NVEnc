@@ -18,7 +18,7 @@ screened only with an explicit nonmatched label, under the existing Round1 rule.
 ## Fixed policy and build
 
 Source is clean pinned master59d1a025698f2ca7b4c4b0e833937dd15e382494, not the
-v3.0.2-B tag. The complete1217-file manifest is
+v3.0.2-B tag. The1217-file root-tracked manifest is
 8cf0314d5ee329b662c32021020c8299ef47bb87681d87508328c1b28eeb5c69.
 Independent source review traced guarded RDOQ rate-weight removal, AC-energy
 distortion, actual residual-zero/skip comparisons and full mode costs. It found
@@ -50,6 +50,16 @@ App SHA f4867ae287fa34cc50f927b7aa52611973adbc7231785117e5d32ce077b2461c;
 private library SHA cd408a2f31f871cf9da924dd943607e2b8aa2e5366e513fc82d959434414f20b.
 The loaded SONAME resolves to that private library. Scratch contains source,
 tool/config/binary manifests, logs, help/version output and all runner revisions.
+
+Provenance correction before encoding: configure fetched an ignored nested
+cpuinfo dependency, explicitly pinned by `cmake/cpuinfo.cmake` to
+e649baaa95efeb61517c06cc783287d4942ffe0e. The root1217-file manifest does not cover
+it. Parent verified the clean nested commit (including ignored/untracked paths),
+all570 tracked files and build.ninja's compiled source paths after the build.
+`cpuinfo-audit.json` and `cpuinfo-manifest.json` supplement the original receipt;
+the manifest SHA is2374575a0aba9b941152770a2374ec048eb540868366bbbb46df846896a4a63f.
+This is a post-build provenance audit, not a nonexistent pre-build manifest.
+The compiled app/library hashes remain pinned; no unchanged build is repeated.
 
 ## Delivery and acceptance
 

@@ -1,0 +1,23 @@
+{
+  "status": "audited",
+  "utc": "2026-10-20T12:59:12.229305+00:00",
+  "nested_repo": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/source/third_party/cpuinfo",
+  "head": "e649baaa95efeb61517c06cc783287d4942ffe0e",
+  "remote": "https://github.com/1480c1/cpuinfo.git",
+  "status_including_ignored": "",
+  "file_count": 570,
+  "manifest": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/cpuinfo-manifest.json",
+    "sha256": "2374575a0aba9b941152770a2374ec048eb540868366bbbb46df846896a4a63f"
+  },
+  "root_ignored_status": "!! third_party/cpuinfo/\n",
+  "pinned_fetch_recipe": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/source/cmake/cpuinfo.cmake",
+    "sha256": "a9c2cf462c682d1f8563f57b39a9ccd401d0a2e79370292447afe07683e91e1f"
+  },
+  "build_ninja": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/build/build.ninja",
+    "sha256": "dc0466e9ab9903c3e08568cd7d3f68615d3ca559cb88c32f624fa7379d535b07"
+  },
+  "scope": "Configure downloaded this pinned ignored nested dependency. Original root manifest covers1217 tracked root files only; supplement establishes complete nested clean commit and compiled source path after build. No claim of pre-build nested manifest."
+}
