@@ -1,0 +1,432 @@
+{
+  "case": "e05-1440",
+  "tags": [
+    "aom-psnr-1x2",
+    "aom-neutralize-on-1"
+  ],
+  "actual_mbps": [
+    9.639088,
+    9.625603199999999
+  ],
+  "source_mbps": 9.6765224,
+  "on_over_off_rate": 0.9986010294749876,
+  "requested_kbps": [
+    11671,
+    11671
+  ],
+  "runtime": {
+    "installed_baseline_both_passes_seconds": 391.65247607801575,
+    "neutralized_instrumented_pass2_seconds": 373.696592539025,
+    "scope": "Replay reused original first-pass statistics; no end-to-end neutralized runtime measured."
+  },
+  "source_intervention": {
+    "selected": {
+      "events": 363,
+      "changed_events": 32,
+      "different_pointer_events": 33,
+      "unequal_samples": [
+        76672,
+        34822,
+        33222
+      ],
+      "maxabs": [
+        2,
+        2,
+        2
+      ]
+    },
+    "effective": {
+      "events": 363,
+      "changed_events": 0,
+      "different_pointer_events": 0,
+      "unequal_samples": [
+        0,
+        0,
+        0
+      ],
+      "maxabs": [
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  "texture": {
+    "shirt": {
+      "source": {
+        "mean": 56.08208999633789,
+        "hf_sigma": 0.6193531235760741,
+        "acf1": -0.2277546852827072,
+        "acf2": -0.06953714489936828,
+        "acf3": 0.04813776984810829,
+        "acf4": -0.002938830014318228,
+        "acf8": -0.003220860939472914,
+        "temporal_hf_corr": 0.11855470202863216
+      },
+      "baseline_psnr": {
+        "mean": 56.11540069580078,
+        "hf_sigma": 0.09860370405699147,
+        "acf1": -0.11466104462742806,
+        "acf2": 0.0381684759631753,
+        "acf3": 0.017495841905474662,
+        "acf4": 0.025348803494125605,
+        "acf8": 0.02276767659932375,
+        "temporal_hf_corr": 0.1112724693492055,
+        "screen": {
+          "hf_relative_error": -0.8407956619518362,
+          "acf1_abs_error": 0.11309364065527915,
+          "source_hf_correlation": 0.08904289733618498,
+          "provisional_hf_acf_pass": false
+        }
+      },
+      "source_neutralized": {
+        "mean": 56.09302978515625,
+        "hf_sigma": 0.09778814586412862,
+        "acf1": -0.15333447307348252,
+        "acf2": 0.051299539394676685,
+        "acf3": -0.008622313477098941,
+        "acf4": 0.02960874028503895,
+        "acf8": 0.02043016143143177,
+        "temporal_hf_corr": 0.08606717274524271,
+        "screen": {
+          "hf_relative_error": -0.8421124522638861,
+          "acf1_abs_error": 0.07442021220922468,
+          "source_hf_correlation": 0.10313158724457025,
+          "provisional_hf_acf_pass": false
+        }
+      }
+    },
+    "background": {
+      "source": {
+        "mean": 107.2617691040039,
+        "hf_sigma": 1.778494865408037,
+        "acf1": -0.1923621267080307,
+        "acf2": -0.08033106252551078,
+        "acf3": 0.0472561776638031,
+        "acf4": -0.006290369434282184,
+        "acf8": -0.0001615575863979757,
+        "temporal_hf_corr": 0.017108448687940835
+      },
+      "baseline_psnr": {
+        "mean": 107.2641098022461,
+        "hf_sigma": 0.9093565982590771,
+        "acf1": -0.08619581386446953,
+        "acf2": -0.046843457221984866,
+        "acf3": 0.0226345494389534,
+        "acf4": 0.00609224340878427,
+        "acf8": 0.004882208775961771,
+        "temporal_hf_corr": 0.010129546467214822,
+        "screen": {
+          "hf_relative_error": -0.48869315512449063,
+          "acf1_abs_error": 0.10616631284356118,
+          "source_hf_correlation": 0.5008854925632477,
+          "provisional_hf_acf_pass": false
+        }
+      },
+      "source_neutralized": {
+        "mean": 107.2667465209961,
+        "hf_sigma": 0.9151816886486468,
+        "acf1": -0.09347042851150036,
+        "acf2": -0.05257611498236656,
+        "acf3": 0.025739336991682647,
+        "acf4": 0.013729993533343077,
+        "acf8": 0.0027311192476190626,
+        "temporal_hf_corr": 0.012729115365073086,
+        "screen": {
+          "hf_relative_error": -0.4854178629080955,
+          "acf1_abs_error": 0.09889169819653035,
+          "source_hf_correlation": 0.5051669239997864,
+          "provisional_hf_acf_pass": false
+        }
+      }
+    }
+  },
+  "metrics": {
+    "baseline_psnr": {
+      "actual_mbps": 9.639088,
+      "vmaf": 94.0,
+      "vmaf_neg": 92.5,
+      "vmaf_p1_excluding_frame0": 82.23088793999999,
+      "ssimu2": 54.81,
+      "ssimu2_p5": 26.85,
+      "butter_max_p95": 7.76,
+      "psnr_y": 40.7,
+      "ssim": 0.9903,
+      "cambi_fr_mean": 0.381026,
+      "cambi_fr_max": 2.309536
+    },
+    "source_neutralized": {
+      "actual_mbps": 9.625603199999999,
+      "vmaf": 94.01,
+      "vmaf_neg": 92.5,
+      "vmaf_p1_excluding_frame0": 82.18697777999999,
+      "ssimu2": 54.79,
+      "ssimu2_p5": 26.87,
+      "butter_max_p95": 7.68,
+      "psnr_y": 40.69,
+      "ssim": 0.9903,
+      "cambi_fr_mean": 0.383783,
+      "cambi_fr_max": 2.332228
+    }
+  },
+  "controls": {
+    "all": {
+      "tiles": 12870,
+      "baseline_psnr": {
+        "mse_mean": 6.4634005459872155,
+        "hf_abs_error": 0.7014134415653479,
+        "acf1_abs_error": 0.16887817164865512,
+        "mse_p95": 21.44884338378906,
+        "hf_signed_delta_p95": -0.14656425426767952
+      },
+      "source_neutralized": {
+        "mse_mean": 6.492231452900398,
+        "hf_abs_error": 0.7015613975387275,
+        "acf1_abs_error": 0.16771654223587923,
+        "mse_p95": 21.676309204101553,
+        "hf_signed_delta_p95": -0.14300333873694335
+      },
+      "mse_worse_count": 6445,
+      "hf_error_worse_count": 6291
+    },
+    "quiet": {
+      "tiles": 51,
+      "baseline_psnr": {
+        "mse_mean": 0.22990028530943626,
+        "hf_abs_error": 0.09037762055514423,
+        "acf1_abs_error": 0.14537502371858108,
+        "mse_p95": 0.404632568359375,
+        "hf_signed_delta_p95": -0.041896340344094896
+      },
+      "source_neutralized": {
+        "mse_mean": 0.2270830939797794,
+        "hf_abs_error": 0.08879678565222701,
+        "acf1_abs_error": 0.13953126154254902,
+        "mse_p95": 0.401702880859375,
+        "hf_signed_delta_p95": -0.03818344582562599
+      },
+      "mse_worse_count": 22,
+      "hf_error_worse_count": 24
+    },
+    "edge": {
+      "tiles": 2198,
+      "baseline_psnr": {
+        "mse_mean": 6.440625899699301,
+        "hf_abs_error": 0.4578339645498738,
+        "acf1_abs_error": 0.1316964077909186,
+        "mse_p95": 15.039181518554688,
+        "hf_signed_delta_p95": -0.06504681382419975
+      },
+      "source_neutralized": {
+        "mse_mean": 6.434873294569993,
+        "hf_abs_error": 0.454887564474209,
+        "acf1_abs_error": 0.13053790664829093,
+        "mse_p95": 14.803439331054689,
+        "hf_signed_delta_p95": -0.05941341884687887
+      },
+      "mse_worse_count": 1034,
+      "hf_error_worse_count": 973
+    },
+    "flat_texture": {
+      "tiles": 4285,
+      "baseline_psnr": {
+        "mse_mean": 3.3662832253455,
+        "hf_abs_error": 0.6589537048245182,
+        "acf1_abs_error": 0.1746078422832758,
+        "mse_p95": 8.51997070312499,
+        "hf_signed_delta_p95": -0.20973539671034475
+      },
+      "source_neutralized": {
+        "mse_mean": 3.361025256732242,
+        "hf_abs_error": 0.6587416462841745,
+        "acf1_abs_error": 0.17331250985271557,
+        "mse_p95": 8.63101806640624,
+        "hf_signed_delta_p95": -0.20679001714370682
+      },
+      "mse_worse_count": 2159,
+      "hf_error_worse_count": 2126
+    },
+    "other": {
+      "tiles": 6336,
+      "baseline_psnr": {
+        "mse_mean": 8.616038630707095,
+        "hf_abs_error": 0.8195464102026565,
+        "acf1_abs_error": 0.17808910836388997,
+        "mse_p95": 27.503021240234375,
+        "hf_signed_delta_p95": -0.18814573266002538
+      },
+      "source_neutralized": {
+        "mse_mean": 8.68017563675389,
+        "hf_abs_error": 0.8210252097874307,
+        "acf1_abs_error": 0.1770537227524947,
+        "mse_p95": 28.113388061523438,
+        "hf_signed_delta_p95": -0.18629282479935952
+      },
+      "mse_worse_count": 3230,
+      "hf_error_worse_count": 3168
+    }
+  },
+  "quiet_signed_hf_tails": {
+    "baseline_psnr": {
+      "count": 51,
+      "min": -0.143606386763631,
+      "p95": -0.041896340344094896,
+      "max": 0.01801148467636451,
+      "positive_count": 1
+    },
+    "source_neutralized": {
+      "count": 51,
+      "min": -0.14272925797562913,
+      "p95": -0.03818344582562599,
+      "max": 0.0,
+      "positive_count": 0
+    }
+  },
+  "face": {
+    "baseline_psnr": {
+      "mse": 5.874192447916666,
+      "edge_gradient_mae": 4.012884500623881,
+      "edge_gradient_ratio": 0.8938849847136322
+    },
+    "source_neutralized": {
+      "mse": 5.867149739583334,
+      "edge_gradient_mae": 3.934275484185971,
+      "edge_gradient_ratio": 0.8970429188769085
+    }
+  },
+  "provenance": {
+    "baseline_psnr": {
+      "run": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/command.json",
+        "sha256": "fc1fbfc56dd660ce46e99cc2ccf98ee8633dd09aff7976031dd8a1c036265bbb"
+      },
+      "assessment": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/assessment.json",
+        "sha256": "21c8a279b40ecc3d16022d9a955fb8d06ecba454566165db9b4533519456644a"
+      },
+      "controls": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/controls.json",
+        "sha256": "8642e2eefdc7dfd00835ba5fb2d602416dfd4e1ba3446d5dbd6603e2dab912ef"
+      },
+      "decoder_validation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/decoder-validation.json",
+        "sha256": "f2238e801f6fdd72f7b425870669fe4c1ee9bf789d15332e328552bc7fa09e85"
+      },
+      "texture": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-psnr-1x2-texture.json",
+        "sha256": "b86486fcd73af9ef250e3d137bf4f00f0c8a26b9cf0a8b27c155e42547e609c3"
+      },
+      "metrics": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-psnr-1x2-result.json",
+        "sha256": "bd11641da33771b64acde26519ac969a10c3406ca7a00d52dd3c35568a91093f"
+      },
+      "decode_identity": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-psnr-1x2-decoded.decode-identity.json",
+        "sha256": "0d843237ab9485d4c9f3130ed2be65e65316838cbeb2ad1527d9178b671a344f"
+      },
+      "score_identity": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-psnr-1x2-score-identity.json",
+        "sha256": "e76cdcafe7dc9a8856ba0ab922a369a09d479f2e769be21c010b1c15923a4baf"
+      },
+      "packet_window": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/packet-window.json",
+        "sha256": "e80201ce7728379b95f38dc574767dd3f3ba1a591b346c9e2b59d4bf51840b8a"
+      },
+      "metrics-cuda": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/metrics-cuda-aom-psnr-1x2.json",
+        "sha256": "3993b954fdce46d2b30437ac53f84dea589f2dd30b98f5eaffe89eb19934292c"
+      },
+      "ssimu2": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/ssimu2-aom-psnr-1x2.json",
+        "sha256": "df32c560d437dc28c771414f963903edcb393046c65a4376c0bc926abfbee272"
+      },
+      "butter": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/butter-aom-psnr-1x2.json",
+        "sha256": "948c99446261ee1a02e734c3451ed5ed716d599c809df92e409869e7f83fe70a"
+      }
+    },
+    "source_neutralized": {
+      "run": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/runs/on-1/command.json",
+        "sha256": "032cfdc851861c098dd3592a9e1888bb5f1577ee5910651fe16424aefd31c201"
+      },
+      "assessment": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/runs/on-1/assessment.json",
+        "sha256": "13e97f3154b74c737b3f41fb525ecbd3d99e6f054f6235d02f86ed3c23ef6f9b"
+      },
+      "controls": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/runs/on-1/controls.json",
+        "sha256": "69c3badf40bff5e029bad9b0b7a30018a740bc9b6ab8069c701ed67499727bde"
+      },
+      "decoder_validation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/runs/on-1/decoder-validation.json",
+        "sha256": "b5b4fb0b8a967ccd5ac25f20db7c60bb74b894402452f85354bd17b9002843b1"
+      },
+      "texture": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-neutralize-on-1-texture.json",
+        "sha256": "f672b17eb9f6a96105191dc0c5f210c4ed39b50ded19d08ee0fc43a3aecdad46"
+      },
+      "metrics": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-neutralize-on-1-result.json",
+        "sha256": "0d21394cfa56061e3e365e6121c88ad34eddfec3217b83ba5c1ed6870638f086"
+      },
+      "decode_identity": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-neutralize-on-1-decoded.decode-identity.json",
+        "sha256": "33b943b4093b4a34aee1062b3ff620236f7d7127c587f9d33269315a3f128ef2"
+      },
+      "score_identity": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-neutralize-on-1-score-identity.json",
+        "sha256": "e75e54655cfd1f2541d971966555ab55bf82f72fc8c70cbeaf6ea063e6e6a01e"
+      },
+      "packet_window": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/runs/on-1/packet-window.json",
+        "sha256": "1c809d61b47ba31801f52a7a24973eabe09b5a1eda665931783d8a158a2cc172"
+      },
+      "metrics-cuda": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/metrics-cuda-aom-neutralize-on-1.json",
+        "sha256": "ee83d652f2b84ca7ad1ea6bb87b8384514802a7eab317f9721565e384a3fdbf9"
+      },
+      "ssimu2": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/ssimu2-aom-neutralize-on-1.json",
+        "sha256": "e48b1c170f3f2a544bd845b735b2588723a459b02929a2fd31ce2cf18e953a19"
+      },
+      "butter": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/butter-aom-neutralize-on-1.json",
+        "sha256": "c4cd58e2b940021303c3b4bf1390df06fc906911d57a30b7d322101bd2ee1057"
+      }
+    },
+    "admission": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/on-1-validated.json",
+      "sha256": "41886600f7705c101b8129e89e788586f339410d5c35d8201083592c952fa59f"
+    },
+    "off_control": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/off-1-validated.json",
+      "sha256": "470cbbb1665197ec321bc88282545ea846fa2754dd563333b48a9c0cd2cf581e"
+    }
+  },
+  "script": {
+    "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/summarize_aom_neutralize.py",
+    "sha256": "180e809b5986196a32415832e5deba263db8645b04753225dbaac07a79d78577"
+  },
+  "playback_observed": false,
+  "scope": "Source-pixel contrast with retained analysis and possible downstream coding feedback; known-fixture numeric screen only.",
+  "full_summary": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/on-1-summary.json",
+    "sha256": "3d64ae6621b5e35e623926286eba7180db4e44801fe161e5bf2ce393bfd116a6"
+  },
+  "visual_validation": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/visuals/e05-1440/aom-neutralize-on-1/validation.json",
+    "sha256": "6e1c83c647804c181f5968292073460d4d3a5de88284489c01a567ae137dbd60"
+  },
+  "parent_still_inspected": "shirt.png; full240-frame trace figure; no motion playback",
+  "independent_review": {
+    "round5-outcome-review.md": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round5-outcome-review.md",
+      "sha256": "b2c7080f4181c2146051cfbc2f1bcefd81b85c95d1808b335e749451984f0d51"
+    },
+    "round5-outcome-review.json": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round5-outcome-review.json",
+      "sha256": "2e88671b1c2429b3c5cb7bcf86cd117ee5c7e6431f9eb8c2dd9bff6a27232f8c"
+    }
+  }
+}

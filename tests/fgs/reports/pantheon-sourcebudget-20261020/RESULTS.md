@@ -147,3 +147,27 @@ Native shirt/background/face clips have exact checks on all 240 panel frames.
 retain the complete metrics and provenance. This result rejects the proposed
 SSIM-weighting removal as a repair under the tested controls. It does not exclude
 an interaction with other settings or establish a codec limit.
+
+
+# Rounds4–5: coding-source boundary and pixel neutralization
+
+The [byte-neutral trace](AOM_SOURCE_BOUNDARY.md) binds all336 original frames
+and363 coded events. The midpoint source is unchanged;32 other events contain
+sparse changes no greater than two raw10-bit levels. The complete1344-file
+source provenance audit closes an earlier manifest-subset omission.
+
+The [all-original coding-source arm](AOM_SOURCE_NEUTRALIZATION.md) demonstrably
+removes every measured pixel difference, with unchanged traced selection and
+retained upstream filtering/analysis. At9.6256032Mbps (99.4738%source,
+99.8601%parent), both texture screens still fail: shirtHF.097788/.619353source,
+ACFerror.074420; backgroundHF.915182/1.778495source, ACFerror.098892. Whole240-frame
+traces remain suppressed. Face/quiet averages improve slightly; overallMSE/tails
+andCAMBI regress slightly. Independent review accepts a valid failed matched-rate
+intervention, not a repair. No playback; original pixel substitution is not an
+ablation of retained TF/GF/TPL/pass1 effects or downstream coding decisions.
+
+Enabled/disabled instrumented replay pass2 costs373.697/371.444s. These reuse
+installed pass1 statistics and cannot establish end-to-end production runtime.
+The existing installed parent cost remains391.652s for both passes/336frames.
+[Paired machine evidence](aom-neutralization-result.json) includes all controls,
+rawGPU metrics, native validated clips, and temporal provenance.

@@ -219,3 +219,32 @@ produces the exact installed IVF and363 uniquely paired selected/effective
 records, with the original32 changed-source events and unchanged sample counts.
 Thus the instrumentation/control transport is neutral for this fixed command.
 The enabled sample intervention and quality outcome are separately pending.
+
+
+### Round5 outcome and corrections
+
+Independent reviewer formed the on-arm outcome before receiving parent’s preferred
+conclusion: valid matched causal diagnostic, failed repair. Dynamic header counts,
+all336 source indices, selected/effective bijection and all-plane hashes pass;
+all selected-stage fields match off. Every effective sample is original. Output
+and reconstruction change, with the original-rate and pairwise gates satisfied.
+Reviewer independently recomputed whole-window texture/control/metric conclusions:
+midpoint amplitude remains severely deficient, ACF improves but still fails,
+full traces are mixed and broadly unchanged; global controls are near-flat/mixed.
+No broad restoration, global superiority, codec limit or playback was inferred.
+
+Before quality execution, reviewer required a changed-stream guard, current
+admission/run/parent and validity bindings, plus remux execution and actual packet
+receipts. Before paired reporting, it required explicit off-control admission,
+rawGPU metric and packet receipts,240-row/frame coverage and12870 unique frozen
+tile coordinates. Parent added all requirements; final reviewed scorer and
+summary hashes are d4b775b7af66b74818d400786cb873e3428fcef80f4aa005bd63631c44526106
+and180e809b5986196a32415832e5deba263db8645b04753225dbaac07a79d78577.
+
+Outcome artifacts `reviewer/round5-outcome-review.md` and `.json` have SHA256
+b2c7080f4181c2146051cfbc2f1bcefd81b85c95d1808b335e749451984f0d51 and
+2e88671b1c2429b3c5cb7bcf86cd117ee5c7e6431f9eb8c2dd9bff6a27232f8c.
+Parent agrees with rejection and next fixed-decision coefficient observation.
+Native shirt/background/face panels validate all240frames; parent inspected the
+shirt still and complete temporal trace plot. Still/plot inspection is not motion
+playback. No source-clean gate was relaxed and no production proposal is justified.

@@ -276,4 +276,18 @@ rate-calibrated arm would need separately labeled admission; current validation
 does not silently permit a different TBR.
 
 The disabled control completed and passed all363 coded-event/source bindings.
-The enabled arm remains under investigation until its separate result is saved.
+The enabled arm passes source/header admission but fails the unchanged texture
+gates at matched original rate; see AOM_SOURCE_NEUTRALIZATION.md.
+
+
+For the admitted changed stream, run the reviewed GPU campaign and paired
+summary, then the existing native-clip generator. Each output tag must be fresh:
+
+```bash
+nice -n10 taskset -c 8-11 "$PYTHON" "$REPORT/score_aom_neutralize.py" on-1
+nice -n10 taskset -c 8-11 "$PYTHON" "$REPORT/summarize_aom_neutralize.py" on-1
+PANTHEON_RD_ROOT="$PANTHEON_SOURCEBUDGET_ROOT" \
+PANTHEON_INDEPENDENT_DIR="$PANTHEON_SOURCEBUDGET_ROOT/parent/scores" \
+  nice -n10 taskset -c 8-11 "$PYTHON" \
+  tests/fgs/reports/pantheon-rd-20261019/visuals.py e05-1440 aom-neutralize-on-1
+```

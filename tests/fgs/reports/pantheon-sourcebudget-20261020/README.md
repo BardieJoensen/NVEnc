@@ -43,10 +43,13 @@ reject this actual policy as a repair; they do not establish a codec limit.
 A byte-neutral [source-boundary trace](AOM_SOURCE_BOUNDARY.md) now shows that
 all visible samples of the prescribed midpoint frame enter coding unchanged.
 32 of 363 coded events have sparse differences elsewhere, at most two 10-bit
-levels. Direct midpoint source smoothing is excluded; indirect decision effects
-remain possible. Next: one causal neutralization of these coding-source sample
-changes, with the preprocessing analysis still executed. [Ledger](LEDGER.md)
-records the scope and unchanged acceptance criteria.
+levels. The subsequent [sample neutralization](AOM_SOURCE_NEUTRALIZATION.md)
+proves every coding input sample original, yet fails at9.6256032Mbps (99.474% of
+source): shirt/background HF deficits84.21%/48.54% and ACF errors.07442/.09889.
+Changes affect coding feedback but their removal is insufficient. Full controls
+are mixed; no playback. Next: fixed-TU coefficient/reconstruction observation to
+separate scalar quantization, optimizer and skip choices. [Ledger](LEDGER.md)
+records scope and unchanged acceptance criteria.
 
 Prior evidence: [causal and measured preservation report](../pantheon-rd-20261019/README.md).
 Prior source-budget ROI failure is accepted; it does not prove source-budget

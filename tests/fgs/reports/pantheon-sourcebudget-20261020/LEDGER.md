@@ -5,7 +5,7 @@ practicality constraint; investigation resumes under original-rate hard cap.
 
 | Hypothesis | Supporting evidence | Contradiction / limit | Still unknown | Cheapest next discriminator |
 |---|---|---|---|---|
-| Material source preprocessing causes libaom texture loss | Byte-neutral trace finds 32 sparsely changed coded events, max two 10-bit levels | Prescribed midpoint input is exactly unchanged; most events are identical | Indirect sensitivity through reference or coding decisions | Round5 all-event coding-source sample neutralization, preserving preprocessing analysis |
+| Coding-source sample changes cause the severe libaom loss |32 events differ sparsely; removing changes alters stream/reconstruction |Admitted all-original coding inputs still lose84.2%/48.5% midpoint HF at99.47% source rate |Retained analysis and downstream coding/quantization mechanisms |Round6 fixed-TU scalar-quantization versus optimizer/skip observation |
 | SSIM's extra variance weighting causes the severe loss | It changes block rate prices; removing it improves face/edges | Matched PSNR still loses 84%/49% of shirt/background HF and fails ACF | Interactions with other policies | Direct removal failed; do not repeat this contrast |
 | More local quantization precision solves the original-rate budget | Fixed-decision inverses retain information; verified lower quantization and 4x coding preserve target texture | Matched-budget precision arms damage other regions; broader controls remain necessary | A policy that preserves texture without displaced damage | Resolve source-boundary uncertainty before another allocation policy |
 | A slower or independent decision stack suffices | Preset0 and libaom improve several broad controls | Tested preset0, SSIM and PSNR arms all fail texture; preset0 was under-cap, not matched | Untested search/allocation strategies and interactions | Use measured mechanism to choose the next arm, not a settings sweep |
@@ -344,3 +344,24 @@ reconstruct r5b from all archive member paths with no name-based exclusions,
 apply the same7 Ubuntu patches and unchanged reviewed intervention. Independent
 review audits the50 omitted files against R4 trees. This fixes provenance and
 reproduction completeness; it does not alter the measured R4 bitstream evidence.
+
+
+Round5 result: admitted all-original effective samples for all363 coded events,
+selected-stage records unchanged from off; dynamic headers and all336/240 decoder
+identities pass. Changed bitstream at9.6256032Mbps (99.4738%source,99.8601%parent).
+Midpoint shirt/background HF deficits84.21%/48.54%, ACF errors.07442/.09889 fail.
+Full-window controls are mixed; quiet/face improve slightly, overall MSE/tails and
+CAMBI worsen. Instrumented replay pass2 costs373.697s; no full-pass runtime claim.
+No playback. This rejects measured sample neutralization as a repair for this
+policy; it neither makes sparse source changes inert nor excludes retained
+analysis influence. Parent inspected the decisive trace and native shirt still.
+
+Next selected question: at fixed final TU/predictor/partition choices, how much
+texture is lost in initial scalar quantization versus later coefficient
+optimization or skip decisions? Start with observation and scratch inverse
+reconstruction only, proving disabled instrumentation bitstream identity. Do not
+use public no-trellis as a pure pruning test: it also changes FP→B scalar quant.
+`OUTPUT_ENABLED` alone may still include frame-recode attempts; final-bitstream
+attempt selection must be audited before implementation. Mark skipped blocks
+whose quantization never executes; never read their stale coefficient buffers
+as observed quantization. The next contract must settle these coverage issues.
