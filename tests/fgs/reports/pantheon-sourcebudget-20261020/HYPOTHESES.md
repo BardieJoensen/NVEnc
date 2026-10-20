@@ -1,6 +1,6 @@
 # Current hypothesis ledger
 
-Updated after admitted and independently reviewed Round11 committed coefficient stages. No candidate qualifies; no technical blocker or
+Updated after admitted and independently reviewed Round12 scalar-rule/precision diagnostic. No candidate qualifies; no technical blocker or
 playback observation exists. Practical ceiling remains original video payload
 rate; all texture, clean-region, detail, banding and temporal gates are unchanged.
 
@@ -11,7 +11,7 @@ rate; all texture, clean-region, detail, banding and temporal gates are unchange
 | Finer actual quantization can restore meaningful texture | R7 delivers shirtq32/backgroundq32–36 and substantially improves texture/detail | At4.01686×source it still fails shirt and background texture screens | Other precision/decision policies; no general quantization impossibility | Stop global qmax repeats; identify a distinct decision policy before another real arm |
 | Later coefficient processing is independently important | Libaom R7 optimizer-only shirt stratum HF.544→.214; dropout is absent there | PSYEX R11 later optimizer changes no shirt units and only six of2151 positives across allROIs; noise changes none | Encoder/policy-specific decision costs; cannot transfer libaom attribution to PSYEX | Defer optimizer bypass on PSYEX; its initial scalar stage is the observed loss boundary |
 | Selected skip/transform decisions constrain reconstruction | R7 removes reduced64 shirt support and raises exercised fraction46.88→67.84% |32.16% still unexercised; fixed raw mosaic itself misses whole-shirt amplitude | Whether available residual candidates lose mainly on rate/distortion cost or are already inadequate | Inspect coefficient, TU-skip and coding-block decision margins together; no final-only bypass |
-| A bundled texture-sensitive policy preserves texture at source rate | R8 proves zero optimizer rate weight and nonzero spatial psy terms execute in search | Matched9.6279Mbps result fails; R11 first scalarFP maps shirt rawHF.3930→.0937, later stages unchanged | Whether scalar rule or precision can retain useful residuals at source budget | Exact nativeFP replay, same-q scalarB contrast and lower-q FP control with fixed decisions/QM |
+| Native scalar choice/precision accounts for remaining PSYEX texture loss | R11 isolates large initial scalar loss; R12 q32 restores much background/face structure | Same-q B worsens allROIs; q32 shirtHF only41.39%source and ACFerror.393; rawshirt itself misses source | Remaining scalar floor versus upstream/selected-decision loss | One q1 replay with distances to raw, then stop scalar sweep; real budget feasibility remains open |
 | In-loop filtering alone causes the PSYEX loss | R9 filters further reduce shirt/background/face HF | Pre-loop shirt already loses84.55% of source HF; postloop improves MSE and shirt ACF | Individual filters and feedback on later frames | Do not infer a repair from unfiltered stills or run a filter-only sweep |
 | Legal grain can distinguish clean and textured areas at comparable inputs | Prior conditional inputs show a local quiet/texture conflict | Only specific white-model probes tested; no global nonrepresentability proof | Other legal model inputs/AR support/base reconstructions | Revisit representability only if a stronger measured base warrants it; never relax quiet protection |
 
@@ -53,3 +53,10 @@ exercised support; face34.37% never invokes finalquantization and remains separa
 The raw local diagnostic itself does not fully match original shirt, so a
 quantizer-only success cannot be assumed. Next: same-q nativeB vsFP and a lower-q
 FP control, exact baseline first. No real encode or bitrate claim yet.
+
+R12 accepts exact native delivery on all2187 invoked TUs,720 unchanged owners.
+Independent full-ROI recalculation agrees within1e-12. B is a negative result;
+q32 improves background/face locally but fails joint shirt preservation. No rate
+or full-window/quiet/playback inference. R13 predeclares one q1 point to measure
+the residual distance to raw, then moves upstream/decision policy. This is a
+diagnostic closure, not a relaxed repair gate. See PSYEX_SCALAR.md.

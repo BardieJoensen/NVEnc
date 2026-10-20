@@ -1,0 +1,1 @@
+{ global: rp_init; rp_fp_tables; rp_quant; rp_inverse; local: *; };

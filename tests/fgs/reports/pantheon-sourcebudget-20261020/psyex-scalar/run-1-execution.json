@@ -1,0 +1,107 @@
+{
+  "status": "complete",
+  "argv": [
+    "/usr/bin/nice",
+    "-n",
+    "10",
+    "/usr/bin/taskset",
+    "-c",
+    "8-11",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/analysis-venv/bin/python",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/experiment.py",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/run-1"
+  ],
+  "started_utc": "2026-10-20T16:24:40.900869+00:00",
+  "inputs_before": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/run.py",
+      "sha256": "b05f166fe1b9c48cba297880aba6a591369f5a07e30ef392326cf26583328d73",
+      "size": 2099
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/experiment.py",
+      "sha256": "87eb15f8a7c082bb875f91edb790ed66a8e592db9d64bc5f554943040f705ee2",
+      "size": 15090
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/native.c",
+      "sha256": "8f1cf5b69700e1a1b2d26d8bf29a0cb87cfe2f2e0b2351881be20106731934fc",
+      "size": 6237
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/build.py",
+      "sha256": "a4cd9bc269f4aeae61fc2fc318a3445794ba2dce3b66173d1cb62b7ff70c9b38",
+      "size": 4272
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/build-2/receipt.json",
+      "sha256": "4b56e9cbd1450f68ec42d02a70d6db2e082db065c6314f34ef17443ef6cb7df5",
+      "size": 48047
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/build-2/native.so",
+      "sha256": "07fe2554623523d8e6dfe5218d94a89cdb2437bb2221123a86678090af6f2228",
+      "size": 5558440
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+      "size": 8020928
+    }
+  ],
+  "returncode": 0,
+  "seconds": 11.48420156899374,
+  "log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/run-1.log",
+    "sha256": "dd76aa441375bd5cdecae06cc3223fd20ca0f6329978523ba5f3a2e63d32dc5e",
+    "size": 779
+  },
+  "inputs_after": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/run.py",
+      "sha256": "b05f166fe1b9c48cba297880aba6a591369f5a07e30ef392326cf26583328d73",
+      "size": 2099
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/experiment.py",
+      "sha256": "87eb15f8a7c082bb875f91edb790ed66a8e592db9d64bc5f554943040f705ee2",
+      "size": 15090
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/native.c",
+      "sha256": "8f1cf5b69700e1a1b2d26d8bf29a0cb87cfe2f2e0b2351881be20106731934fc",
+      "size": 6237
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/build.py",
+      "sha256": "a4cd9bc269f4aeae61fc2fc318a3445794ba2dce3b66173d1cb62b7ff70c9b38",
+      "size": 4272
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/build-2/receipt.json",
+      "sha256": "4b56e9cbd1450f68ec42d02a70d6db2e082db065c6314f34ef17443ef6cb7df5",
+      "size": 48047
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/build-2/native.so",
+      "sha256": "07fe2554623523d8e6dfe5218d94a89cdb2437bb2221123a86678090af6f2228",
+      "size": 5558440
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+      "size": 8020928
+    }
+  ],
+  "inner_receipt": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/run-1/receipt.json",
+    "sha256": "e657bc7acdbf80bfa0c2acdf18126ce4930c7172ac89bebd253837f0286c41b3",
+    "size": 10889
+  },
+  "result": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/run-1/result.json",
+    "sha256": "9caf06214e249306788a6e58a22d134ed86284b4183fb38f815d8ccf236029d9",
+    "size": 37133254
+  },
+  "ended_utc": "2026-10-20T16:24:52.425511+00:00"
+}

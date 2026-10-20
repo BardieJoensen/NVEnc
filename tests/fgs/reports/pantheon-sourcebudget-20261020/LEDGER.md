@@ -516,3 +516,13 @@ against prior tested policies; reviewer independently constrains the next test.
   Require exact q/DQ/EOB/inverse baseline before interpreting counterfactuals.
   A useful diagnostic must still survive realencoderfeedback, packetcost and full
   original-budget controls. No candidate/playback/blocker is established.
+
+- R12 completed and independently reviewed: exact baseline/raw and all B/q32
+  C/runtime outputs pass. Same-qB loses amplitude/correlation and worsens MSE;
+  accept negative. q32 shirtHF.251 versus.606source, ACFerror.393 fails; background
+  HF1.622 versus1.676source and ACF.0322 improve. All720 uninvoked owners retained.
+  Independent metrics agree<1e-12; no bitrate/repair/quiet/playback inference.
+- auto R13: one nativeFPq1 replay using verified helper, fixed decisions/QM and
+  explicit distances to raw. No repeated baseline encode/build or localq sweep.
+  Afterwards choose upstream/decision policy from evidence. Contract preserves
+  original-rate ceiling and all acceptance gates.

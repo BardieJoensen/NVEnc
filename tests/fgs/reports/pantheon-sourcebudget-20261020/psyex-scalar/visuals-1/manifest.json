@@ -1,0 +1,44 @@
+{
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/render.py",
+    "sha256": "90977c1e49af9a9c1fe00d965706b3a69327457073562920f85d9a518b394f6e",
+    "size": 4003
+  },
+  "result": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/run-1/result.json",
+    "sha256": "9caf06214e249306788a6e58a22d134ed86284b4183fb38f815d8ccf236029d9",
+    "size": 37133254
+  },
+  "arrays": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/run-1/native-arrays.npz",
+    "sha256": "aaee0f9c89623023e5c0d541c38241092950e99e3f48e46de4544bc5caf9799c",
+    "size": 1029348
+  },
+  "files": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/visuals-1/README.md",
+      "sha256": "6b165979c378e9e07705c5571bda5619e187729d55ea851935699c5945514fc0",
+      "size": 402
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/visuals-1/background-native-luma.png",
+      "sha256": "91423a65b65f3c48f7846d7b5abdb15998a9538f218421ff4f263db7a146c865",
+      "size": 149951
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/visuals-1/face-native-luma.png",
+      "sha256": "0396d30ffa8cbcaf34e020aca272fc95fa6f90ad974d71454e47788b316fbfc9",
+      "size": 859224
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/visuals-1/scalar-diagnostics.png",
+      "sha256": "dd0a4cfabf1a6b66e602f4e2fe9e8a963f14bef63931cff7f57ba8a0e0891d8a",
+      "size": 372789
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/visuals-1/shirt-native-luma.png",
+      "sha256": "25f9714ba870f69fb6f6f2fe89bae081128544c36cb926304594f08cee005f95",
+      "size": 42754
+    }
+  ]
+}

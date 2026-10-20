@@ -99,3 +99,11 @@ independently verified storage permutation. Face34.37% no-quantizer coverage,
 upstream shirt loss and postloop changes remain separate. Next is a fixed-decision
 scalar-rule versus precision diagnostic. No source-budget repair or playback
 acceptance has been demonstrated.
+
+The [R12 scalar diagnostic](PSYEX_SCALAR.md) rejects same-q scalarB: it prunes
+more and worsens all three ROIs. NativeFPq32 improves background/face locally,
+but shirt amplitude stays41.39%ofsource and ACFerror worsens to.393. Every new
+native arm matches directC exactly; independent metrics agree<1e-12. These
+fixed-decision local images have no bitrate or repair claim. The
+[R13 contract](ROUND13_FINE_CONTRACT.md) chooses one q1 precision closure before
+upstream/decision-policy work; no candidate or playback acceptance exists.

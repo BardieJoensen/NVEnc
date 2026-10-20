@@ -1,0 +1,7 @@
+/home/bardie/git-repos/NVEnc/tests/fgs/matched_rate_sweep.py:61: RuntimeWarning: Mean of empty slice
+  h = (r[:, :-lag] * r[:, lag:]).mean()
+/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/analysis-venv/lib/python3.12/site-packages/numpy/_core/_methods.py:142: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+/home/bardie/git-repos/NVEnc/tests/fgs/matched_rate_sweep.py:62: RuntimeWarning: Mean of empty slice
+  w = (r[:-lag, :] * r[lag:, :]).mean()
+{"status": "complete", "result": {"path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/run-1/result.json", "sha256": "9caf06214e249306788a6e58a22d134ed86284b4183fb38f815d8ccf236029d9", "size": 37133254}, "seconds": 11.352334902039729}

@@ -1,0 +1,1 @@
+Preparation-only C-kernel helper. No input trace or experimental outcome was run. Superseded by independent R12 design review requiring C-versus-runtime equality on every arm, not only the observed baseline. Receipt is preserved; original native.c/build.py bytes are source-native.c/source-build.py here. No prior R11 artifact changed.
