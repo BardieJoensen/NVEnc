@@ -1,0 +1,89 @@
+{
+  "status": "build_complete",
+  "returncode": 0,
+  "app": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/build/bin/SvtAv1EncApp",
+    "sha256": "21998212b3b499695bdde09ec93767749fe6c5b131740469c9c7093ef4a68289",
+    "size": 129688
+  },
+  "library": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/build/bin/libSvtAv1Enc.so.3.0.2",
+    "sha256": "db8f431f5fd5edc8790f3d77b0af994018df87a8c016f41eff19fff67f7bd156",
+    "size": 8424480
+  },
+  "build_receipt": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/build-receipt.log",
+    "sha256": "464e863fa45aad7879deb4ec29c576f0020548a0d48e0fa6a15580d5d2ce6241",
+    "size": 50477
+  },
+  "source_manifest": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/source-manifest.json",
+    "sha256": "c4a264dfa50cf24e5411c27719cf9e7ac118357ee8f0ee133e5a371854065b55",
+    "size": 249089
+  },
+  "manifest_before": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/source-manifest-before.json",
+    "sha256": "c4a264dfa50cf24e5411c27719cf9e7ac118357ee8f0ee133e5a371854065b55",
+    "size": 249089
+  },
+  "manifest_after": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/source-manifest-after.json",
+    "sha256": "c4a264dfa50cf24e5411c27719cf9e7ac118357ee8f0ee133e5a371854065b55",
+    "size": 249089
+  },
+  "patch": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/coeff-r9-relative.patch",
+    "sha256": "60d3b8e08de72e960c838df1b83e01eacbd2d755247cca732f0efc852a3eddbb",
+    "size": 23969
+  },
+  "helper": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/source/Source/Lib/Codec/pc_impl.h",
+    "sha256": "3ae5418f7b4b34677267bce91b1a4ab140ec52919ac4dd181bc0c224c2ccd56e",
+    "size": 15637
+  },
+  "schema": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/schema.json",
+    "sha256": "24eb5327b7b0d6f431f285075ca11f8cfbbd7857d9cdd54fc4a1c98cb19e447a",
+    "size": 1314
+  },
+  "runner": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/measured-runner.sh",
+    "sha256": "088d599f60a022828105f83555eaf7273a1e3360f8824540ca2340dcc8bc3fd2",
+    "size": 8606
+  },
+  "cmakecache": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/build/CMakeCache.txt",
+    "sha256": "dbfec2aad38f4c2b2ebeb06c94a6b1fd4347022c660c3f84e5d1efac86d445b6",
+    "size": 27745
+  },
+  "build_ninja": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/build/build.ninja",
+    "sha256": "bc6ddf14acf268b6b27451f3460bafbb9eafaa59d3d674fdaa503e9971ec4f77",
+    "size": 687622
+  },
+  "artifact_hashes": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/build-artifact-hashes.txt",
+    "sha256": "04e4c644423605c8b5a75cc7502ed697ed1e0e48075abfa82ecac1cbc85c58cc",
+    "size": 2662
+  },
+  "tools": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/tool-identities.txt",
+    "sha256": "f1166c6482b92233d53933eb20b5bb9f56fdd2f586135470721c60e0f607e332",
+    "size": 636
+  },
+  "configure_log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/configure.log",
+    "sha256": "c2eb26cc584caba98d603d5fcc1302d4cc70f92a0e911947094b1c706ba3f4a9",
+    "size": 4327
+  },
+  "build_log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/build.log",
+    "sha256": "7826013026a1933600fca62358697d173c341fc58175a412f45891bfb56f9c06",
+    "size": 41012
+  },
+  "baseline_source_manifest": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/baseline-source-manifest.json",
+    "sha256": "12f345e1f738b97fd00d9b9b2978864c53df995ad7590374edc21d31004124ce",
+    "size": 248963
+  }
+}

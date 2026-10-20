@@ -1,0 +1,83 @@
+{
+  "status": "complete",
+  "argv": [
+    "/usr/bin/nice",
+    "-n",
+    "10",
+    "/usr/bin/taskset",
+    "-c",
+    "8-11",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/analysis-venv/bin/python",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/analyze.py",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/admitted-1/admission.json",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/analysis-run-1/result.json"
+  ],
+  "started_utc": "2026-10-20T16:02:06.668715+00:00",
+  "identity_before": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/analyze.py",
+      "sha256": "44b8037c2a922b7e893cd66c8488f3683c45b8859400ff6b082bd0910286f64e",
+      "size": 10682
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/validate.py",
+      "sha256": "258db37595666efa153d6fc526d42de371fe0a7f0b21bff7c3334e84238378f3",
+      "size": 17582
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/admitted-1/admission.json",
+      "sha256": "f9aba0b6b1d5d8b73c606698130a64e46ec0bc7f55a6d7363ea113bd45e1548a",
+      "size": 4346
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/run_analysis.py",
+      "sha256": "2e55e2e5027d80a78b1049f863af8953cfaf05e232dda28e59dbb317f931c50b",
+      "size": 1782
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+      "size": 8020928
+    }
+  ],
+  "returncode": 0,
+  "seconds": 16.318396889953874,
+  "log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/analysis-run-1/analysis.log",
+    "sha256": "ec8dfd9dd41feeb1fe393c1edf85bf5b61d22c8a0af9666d15cca3d9cf9e6d9e",
+    "size": 771
+  },
+  "identity_after": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/analyze.py",
+      "sha256": "44b8037c2a922b7e893cd66c8488f3683c45b8859400ff6b082bd0910286f64e",
+      "size": 10682
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/validate.py",
+      "sha256": "258db37595666efa153d6fc526d42de371fe0a7f0b21bff7c3334e84238378f3",
+      "size": 17582
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/admitted-1/admission.json",
+      "sha256": "f9aba0b6b1d5d8b73c606698130a64e46ec0bc7f55a6d7363ea113bd45e1548a",
+      "size": 4346
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/run_analysis.py",
+      "sha256": "2e55e2e5027d80a78b1049f863af8953cfaf05e232dda28e59dbb317f931c50b",
+      "size": 1782
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+      "size": 8020928
+    }
+  ],
+  "result": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/analysis-run-1/result.json",
+    "sha256": "7ba42f09fbea1a3380c80291479ed0c47ad857e9b3196c4181163487bc05b5e4",
+    "size": 54039004
+  },
+  "ended_utc": "2026-10-20T16:02:23.025865+00:00"
+}

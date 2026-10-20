@@ -500,3 +500,19 @@ against prior tested policies; reviewer independently constrains the next test.
 - auto R11: choose neutral committed encoder coefficient/producer capture before
   another settings arm. Actualprequant/initial/final must join decoderfinalowners;
   MD reuse/bypass requiresproducer lineage, not repeatedcoordinate matching.
+
+- R11 completed and independently reviewed: 2907committed tokens,2187scalarFP
+  calls,2151positiveunits, all24shirt positives. Scalar maps rawHFshirt.3930→.0937
+  andbackground1.6238→1.2805 while sourcecorrelation/ACF also worsen. Lateroptimizer
+  changes0shirt/1background/5face units; noise changesnone. Actualforwardqshirt71,
+  bg79–87,face71–115. Noquantizerface34.37% remains distinct. All336bytesexactR8,
+  so reuse its rate/GPU/fullwindow evidence; localcounterfactuals have no bitrate.
+  Validator's directDQfailure was exact storage-order mismatch; independent source,
+  all13scan-families and all2151unit joins establish transpose/effectiveQM correction.
+  Sevenmalformedtraces rejected. Parent reviewed native-size luma stills only.
+- auto R12: same-q native scalarB contrast with exactFP replay plus a lower-q FP
+  precision control, fixedraw/predictor/partition/TX/QM, allinvokedunits retained.
+  This separates scalar rule from precision without another policy sweep.
+  Require exact q/DQ/EOB/inverse baseline before interpreting counterfactuals.
+  A useful diagnostic must still survive realencoderfeedback, packetcost and full
+  original-budget controls. No candidate/playback/blocker is established.

@@ -1,6 +1,6 @@
 # Current hypothesis ledger
 
-Updated after admitted and independently reviewed Round10 final syntax/predictors. No candidate qualifies; no technical blocker or
+Updated after admitted and independently reviewed Round11 committed coefficient stages. No candidate qualifies; no technical blocker or
 playback observation exists. Practical ceiling remains original video payload
 rate; all texture, clean-region, detail, banding and temporal gates are unchanged.
 
@@ -9,9 +9,9 @@ rate; all texture, clean-region, detail, banding and temporal gates are unchange
 | Libaom coding-source sample substitutions dominate loss | R4 finds sparse changes elsewhere and R5 changes reconstruction | Libaom target input is already original; all-event neutralization fails at matched rate | Retained upstream analysis/reference policy | Defer this libaom route; unchanged neutralization reruns add no information |
 | PSYEX upstream sample processing explains texture loss | R9 shirt HF .6063→.4413 before EncDec | Background input nearly unchanged; shirt falls further to .0937 before filters | Which upstream component and feedback effects matter | Source audit now; retain TF-off as a separate policy intervention after final coding map |
 | Finer actual quantization can restore meaningful texture | R7 delivers shirtq32/backgroundq32–36 and substantially improves texture/detail | At4.01686×source it still fails shirt and background texture screens | Other precision/decision policies; no general quantization impossibility | Stop global qmax repeats; identify a distinct decision policy before another real arm |
-| Later coefficient processing is independently important | R7 optimizer-only shirt stratum HF.544→.214; dropout is absent there | Initial quantization and skips also lose texture; mixed intra path remains unseparated | Native decision costs and whether a fixed alternative policy retains useful candidates at source budget | Existing policy source audit; otherwise one R3 native decision-margin capture |
+| Later coefficient processing is independently important | Libaom R7 optimizer-only shirt stratum HF.544→.214; dropout is absent there | PSYEX R11 later optimizer changes no shirt units and only six of2151 positives across allROIs; noise changes none | Encoder/policy-specific decision costs; cannot transfer libaom attribution to PSYEX | Defer optimizer bypass on PSYEX; its initial scalar stage is the observed loss boundary |
 | Selected skip/transform decisions constrain reconstruction | R7 removes reduced64 shirt support and raises exercised fraction46.88→67.84% |32.16% still unexercised; fixed raw mosaic itself misses whole-shirt amplitude | Whether available residual candidates lose mainly on rate/distortion cost or are already inadequate | Inspect coefficient, TU-skip and coding-block decision margins together; no final-only bypass |
-| A bundled texture-sensitive policy preserves texture at source rate | R8 proves zero optimizer rate weight and nonzero spatial psy terms execute in search | Matched9.6279Mbps result fails; R9 shirt coding-input .4413→preloop .0937 proves major loss before filters | R10 EOB-positive covers91.84%shirt/94.84%background; initial/final coefficient lineage remains unknown | Neutral final-committed encoder coefficient/producer capture joined to exact R10 units |
+| A bundled texture-sensitive policy preserves texture at source rate | R8 proves zero optimizer rate weight and nonzero spatial psy terms execute in search | Matched9.6279Mbps result fails; R11 first scalarFP maps shirt rawHF.3930→.0937, later stages unchanged | Whether scalar rule or precision can retain useful residuals at source budget | Exact nativeFP replay, same-q scalarB contrast and lower-q FP control with fixed decisions/QM |
 | In-loop filtering alone causes the PSYEX loss | R9 filters further reduce shirt/background/face HF | Pre-loop shirt already loses84.55% of source HF; postloop improves MSE and shirt ACF | Individual filters and feedback on later frames | Do not infer a repair from unfiltered stills or run a filter-only sweep |
 | Legal grain can distinguish clean and textured areas at comparable inputs | Prior conditional inputs show a local quiet/texture conflict | Only specific white-model probes tested; no global nonrepresentability proof | Other legal model inputs/AR support/base reconstructions | Revisit representability only if a stronger measured base warrants it; never relax quiet protection |
 
@@ -43,3 +43,13 @@ versus1.67639source. Residuals improve MSE, but shirt source-HF correlation stay
 nearzero. Exact decoderq71shirt is normative, not actualforwardq. Next discriminate
 initialquantization versus laterremoval on finalcommitted encoder owners, requiring
 explicit MDreuse/bypass provenance and exact decoderjoin. See DECODER_MAP.md.
+
+R11 completes that producer lineage: all510 pre-dispatch route assertions prove
+normal finalEncDec, all2907 tokens join committed owners, all2151positiveDQ/EOB/
+IQM agree with R10 after exact independently proven storage permutation.
+Actualforwardq is now established (shirt71/background79–87/face71–115).
+Initial scalarFP accounts for the decisive observed coefficient-stage loss on
+exercised support; face34.37% never invokes finalquantization and remains separate.
+The raw local diagnostic itself does not fully match original shirt, so a
+quantizer-only success cannot be assumed. Next: same-q nativeB vsFP and a lower-q
+FP control, exact baseline first. No real encode or bitrate claim yet.

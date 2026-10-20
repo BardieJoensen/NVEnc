@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/validate.py", line 260, in <module>
+    main()
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/validate.py", line 233, in main
+    assert np.array_equal(f['dq'],dq),(token,u['id'],'DQ')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: (1, 187, 'DQ')

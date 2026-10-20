@@ -1,0 +1,126 @@
+{
+  "actual_committed_owner": true,
+  "all336_exact": true,
+  "boundary": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/runs/on-1/boundary.bin",
+    "sha256": "023247030b240a0ec68d88c39d5aef365fb06bb9e64a411aabdbbc6c8c491b8b",
+    "size": 18763935
+  },
+  "commands": {
+    "off": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/runs/off-1/command.json",
+      "sha256": "6d66dbbafc7f07b9e11db871ff70a98cc0469efbbac69efb0425fabe2fc4af42",
+      "size": 18958
+    },
+    "on": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/runs/on-1/command.json",
+      "sha256": "dfb566e7c591068ea8166074e19338108201f12ba113003145ca6ccb40876371",
+      "size": 19513
+    }
+  },
+  "decoder_admission": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/admitted-1/admission.json",
+    "sha256": "4848fa5164df8ffbca7a2204de8f2df03982aed251fc7d2737709d5019e8de79",
+    "size": 6243
+  },
+  "final_dq_eob_iqm_exact": true,
+  "layout_normalization": {
+    "rule": "SVT native row-major [min(h,32),min(w,32)] transposed to libaom column-major coefficient storage; exact values, no tolerance",
+    "sources": [
+      {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/source/Source/Lib/Codec/inv_transforms.c",
+        "sha256": "656be83dc207a1716514a0788652774b558e17a84fa50bb4697e6f7dc27c6ea1",
+        "size": 163307
+      },
+      {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/source/Source/Lib/Codec/coefficients.h",
+        "sha256": "0991411a5485efb927e67c5f1347eb56a2ffa237a2b5fdbdc4958879ca4010be",
+        "size": 276165
+      },
+      {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/source/av1/common/av1_inv_txfm2d.c",
+        "sha256": "883456f646043d5f4eadc307f400d71d5eec608e88cb10aadfaf45f9eb225303",
+        "size": 19489
+      },
+      {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/source/av1/common/scan.c",
+        "sha256": "eea8d3f25d110e137b5d31d7936ee15c33225db3c015cd7ae666de5b3032b699",
+        "size": 128126
+      }
+    ]
+  },
+  "pins": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/completed-build-pins.json",
+    "sha256": "f32ace44e5e449ce0898b6566cc9bb3195a8daa2fcb0b9d7f20b0e0d8b3c54d8",
+    "size": 4144
+  },
+  "positive_units": 2151,
+  "scope": "actual final EncDec stages and fixed-predictor local native inverse diagnostics; no repair or rate inference",
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/validate.py",
+    "sha256": "258db37595666efa153d6fc526d42de371fe0a7f0b21bff7c3334e84238378f3",
+    "size": 17582
+  },
+  "shirt_positive_ids": [
+    6201,
+    6203,
+    6204,
+    6205,
+    6206,
+    6207,
+    6208,
+    6209,
+    6210,
+    6211,
+    6212,
+    6790,
+    6794,
+    6795,
+    6796,
+    6797,
+    6803,
+    6804,
+    6805,
+    6806,
+    6807,
+    6809,
+    6810,
+    6811
+  ],
+  "source_predictor_preloop_exact": true,
+  "status": "admitted",
+  "targets": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r11-targets/targets.json",
+    "sha256": "8090913807bf9574f70f49e0228927895b8a7ec5d5d0ef43d54528a37c1a61d9",
+    "size": 5941207
+  },
+  "terminal": {
+    "all_tokens": 2907,
+    "attempts": [
+      {
+        "ended": 2907,
+        "generation": 0,
+        "recode": 0,
+        "routes": 510,
+        "started": 2907
+      }
+    ],
+    "footer": {
+      "accepted_generation": 0,
+      "ended": 2907,
+      "started": 2907,
+      "status": "complete"
+    }
+  },
+  "token_manifest": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/admitted-1/tokens.json",
+    "sha256": "8a8d6bdb2ad7a96064a8b5d6e62d293cb8b9ee60ac4ce00967eb352d16ef0e92",
+    "size": 6356459
+  },
+  "tokens": 2907,
+  "trace": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/runs/on-1/coeff.bin",
+    "sha256": "2fdc5c48a702ce107712fe1bb08b1009b096c8093cce6207f7288f8facc04dd3",
+    "size": 19581687
+  }
+}

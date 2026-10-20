@@ -90,3 +90,12 @@ dominant target coverage explanation:91.84%shirt/94.84%background has positive
 EOB. Native residuals improve pixel error but barely restore shirt HF. Exact
 all336 output/preloop/OBU bindings pass. Next is committed encoder coefficient
 lineage, not another settings sweep. No repair/playback/blocker is established.
+
+The admitted [R11 committed coefficient trace](PSYEX_COEFFICIENTS.md) now localizes
+the decisive exercised-TU loss to initial scalar FP quantization. Actual shirt
+qindex71 maps raw native-inverse HF.3930 to.0937; later processing changes no
+shirt units. Exact off/on bytes and all2151positive decoder joins pass after an
+independently verified storage permutation. Face34.37% no-quantizer coverage,
+upstream shirt loss and postloop changes remain separate. Next is a fixed-decision
+scalar-rule versus precision diagnostic. No source-budget repair or playback
+acceptance has been demonstrated.

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "magic": "0x314346504e5450",
+  "header": "eight little-endian u64: magic/version/kind/generation/picture/sequence/meta_bytes/payload_bytes; JSON metadata; payload",
+  "target_picture": 216,
+  "payloads": {
+    "10": "route, none",
+    "11": "source u16[w*h], predictor u16[w*h]",
+    "12": "residual i16[w*h], raw i32[n], native inverse u16[w*h]",
+    "13": "7 tables int16[8] in metadata order, scan int16[n], iscan int16[n], qmatrix uint8[qm_count], iqmatrix uint8[iqm_count]",
+    "14": "qcoeff int32[n], dqcoeff int32[n], native inverse uint16[w*h]",
+    "15": "actual preloop recon uint16[w*h]",
+    "16": "generation end none",
+    "17": "complete footer none",
+    "18": "subsequent committed owner none"
+  },
+  "order": "tokens may interleave across threads; stages within a token ordered; all tokens committed before attempt; final accepted generation is shared with R9",
+  "units": "samples raw10, signed residual raw10 difference, coeff native encoder transform scale; DQ includes QM and transform scaling, validate independently",
+  "controls": "all luma TUs intersecting frozen shirt/background/face; full TU preserved; skip_mode bypass has begin/end/commit only; md_skip has same",
+  "counterfactual": "private native inverse, fixed per-TU predictor, no propagation/rate claim"
+}

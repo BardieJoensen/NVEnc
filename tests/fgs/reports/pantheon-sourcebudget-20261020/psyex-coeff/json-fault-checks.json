@@ -1,0 +1,26 @@
+{
+  "validator_sha256": "26e1df6508cac06c722fd4e077bbc901ed6d15a0f8a2d348ee0dfce368b53d25",
+  "tests": [
+    {
+      "input": "{\"x\":1,\"x\":2}",
+      "rejected": true
+    },
+    {
+      "input": "{\"x\":NaN}",
+      "rejected": true
+    },
+    {
+      "input": "{\"x\":Infinity}",
+      "rejected": true
+    },
+    {
+      "input": "{\"x\":1e999}",
+      "rejected": true
+    },
+    {
+      "input": "{\"x\":-1e999}",
+      "rejected": true
+    }
+  ],
+  "finite_control": true
+}

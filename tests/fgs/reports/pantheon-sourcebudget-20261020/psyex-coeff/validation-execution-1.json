@@ -1,0 +1,24 @@
+{
+  "argv": [
+    "/usr/bin/nice",
+    "-n",
+    "10",
+    "/usr/bin/taskset",
+    "-c",
+    "8-11",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/analysis-venv/bin/python",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/validate.py",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/runs/off-1",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/runs/on-1",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/admitted-1",
+    "--pins-sha",
+    "f32ace44e5e449ce0898b6566cc9bb3195a8daa2fcb0b9d7f20b0e0d8b3c54d8",
+    "--replay-sha",
+    "f9023e688eeacbc0c1b42defe879c0a3d93be072ea8e77e5fb4f565a4bb96747"
+  ],
+  "validator_sha256": "26e1df6508cac06c722fd4e077bbc901ed6d15a0f8a2d348ee0dfce368b53d25",
+  "started_utc": "2026-10-20T15:50:59.686111+00:00",
+  "returncode": 1,
+  "seconds": 5.714370707981288,
+  "log_sha256": "982ac39b10633dd5de7af500bd8d016ca57402f60344de8cb5890b344328ace3"
+}

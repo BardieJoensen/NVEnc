@@ -1,0 +1,124 @@
+{
+  "status": "all_rejected",
+  "baseline_tokens": 2907,
+  "terminal": {
+    "footer": {
+      "status": "complete",
+      "accepted_generation": 0,
+      "started": 2907,
+      "ended": 2907
+    },
+    "attempts": [
+      {
+        "generation": 0,
+        "recode": 0,
+        "routes": 510,
+        "started": 2907,
+        "ended": 2907
+      }
+    ],
+    "all_tokens": 2907
+  },
+  "source": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/runs/on-1/coeff.bin",
+    "sha256": "2fdc5c48a702ce107712fe1bb08b1009b096c8093cce6207f7288f8facc04dd3",
+    "size": 19581687
+  },
+  "validator": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/validate.py",
+    "sha256": "258db37595666efa153d6fc526d42de371fe0a7f0b21bff7c3334e84238378f3",
+    "size": 17582
+  },
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/fault_checks.py",
+    "sha256": "3a7282722bc86815028669495200d3cebfe606fbdc7a6e8753a3bcb42755b7a2",
+    "size": 2678
+  },
+  "cases": [
+    {
+      "case": "missing_footer",
+      "rejected": true,
+      "error_type": "AssertionError",
+      "error": "",
+      "seconds": 0.38885677501093596,
+      "artifact": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/fault-run-1/missing_footer.bin",
+        "sha256": "504ef8489d927e015f15de19dac5e3291467fafbf1ec17c0c3c0c4260313e6b0",
+        "size": 19581550
+      }
+    },
+    {
+      "case": "missing_commit",
+      "rejected": true,
+      "error_type": "AssertionError",
+      "error": "",
+      "seconds": 0.3776276510907337,
+      "artifact": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/fault-run-1/missing_commit.bin",
+        "sha256": "34eb98b13ad8b5e9137b2f3c7ff110d5e3bc9b33d5a94d175dc8ed851b8b06a1",
+        "size": 19581428
+      }
+    },
+    {
+      "case": "missing_scalar",
+      "rejected": true,
+      "error_type": "AssertionError",
+      "error": "",
+      "seconds": 0.002506579039618373,
+      "artifact": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/fault-run-1/missing_scalar.bin",
+        "sha256": "8dd217d1901b9c8d24736305f8b1b68a3fe2a9ed4553a77f7f86484dcb740290",
+        "size": 19576442
+      }
+    },
+    {
+      "case": "duplicate_begin",
+      "rejected": true,
+      "error_type": "AssertionError",
+      "error": "",
+      "seconds": 0.0023063860135152936,
+      "artifact": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/fault-run-1/duplicate_begin.bin",
+        "sha256": "882bc119078caa1b44a0009537a5382794b45b2388a5e54f570d2fcd91f38e29",
+        "size": 19584101
+      }
+    },
+    {
+      "case": "wrong_actual_q",
+      "rejected": true,
+      "error_type": "AssertionError",
+      "error": "",
+      "seconds": 0.002468300051987171,
+      "artifact": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/fault-run-1/wrong_actual_q.bin",
+        "sha256": "2006adf127d2ead64422069c1aaa63aa55e80abae60eba2de595a7a0648ae1b3",
+        "size": 19581687
+      }
+    },
+    {
+      "case": "wrong_generation",
+      "rejected": true,
+      "error_type": "AssertionError",
+      "error": "",
+      "seconds": 0.0023263520561158657,
+      "artifact": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/fault-run-1/wrong_generation.bin",
+        "sha256": "ab9a2550a016ad158acbdbe2d9d3b0124839e834825fb5b12d4aa844761e0c6e",
+        "size": 19581687
+      }
+    },
+    {
+      "case": "residual_corrupt",
+      "rejected": true,
+      "error_type": "AssertionError",
+      "error": "",
+      "seconds": 0.002262344933114946,
+      "artifact": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/fault-run-1/residual_corrupt.bin",
+        "sha256": "f54d6ab1c1d23a647e28982c35c3540f7933a861468e7769ea595bb075d1c3a2",
+        "size": 19581687
+      }
+    }
+  ],
+  "note": "Malformed traces are reproducible derivatives. Hashes and mutation script retained; source trace unchanged."
+}
