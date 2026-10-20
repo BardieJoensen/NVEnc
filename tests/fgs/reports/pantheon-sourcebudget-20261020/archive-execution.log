@@ -1,0 +1,2 @@
+[21:12:27] ARCHIVE /tmp/downloads/codex-work/pantheon-sourcebudget-20261020 (77G) -> /media/merged-storage/logs/cold-storage/docker-apps/pantheon-sourcebudget-20261020 (root-owned files: via container)
+[21:26:22] OK /tmp/downloads/codex-work/pantheon-sourcebudget-20261020: 54430 files verified, removed from SSD, symlink left at /tmp/downloads/codex-work/pantheon-sourcebudget-20261020, INDEX row added

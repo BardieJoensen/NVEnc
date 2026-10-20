@@ -1,8 +1,9 @@
 # Source-budget evidence storage and restoration
 
-The standard archive workflow started on2026-10-20 after the two child agents
-hit their usage limit. Final completion and verification are recorded below when
-available. Earlier evidence archives are unchanged.
+The standard archive workflow completed on2026-10-20 at21:26:22UTC after the
+two child agents hit their usage limit. It verified54,430files, removed the77GiB
+task tree from SSD, left the compatibility symlink and added one index row.
+Earlier evidence archives are unchanged.
 
 - Source: `/tmp/downloads/codex-work/pantheon-sourcebudget-20261020`
 - Destination: `/media/merged-storage/cold-storage/docker-apps/pantheon-sourcebudget-20261020`
@@ -36,3 +37,15 @@ the archive in place. A different prefix needs explicit new provenance.
 [Current state and dependency instructions](psyex-cap/archival/CURRENT_STATE.md)
 and [resource blocker](R18_RESOURCE_BLOCKER.md) give the next checks. The archive
 is a checkpoint at a resource limit, not a completed repair or playback finding.
+
+Additional read-only verification passed:3,759unique file contents hashed against
+the frozen evidence, including all1,790files in each R18 source tree, decisive
+traces, media and private build artifacts. The check took43.974403s and does not
+claim unchanged resolved-path execution provenance. See
+[verification receipt](archive-verification.json) and
+[verification script](archive_verify.py).
+
+Post-archive free space: staging SSD approximately670GiB; home75GiB; cold-storage
+pool20TiB. The archive helper and temporary copy container exited successfully.
+No experimental job remains active. Useful pinned dependencies stay in cold
+storage; duplicate payloads occupy a single hardlinked copy.

@@ -1,0 +1,754 @@
+{
+  "status": "verified",
+  "started_utc": "2026-10-20T21:26:31.903063+00:00",
+  "argv": [
+    "archive_verify.py"
+  ],
+  "script": {
+    "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/archive_verify.py",
+    "size": 4534,
+    "sha256": "4b3bdc3ca8a48df34a9da8cfc9a4d6a0d36a50a5d754df9f6c67faf5d7eb6584"
+  },
+  "python": {
+    "path": "/usr/bin/python3.12",
+    "size": 8020928,
+    "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+  },
+  "scope": "Content hashes and relocation integrity only; historical resolved-path execution provenance requires restoring original scratch root.",
+  "original_root": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020",
+  "cold_root": "/media/merged-storage/logs/cold-storage/docker-apps/pantheon-sourcebudget-20261020",
+  "compatibility_symlink": "/media/merged-storage/logs/cold-storage/docker-apps/pantheon-sourcebudget-20261020",
+  "helper_verified_files": 54430,
+  "archive_log": {
+    "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/archive-execution.log",
+    "size": 404,
+    "sha256": "a2d02249d420caefe17780a12a302d986d4315db5536cbb242eb02996a04e415"
+  },
+  "index_row": "| `docker-apps/pantheon-sourcebudget-20261020` | 2026-10-20 | 77G | `/tmp/downloads/codex-work/pantheon-sourcebudget-20261020` | Pantheon source-budget R1\u2013R18 evidence and pinned resume dependencies; stopped at child-agent usage limit, no qualified repair |",
+  "manifests": [
+    {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-cap/preflight/manifest.json",
+      "size": 21278,
+      "sha256": "b664f049f64a70171e5320c073d2b87eac7028d06360675cafba075270900414"
+    },
+    {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-cap/controls/manifest.json",
+      "size": 32717,
+      "sha256": "79d58da5477bb4d2a7d5dcc776f43c68978e9995bd410e3f2c13d9e81133150e"
+    },
+    {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-cap/observations/manifest.json",
+      "size": 18663,
+      "sha256": "45590407ae5de22506f00cb11374ab2bffe0ec85fdd3f1cea204179cc8f63a7c"
+    }
+  ],
+  "artifact_checks": {
+    "parent/psyex-cap-r18/README.md": {
+      "size": 1949,
+      "sha256": "49aa03f310684ab5ccdec1137f82d8625f257686f6be963cdec861fa873604bd"
+    },
+    "parent/psyex-cap-r18/freeze_preflight.py": {
+      "size": 3526,
+      "sha256": "f6f1dd6a43d64a103d4dcb56802a6eca8fe956b047bed599ddfd04b510b550bf"
+    },
+    "parent/psyex-cap-r18/freeze_source.py": {
+      "size": 2980,
+      "sha256": "99549bdc048a98cd4f14b3c6593cacab1b4602a4f62e8ce6b9e5c1596bb8b0e2"
+    },
+    "parent/psyex-cap-r18/prepare_build.py": {
+      "size": 2582,
+      "sha256": "f0c29f5be5bd910f7bf7ea04b021005fbdeb7dbfeb4730937386f4d6510b58e8"
+    },
+    "parent/psyex-cap-r18/execute_build.py": {
+      "size": 1923,
+      "sha256": "7f366b22bcd3d38bd87e32c7af58753925a4efd99920280fc7b47248531b6a32"
+    },
+    "parent/psyex-cap-r18/pin_build.py": {
+      "size": 4682,
+      "sha256": "dd5093a3cddd6e309e36e51f329dea2937c2591c8524c5659b55896655f84d9a"
+    },
+    "parent/psyex-cap-r18/run.py": {
+      "size": 14607,
+      "sha256": "ebfce2b97bd8002db2e866086ed44ac8dece936d64bfeaa01062f29dc5bf6bb3"
+    },
+    "parent/psyex-cap-r18/harness-revision3.json": {
+      "size": 1420,
+      "sha256": "bf7fce139b7e6dbd23282805f281f576f2de2e3f0c356ea011a2af0fd2c7dea9"
+    },
+    "parent/psyex-cap-r18/source-freeze-1/r18-cap.patch": {
+      "size": 32673,
+      "sha256": "5f03edf1ba320c84006e65484e88742ffb60b2de422b73b10346ea90ca9ed5d0"
+    },
+    "parent/psyex-cap-r18/source-freeze-1/source-manifest.json": {
+      "size": 249090,
+      "sha256": "f405193d6b35d74919d452457e9b8c93e52938ebbf184dda07c7622180af75ca"
+    },
+    "parent/psyex-cap-r18/source-freeze-1/receipt.json": {
+      "size": 1620,
+      "sha256": "15f90baddfc51d783fe79a7107cb983f7731fd17cdefe27a2883d0c8c3475d52"
+    },
+    "parent/psyex-cap-r18/source-freeze-1-execution.json": {
+      "size": 2681,
+      "sha256": "14e69ea9ccc4c6cc824e9c685cb0b07bd7d924cdc9ec74518f5dea5ec77a8583"
+    },
+    "parent/psyex-cap-r18/source-freeze-1-execution.log": {
+      "size": 1620,
+      "sha256": "15f90baddfc51d783fe79a7107cb983f7731fd17cdefe27a2883d0c8c3475d52"
+    },
+    "parent/psyex-cap-r18/build-1-preparation-execution.json": {
+      "size": 2962,
+      "sha256": "b82971dd1213454ccfb1df8cdc50c65f29102485aa714914b8594028fec4e9d7"
+    },
+    "parent/psyex-cap-r18/build-1-preparation-execution.log": {
+      "size": 207,
+      "sha256": "a544168def9a289654f67127cb85e4711db69e4b6498d8bcb822d3da32dd94b2"
+    },
+    "parent/psyex-cap-r18/build-1-execution.json": {
+      "size": 2749,
+      "sha256": "487a302c8e01eee3fbc12e6e7a3dc3d2679be6d16e3c4514e6a5e58764718bc9"
+    },
+    "parent/psyex-cap-r18/build-1-execution.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "parent/psyex-cap-r18/build-1-pin-execution.json": {
+      "size": 3086,
+      "sha256": "ac83f93fccb0222a8e411d1c294ae2983fa58c32964ee5bb55aa2abd9ae4cb2c"
+    },
+    "parent/psyex-cap-r18/build-1-pin-execution.log": {
+      "size": 216,
+      "sha256": "c90a86508d27fe607eee87832959b7cba3cf04c6f3c9c087f197d72dadd3d8a2"
+    },
+    "parent/psyex-cap-r18/baseline-preview-execution.json": {
+      "size": 2794,
+      "sha256": "bf61ed52f6a3adf2250be5abf8b343449fd4a8bafa0619aacde0e80e814d0eab"
+    },
+    "parent/psyex-cap-r18/baseline-preview-execution.log": {
+      "size": 2462,
+      "sha256": "9a847bd9e3cd86cb7d531ffc8e5235e4e89d859602967076525169e1f65656f6"
+    },
+    "parent/psyex-cap-r18/build-1/build_runner.sh": {
+      "size": 8678,
+      "sha256": "83ed079e604833cd596c0605a3afd3d6dae7b6574216b4d831c4d960522c148e"
+    },
+    "parent/psyex-cap-r18/build-1/preparation.json": {
+      "size": 1233,
+      "sha256": "2785ef58fe327230d879a42a92d5220e44e9e598a1034be711fa1a9175486ec2"
+    },
+    "parent/psyex-cap-r18/build-1/launch.json": {
+      "size": 1970,
+      "sha256": "7a3e1e12ac77176b4dd4b54200c89238b9400a0b566ea5091db1f16fd9349b34"
+    },
+    "parent/psyex-cap-r18/build-1/completed-build-pins.json": {
+      "size": 4765,
+      "sha256": "c0e389a6ca98513c5b4117b48dab02552b7f21ea978585974243f747803e1fe7"
+    },
+    "parent/psyex-cap-r18/build-1/build-receipt.log": {
+      "size": 51351,
+      "sha256": "29c5631f1be9c664b767db8ad4410a9d2331f147671ad11c42d1efc12f18c7d4"
+    },
+    "parent/psyex-cap-r18/build-1/configure.log": {
+      "size": 4333,
+      "sha256": "44b0bd272e9c26ea135b45da18ad30f78ec608593a4a54b5cfa7a262a9808fb6"
+    },
+    "parent/psyex-cap-r18/build-1/build.log": {
+      "size": 41746,
+      "sha256": "b5b8e393a83752fe627ff8954ae356d3d827e9b0ff3c828a85154475d2c5a8ff"
+    },
+    "parent/psyex-cap-r18/build-1/source-manifest-before.json": {
+      "size": 249090,
+      "sha256": "f405193d6b35d74919d452457e9b8c93e52938ebbf184dda07c7622180af75ca"
+    },
+    "parent/psyex-cap-r18/build-1/source-manifest-after.json": {
+      "size": 249090,
+      "sha256": "f405193d6b35d74919d452457e9b8c93e52938ebbf184dda07c7622180af75ca"
+    },
+    "parent/psyex-cap-r18/build-1/build-artifact-hashes.txt": {
+      "size": 2758,
+      "sha256": "333b98e507175618fd00e2fc6010bbd9ec205bf60572e8f4b1683528ed3ff65c"
+    },
+    "parent/psyex-cap-r18/build-1/tool-identities-before.txt": {
+      "size": 636,
+      "sha256": "f1166c6482b92233d53933eb20b5bb9f56fdd2f586135470721c60e0f607e332"
+    },
+    "parent/psyex-cap-r18/build-1/tool-identities-after.txt": {
+      "size": 636,
+      "sha256": "f1166c6482b92233d53933eb20b5bb9f56fdd2f586135470721c60e0f607e332"
+    },
+    "parent/psyex-cap-r18/build-1/tool-identities.txt": {
+      "size": 636,
+      "sha256": "f1166c6482b92233d53933eb20b5bb9f56fdd2f586135470721c60e0f607e332"
+    },
+    "parent/psyex-cap-r18/build-1/app-ldd.txt": {
+      "size": 379,
+      "sha256": "ee164475660112d1cc4cef704083c720d74d5756eca11585fdae0f525013a8df"
+    },
+    "parent/psyex-cap-r18/build-1/app-version.txt": {
+      "size": 78,
+      "sha256": "ea3fc2305ef027fc53245fb358fb8af5fd91a5f85a1089f3d5f00e9b503c3a52"
+    },
+    "parent/psyex-cap-r18/native-parent-prebuild-notes.md": {
+      "size": 1229,
+      "sha256": "73aff98aabbeb7f76094827ed3ea8813fd8d9661e3bac525a3968f85501d62f4"
+    },
+    "parent/psyex-cap-r18/parent-cap-correction.json": {
+      "size": 632,
+      "sha256": "3cbfa0b0595abb4370881ef262618ca23e84bbfc7fc6bdc5a26acac4711485c9"
+    },
+    "reviewer/round18-contract-review.md": {
+      "size": 6693,
+      "sha256": "5878400fcee63a547031cafb04e449182054adafa595cb17ceb34c47ef5ea656"
+    },
+    "reviewer/round18-v1-review.md": {
+      "size": 7899,
+      "sha256": "1e425cc982d4af5e46b7edced421d24793aefe5757d389c730f1dffd29549b70"
+    },
+    "reviewer/round18-implementation-review.md": {
+      "size": 9253,
+      "sha256": "780c83f4be5e2f39ef090f04976551de79312b2e6952eb9d3afa34f8255988d6"
+    },
+    "reviewer/round18-implementation-review-v5.md": {
+      "size": 4066,
+      "sha256": "9840b690d2193fad3ec35b5bdc10139df943f45557a89edb8fd63a58d9f32173"
+    },
+    "reviewer/round18-harness-review.md": {
+      "size": 8059,
+      "sha256": "71a6e5a7966e1ed7681aff2f208f9cf0e1f2ec5b143f71115de66053f9c9844b"
+    },
+    "reviewer/round18-harness-review-revision3.md": {
+      "size": 4876,
+      "sha256": "d4f8b9ae3074d951bb0164acbc6d779e8f168062e821693055840db5cefca8e5"
+    },
+    "reviewer/round18-source-release.md": {
+      "size": 4082,
+      "sha256": "5406b49c7adf70f5b1261f46d701186f15c0e17b89a87fddc32fc539e2b88e2c"
+    },
+    "parent/psyex-cap-r18/build-1/build/bin/SvtAv1EncApp": {
+      "size": 129688,
+      "sha256": "2288851074fd31fd4ddf26519f48bcdd301b99c9a918c60fc7f74641985ef45f"
+    },
+    "parent/psyex-cap-r18/build-1/build/bin/libSvtAv1Enc.so.3.0.2": {
+      "size": 8441736,
+      "sha256": "a7ef2217cff8237130d0efc60c973af7685c524b64239a11c7b28a22e08d294d"
+    },
+    "parent/psyex-cap-r18/build-1/build/CMakeCache.txt": {
+      "size": 27791,
+      "sha256": "5863560cbd4537b87bf19655d92ecc58d04162b80dd61ad4d9b3b25afb60abe0"
+    },
+    "parent/psyex-cap-r18/build-1/build/build.ninja": {
+      "size": 682224,
+      "sha256": "be55e756df1915140b058a777192c5bcb813904068c66132aa5310dba6fdd075"
+    },
+    "parent/psyex-cap-r18/freeze_controls.py": {
+      "size": 3769,
+      "sha256": "c2d6c7153470cbf2321ef4db4538577d7d42eb93b46267a1d0a22f8d353b35e2"
+    },
+    "parent/psyex-cap-r18/policy-index-1.json": {
+      "size": 2377,
+      "sha256": "10cf5a2006cdaf5660627e79def9da43a947ebe0d7ba967b5a288b20e440d067"
+    },
+    "parent/psyex-cap-r18/media_admission.py": {
+      "size": 10381,
+      "sha256": "750e11a1bb75e7cb0b39c60316c29715a13899f2581c6e63242b64c87b1919a5"
+    },
+    "parent/psyex-cap-r18/bind_headers.py": {
+      "size": 8504,
+      "sha256": "2fcce467cbd6ef3a09f5adb076db47289472ed93441cabc3e89bcc08e05e235d"
+    },
+    "parent/psyex-cap-r18/baseline-1-execution.json": {
+      "size": 2769,
+      "sha256": "3831ac151bd20c34e7f8eb4ed1d36e3543a6b2388dcdff81b416d86faa3edfc3"
+    },
+    "parent/psyex-cap-r18/baseline-1-execution.log": {
+      "size": 297,
+      "sha256": "72afff2d7f901af17720c71404e4752087fdf5fa71dcf756dc8dee6eaf9fbd8d"
+    },
+    "parent/psyex-cap-r18/pass1-1-execution.json": {
+      "size": 2760,
+      "sha256": "95e9e5642013d0d25f66200d11505ed092a0f2916c68297d79192ec38c005440"
+    },
+    "parent/psyex-cap-r18/pass1-1-execution.log": {
+      "size": 291,
+      "sha256": "46cb50ec6ea43a55968ddb86e86fedc6f494d435c99529510c3aff134259050d"
+    },
+    "parent/psyex-cap-r18/cap-1-execution.json": {
+      "size": 3197,
+      "sha256": "a3650328b7a792080c0a3eeead0214165c88951b54543c6b5fbb75f1dd959207"
+    },
+    "parent/psyex-cap-r18/cap-1-execution.log": {
+      "size": 288,
+      "sha256": "93d54c8f6e58251fba2cc64c49a0eb1801dcee716a4b1c66ee0509b209a5a6e3"
+    },
+    "parent/psyex-cap-r18/trace-1-execution.json": {
+      "size": 3200,
+      "sha256": "b8e1035cc36b3b6be31ab1b0bb28cf0d34d3441ae1162fbd71d7c9eabc132bd2"
+    },
+    "parent/psyex-cap-r18/trace-1-execution.log": {
+      "size": 361,
+      "sha256": "4f5c7cef3a88476e14c781bc90cbb7e30c764e4621e48607836fb4682d95c54e"
+    },
+    "parent/psyex-cap-r18/media-1-execution.json": {
+      "size": 3219,
+      "sha256": "e268b22f24bee23e9dbf6d0f640b2939961c451e4903daae357e487a73a673d5"
+    },
+    "parent/psyex-cap-r18/media-1-execution.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "parent/psyex-cap-r18/binding-1-execution.json": {
+      "size": 3022,
+      "sha256": "1e4490d98cb37eb1bd2a8017ff77959c17faf98c1f60923ac0fc89070f40e044"
+    },
+    "parent/psyex-cap-r18/binding-1-execution.log": {
+      "size": 1058,
+      "sha256": "84d1aca633bb303153b02a44b50270dfd9e4e75e8104185edb3ea8dbf2743cfe"
+    },
+    "parent/psyex-cap-r18/media-1/media-admission.json": {
+      "size": 145474,
+      "sha256": "fa64284aa9441b8c45483eb4e212a037b6a43ba127282f1a1b5f2f5000585d1c"
+    },
+    "parent/psyex-cap-r18/media-1/probe.json": {
+      "size": 141127,
+      "sha256": "843607634157fcc33ea4f0e19393f973ed72cad3235fee4b6a8e8c9cb1a899a8"
+    },
+    "parent/psyex-cap-r18/binding-1/result.json": {
+      "size": 9460,
+      "sha256": "4ae3911b52a192e89f70504ad4088c3fc46266150742fee61195f145b8ffb47f"
+    },
+    "parent/psyex-cap-r18/prepare_observer2.py": {
+      "size": 5172,
+      "sha256": "425e88bb81e41ed007dc694a386336a911d18dcc3c22edf61b817285d8e457a5"
+    },
+    "parent/psyex-cap-r18/observer2-preparation-execution.json": {
+      "size": 2597,
+      "sha256": "0dc9eae71ebd76bb829fa4847350cf674266859505d92cc392277979efa13485"
+    },
+    "parent/psyex-cap-r18/observer2-preparation-execution.log": {
+      "size": 1362,
+      "sha256": "640a3e3f073f77286a26bb8e5adf7bca4c912fc04859d874fd172f837a2c0e2a"
+    },
+    "parent/psyex-cap-r18/observer-freeze-2/observer-only.patch": {
+      "size": 3779,
+      "sha256": "a53d222914c87e20cbedd12497774a93a375448c53a3fe78c60a93e616505024"
+    },
+    "parent/psyex-cap-r18/observer-freeze-2/source-manifest.json": {
+      "size": 249090,
+      "sha256": "305f06b51bf94988bd9d6c1002cfa880736071799f52d38f3bc7c25f5248a22b"
+    },
+    "parent/psyex-cap-r18/observer-freeze-2/receipt.json": {
+      "size": 1462,
+      "sha256": "0c95558f01197d15a8e3766340b7ec67061ab809c4f8e8374bddd7eaa05498ba"
+    },
+    "parent/psyex-cap-r18/observer-build-index-2.json": {
+      "size": 1044,
+      "sha256": "067f1ef1d7af99f67c7829e13bd135d3b6e840678e034f3a64ca6e17a81b2361"
+    },
+    "parent/psyex-cap-r18/runs/baseline-1/command.json": {
+      "size": 54688,
+      "sha256": "b912affabfc3dce44b63675b7a7fd68b92decb9d876a293d09509c7e9c4b5887"
+    },
+    "parent/psyex-cap-r18/runs/baseline-1/encode.log": {
+      "size": 1807,
+      "sha256": "ae66b07e914c57ba0d1007150dfd26a9bf0d034c5575e270ffcc720f50044d60"
+    },
+    "parent/psyex-cap-r18/runs/baseline-1/measured-runner.py": {
+      "size": 14607,
+      "sha256": "ebfce2b97bd8002db2e866086ed44ac8dece936d64bfeaa01062f29dc5bf6bb3"
+    },
+    "parent/psyex-cap-r18/runs/pass1-1/command.json": {
+      "size": 34119,
+      "sha256": "b5f32616ab2122863b09e40df1fcc18ac6f19dffba7c430a4ff086b0579bef2a"
+    },
+    "parent/psyex-cap-r18/runs/pass1-1/encode.log": {
+      "size": 513,
+      "sha256": "4bbfcf242e271c5196e618af9ca74b9cdc1d21eb0bbc77ce4ba8e8e72baea79b"
+    },
+    "parent/psyex-cap-r18/runs/pass1-1/measured-runner.py": {
+      "size": 14607,
+      "sha256": "ebfce2b97bd8002db2e866086ed44ac8dece936d64bfeaa01062f29dc5bf6bb3"
+    },
+    "parent/psyex-cap-r18/runs/cap-1/command.json": {
+      "size": 56092,
+      "sha256": "6c90d0a52582d82fd6c0697848aad9cdcfd1c7cc84b72c4643321342ec660587"
+    },
+    "parent/psyex-cap-r18/runs/cap-1/encode.log": {
+      "size": 1807,
+      "sha256": "924b229aa2ef575f41ee4263f31bec07bcbf94b1169fa95976f1567eb1292b2d"
+    },
+    "parent/psyex-cap-r18/runs/cap-1/measured-runner.py": {
+      "size": 14607,
+      "sha256": "ebfce2b97bd8002db2e866086ed44ac8dece936d64bfeaa01062f29dc5bf6bb3"
+    },
+    "parent/psyex-cap-r18/runs/trace-1/command.json": {
+      "size": 22891,
+      "sha256": "26b5019c4855089d9bd4e41011783c19e042070fdf5dd41d6f2786a087bf8224"
+    },
+    "parent/psyex-cap-r18/runs/trace-1/encode.log": {
+      "size": 1678,
+      "sha256": "9fc755d661b1c52c47ea21bd9ec65cf407a43b67aae0f1b879b38b960614963d"
+    },
+    "parent/psyex-cap-r18/runs/trace-1/measured-runner.py": {
+      "size": 14607,
+      "sha256": "ebfce2b97bd8002db2e866086ed44ac8dece936d64bfeaa01062f29dc5bf6bb3"
+    },
+    "parent/psyex-cap-r18/build-observer-2-preparation-execution.json": {
+      "size": 2993,
+      "sha256": "a6fe5e20200e6e22b14473eab9efccf1b5eeb95ceb5cc60c876d06aedd522073"
+    },
+    "parent/psyex-cap-r18/build-observer-2-preparation-execution.log": {
+      "size": 216,
+      "sha256": "25fa81efaee6cbdff035917b4e22442f4d7d9f0ccb5d63ba6a828b112322b6f1"
+    },
+    "parent/psyex-cap-r18/build-observer-2-execution.json": {
+      "size": 2768,
+      "sha256": "31d6dc458e9479729b88510acb90a6a575d7e1a718d09503bde95faa2cb858fa"
+    },
+    "parent/psyex-cap-r18/build-observer-2-execution.log": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "parent/psyex-cap-r18/build-observer-2-pin-execution.json": {
+      "size": 3121,
+      "sha256": "d722b0fb32cea12db3534f5204fe8a45c8ea0559ddb27720d59e2711bdc88bbd"
+    },
+    "parent/psyex-cap-r18/build-observer-2-pin-execution.log": {
+      "size": 225,
+      "sha256": "3e3c23bddea48105f84631ed43feee5b170cc5cb4174e4099399a5ce5bf49513"
+    },
+    "parent/psyex-cap-r18/build-observer-2/preparation.json": {
+      "size": 1255,
+      "sha256": "9e76dd20d762bf2270ec19cbc8c874d829dccbc0d1c31a45eaf913919d9e9cef"
+    },
+    "parent/psyex-cap-r18/build-observer-2/launch.json": {
+      "size": 2016,
+      "sha256": "7d95bf2a43ea961938bd456172d9613e70de57dcd79093b6506908ef036652d1"
+    },
+    "parent/psyex-cap-r18/build-observer-2/completed-build-pins.json": {
+      "size": 4936,
+      "sha256": "b8f5e1353621974462b9d8840faaa53282c77312e470816932c80c6aae8cce82"
+    },
+    "parent/psyex-cap-r18/build-observer-2/build_runner.sh": {
+      "size": 8689,
+      "sha256": "221b6b4de6bbe71dd608275bec324a9f96ea83430f821abc675c30c73b20b778"
+    },
+    "parent/psyex-cap-r18/build-observer-2/measured-runner.sh": {
+      "size": 8689,
+      "sha256": "221b6b4de6bbe71dd608275bec324a9f96ea83430f821abc675c30c73b20b778"
+    },
+    "parent/psyex-cap-r18/build-observer-2/build-receipt.log": {
+      "size": 52425,
+      "sha256": "21d545759581ba0b7c75b286cb26122412f625f6edcf1ff852e8e612c3ba0371"
+    },
+    "parent/psyex-cap-r18/build-observer-2/configure.log": {
+      "size": 4342,
+      "sha256": "f66099074c346687e26d8dfe96cc26061bacd19473cb6b804884b01cee744db8"
+    },
+    "parent/psyex-cap-r18/build-observer-2/build.log": {
+      "size": 42582,
+      "sha256": "006b584ab1de8d25cb1f0d8962fb92fc458ae356df5f8c3dbbec2940c1c4c845"
+    },
+    "parent/psyex-cap-r18/build-observer-2/build-artifact-hashes.txt": {
+      "size": 2902,
+      "sha256": "467caba9e32d1b09856d37f2a93a564b30803761aa772ffc6497b54008f6d485"
+    },
+    "parent/psyex-cap-r18/build-observer-2/tool-identities-before.txt": {
+      "size": 636,
+      "sha256": "f1166c6482b92233d53933eb20b5bb9f56fdd2f586135470721c60e0f607e332"
+    },
+    "parent/psyex-cap-r18/build-observer-2/tool-identities-after.txt": {
+      "size": 636,
+      "sha256": "f1166c6482b92233d53933eb20b5bb9f56fdd2f586135470721c60e0f607e332"
+    },
+    "parent/psyex-cap-r18/build-observer-2/app-ldd.txt": {
+      "size": 388,
+      "sha256": "00e464c2319460b47ef069b3da97715d8e08bee7d0a81494847215655cdf58af"
+    },
+    "parent/psyex-cap-r18/build-observer-2/app-version.txt": {
+      "size": 78,
+      "sha256": "ea3fc2305ef027fc53245fb358fb8af5fd91a5f85a1089f3d5f00e9b503c3a52"
+    },
+    "reviewer/round18-media-release.md": {
+      "size": 2599,
+      "sha256": "d254364bf95398114cee2b6dcb39e86e435b995920bed1eb2dd58cf53fa8a2c0"
+    },
+    "reviewer/round18-binding-review.md": {
+      "size": 4498,
+      "sha256": "3bebd8c6f9fc9abc0fab27fb63c104b0c6980b02ff7b81dff2fcad365c0999c7"
+    },
+    "reviewer/round18-binding-release-addendum.md": {
+      "size": 734,
+      "sha256": "68d96a8f586dfe86a5370c7b88988e582438dd2b4b728063a3906882fee5d401"
+    },
+    "reviewer/round18-observer-rebuild-control.md": {
+      "size": 4940,
+      "sha256": "f89fe17a3c299bc9dc6861a951d4fd5fe0a1a297867bcc377230a91d0de2a88b"
+    },
+    "reviewer/round18-observer2-source-review.md": {
+      "size": 3893,
+      "sha256": "566197111539997ad89180f6db36c969dc87fdf1aa9fcb4ff9e67adf058393ff"
+    },
+    "parent/psyex-cap-r18/runs/baseline-1/out.ivf": {
+      "size": 17506710,
+      "sha256": "731dc2aae95eab5cc66e641debfc5366ae4bf2a75522b52b35850d50051775e7"
+    },
+    "parent/psyex-cap-r18/runs/baseline-1/recon.yuv": {
+      "size": 2090188800,
+      "sha256": "84b5280ec372c3003ae448f1cb67c050510df23933aeabdfab978b13eadd1a94"
+    },
+    "parent/psyex-cap-r18/runs/baseline-1/pass.stats": {
+      "size": 18872,
+      "sha256": "6114f3cd907246cf1aa6fc6654ff63f59e8be72ba5aa4663a4e98b46804b1007"
+    },
+    "parent/psyex-cap-r18/runs/pass1-1/out.ivf": {
+      "size": 28099692,
+      "sha256": "caccac9a7b8c230e49238c083d6cf856144d650ffd20eb55aa26fb45a6d57c75"
+    },
+    "parent/psyex-cap-r18/runs/pass1-1/pass.stats": {
+      "size": 18872,
+      "sha256": "6114f3cd907246cf1aa6fc6654ff63f59e8be72ba5aa4663a4e98b46804b1007"
+    },
+    "parent/psyex-cap-r18/runs/cap-1/out.ivf": {
+      "size": 24553381,
+      "sha256": "e141c7ac67476320b76f96c505a809a15cde126721b9a5b45d6f8ecfab6cbd96"
+    },
+    "parent/psyex-cap-r18/runs/cap-1/recon.yuv": {
+      "size": 2090188800,
+      "sha256": "eac96957e302c1989b26ff5f5279864b3779bc5dce4cca8c38b7839c52b544bf"
+    },
+    "parent/psyex-cap-r18/runs/cap-1/pass.stats": {
+      "size": 18872,
+      "sha256": "6114f3cd907246cf1aa6fc6654ff63f59e8be72ba5aa4663a4e98b46804b1007"
+    },
+    "parent/psyex-cap-r18/runs/trace-1/out.ivf": {
+      "size": 200704,
+      "sha256": "2ba012950a2144cb379c2eb98becc8df9c8238a06d1757c7a81edd68c4939758"
+    },
+    "parent/psyex-cap-r18/runs/trace-1/recon.yuv": {
+      "size": 101711872,
+      "sha256": "9e1d7725a10dcef11cdaaa996a9e0199e05b02b6056e5607935aa28cbffde714"
+    },
+    "parent/psyex-cap-r18/runs/trace-1/pass.stats": {
+      "size": 18872,
+      "sha256": "6114f3cd907246cf1aa6fc6654ff63f59e8be72ba5aa4663a4e98b46804b1007"
+    },
+    "parent/psyex-cap-r18/runs/trace-1/r18-trace.bin": {
+      "size": 1737763,
+      "sha256": "c0054fc305a7176707e692b5c709a13f8c4c8e71fa719e68fdc81234496bc469"
+    },
+    "parent/psyex-cap-r18/runs/trace-1/boundary.bin": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "parent/psyex-cap-r18/runs/trace-1/coeff.bin": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "parent/psyex-cap-r18/build-observer-2/build/bin/SvtAv1EncApp": {
+      "size": 129688,
+      "sha256": "893cf5fc01027878c30b1979db01d79f57b8efe731f983eaaf79055bef585dfb"
+    },
+    "parent/psyex-cap-r18/build-observer-2/build/bin/libSvtAv1Enc.so.3.0.2": {
+      "size": 8441888,
+      "sha256": "23eeb24aff56d809f78250803ce63c3137bf0facec1e2e5b151de3bba7461716"
+    },
+    "parent/psyex-cap-r18/build-observer-2/build/CMakeCache.txt": {
+      "size": 27916,
+      "sha256": "9939901f380ce5e1b5175e09ea20d5f016632446bed21048dff3186eda0e03d1"
+    },
+    "parent/psyex-cap-r18/build-observer-2/build/build.ninja": {
+      "size": 715987,
+      "sha256": "064cc401c445dec692ade7ac61e9a676ba0bf2b80e4c433d209e19afb6bb4fc9"
+    },
+    "parent/psyex-cap-r18/freeze_observations.py": {
+      "size": 2936,
+      "sha256": "84d35af6ea323c0531d408270c5e90b5b4bf601c2ed01aea91cbc4159a7a0e63"
+    },
+    "parent/psyex-cap-r18/policy_provenance.py": {
+      "size": 6019,
+      "sha256": "a7fa1a5f102444d2a1aa87cd21afbae8b09b13ed748036368e37c06d533b4792"
+    },
+    "parent/psyex-cap-r18/replay_observer2.py": {
+      "size": 7796,
+      "sha256": "8276cad4df501913b9e05604f91ceb91020fc56d7157cde0dd7146b63ef3626d"
+    },
+    "parent/psyex-cap-r18/trace_provenance2.py": {
+      "size": 4124,
+      "sha256": "1111b50a7b8272e280ca326207ac4ba314cc639910d861d5e83bab856e08b037"
+    },
+    "parent/psyex-cap-r18/cap_semantics2.py": {
+      "size": 10945,
+      "sha256": "c94327149138fb95d347ae409c8deed29d75566d2381795e5f806f7a93341acb"
+    },
+    "parent/psyex-cap-r18/admit_cap_trace2.py": {
+      "size": 3787,
+      "sha256": "0782ee6a4b4f44f49bb807dc95432a7b690a6306482d9a02f832e4bc478bb553"
+    },
+    "parent/psyex-cap-r18/admit_cap_trace.py": {
+      "size": 15907,
+      "sha256": "b5a9c506e58fc897b695ea2a87e06c8b07d0dd4e798190fc752a0a0f1c004645"
+    },
+    "parent/psyex-cap-r18/read_cap_trace.py": {
+      "size": 3887,
+      "sha256": "08fe4c552b576e30b91f000246f3a6f39235383f0cb6aa1c19991af3323561d8"
+    },
+    "parent/psyex-cap-r18/provenance.py": {
+      "size": 7187,
+      "sha256": "b6c923ec919c27e55c3be1a432bce225f582064212ad68ac1590388c00e95d8f"
+    },
+    "parent/psyex-cap-r18/replay_decoder.py": {
+      "size": 9145,
+      "sha256": "f76c275c4553ea1061af5fbbae71f521517907541ce1a7c0d6a483251382250d"
+    },
+    "parent/psyex-cap-r18/trace-index-2.json": {
+      "size": 1009,
+      "sha256": "b873769031192a25c074843829525f73bc330ff7f47bec20d8a2e17a139b292b"
+    },
+    "parent/psyex-cap-r18/trace2-admission.json": {
+      "size": 431734,
+      "sha256": "4f430b982b0ac9f473fc1c81764a6ca7fb672fda9ebc4c78757518844b42fe3e"
+    },
+    "parent/psyex-cap-r18/observer2-preview-execution.json": {
+      "size": 2621,
+      "sha256": "8d5e1efe40f5c366cac745577da760ce82cac991084dc1f2e5c0b30475f058e1"
+    },
+    "parent/psyex-cap-r18/observer2-preview-execution.log": {
+      "size": 2719,
+      "sha256": "cfbcb43151501c47016102ef4443f98ce4e387428072f9d2696fb5a9599b741f"
+    },
+    "parent/psyex-cap-r18/observer2-replay-execution.json": {
+      "size": 2603,
+      "sha256": "2f1820fc19e99cdde7d607c8d23b7e2bb4af28888e088580474d782a47d74c10"
+    },
+    "parent/psyex-cap-r18/observer2-replay-execution.log": {
+      "size": 253,
+      "sha256": "7058a25c6e374610b30efe6b62ca6486263a4bf9d106cb6967f88111184e8e32"
+    },
+    "parent/psyex-cap-r18/trace2-admission-execution.json": {
+      "size": 2871,
+      "sha256": "0c94e61aec9d4bede63263ea54bff2762ab93b4655bf8e25950e81a4e8bafb54"
+    },
+    "parent/psyex-cap-r18/trace2-admission-execution.log": {
+      "size": 206,
+      "sha256": "83657e65acf5dfa4ba14244a44f45df402b85b06ab3daa66f11f46ca88a363d7"
+    },
+    "parent/psyex-cap-r18/native-off-execution.json": {
+      "size": 3227,
+      "sha256": "e7c8ad2265b56a224abd6dacf3f76a77736f4b21ed1a120d8646ced7773db032"
+    },
+    "parent/psyex-cap-r18/native-off-execution.log": {
+      "size": 241,
+      "sha256": "dc313a41746b48f33543b9190a4b5b5ff4a7afc7360181a96077af227831c8ec"
+    },
+    "parent/psyex-cap-r18/native-on-execution.json": {
+      "size": 3240,
+      "sha256": "5454afc160588560e9ae43512bd8b4e988f5d5527728ae3a85dfadf9e140fff2"
+    },
+    "parent/psyex-cap-r18/native-on-execution.log": {
+      "size": 240,
+      "sha256": "214cad555d65419c20e1d7d9f77f71a41fc93c9390ebb6c2392001884211eb1a"
+    },
+    "parent/psyex-cap-r18/runs/trace-2/command.json": {
+      "size": 63341,
+      "sha256": "0968dfe3b2341ef0f514e7f366dc53afc7092a320dd3a720aa102884d42edd24"
+    },
+    "parent/psyex-cap-r18/runs/trace-2/measured-runner.py": {
+      "size": 7796,
+      "sha256": "8276cad4df501913b9e05604f91ceb91020fc56d7157cde0dd7146b63ef3626d"
+    },
+    "parent/psyex-cap-r18/runs/trace-2/encode.log": {
+      "size": 1807,
+      "sha256": "88ea798cccacfcd7b7643bbd1a71e6140451d28666bd7557259ba35ad67980dc"
+    },
+    "parent/psyex-cap-r18/native-off/command.json": {
+      "size": 47427,
+      "sha256": "20bfaba3311d9b946c7b934e070ea6d17fcfdb9acfb4ae80a7013e4e8b942ba9"
+    },
+    "parent/psyex-cap-r18/native-off/decode.log": {
+      "size": 64,
+      "sha256": "db070a992e104bc5d608f5f5684b364ff9bffa9fc756f166778bfffbba2911a2"
+    },
+    "parent/psyex-cap-r18/native-off/ldd.txt": {
+      "size": 369,
+      "sha256": "eb7ea2c5a240794cfc8259970ed1fb7a1d0b0f72108e14d5276dbc40e860fbe7"
+    },
+    "parent/psyex-cap-r18/native-on/command.json": {
+      "size": 48035,
+      "sha256": "26abcb90d06d956201e375e91ad0e1267f901f09f8691db42baa7313bb2f80b4"
+    },
+    "parent/psyex-cap-r18/native-on/decode.log": {
+      "size": 64,
+      "sha256": "8c2af6a3494ab496c014efcc3c7f079bc99a0b4fd2bd6c60c0469d34513d02eb"
+    },
+    "parent/psyex-cap-r18/native-on/ldd.txt": {
+      "size": 369,
+      "sha256": "43933bd39dd43e67b8aecb77590f453e48002a8deb55009c0a3950f41492058b"
+    },
+    "reviewer/round18-observer2-replay-review.md": {
+      "size": 4341,
+      "sha256": "8575960290847a33cd489e8250f62e72c87e068a5074f76c21de21a9b2910708"
+    },
+    "reviewer/round18-trace2-admission-review.md": {
+      "size": 3637,
+      "sha256": "e63fb9c6f0a4011dfe966035762c5b1114e4588b8f894b1ee614bac3b1179bca"
+    },
+    "reviewer/round18-native-adapter-review.md": {
+      "size": 4965,
+      "sha256": "c5b4237db478cffc8f15759aafd46d1a94a70d65b76bf65311f0a53ebb5daf35"
+    },
+    "reviewer/round18-native-v3-review.md": {
+      "size": 3213,
+      "sha256": "fe35abc580b552c3758ecf0cbd31d5325dc1011466b4f79cb0b7a19e8ff21d38"
+    },
+    "reviewer/round18-native-release.md": {
+      "size": 1670,
+      "sha256": "d6eb0164746e8033abdd8a5c37aa712c4f03e4ac75bd952f3b8a4afb17741f16"
+    },
+    "parent/psyex-cap-r18/runs/trace-2/out.ivf": {
+      "size": 24553381,
+      "sha256": "e141c7ac67476320b76f96c505a809a15cde126721b9a5b45d6f8ecfab6cbd96"
+    },
+    "parent/psyex-cap-r18/runs/trace-2/recon.yuv": {
+      "size": 2090188800,
+      "sha256": "eac96957e302c1989b26ff5f5279864b3779bc5dce4cca8c38b7839c52b544bf"
+    },
+    "parent/psyex-cap-r18/runs/trace-2/pass.stats": {
+      "size": 18872,
+      "sha256": "6114f3cd907246cf1aa6fc6654ff63f59e8be72ba5aa4663a4e98b46804b1007"
+    },
+    "parent/psyex-cap-r18/runs/trace-2/r18-trace.bin": {
+      "size": 280676762,
+      "sha256": "ac17d7332a1b9a86775f6b8c22f92a37380ac4cc52544a8f6ed5d1d7306697dc"
+    },
+    "parent/psyex-cap-r18/runs/trace-2/boundary.bin": {
+      "size": 18763935,
+      "sha256": "e60dfd10dc4ab00f3db4ed2023d3846c7326f5c2b117f107ada9959d7892c5cb"
+    },
+    "parent/psyex-cap-r18/runs/trace-2/coeff.bin": {
+      "size": 11823339,
+      "sha256": "697ae0ee914d25119630aba71bfcc636aeab491900724a5c3c272f2c6ef5591d"
+    },
+    "parent/psyex-cap-r18/native-off/recon.yuv": {
+      "size": 2090188800,
+      "sha256": "eac96957e302c1989b26ff5f5279864b3779bc5dce4cca8c38b7839c52b544bf"
+    },
+    "parent/psyex-cap-r18/native-on/recon.yuv": {
+      "size": 2090188800,
+      "sha256": "eac96957e302c1989b26ff5f5279864b3779bc5dce4cca8c38b7839c52b544bf"
+    },
+    "parent/psyex-cap-r18/native-on/trace.jsonl": {
+      "size": 1797165,
+      "sha256": "dd4ba62ea4ba67aea3971d6c08d630b3a92e43e05d9e6c305c81d7b7b93d5ca7"
+    },
+    "parent/psyex-cap-r18/native-on/payload.bin": {
+      "size": 40652197,
+      "sha256": "7342863c404de53560e739b7f63ca0562d7f0249a2f88275f5c929030d68eccd"
+    }
+  },
+  "source_files_checked": {
+    "build-1": 1790,
+    "build-observer-2": 1790
+  },
+  "unique_file_contents_hashed": 3759,
+  "seconds": 43.974403177038766,
+  "finished_utc": "2026-10-20T21:27:15.882561+00:00"
+}
