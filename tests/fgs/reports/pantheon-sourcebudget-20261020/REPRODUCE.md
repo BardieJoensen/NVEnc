@@ -114,3 +114,40 @@ against those hashes and is not an application reconstruction export. All240
 scored frames must equal display positions96:336. Required CUDA/FFVship campaign
 metrics and frozen whole-window controls reuse the established path. Native
 comparison clips use the same `visuals.py` command with the `aom-` tag.
+
+## Round3 direct tune-policy comparison
+
+The pinned [source audit](AOM_TUNE_POLICY.md) identifies SSIM's extra normalized
+source-variance RDMULT factor. The public PSNR tune omits that factor; the in-block
+distortion metric stays unchanged. First-pass statistics must match exactly.
+
+```bash
+"$PYTHON" "$REPORT/encode_aom.py" e05-1440 psnr-1x0 11576 --tune psnr
+```
+
+The first PSNR request landed at9.5041536Mbps (98.22% of source), outside both
+source and pairwise matching gates. Before quality inspection, calibrate only
+TBR to11727 and preserve the first receipt:
+
+```bash
+"$PYTHON" "$REPORT/encode_aom.py" e05-1440 psnr-1x1 11727 --tune psnr
+```
+
+That calibration overshot the hard ceiling at9.7005904Mbps and was not scored.
+A bracketed interpolation selected request11671, yielding9.639088Mbps
+(99.613% of source,0.153% above SSIM). Only this matched arm was scored:
+
+```bash
+"$PYTHON" "$REPORT/encode_aom.py" e05-1440 psnr-1x2 11671 --tune psnr
+nice -n10 taskset -c 8-11 "$PYTHON" "$REPORT/score_aom.py" e05-1440 aom-psnr-1x2
+"$PYTHON" "$REPORT/summarize_budget.py" e05-1440 aom-psnr-1x2
+"$PYTHON" "$REPORT/compare_aom_tunes.py" e05-1440 aom-psnr-1x2
+```
+
+The last script directly pairs the two libaom arms and rejects undeclared
+command differences, unmatched rates, changed sources/controls or unequal pass1
+statistics. The older SSIM summary is bound to its committed machine result;
+its unchanged metrics are not rerun just to add the newer tune-policy field.
+Mode, partition, transform, reconstruction and later prediction choices are free
+to change with the tested policy. Requested TBRs and actual packets are both
+reported; this is a rate-calibrated contrast, not identical rate-control input.

@@ -97,3 +97,53 @@ checks. No motion playback was observed. The next discriminator will change only
 libaom's public tune policy SSIM→PSNR plus necessary TBR calibration, retaining
 all other settings and gates. This tests whole-encoder objective policy; it does
 not hold mode/allocation/quantization decisions fixed.
+
+
+# Round3: remove the extra SSIM variance weighting
+
+The PSNR-tuned arm fails both texture screens at **9.639088 Mbps**, 99.613% of
+source and 0.153% above the matched SSIM arm. Two-pass runtime is **391.652 s
+for 336 frames**, versus 389.179 s for SSIM. Both policies use the same in-block
+distortion metric; PSNR omits the additional normalized source-variance RDMULT
+weighting. Predictor, mode, partition, transform and later coding decisions can
+change. This is a rate-calibrated policy contrast, not a fixed-decision ablation.
+
+| Midpoint ROI | Source HF | SSIM HF | PSNR HF | PSNR HF error | PSNR ACF1 error |
+|---|---:|---:|---:|---:|---:|
+| Shirt | 0.619353 | 0.096799 | 0.098604 | −84.080% | 0.113094 |
+| Background | 1.778495 | 0.874773 | 0.909357 | −48.869% | 0.106166 |
+
+Source HF correlations are 0.08904 and 0.50089. Shirt ACF error worsens from
+0.108665; background improves from 0.121372. Both remain outside the 0.05 gate.
+The small amplitude changes do not explain or repair the severe deficit.
+The full 240-frame traces corroborate similar suppression through the affected
+shot. Parent inspected the native shirt still and complete trace plot; no motion
+playback was observed.
+
+Removing the weighting improves face MSE 8.523→5.874, gradient MAE 5.110→4.013
+and gradient ratio 0.8578→0.8939. Edge-tile MSE falls 8.556→6.441. All-tile
+mean MSE improves 6.978→6.463, but 7,020/12,870 tiles worsen; improvements are
+uneven. Frozen flat-texture tiles worsen in mean MSE 3.217→3.366 and HF error
+0.6291→0.6590. Quiet mean MSE rises 0.2187→0.2299, HF error 0.08996→0.09038
+and MSE p95 0.3911→0.4046. Maximum positive quiet HF excess rises slightly
+0.01750→0.01801, with one positive tile in each arm.
+
+VMAF/NEG improve 92.56/90.92→94.00/92.50; VMAF p1 improves 81.396→82.231,
+SSIMULACRA2 p5 25.79→26.85 and Butteraugli p95 8.30→7.76. SSIMULACRA2 mean
+falls 55.11→54.81, SSIM 0.9906→0.9903 and CAMBI full-reference mean/max worsen
+0.3113/2.1098→0.3810/2.3095. These mixed changes reject any uniform-superiority
+claim. Fixed-coordinate temporal correlation remains descriptive, not a motion-
+compensated or playback assessment.
+
+All 336 frames and planes agree across native libaom, dav1d and NVDEC; all 240
+scored frames agree with positions 96:336. Source bytes, color, binary/library,
+commands, first-pass statistics and frozen control definitions are bound by
+hashes. First-pass statistics and keyframe positions match between tune arms.
+The initial PSNR requests produced 9.504154 and 9.700590 Mbps; neither was
+quality-scored. The final request was selected solely by packet-rate calibration.
+Native shirt/background/face clips have exact checks on all 240 panel frames.
+
+[Machine result](aom-psnr-result.json) and [direct paired evidence](aom-tune-comparison.json)
+retain the complete metrics and provenance. This result rejects the proposed
+SSIM-weighting removal as a repair under the tested controls. It does not exclude
+an interaction with other settings or establish a codec limit.

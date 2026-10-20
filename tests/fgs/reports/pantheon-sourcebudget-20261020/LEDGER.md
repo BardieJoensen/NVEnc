@@ -194,3 +194,43 @@ aom-1x1 for controls, traces and tails. This is an encoder decision-policy
 contrast, not a fixed-predictor scalar-distortion or pure-quantizer ablation.
 No model fit or threshold change. A persistent severe deficit rejects this
 specific SSIM-policy explanation, not other encoder strategies or AV1.
+
+Round3 source audit sharpens the hypothesis before results: libaom3.8.2's tune
+switch does not change the default in-block PSNR distortion metric. SSIM adds
+source-variance-derived, geometrically normalized block RDMULT factors after
+variance-AQ/delta-Q setup; PSNR omits that additional weighting. The audited direct
+PSNR/SSIM branches do not switch filter/reference/ARNR tools. Downstream decisions
+can still change. Thus test the extra source-variance rate-price weighting, not
+“SSIM versus PSNR distortion.” Pinned upstream source and installed Ubuntu patch
+scope are preserved. Exact first-pass statistics equality is now required; no
+firstpass tune branch exists. Compare actual rates, not identical requested TBR.
+
+- auto: First PSNR arm atrequest11576 completed391.557s, actual9.5041536Mbps,
+  98.22% of source and98.75% of matched SSIM. Before any quality inspection,
+  calibrate only TBR to11727 (observed response,99.5% aim). Preserve the first
+  arm. Unlike the earlier practical preset0 screen, this round's primary policy
+  contrast specifically requires matched rates, so calibration is necessary.
+
+- auto: Request11727 yielded9.7005904Mbps,100.249% of source. Reject before
+  quality inspection; do not excuse the overshoot with the1% matching tolerance.
+  Interpolate the observed11576/11727 bracket to request11671, targeting99.5%.
+  This run yielded9.639088Mbps,99.613% of source and100.153% of SSIM.
+  Both rate gates pass. All three PSNR runs have identical pass1 statistics
+  and unchanged input hashes; only the matched final run receives quality scoring.
+
+
+Round3 result: all identity and rate gates pass. At 9.639088 Mbps, PSNR removes
+SSIM's additional variance weighting but leaves shirt/background amplitude
+errors −84.080%/−48.869% and ACF errors 0.113094/0.106166. Face/edges improve;
+quiet and flat-texture controls regress, and 54.5% of tiles worsen in MSE.
+Independent review accepts the failed policy and the mixed full-reference/tail/
+banding results. Parent inspected the native shirt still and full traces.
+No playback was observed. This weakens the extra-SSIM-weighting explanation for
+the severe suppression under these controls; it does not isolate quantization
+or exclude other policies and interactions.
+
+Next question selected: whether the coding source itself differs materially
+from original input before prediction/quantization. Requested ARNR strength zero
+is insufficient proof either way: the filter path is reachable, but its integer
+weights can round the change away. Trace actual samples before another settings
+trial. The private build must preserve output before its evidence is admitted.

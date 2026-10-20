@@ -65,6 +65,47 @@ The experiment is therefore a **rate-calibrated source-variance RDMULT
 allocation / whole decision-policy contrast**, not a pure distortion-metric,
 quantizer, or fixed-structure test.
 
+### Which source supplies the variance field
+
+The factor builder reads `cpi->source->y_buffer`, not the separately preserved
+`cpi->unfiltered_source` (`encoder_utils.c:1316-1321`). The high-level strategy
+starts with a lookahead image and preserves that original pointer as
+`cpi->unfiltered_source` (`encode_strategy.c:1429-1438`). Before the encode,
+`denoise_and_encode()` may replace `frame_input.source` with a temporal-filter
+buffer for key/alt-reference coding frames (`encode_strategy.c:734-841`).
+`av1_encode()` then assigns `cpi->source` from that possibly replaced pointer
+(`encoder.c:3953-3962`), and the SSIM field is built later in
+`encode_frame_to_data_rate()` (`encoder.c:3732-3734`). A reset to the original
+source for PSNR reporting occurs only after the encode
+(`encode_strategy.c:908-914`). Thus the field is derived from the current
+**coded-frame source**, which can be a filtered no-show/reference frame; it is
+not universally derived from original display samples.
+
+Requested ARNR strength zero does not by itself prove that the filter output
+differs, or that it is identical. LibAOM clamps the strength decay to `1e-5`,
+forms `exp(-scaled_error) * 1000`, and, at CPU-used 4, truncates it to an
+integer weight (`temporal_filter.c:637-767`; `speed_features.c:1200-1234,
+1900-1913`). The central frame always contributes weight 1000
+(`temporal_filter.c:466-505`); the rounded weighted result is written at
+`:811-847`. Most nonzero errors can therefore give a zero neighbor weight,
+while exact or sufficiently close predictors can still contribute. Positive
+neighbor weights can also round back to the central sample. Static inspection
+does not establish material modification or byte identity.
+
+The smallest direct discriminator, only if localization of the mechanism is
+needed, is an instrumented replay of the existing pass-2 command using its
+preserved pass-1 statistics. Immediately before
+`av1_set_mb_ssim_rdmult_scaling(cpi)` at `encoder.c:3732`, record cropped
+all-plane hashes plus unequal-sample counts and maximum absolute differences
+between `cpi->source` and `cpi->unfiltered_source`. Also record the coding-event
+sequence, `gf_frame_index`, GF update type, frame type, `show_frame`,
+`show_existing_frame`, and display/order hints. Bind the original side by its
+all-plane hash to the known 336-frame input hashes, or propagate the selected
+lookahead timestamp from `encode_strategy.c:1403-1441`. This distinguishes
+coding frames, including no-show ARFs, from display positions. It is a trace of
+the existing setting, not another settings arm, and is unnecessary unless a
+claim about actual original-versus-filtered factor input is made.
+
 `firstpass.c` contains no tune/SSIM/PSNR reference; the only tune condition in
 `pass2_strategy.c` is for VMAF modes. Identical pass-1 statistics between the
 two executed arms remain a required runtime check. A difference would reveal

@@ -33,9 +33,18 @@ and ACF errors .10866/.12137 fail. Broad controls improve but face detail and
 VMAF/NEG regress. [Machine evidence](aom-result.json) and the same result/review
 reports preserve this mixed outcome. All3decoder/sample gates pass.
 
-Next discriminator: libaom PSNR versus SSIM tune policy at matched source budget,
-with all other declared controls fixed. This tests whole-encoder objective policy;
-no codec limit follows. [Ledger](LEDGER.md) records the bounded contract.
+The matched PSNR-tuned arm also fails at **9.639088 Mbps**, 99.613% of source,
+391.652 s/336 frames. Removing the extra SSIM source-variance weighting improves
+face/edge detail but leaves shirt/background HF deficits of 84.08%/48.87% and
+failed spatial structure. Quiet and flat-texture controls regress on several
+measures. [Direct comparison](aom-tune-comparison.json) and independent review
+reject this actual policy as a repair; they do not establish a codec limit.
+
+Next discriminator: observational tracing of libaom coding-source samples versus
+the exact original input, with unchanged encoded bytes required for admission.
+Source audit shows temporal preprocessing is reachable despite requested ARNR
+strength zero; only a sample comparison can establish whether it changes pixels.
+[Ledger](LEDGER.md) records the bounded contracts and conclusions.
 
 Prior evidence: [causal and measured preservation report](../pantheon-rd-20261019/README.md).
 Prior source-budget ROI failure is accepted; it does not prove source-budget

@@ -48,6 +48,7 @@ def main():
     global ACTIVE_RECEIPT, ACTIVE_RUN
     ap = argparse.ArgumentParser()
     ap.add_argument("case", choices=[CASE]); ap.add_argument("tag"); ap.add_argument("request_kbps", type=int)
+    ap.add_argument("--tune", choices=["ssim", "psnr"], default="ssim")
     ap.add_argument("--preview", action="store_true", help="write command preview and exit without encoding")
     a = ap.parse_args()
     if a.request_kbps <= 0 or not re.fullmatch(r"[A-Za-z0-9_.-]+", a.tag): ap.error("invalid tag or bitrate")
@@ -68,7 +69,7 @@ def main():
     common = ["nice", "-n", "10", "taskset", "-c", "0-7", str(FFMPEG), "-hide_banner", "-loglevel", "verbose", "-y", "-f", "yuv4mpegpipe",
               "-i", str(inp), "-frames:v", "336", "-c:v", "libaom-av1", "-pix_fmt", "yuv420p10le",
               "-usage", "good", "-cpu-used", "4", "-threads", "4", "-row-mt", "1", "-tiles", "1x1",
-              "-tune", "ssim", "-aq-mode", "variance", "-denoise-noise-level", "0", "-auto-alt-ref", "1",
+              "-tune", a.tune, "-aq-mode", "variance", "-denoise-noise-level", "0", "-auto-alt-ref", "1",
               "-arnr-strength", "0", "-lag-in-frames", "25", "-g", "161", "-color_range", "tv",
               "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-b:v", f"{a.request_kbps}k"]
     pass1 = common + ["-pass", "1", "-passlogfile", str(stats), "-f", "null", "/dev/null"]
@@ -84,7 +85,7 @@ def main():
                "ffprobe": {"path": str(FFPROBE), "sha256": sha(FFPROBE), "version": capture([str(FFPROBE), "-version"])},
                "commands": {"pass1": pass1, "pass2": pass2}, "settings": {
                    "usage": "good", "cpu_used": 4, "threads": 4, "row_mt": 1, "tiles": "1x1",
-                   "tune": "ssim", "aq_mode": "variance", "denoise_noise_level": 0,
+                   "tune": a.tune, "aq_mode": "variance", "denoise_noise_level": 0,
                    "auto_alt_ref": 1, "arnr_strength": 0, "lag_in_frames": 25, "g": 161,
                    "film_grain": "not requested"}}
     ACTIVE_RECEIPT = receipt

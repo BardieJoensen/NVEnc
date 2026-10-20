@@ -31,6 +31,7 @@ assert 0<ratio<=1,'Any practical screen must meet the hard original packet-rate 
 if not mode:assert matched,'Default decisive comparison requires99–100%; use explicit under-cap screen for cheaper arms.'
 run=json.loads((d/'command.json').read_text())
 assert (run['case'],run['tag'])==(case,tag)
+tune=run['settings']['tune'];assert tune in ('ssim','psnr')
 assert x.fingerprint(f/'validity.json')['sha256']==run['validity']['sha256']
 assert fps==run['validity']['fps'] and v['source_mbps']==run['validity']['source_mbps']
 assert run['status']==('encoded' if matched else 'rate_gate_failed') and run['returncode']==0
@@ -58,6 +59,10 @@ assert stats.stat().st_size==snapshot['size']>0
 assert x.fingerprint(stats)['sha256']==x.fingerprint(snapshot['path'])['sha256']==snapshot['sha256']
 assert run['passes']['pass1']['after_stats']==run['passes']['pass2']['before_stats']==run['passes']['pass2']['after_stats']
 assert abs(run['wall_seconds']-sum(q['seconds'] for q in run['passes'].values()))<1e-9
+if tune=='psnr':
+    baseline=json.loads((d.parent/'aom-1x1/command.json').read_text())
+    assert snapshot['sha256']==baseline['passes']['pass1']['pass1_stats_snapshot']['sha256']
+    assert baseline['settings']['tune']=='ssim'
 historical=f/'historical-input-validation.json';hi=json.loads(historical.read_text())
 assert hi['all336_exact_Y4M_bytes_match_prior'] and hi['input']['sha256']==run['input']['sha256']
 assert hi['prior_input_identity']['svt_input']['sha256']==run['input']['sha256']
@@ -65,7 +70,7 @@ assert x.fingerprint(hi['prior_receipt']['path'])['sha256']==hi['prior_receipt']
 assert x.fingerprint(historical)['sha256']==run['historical_input_validation']['sha256']
 common=['nice','-n','10','taskset','-c','0-7','/usr/bin/ffmpeg','-hide_banner','-loglevel','verbose','-y',
     '-f','yuv4mpegpipe','-i',str(f/'input10.y4m'),'-frames:v','336','-c:v','libaom-av1','-pix_fmt','yuv420p10le',
-    '-usage','good','-cpu-used','4','-threads','4','-row-mt','1','-tiles','1x1','-tune','ssim',
+    '-usage','good','-cpu-used','4','-threads','4','-row-mt','1','-tiles','1x1','-tune',tune,
     '-aq-mode','variance','-denoise-noise-level','0','-auto-alt-ref','1','-arnr-strength','0','-lag-in-frames','25',
     '-g','161','-color_range','tv','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709',
     '-b:v',str(run['request_kbps'])+'k']
@@ -157,7 +162,7 @@ for name,q in t['midpoint_summary'].items():
     hf=q['target']['hf_sigma']/q['source']['hf_sigma']-1;acf=abs(q['target']['acf1']-q['source']['acf1'])
     screen[name]={'hf_relative_error':hf,'acf1_abs_error':acf,'source_hf_correlation':q['paired_hf_correlation'],
                   'provisional_hf_acf_pass':abs(hf)<=.1 and acf<=.05}
-receipt={'encoder_stack':run['encoder_stack'],'actual_mbps':rate,'source_mbps':v['source_mbps'],'relative_source_rate':ratio,
+receipt={'encoder_stack':run['encoder_stack'],'tune_policy':tune,'actual_mbps':rate,'source_mbps':v['source_mbps'],'relative_source_rate':ratio,
     'baseline_actual_mbps':br['rate_mbps'],'relative_baseline_rate':baseline_ratio,
     'practical_rate_eligible':True,'matched_comparison_eligible':matched,
     'comparison_kind':'matched-source comparison' if matched else 'under-cap practical screen; not a matched implementation comparison',

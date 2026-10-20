@@ -1,0 +1,283 @@
+{
+  "case": "e05-1440",
+  "tags": [
+    "aom-1x1",
+    "aom-psnr-1x2"
+  ],
+  "actual_mbps": [
+    9.6243504,
+    9.639088
+  ],
+  "psnr_over_ssim_rate": 1.0015312825684317,
+  "requested_kbps": [
+    11576,
+    11671
+  ],
+  "wall_seconds_336": [
+    389.17901406396413,
+    391.65247607801575
+  ],
+  "same_pass1_stats": true,
+  "keyframe_display_positions": [
+    [
+      0,
+      44,
+      108,
+      269,
+      295,
+      328
+    ],
+    [
+      0,
+      44,
+      108,
+      269,
+      295,
+      328
+    ]
+  ],
+  "texture": {
+    "shirt": {
+      "ssim": {
+        "mean": 56.099491119384766,
+        "hf_sigma": 0.09679938936952419,
+        "acf1": -0.1190900482237339,
+        "acf2": 0.055221372935920957,
+        "acf3": 0.03129105120897293,
+        "acf4": 0.02446959801018238,
+        "acf8": 0.020675756502896547,
+        "temporal_hf_corr": 0.09356565121561289,
+        "source_hf_correlation": 0.08675546701997519,
+        "screen": {
+          "hf_relative_error": -0.8437088864416868,
+          "acf1_abs_error": 0.1086646370589733,
+          "source_hf_correlation": 0.08675546701997519,
+          "provisional_hf_acf_pass": false
+        }
+      },
+      "psnr": {
+        "mean": 56.11540069580078,
+        "hf_sigma": 0.09860370405699147,
+        "acf1": -0.11466104462742806,
+        "acf2": 0.0381684759631753,
+        "acf3": 0.017495841905474662,
+        "acf4": 0.025348803494125605,
+        "acf8": 0.02276767659932375,
+        "temporal_hf_corr": 0.1112724693492055,
+        "source_hf_correlation": 0.08904289733618498,
+        "screen": {
+          "hf_relative_error": -0.8407956619518362,
+          "acf1_abs_error": 0.11309364065527915,
+          "source_hf_correlation": 0.08904289733618498,
+          "provisional_hf_acf_pass": false
+        }
+      }
+    },
+    "background": {
+      "ssim": {
+        "mean": 107.2816375732422,
+        "hf_sigma": 0.87477250371227,
+        "acf1": -0.07099013030529022,
+        "acf2": -0.06022612005472183,
+        "acf3": 0.026706665894016622,
+        "acf4": 0.011782649601809681,
+        "acf8": 0.0033218788041267542,
+        "temporal_hf_corr": 0.008428752399049699,
+        "source_hf_correlation": 0.4841897487640381,
+        "screen": {
+          "hf_relative_error": -0.508138864650828,
+          "acf1_abs_error": 0.12137199640274049,
+          "source_hf_correlation": 0.4841897487640381,
+          "provisional_hf_acf_pass": false
+        }
+      },
+      "psnr": {
+        "mean": 107.2641098022461,
+        "hf_sigma": 0.9093565982590771,
+        "acf1": -0.08619581386446953,
+        "acf2": -0.046843457221984866,
+        "acf3": 0.0226345494389534,
+        "acf4": 0.00609224340878427,
+        "acf8": 0.004882208775961771,
+        "temporal_hf_corr": 0.010129546467214822,
+        "source_hf_correlation": 0.5008854925632477,
+        "screen": {
+          "hf_relative_error": -0.48869315512449063,
+          "acf1_abs_error": 0.10616631284356118,
+          "source_hf_correlation": 0.5008854925632477,
+          "provisional_hf_acf_pass": false
+        }
+      }
+    }
+  },
+  "quiet_signed_hf_tails": {
+    "ssim": {
+      "count": 51,
+      "min": -0.14418521706003803,
+      "p95": -0.04402598988609509,
+      "max": 0.017499779540057565,
+      "positive_count": 1
+    },
+    "psnr": {
+      "count": 51,
+      "min": -0.143606386763631,
+      "p95": -0.041896340344094896,
+      "max": 0.01801148467636451,
+      "positive_count": 1
+    }
+  },
+  "metrics": {
+    "ssim": {
+      "actual_mbps": 9.6243504,
+      "vmaf": 92.56,
+      "vmaf_neg": 90.92,
+      "vmaf_p1_excluding_frame0": 81.39562803999999,
+      "ssimu2": 55.11,
+      "ssimu2_p5": 25.79,
+      "butter_max_p95": 8.3,
+      "psnr_y": 40.46,
+      "ssim": 0.9906,
+      "cambi_fr_mean": 0.311307,
+      "cambi_fr_max": 2.109762
+    },
+    "psnr": {
+      "actual_mbps": 9.639088,
+      "vmaf": 94.0,
+      "vmaf_neg": 92.5,
+      "vmaf_p1_excluding_frame0": 82.23088793999999,
+      "ssimu2": 54.81,
+      "ssimu2_p5": 26.85,
+      "butter_max_p95": 7.76,
+      "psnr_y": 40.7,
+      "ssim": 0.9903,
+      "cambi_fr_mean": 0.381026,
+      "cambi_fr_max": 2.309536
+    }
+  },
+  "controls": {
+    "all": {
+      "tiles": 12870,
+      "ssim": {
+        "mse_mean": 6.977976898454194,
+        "hf_abs_error": 0.7139713250930727,
+        "acf1_abs_error": 0.17400575323789896,
+        "mse_p95": 24.523156738281248,
+        "hf_signed_delta_p95": -0.1570722535238493
+      },
+      "psnr": {
+        "mse_mean": 6.4634005459872155,
+        "hf_abs_error": 0.7014134415653479,
+        "acf1_abs_error": 0.16887817164865512,
+        "mse_p95": 21.44884338378906,
+        "hf_signed_delta_p95": -0.14656425426767952
+      },
+      "mse_worse_count": 7020,
+      "hf_error_worse_count": 6893
+    },
+    "quiet": {
+      "tiles": 51,
+      "ssim": {
+        "mse_mean": 0.21868298100490197,
+        "hf_abs_error": 0.08995945001803587,
+        "acf1_abs_error": 0.12713474081942477,
+        "mse_p95": 0.391082763671875,
+        "hf_signed_delta_p95": -0.04402598988609509
+      },
+      "psnr": {
+        "mse_mean": 0.22990028530943626,
+        "hf_abs_error": 0.09037762055514423,
+        "acf1_abs_error": 0.14537502371858108,
+        "mse_p95": 0.404632568359375,
+        "hf_signed_delta_p95": -0.041896340344094896
+      },
+      "mse_worse_count": 32,
+      "hf_error_worse_count": 26
+    },
+    "edge": {
+      "tiles": 2198,
+      "ssim": {
+        "mse_mean": 8.556189525767389,
+        "hf_abs_error": 0.549037816306793,
+        "acf1_abs_error": 0.1508362230648857,
+        "mse_p95": 21.282681274414067,
+        "hf_signed_delta_p95": -0.08348481334572838
+      },
+      "psnr": {
+        "mse_mean": 6.440625899699301,
+        "hf_abs_error": 0.4578339645498738,
+        "acf1_abs_error": 0.1316964077909186,
+        "mse_p95": 15.039181518554688,
+        "hf_signed_delta_p95": -0.06504681382419975
+      },
+      "mse_worse_count": 395,
+      "hf_error_worse_count": 618
+    },
+    "flat_texture": {
+      "tiles": 4285,
+      "ssim": {
+        "mse_mean": 3.2166498920881343,
+        "hf_abs_error": 0.6290660928149842,
+        "acf1_abs_error": 0.17627846491726698,
+        "mse_p95": 8.098828124999999,
+        "hf_signed_delta_p95": -0.1981539844953235
+      },
+      "psnr": {
+        "mse_mean": 3.3662832253455,
+        "hf_abs_error": 0.6589537048245182,
+        "acf1_abs_error": 0.1746078422832758,
+        "mse_p95": 8.51997070312499,
+        "hf_signed_delta_p95": -0.20973539671034475
+      },
+      "mse_worse_count": 2949,
+      "hf_error_worse_count": 2787
+    },
+    "other": {
+      "tiles": 6336,
+      "ssim": {
+        "mse_mean": 9.028655379709571,
+        "hf_abs_error": 0.8336315804991145,
+        "acf1_abs_error": 0.18087627223965316,
+        "mse_p95": 32.03623962402344,
+        "hf_signed_delta_p95": -0.18371359474199317
+      },
+      "psnr": {
+        "mse_mean": 8.616038630707095,
+        "hf_abs_error": 0.8195464102026565,
+        "acf1_abs_error": 0.17808910836388997,
+        "mse_p95": 27.503021240234375,
+        "hf_signed_delta_p95": -0.18814573266002538
+      },
+      "mse_worse_count": 3644,
+      "hf_error_worse_count": 3462
+    }
+  },
+  "face": {
+    "ssim": {
+      "mse": 8.52303671875,
+      "edge_gradient_mae": 5.110020072695709,
+      "edge_gradient_ratio": 0.8577864496767156
+    },
+    "psnr": {
+      "mse": 5.874192447916666,
+      "edge_gradient_mae": 4.012884500623881,
+      "edge_gradient_ratio": 0.8938849847136322
+    }
+  },
+  "provenance": {
+    "aom-1x1": {
+      "summary": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/summary/e05-1440/aom-1x1/summary.json",
+        "sha256": "bf2be4f52e222868801a588ccce60be29cae255874480988f575af4ba0330d27"
+      }
+    },
+    "aom-psnr-1x2": {
+      "summary": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/summary/e05-1440/aom-psnr-1x2/summary.json",
+        "sha256": "8a428ce2a64b95cf15dcc4bfb597853531f4741bed3f2d19255dc10746497c52"
+      }
+    }
+  },
+  "script_sha256": "4990083d418e24f6e0ff0e33a7028ee72100651974588970eda520e0d8e370fb",
+  "playback_observed": false,
+  "scope": "Rate-calibrated tune-policy contrast: tune and requested TBR may differ, achieved packet rates are matched; encoder decisions are not held fixed."
+}

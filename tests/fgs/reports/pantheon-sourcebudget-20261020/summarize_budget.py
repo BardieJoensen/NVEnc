@@ -139,6 +139,7 @@ result = {
     "baseline_rate_ratio": a["relative_baseline_rate"],
     "practical_rate_eligible": True, "matched_comparison_eligible": matched,
     "comparison_kind": a["comparison_kind"],
+    "tune_policy": c.get("settings", {}).get("tune"),
     "decoder_set": a.get("decoder_set", ["SVT application reconstruction", "libdav1d", "av1_cuvid"]),
     "wall_seconds_336": c["wall_seconds"],
     "baseline_wall_seconds_336": data["baseline_command"]["seconds"],

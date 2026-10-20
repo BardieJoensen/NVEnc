@@ -69,7 +69,38 @@
     "src/av1/encoder/encoder.c": {
       "sha256": "d9377bf488befd79f760aae5228ee5b2d19437e933f2344ffd8c96cb44276dbb",
       "lines": [
-        "3732-3734: per-frame SSIM factor construction"
+        "3732-3734: per-coded-frame SSIM factor construction",
+        "3953-3962: cpi->source assignment from the possibly replaced frame_input source"
+      ]
+    },
+    "src/av1/encoder/encode_strategy.c": {
+      "sha256": "7de4f52231ca5cf96365ecb5d940ebfc48d559868a06b0968fb06955622c6cc9",
+      "lines": [
+        "734-841: conditional temporal-filter buffer substitution for key/alt-reference coding frames",
+        "908-914: post-encode reset to true source for PSNR calculation",
+        "1403-1441: lookahead source selection, timestamp, and preserved unfiltered-source pointer"
+      ]
+    },
+    "src/av1/encoder/temporal_filter.c": {
+      "sha256": "319cde9508494a3d5087b627699b61137422aa3718889fc72e62fa4751692de6",
+      "lines": [
+        "466-505: central source frame contributes fixed weight 1000",
+        "637-767: strength-zero decay floor, exponential weight, clipping, and integer conversion",
+        "811-847: rounded normalization to output samples",
+        "1442-1444: temporal-filter enable test"
+      ]
+    },
+    "src/av1/encoder/temporal_filter.h": {
+      "sha256": "e79ff17b50ddbe1683a333fe5bbff32c6e0decccc22930c771f473e932e257b4",
+      "lines": [
+        "43-47: weight scale 1000 and window/block balance constant"
+      ]
+    },
+    "src/av1/encoder/speed_features.c": {
+      "sha256": "0f7876a62b0265afb46fd0b663764f68158879a254a5102878e53b6b75ec475c",
+      "lines": [
+        "1200-1234: approximate/rounded temporal-filter weights start at speed 5",
+        "1900-1913: CPU-used 4 retains exact-exp/truncating level zero"
       ]
     },
     "src/av1/encoder/firstpass.c": {
@@ -143,6 +174,8 @@
       "selected filter parameters"
     ],
     "required_runtime_check": "Byte-identical pass-1 statistics between the SSIM and PSNR arms",
-    "claim_scope": "Rate-calibrated source-variance RDMULT allocation / whole decision-policy contrast; not a pure distortion-metric, quantizer, or fixed-structure experiment"
+    "claim_scope": "Rate-calibrated source-variance RDMULT allocation / whole decision-policy contrast; not a pure distortion-metric, quantizer, or fixed-structure experiment",
+    "factor_source_scope": "The variance field reads the current coded-frame cpi->source, which may be a temporal-filter buffer; static source inspection does not establish sample modification at ARNR strength zero",
+    "smallest_identity_discriminator": "At encoder.c:3732, trace all-plane active-sample identity between cpi->source and cpi->unfiltered_source per coded event, together with GF update/frame/show/order metadata and an input-frame hash or propagated lookahead timestamp"
   }
 }

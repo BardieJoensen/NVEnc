@@ -100,3 +100,33 @@ The next recommended discriminator is libaom's PSNR versus SSIM tune policy with
 all other declared controls fixed and actual rates matched. Parent accepted this
 as a whole-encoder policy contrast, without asserting unchanged internal search,
 allocation or quantizer decisions. No playback was claimed.
+
+Round3 pre-result comparison review required live/cross-arm pass1 snapshot
+identity, exactly240 texture rows with identical ROI definitions, explicit
+requested TBRs and a rate-calibrated scope label. Parent implemented all four.
+The preserved SSIM summary predates the new tune-policy field, so it is bound
+exactly to the committed `aom-result.json`; the new PSNR summary must cross-bind
+its tune field to its command receipt. This preserves verified old evidence
+without rerunning unchanged metrics or rewriting its receipt.
+
+
+Round3 outcome review independently bound all source, command, pass1-statistics,
+output and score hashes. Actual PSNR rate is 99.6131% of source and 100.1531% of
+SSIM; keyframe positions are identical. All 336 three-decoder/all-plane checks
+and 240 scored-frame bindings pass. Both frozen midpoint amplitude/ACF screens
+fail. Only 3 shirt and 2 background frames meet both gates across the full
+fixed-coordinate traces; these counts are descriptive, not new acceptance rules.
+
+The reviewer retained regressions hidden by pooled gains: 7,020 of 12,870 tiles
+worsen in MSE and 6,893 in HF error; quiet/flat-texture controls worsen, as do
+mean SSIMULACRA2/SSIM and CAMBI mean/max. It accepted face/edge improvements
+without calling the arm uniformly better. No playback inference was made.
+Parent agrees with the scoped rejection and the next source-boundary trace.
+Preserved independent artifacts: `reviewer/round3-review.md` and `.json` under
+the experiment root. These were formed before receiving the parent's conclusion.
+
+The source-audit correction distinguishes a reachable filter path from material
+sample changes. At ARNR strength zero, noncentral weights can truncate to zero;
+`cpi->source` being allowed to point to a filtered buffer proves neither loss
+nor equality. The next trace compares all visible planes and requires exact
+private pristine-versus-instrumented output before causal interpretation.
