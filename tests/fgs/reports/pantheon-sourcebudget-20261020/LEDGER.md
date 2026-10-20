@@ -442,3 +442,8 @@ Inventory a genuinely different texture-sensitive decision policy, source-first,
 against prior tested policies; reviewer independently constrains the next test.
 
 - auto2026-10-20R8: first real two-pass arm requests10000kbps, scores9.3361368Mbps (96.4824% source), full-window9.959614857Mbps,369.290s. Before quality inspection, calibrate request to10313 using observed rate response and99.5% target; fixed policy unchanged.
+
+- R8 calibrated arm: request10313, scored9.6279048Mbps (99.49757%source),
+  full336 rate10.25718343Mbps, both passes370.33577s. All336 application/dav1d/
+  libaom/NVDEC frames agree exactly with admitted cadence/color. Runtime
+  observation and quality remain pending; no preservation inference yet.
