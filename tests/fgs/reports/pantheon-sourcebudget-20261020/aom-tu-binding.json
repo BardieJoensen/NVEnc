@@ -1,0 +1,134 @@
+{
+  "status": "bound",
+  "scope": "Exact installed R3 stream only; reuse requires IVF identity.",
+  "script": {
+    "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/aom_tu_binding.py",
+    "sha256": "7d8be210357c70706ca17c8ecad81463b22b809455cc3c36944714c66cfd7935",
+    "size": 9133
+  },
+  "inputs": {
+    "ivf": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/out.ivf",
+      "sha256": "ab233b3874583fbbb75f9bd9e91a63ff19efeae9a57e7639ca4fc499c7662052",
+      "size": 20619954
+    },
+    "decoder_validation": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/decoder-validation.json",
+      "sha256": "f2238e801f6fdd72f7b425870669fe4c1ee9bf789d15332e328552bc7fa09e85",
+      "size": 15938
+    },
+    "r3_command": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/command.json",
+      "sha256": "fc1fbfc56dd660ce46e99cc2ccf98ee8633dd09aff7976031dd8a1c036265bbb",
+      "size": 180216
+    },
+    "mkv": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/out.mkv",
+      "sha256": "df406e46afb3d68e99bd25df961c5cd19fe9209d4e6f9021cf515e041a8c0569",
+      "size": 20618329
+    },
+    "decoded_raw": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/dav1d-decoded.yuv",
+      "sha256": "5aeeca6d356f49b21e20491871ce1a0d8efc668608d2fe97b73849d08fc7c71d",
+      "size": 2090188800
+    },
+    "frozen_controls": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/controls.json",
+      "sha256": "8642e2eefdc7dfd00835ba5fb2d602416dfd4e1ba3446d5dbd6603e2dab912ef",
+      "size": 14054715
+    },
+    "parsed_events": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/parser-control/parsed-events.json",
+      "sha256": "34958123add027a4bd649c6212d0cb9184bf31117b5c19dc117730d2ed9ff0d0",
+      "size": 273042
+    },
+    "parser_command": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-neutralize/parser-control/command.json",
+      "sha256": "164b71e4456c12eb2514ad45b0ec9258ba9ef76332ef7d3ad126fdb0c0bbdcfd",
+      "size": 1254
+    },
+    "parser": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/parse_aom_headers.py",
+      "sha256": "6adfc1947424e3e7f607e144b1cd31a5670022fba3544999620ed059abdfa5d2",
+      "size": 9808
+    },
+    "input_planes": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/source-boundary/input-planes.json",
+      "sha256": "d4e7e47ac1c042bd3bbfcba559b55964e8389999cddd6c1b330c9a9c706146de",
+      "size": 86490
+    },
+    "source_raw": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/fixtures/e05-1440/source.yuv",
+      "sha256": "ca3356ad056ee70ddb483acc2a4a0dac8ccd98d70b9096d8b4786d49a1f88fd3",
+      "size": 1492992000
+    }
+  },
+  "outputs": {
+    "target.obu": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/tu-observation/binding-v2/target.obu",
+      "sha256": "18390f9b9ca737001b9a7171609d34104ef790710a821e5345a0b981a271a6b2",
+      "size": 28408
+    },
+    "decoded_y.u16": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/tu-observation/binding-v2/decoded_y.u16",
+      "sha256": "448a6aaa58affff9bed9bb66a81948b44d97caea7019f59878ec3afad58a7956",
+      "size": 4147200
+    },
+    "original.yuv": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/tu-observation/binding-v2/original.yuv",
+      "sha256": "c2798d9c00f53bdbe7041575249b353a478a8f5557bc4dd5b61d9ae03f13ea12",
+      "size": 6220800
+    }
+  },
+  "coded_event": {
+    "event_index": 317,
+    "packet_index": 215,
+    "packet_pts": 215,
+    "packet_event_index": 3,
+    "header_log_line": 28197,
+    "show_existing_frame": 0,
+    "frame_type": 1,
+    "show_frame": 0,
+    "showable_frame": 1,
+    "order_hint": 108,
+    "refresh_frame_flags": 128,
+    "expected_source_index": 216,
+    "showable_frame_normalized": 1,
+    "refresh_frame_flags_normalized": 128,
+    "hook_match_key": [
+      216,
+      1,
+      0,
+      1,
+      108,
+      128
+    ]
+  },
+  "display_event": {
+    "event_index": 319,
+    "packet_index": 216,
+    "packet_pts": 216,
+    "packet_event_index": 0,
+    "header_log_line": 28394,
+    "show_existing_frame": 1,
+    "frame_to_show_map_idx": 7,
+    "expected_source_index": 216
+  },
+  "target_packet_file_offset": 12936048,
+  "target_obu_packet_offsets": [
+    212706,
+    241114
+  ],
+  "target_obu_md5": "13287d8d1a6c3f85545be86e6a303879",
+  "decoded_y_md5": "88779f6d89a97a16597eea115b368dd9",
+  "target_source": {
+    "source_index": 216,
+    "whole_md5": "94fa8bde346a2a52d40b26f8183afea5",
+    "plane_md5": [
+      "67afb3b722bfbcf85d80b9d8cf54df1a",
+      "2b3a64dca799675249410f8d84851768",
+      "118dc9fb054522fbcec845fa2576325c"
+    ]
+  },
+  "all336_ivf_and_obu_framing_exact": true
+}

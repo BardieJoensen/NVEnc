@@ -365,3 +365,17 @@ use public no-trellis as a pure pruning test: it also changes FP→B scalar quan
 attempt selection must be audited before implementation. Mark skipped blocks
 whose quantization never executes; never read their stale coefficient buffers
 as observed quantization. The next contract must settle these coverage issues.
+
+
+Round6 contract is fixed in AOM_COEFFICIENT_CONTRACT.md. Independent byte-framing
+and reference-history binding resolves input216 to the fourth coded OBU in
+packet215 (28408B), then show-existing slot7 at display216. The extracted source
+frame120 exactly matches input216 whole/per-plane hashes; postloopY is bound to
+the admitted decoded display. No codec/metric rerun was needed for this binding.
+
+Two instrumentation drafts were rejected before build. Parent and reviewer
+identified zero-seeded inverse, wrong coordinates/stride serialization, unsafe
+skip/EOB-zero handling and incomplete final-attempt/provenance checks. Corrections
+are engineering validity work, not negative texture results. Parent owns final
+C integration in fresh implementation-v3; worker supplied build support; reviewer
+checks independently. No Round6 reconstruction evidence is admitted yet.

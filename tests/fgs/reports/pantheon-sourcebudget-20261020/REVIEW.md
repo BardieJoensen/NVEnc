@@ -248,3 +248,16 @@ Parent agrees with rejection and next fixed-decision coefficient observation.
 Native shirt/background/face panels validate all240frames; parent inspected the
 shirt still and complete temporal trace plot. Still/plot inspection is not motion
 playback. No source-clean gate was relaxed and no production proposal is justified.
+
+
+Round6 preparation: reviewer/round6-counterfactual-plan.md and
+round6-admission-plan.md set exact inverse, packed64-domain, skip and hidden-frame
+admission requirements. Parent reproduced the independent OBU/display binding.
+Binding-v1 logic passed; review required explicit R3 IVF→MKV→decoder and original
+input216→scored120 per-plane links. Binding-v2 closes both and is accepted.
+
+The initial two C drafts were rejected before compilation; see
+reviewer/round6-patch-review.md and round6-patch-v2-review.md. No measurements from
+them exist or support a causal claim. Parent took over final C integration after
+focused worker revisions left required checks incomplete. The contract remains
+unchanged. Build and reconstruction admission remain pending.

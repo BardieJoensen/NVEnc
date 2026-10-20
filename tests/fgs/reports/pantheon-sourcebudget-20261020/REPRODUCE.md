@@ -291,3 +291,16 @@ PANTHEON_INDEPENDENT_DIR="$PANTHEON_SOURCEBUDGET_ROOT/parent/scores" \
   nice -n10 taskset -c 8-11 "$PYTHON" \
   tests/fgs/reports/pantheon-rd-20261019/visuals.py e05-1440 aom-neutralize-on-1
 ```
+
+
+Round6 hidden-frame binding (no new encode or quality scoring):
+
+```sh
+nice -n 10 taskset -c 8-11 python3 tests/fgs/reports/pantheon-sourcebudget-20261020/aom_tu_binding.py /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/tu-observation/binding-v2
+```
+
+Use a fresh output directory on reproduction. The script binds complete IVF/OBU
+framing, original whole/per-plane samples, the preserved all-event reference
+history, R3 command/remux/decoder receipts and extracted display216 Y.
+`aom-tu-binding.json` is the accepted compact receipt. Full Round6 trace and
+analysis scripts are not yet admitted experimental evidence.
