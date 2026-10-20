@@ -1,0 +1,38 @@
+{
+  "files": {
+    "Source/Lib/Codec/CMakeLists.txt": {
+      "before_sha256": "3ce9c0cecec8b6d6c1f1893a55361b0fbab546748f4953f69bfc91610cfa730d",
+      "after_sha256": "ee91db9e455203b17e3fd9ff30ca20332bddb69696eec08750ef6a927eb05398"
+    },
+    "Source/Lib/Codec/full_loop.c": {
+      "before_sha256": "bf49b663847a0cb0666e359131f728a3d19c28db1cff2630cb50b2f8fd4d9d4c",
+      "after_sha256": "975021cd9a82b8d35294596ce48a39b09923c5c0ea55aae950e2eb503e9adebd"
+    },
+    "Source/Lib/Codec/product_coding_loop.c": {
+      "before_sha256": "bf652cadd200f72afff7f6e774342c50e779e897c6444caecb82bba37a51e6a9",
+      "after_sha256": "3638e612bb58b5befdf62da278c27f29d84e3070c967dc91462cb9ad0c01bc6d"
+    },
+    "Source/Lib/Codec/rd_cost.c": {
+      "before_sha256": "9a0a3444eb1ef4bd54283e26a60772d4ca679d84eea5d63d3a69c2c1e976a8eb",
+      "after_sha256": "be522138f54b4ea5c9afc807865d07002b7a0a4f985c419e6f7d1a673ce840fa"
+    },
+    "Source/Lib/Codec/mode_decision.c": {
+      "before_sha256": "1cfaa2ede95ec4cff01da314ae10389c53b882f899030f5cab7f626d7c0961c4",
+      "after_sha256": "be80eedd520d4795274f133ad4396da02a1cdde85c953cf3ed36e16bb557b8c8"
+    },
+    "Source/Lib/Globals/enc_handle.c": {
+      "before_sha256": "fa2a0b22120c4ac50872c23d48c63e1ce09d1bd1439e7f72cb6652212bbd9bd3",
+      "after_sha256": "80b4d36a4f312068cc7cd6392a6dfe911f79817b42269b4f3365a003f6591415"
+    },
+    "Source/Lib/Codec/psy_observe.c": {
+      "before_sha256": null,
+      "after_sha256": "86005185c3704851e6a2a3b53853cb9130d44050dade17236eb0fb950eb97553"
+    },
+    "Source/Lib/Codec/psy_observe.h": {
+      "before_sha256": null,
+      "after_sha256": "99cf90fe4035550f8eedc0ff3d4193af3e51daeca1bdc47bdf2cac5c39c71a07"
+    }
+  },
+  "script_sha256": "34bb7f0dab83d1beda7f9cc67731f0e666e5b2d421b7aa700ac7f1e59c268495",
+  "patch_sha256": "740a90af1352368e907a0aa8f1a4a2f5e96d46ff3686d31b1df570f9fe27552a"
+}

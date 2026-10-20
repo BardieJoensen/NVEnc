@@ -1,0 +1,434 @@
+--- a/Source/Lib/Codec/CMakeLists.txt
++++ b/Source/Lib/Codec/CMakeLists.txt
+@@ -138,6 +138,8 @@
+         filter.h
+         firstpass.c
+         firstpass.h
++        psy_observe.c
++        psy_observe.h
+         full_loop.c
+         full_loop.h
+         global_motion.c
+--- a/Source/Lib/Codec/full_loop.c
++++ b/Source/Lib/Codec/full_loop.c
+@@ -18,6 +18,7 @@
+ #include "sequence_control_set.h"
+ #include "utility.h"
+ #include "psy_rd.h"
++#include "psy_observe.h"
+ 
+ void     svt_aom_residual_kernel(uint8_t *input, uint32_t input_offset, uint32_t input_stride, uint8_t *pred,
+                                  uint32_t pred_offset, uint32_t pred_stride, int16_t *residual, uint32_t residual_offset,
+@@ -1129,6 +1130,8 @@
+                                TranLow *qcoeff_ptr, TranLow *dqcoeff_ptr, uint16_t *eob, const QuantParam *qparam,
+                                TxSize tx_size, TxType tx_type, bool is_inter, uint8_t use_sharpness,
+                                uint8_t delta_q_present, uint8_t picture_qp, uint32_t lambda, int plane) {
++    PO_COUNT(pcs, ctx, PO_OPT_ENTER);
++    if (plane == 0) PO_COUNT(pcs, ctx, PO_OPT_LUMA);
+     int                    sharpness  = 0; // No Sharpness
+     int                    fast_mode  = (ctx->rdoq_ctrls.eob_fast_y_inter && is_inter && !plane) ||
+             (ctx->rdoq_ctrls.eob_fast_y_intra && !is_inter && !plane) ||
+@@ -1157,26 +1160,31 @@
+     int sq_size_idx = 7 - (int)svt_log2f(ctx->blk_geom->sq_size);
+     if (eob_cost < (int)(width * height * sq_size_idx * ctx->rdoq_ctrls.early_exit_th)) {
+         if (skip_cost < non_skip_cost) {
++            PO_COUNT(pcs, ctx, PO_OPT_EARLY_RATE);
+             return;
+         }
+     }
+ 
+     if (fast_mode) {
+         update_coeff_eob_fast(eob, shift, p->dequant_qtx, scan, coeff_ptr, qcoeff_ptr, dqcoeff_ptr);
+-        if (*eob == 0)
++        if (*eob == 0) {
++            PO_COUNT(pcs, ctx, PO_OPT_EARLY_EOB);
+             return;
++        }
+     }
+     int           rweight       = 100;
+     const int32_t sharpness_val = CLIP3(0, 7, pcs->scs->static_config.sharpness);
+     const int     rshift        = MAX(2, (int)sharpness_val);
+     //use_sharpness = vq_ctrls.sharpness_ctrls.rdoq, so this function is enabled for tune 0 and tune 3
+     if (use_sharpness && delta_q_present && plane == 0) {
++        PO_COUNT(pcs, ctx, PO_OPT_GUARD);
+         int diff = ctx->sb_ptr->qindex - quantizer_to_qindex[picture_qp];
+         //Only activate on 2 conditions: diff<0
+         //or if the user controlled sharp-tx is active
+         if (diff < 0 || pcs->scs->static_config.sharp_tx == 1) {
+             sharpness = 1;
+             rweight   = 0;
++            PO_COUNT(pcs, ctx, PO_OPT_ZERO_WEIGHT);
+         }
+     }
+     const int64_t  rdmult = (((((int64_t)lambda * plane_rd_mult[is_inter][plane_type]) * rweight) / 100) + 2) >> rshift;
+@@ -1333,6 +1341,7 @@
+                              levels,
+                              qparam->iqmatrix);
+     }
++    PO_COUNT(pcs, ctx, PO_OPT_COMPLETE);
+ }
+ 
+ static INLINE void set_dc_sign(int32_t *cul_level, int32_t dc_val) {
+@@ -1817,6 +1826,7 @@
+     }
+ 
+     if (is_encode_pass && *eob != 0 && tx_type != IDTX && (component_type == COMPONENT_LUMA)) {
++        PO_COUNT(pcs, ctx, PO_NOISE_CALL);
+         svt_av1_perform_noise_normalization(
+             &candidate_plane,
+             &qparam,
+--- a/Source/Lib/Codec/product_coding_loop.c
++++ b/Source/Lib/Codec/product_coding_loop.c
+@@ -32,6 +32,7 @@
+ #include "av1me.h"
+ #include "limits.h"
+ #include "psy_rd.h"
++#include "psy_observe.h"
+ 
+ #include "pack_unpack_c.h"
+ #include "enc_inter_prediction.h"
+@@ -1188,7 +1189,7 @@
+                     pcs->temporal_layer_index,
+                     hvs_modulation_factor,
+                     pcs->scs->static_config.spy_rd);
+-                luma_fast_dist += get_svt_psy_full_dist(input_pic->buffer_y,
++                luma_fast_dist += psy_obs_term(pcs->picture_number, ctx->md_stage, PO_FAST_CALL, PO_FAST_NONZERO, get_svt_psy_full_dist(input_pic->buffer_y,
+                                                         input_origin_index,
+                                                         input_pic->stride_y,
+                                                         pred->buffer_y,
+@@ -1197,7 +1198,7 @@
+                                                         ctx->blk_geom->bwidth,
+                                                         ctx->blk_geom->bheight,
+                                                         ctx->hbd_md,
+-                                                        hvs_modulation_factor);
++                                                        hvs_modulation_factor));
+                 cand_bf->luma_fast_dist = luma_fast_dist;
+             } else if (ctx->mds0_ctrls.mds0_dist_type == VAR) {
+                 if (!ctx->hbd_md) {
+@@ -1375,7 +1376,7 @@
+                                                     pred->stride_y,
+                                                     ctx->blk_geom->bwidth,
+                                                     ctx->blk_geom->bheight);
+-        luma_fast_dist += get_svt_psy_full_dist(input_pic->buffer_y,
++        luma_fast_dist += psy_obs_term(pcs->picture_number, ctx->md_stage, PO_FAST_CALL, PO_FAST_NONZERO, get_svt_psy_full_dist(input_pic->buffer_y,
+                                                 input_origin_index,
+                                                 input_pic->stride_y,
+                                                 pred->buffer_y,
+@@ -1384,7 +1385,7 @@
+                                                 ctx->blk_geom->bwidth,
+                                                 ctx->blk_geom->bheight,
+                                                 ctx->hbd_md,
+-                                                hvs_modulation_factor);
++                                                hvs_modulation_factor));
+         cand_bf->luma_fast_dist = luma_fast_dist;
+     } else if (ctx->mds0_ctrls.mds0_dist_type == VAR) {
+         if (!ctx->hbd_md) {
+@@ -4860,7 +4861,7 @@
+                     pcs->temporal_layer_index,
+                     hvs_modulation_factor,
+                     pcs->scs->static_config.spy_rd);
+-                txb_full_distortion_txt[DIST_SSD][tx_type][DIST_CALC_PREDICTION] += get_svt_psy_full_dist(
++                txb_full_distortion_txt[DIST_SSD][tx_type][DIST_CALC_PREDICTION] += psy_obs_term(pcs->picture_number, ctx->md_stage, PO_TX_PRED_CALL, PO_TX_PRED_NONZERO, get_svt_psy_full_dist(
+                     input_pic->buffer_y,
+                     input_txb_origin_index,
+                     input_pic->stride_y,
+@@ -4870,7 +4871,7 @@
+                     cropped_tx_width,
+                     cropped_tx_height,
+                     ctx->hbd_md,
+-                    hvs_modulation_factor);
++                    hvs_modulation_factor));
+                 txb_full_distortion_txt[DIST_SSD][tx_type][DIST_CALC_RESIDUAL] = svt_spatial_full_distortion_kernel_facade(
+                     input_pic->buffer_y,
+                     input_txb_origin_index,
+@@ -4886,7 +4887,7 @@
+                     pcs->temporal_layer_index,
+                     hvs_modulation_factor,
+                     pcs->scs->static_config.spy_rd);
+-                txb_full_distortion_txt[DIST_SSD][tx_type][DIST_CALC_RESIDUAL] += get_svt_psy_full_dist(
++                txb_full_distortion_txt[DIST_SSD][tx_type][DIST_CALC_RESIDUAL] += psy_obs_term(pcs->picture_number, ctx->md_stage, PO_TX_RECON_CALL, PO_TX_RECON_NONZERO, get_svt_psy_full_dist(
+                     input_pic->buffer_y,
+                     input_txb_origin_index,
+                     input_pic->stride_y,
+@@ -4896,7 +4897,7 @@
+                     cropped_tx_width,
+                     cropped_tx_height,
+                     ctx->hbd_md,
+-                    hvs_modulation_factor);
++                    hvs_modulation_factor));
+                 txb_full_distortion_txt[DIST_SSD][tx_type][DIST_CALC_PREDICTION] <<= 4;
+                 txb_full_distortion_txt[DIST_SSD][tx_type][DIST_CALC_RESIDUAL] <<= 4;
+             } else {
+@@ -5742,6 +5743,7 @@
+ 
+     // Perform T-1 if mds_spatial_sse (assumes TX depth is 0 b/c TXS is assumed off)
+     if (ctx->mds_spatial_sse) {
++        PO_COUNT(pcs, ctx, PO_FULL_SPATIAL);
+         const SsimLevel ssim_level = ctx->tune_ssim_level;
+         assert(IMPLIES(ssim_level > SSIM_LVL_0, ctx->pd_pass == PD_PASS_1));
+         assert(IMPLIES(ssim_level > SSIM_LVL_0, ctx->md_stage == MD_STAGE_3));
+@@ -5819,7 +5821,7 @@
+                                                                                        pcs->temporal_layer_index,
+                                                                                        hvs_modulation_factor,
+                                                                                        pcs->scs->static_config.spy_rd);
+-        y_full_distortion[DIST_SSD][DIST_CALC_PREDICTION] += get_svt_psy_full_dist(input_pic->buffer_y,
++        y_full_distortion[DIST_SSD][DIST_CALC_PREDICTION] += psy_obs_term(pcs->picture_number, ctx->md_stage, PO_FULL_PRED_CALL, PO_FULL_PRED_NONZERO, get_svt_psy_full_dist(input_pic->buffer_y,
+                                                                                    input_txb_origin_index,
+                                                                                    input_pic->stride_y,
+                                                                                    cand_bf->pred->buffer_y,
+@@ -5828,7 +5830,7 @@
+                                                                                    cropped_tx_width,
+                                                                                    cropped_tx_height,
+                                                                                    ctx->hbd_md,
+-                                                                                   hvs_modulation_factor);
++                                                                                   hvs_modulation_factor));
+         y_full_distortion[DIST_SSD][DIST_CALC_RESIDUAL]   = svt_spatial_full_distortion_kernel_facade(input_pic->buffer_y,
+                                                                                      input_txb_origin_index,
+                                                                                      input_pic->stride_y,
+@@ -5843,7 +5845,7 @@
+                                                                                      pcs->temporal_layer_index,
+                                                                                      hvs_modulation_factor,
+                                                                                      pcs->scs->static_config.spy_rd);
+-        y_full_distortion[DIST_SSD][DIST_CALC_RESIDUAL] += get_svt_psy_full_dist(input_pic->buffer_y,
++        y_full_distortion[DIST_SSD][DIST_CALC_RESIDUAL] += psy_obs_term(pcs->picture_number, ctx->md_stage, PO_FULL_RECON_CALL, PO_FULL_RECON_NONZERO, get_svt_psy_full_dist(input_pic->buffer_y,
+                                                                                  input_txb_origin_index,
+                                                                                  input_pic->stride_y,
+                                                                                  recon_ptr->buffer_y,
+@@ -5852,10 +5854,11 @@
+                                                                                  cropped_tx_width,
+                                                                                  cropped_tx_height,
+                                                                                  ctx->hbd_md,
+-                                                                                 hvs_modulation_factor);
++                                                                                 hvs_modulation_factor));
+         y_full_distortion[DIST_SSD][DIST_CALC_PREDICTION] <<= 4;
+         y_full_distortion[DIST_SSD][DIST_CALC_RESIDUAL] <<= 4;
+     } else {
++        PO_COUNT(pcs, ctx, PO_FULL_TX_DOMAIN);
+         // LUMA DISTORTION
+         uint32_t txbwidth  = ctx->blk_geom->tx_width[tx_depth];
+         uint32_t txbheight = (ctx->blk_geom->tx_height[tx_depth] >> ctx->mds_subres_step);
+--- a/Source/Lib/Codec/rd_cost.c
++++ b/Source/Lib/Codec/rd_cost.c
+@@ -1,3 +1,4 @@
++#include "psy_observe.h"
+ /*
+ * Copyright(c) 2019 Intel Corporation
+ * Copyright (c) 2016, Alliance for Open Media. All rights reserved
+@@ -1542,6 +1543,8 @@
+ 
+     // Decide if block should be signalled as skip (send no coeffs)
+     if (ctx->blk_skip_decision && cand_bf->block_has_coeff && is_inter_mode(cand_bf->cand->pred_mode)) {
++        PO_COUNT(pcs, ctx, PO_ZERO_COMPARE);
++        if (ctx->mds_spatial_sse && pcs->scs->static_config.psy_rd > 0) PO_COUNT(pcs, ctx, PO_ZERO_SPATIAL_COMPARE);
+         const uint64_t non_skip_cost = RDCOST(
+             lambda,
+             (*y_coeff_bits + *cb_coeff_bits + *cr_coeff_bits + non_skip_tx_size_bits +
+@@ -1555,6 +1558,7 @@
+ 
+         // Update signals to correspond to skip_mode values (no coeffs, etc.)
+         if (skip_cost < non_skip_cost) {
++            PO_COUNT(pcs, ctx, PO_ZERO_CHOICE);
+             y_distortion[DIST_SSD][0]  = y_distortion[DIST_SSD][1];
+             cb_distortion[DIST_SSD][0] = cb_distortion[DIST_SSD][1];
+             cr_distortion[DIST_SSD][0] = cr_distortion[DIST_SSD][1];
+@@ -1595,6 +1599,8 @@
+ 
+     // If skip_mode is allowed for this candidate, check cost of skip mode compared to regular cost
+     if (cand_bf->cand->skip_mode_allowed == true) {
++        PO_COUNT(pcs, ctx, PO_SKIPMODE_COMPARE);
++        if (ctx->mds_spatial_sse && pcs->scs->static_config.psy_rd > 0) PO_COUNT(pcs, ctx, PO_SKIPMODE_SPATIAL_COMPARE);
+         const uint8_t skip_mode_ctx = ctx->skip_mode_ctx;
+ 
+         // Skip mode cost
+@@ -1608,6 +1614,7 @@
+ 
+         cand_bf->cand->skip_mode = false;
+         if (skip_mode_cost <= mode_cost) {
++            PO_COUNT(pcs, ctx, PO_SKIPMODE_CHOICE);
+             // Update candidate cost
+             mode_cost                = skip_mode_cost;
+             mode_rate                = skip_mode_rate;
+--- a/Source/Lib/Codec/mode_decision.c
++++ b/Source/Lib/Codec/mode_decision.c
+@@ -33,6 +33,7 @@
+ #include "resize.h"
+ #include "mcomp.h"
+ #include "psy_rd.h"
++#include "psy_observe.h"
+ #include "src_ops_process.h"
+ #define INC_MD_CAND_CNT(cnt, max_can_count)                  \
+     MULTI_LINE_MACRO_BEGIN                                   \
+@@ -4075,6 +4076,14 @@
+     ModeDecisionCandidateBuffer *cand_bf)
+ {
+     ModeDecisionCandidate* cand = cand_bf->cand;
++    PO_COUNT(pcs, ctx, PO_MODE_CALL);
++    psy_obs_add(pcs->picture_number, ctx->md_stage, PO_MODE_CANDIDATES, 1);
++    if (ctx->hbd_md) PO_COUNT(pcs, ctx, PO_MODE_HBD);
++    if (ctx->mds_spatial_sse) PO_COUNT(pcs, ctx, PO_MODE_SPATIAL);
++    if (is_inter_mode(cand->pred_mode)) PO_COUNT(pcs, ctx, PO_MODE_INTER);
++    else PO_COUNT(pcs, ctx, PO_MODE_INTRA);
++    if (cand->skip_mode) PO_COUNT(pcs, ctx, PO_MODE_SKIP);
++    if (cand_bf->block_has_coeff) PO_COUNT(pcs, ctx, PO_MODE_COEFF);
+     blk_ptr->total_rate = cand_bf->total_rate;
+ 
+     // Set common signals (INTER/INTRA)
+@@ -4335,6 +4344,14 @@
+     }
+     ModeDecisionCandidateBuffer* cand_bf = buffer_ptr_array[lowest_cost_index];
+     ModeDecisionCandidate* cand = cand_bf->cand;
++    PO_COUNT(pcs, ctx, PO_MODE_CALL);
++    psy_obs_add(pcs->picture_number, ctx->md_stage, PO_MODE_CANDIDATES, candidate_total_count);
++    if (ctx->hbd_md) PO_COUNT(pcs, ctx, PO_MODE_HBD);
++    if (ctx->mds_spatial_sse) PO_COUNT(pcs, ctx, PO_MODE_SPATIAL);
++    if (is_inter_mode(cand->pred_mode)) PO_COUNT(pcs, ctx, PO_MODE_INTER);
++    else PO_COUNT(pcs, ctx, PO_MODE_INTRA);
++    if (cand->skip_mode) PO_COUNT(pcs, ctx, PO_MODE_SKIP);
++    if (cand_bf->block_has_coeff) PO_COUNT(pcs, ctx, PO_MODE_COEFF);
+     blk_ptr->total_rate = cand_bf->total_rate;
+     if (!(ctx->pd_pass == PD_PASS_1 && ctx->fixed_partition)) {
+         if (ctx->blk_lambda_tuning) {
+--- a/Source/Lib/Globals/enc_handle.c
++++ b/Source/Lib/Globals/enc_handle.c
+@@ -1,3 +1,4 @@
++#include "psy_observe.h"
+ // clang-format off
+ /*
+ * Copyright(c) 2019 Intel Corporation
+@@ -980,6 +981,7 @@
+ {
+     EbEncHandle *enc_handle_ptr = (EbEncHandle *)p;
+     svt_enc_handle_stop_threads(enc_handle_ptr);
++    psy_obs_flush(&enc_handle_ptr->scs_instance_array[0]->scs->static_config, enc_handle_ptr->encode_instance_total_count);
+     EB_FREE_PTR_ARRAY(enc_handle_ptr->app_callback_ptr_array, enc_handle_ptr->encode_instance_total_count);
+     EB_DELETE_PTR_ARRAY(enc_handle_ptr->scs_pool_ptr_array, enc_handle_ptr->encode_instance_total_count);
+     EB_DELETE_PTR_ARRAY(enc_handle_ptr->picture_parent_control_set_pool_ptr_array, enc_handle_ptr->encode_instance_total_count);
+--- /dev/null
++++ b/Source/Lib/Codec/psy_observe.c
+@@ -0,0 +1,102 @@
++#define _POSIX_C_SOURCE 200809L
++#include "psy_observe.h"
++#include <errno.h>
++#include <fcntl.h>
++#include <inttypes.h>
++#include <limits.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <sys/stat.h>
++#include <unistd.h>
++
++static uint64_t counts[336][4][PO_KIND_COUNT];
++static uint64_t invalid, overflow;
++static int state, output_fd = -1, flushed;
++static void die(const char *message) {
++    fprintf(stderr, "Pantheon observation failed: %s\n", message);
++    _exit(86);
++}
++static int enabled(void) {
++    int s = __atomic_load_n(&state, __ATOMIC_ACQUIRE);
++    if (s >= 2) return s == 2;
++    int expected = 0;
++    if (!__atomic_compare_exchange_n(&state, &expected, 1, 0, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)) {
++        do { s = __atomic_load_n(&state, __ATOMIC_ACQUIRE); } while (s == 1);
++        return s == 2;
++    }
++    const char *text = getenv("SVT_PSYEX_OBS_FD");
++    if (!text) { __atomic_store_n(&state, 3, __ATOMIC_RELEASE); return 0; }
++    char *end; errno = 0;
++    long fd = strtol(text, &end, 10);
++    if (errno || end == text || *end || fd < 3 || fd > INT_MAX) die("invalid inherited FD");
++    int flags = fcntl((int)fd, F_GETFL); struct stat st;
++    if (flags < 0 || !(flags & O_APPEND) || (flags & O_ACCMODE) == O_RDONLY ||
++        fstat((int)fd, &st) || !S_ISREG(st.st_mode) || st.st_size != 0)
++        die("FD must be a fresh writable append-only regular file");
++    output_fd = (int)fd;
++    __atomic_store_n(&state, 2, __ATOMIC_RELEASE);
++    return 1;
++}
++void psy_obs_add(uint64_t picture, unsigned md_stage, enum PsyObsKind kind, uint64_t amount) {
++    if (!enabled()) return;
++    if (picture >= 336 || md_stage >= 4 || (unsigned)kind >= PO_KIND_COUNT) {
++        __atomic_fetch_add(&invalid, 1, __ATOMIC_RELAXED); return;
++    }
++    uint64_t *cell = &counts[picture][md_stage][kind];
++    uint64_t old = __atomic_load_n(cell, __ATOMIC_RELAXED);
++    for (;;) {
++        if (amount > UINT64_MAX-old) { __atomic_fetch_add(&overflow, 1, __ATOMIC_RELAXED); return; }
++        if (__atomic_compare_exchange_n(cell, &old, old+amount, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) return;
++    }
++}
++uint64_t psy_obs_term(uint64_t picture, unsigned md_stage, enum PsyObsKind call_kind,
++                      enum PsyObsKind nonzero_kind, uint64_t value) {
++    psy_obs_add(picture, md_stage, call_kind, 1);
++    if (value) psy_obs_add(picture, md_stage, nonzero_kind, 1);
++    return value;
++}
++void psy_obs_flush(const EbSvtAv1EncConfiguration *cfg, unsigned instances) {
++    if (!enabled()) return;
++    if (__atomic_exchange_n(&flushed, 1, __ATOMIC_ACQ_REL)) die("duplicate flush/encoder instance");
++    if (!cfg || instances != 1 || cfg->active_channel_count != 1 || cfg->channel_id != 0 || cfg->pass != 2)
++        die("requires one actual pass-2 encoder channel");
++    if (cfg->source_width != 1920 || cfg->source_height != 1080 || cfg->encoder_bit_depth != 10 ||
++        cfg->frame_rate_numerator != 24 || cfg->frame_rate_denominator != 1)
++        die("unexpected fixture geometry/cadence");
++    if (__atomic_load_n(&invalid, __ATOMIC_RELAXED) || __atomic_load_n(&overflow, __ATOMIC_RELAXED))
++        die("out-of-domain or overflowing counters");
++    int copy = dup(output_fd); if (copy < 0) die("dup");
++    FILE *out = fdopen(copy, "a"); if (!out) die("fdopen");
++    fprintf(out, "{\"schema\":3,\"status\":\"complete\",\"instances\":%u,\"config\":{", instances);
++#define CFG_I(field) fprintf(out, "\"" #field "\":%lld,", (long long)cfg->field)
++    CFG_I(pass); CFG_I(active_channel_count); CFG_I(channel_id);
++    CFG_I(source_width); CFG_I(source_height); CFG_I(encoder_bit_depth); CFG_I(encoder_color_format);
++    CFG_I(frame_rate_numerator); CFG_I(frame_rate_denominator); CFG_I(enc_mode); CFG_I(tune);
++    CFG_I(scene_change_detection); CFG_I(level_of_parallelism); CFG_I(color_range);
++    CFG_I(color_primaries); CFG_I(transfer_characteristics); CFG_I(matrix_coefficients);
++    CFG_I(sharp_tx); CFG_I(sharpness); CFG_I(spy_rd); CFG_I(hbd_mds); CFG_I(complex_hvs);
++    CFG_I(noise_norm_strength); CFG_I(noise_adaptive_filtering); CFG_I(rate_control_mode);
++    CFG_I(pred_structure); CFG_I(intra_period_length); CFG_I(intra_refresh_type); CFG_I(hierarchical_levels);
++    CFG_I(enable_adaptive_quantization); CFG_I(enable_variance_boost); CFG_I(variance_boost_strength);
++    CFG_I(variance_octile); CFG_I(variance_boost_curve); CFG_I(enable_qm); CFG_I(min_qm_level);
++    CFG_I(max_qm_level); CFG_I(min_chroma_qm_level); CFG_I(max_chroma_qm_level);
++    CFG_I(enable_tf); CFG_I(tf_strength); CFG_I(kf_tf_strength); CFG_I(enable_overlays);
++    CFG_I(enable_dlf_flag); CFG_I(cdef_level); CFG_I(enable_restoration_filtering);
++    CFG_I(film_grain_denoise_strength); CFG_I(film_grain_denoise_apply); CFG_I(target_bit_rate);
++    fprintf(out,"\"psy_rd\":%.17g,\"qp_scale_compress_strength\":%.17g},", cfg->psy_rd, cfg->qp_scale_compress_strength);
++#undef CFG_I
++    fprintf(out,"\"shape\":[336,4,%u],\"invalid\":0,\"overflow\":0,\"counts\":[",(unsigned)PO_KIND_COUNT);
++    for (unsigned p=0; p<336; ++p) {
++        fprintf(out,"%s[",p?",":"");
++        for(unsigned s=0;s<4;++s) {
++            fprintf(out,"%s[",s?",":"");
++            for(unsigned k=0;k<PO_KIND_COUNT;++k)
++                fprintf(out,"%s%" PRIu64,k?",":"",__atomic_load_n(&counts[p][s][k],__ATOMIC_RELAXED));
++            fprintf(out,"]");
++        }
++        fprintf(out,"]");
++    }
++    fprintf(out,"]}\n");
++    if (ferror(out) || fflush(out)) die("write/flush error");
++    if (fclose(out)) die("close error");
++}
+--- /dev/null
++++ b/Source/Lib/Codec/psy_observe.h
+@@ -0,0 +1,21 @@
++#ifndef PANTHEON_PSY_OBSERVE_H
++#define PANTHEON_PSY_OBSERVE_H
++#include <stdint.h>
++#include "EbSvtAv1Enc.h"
++enum PsyObsKind {
++    PO_OPT_ENTER, PO_OPT_LUMA, PO_OPT_EARLY_RATE, PO_OPT_EARLY_EOB,
++    PO_OPT_GUARD, PO_OPT_ZERO_WEIGHT, PO_OPT_COMPLETE, PO_NOISE_CALL,
++    PO_FAST_CALL, PO_FAST_NONZERO, PO_TX_PRED_CALL, PO_TX_PRED_NONZERO,
++    PO_TX_RECON_CALL, PO_TX_RECON_NONZERO, PO_FULL_SPATIAL, PO_FULL_TX_DOMAIN,
++    PO_FULL_PRED_CALL, PO_FULL_PRED_NONZERO, PO_FULL_RECON_CALL, PO_FULL_RECON_NONZERO,
++    PO_ZERO_COMPARE, PO_ZERO_CHOICE, PO_ZERO_SPATIAL_COMPARE,
++    PO_SKIPMODE_COMPARE, PO_SKIPMODE_CHOICE, PO_SKIPMODE_SPATIAL_COMPARE,
++    PO_MODE_CALL, PO_MODE_CANDIDATES, PO_MODE_HBD, PO_MODE_SPATIAL,
++    PO_MODE_INTER, PO_MODE_INTRA, PO_MODE_SKIP, PO_MODE_COEFF, PO_KIND_COUNT
++};
++void psy_obs_add(uint64_t picture, unsigned md_stage, enum PsyObsKind kind, uint64_t amount);
++uint64_t psy_obs_term(uint64_t picture, unsigned md_stage, enum PsyObsKind call_kind,
++                      enum PsyObsKind nonzero_kind, uint64_t value);
++void psy_obs_flush(const EbSvtAv1EncConfiguration *cfg, unsigned instances);
++#define PO_COUNT(pcs, ctx, kind) psy_obs_add((pcs)->picture_number, (ctx)->md_stage, (kind), 1)
++#endif

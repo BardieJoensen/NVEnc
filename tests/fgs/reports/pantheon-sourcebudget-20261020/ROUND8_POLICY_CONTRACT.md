@@ -96,3 +96,15 @@ defect before interpreting quality.
 If this arm fails, reject only this pinned configuration at its measured rate.
 The next experiment must distinguish a remaining mechanism; failure does not
 prove that AV1 or faithful re-encoding is impossible.
+
+Observation scope revision before reading runtime counters: schema3 observes
+actual candidate selection under high-bit-depth/spatial policy, not final
+partition survival. Independent review found the original “partition paths”
+wording broader than the implemented hooks. The admitted claim is therefore
+aggregate search-route execution; no component-to-final-pixel attribution is
+allowed. Final-partition instrumentation is unnecessary for judging the legal
+bundled encode and is deferred unless a subsequent causal question needs it.
+Target input216 must show both MODE_HBD and MODE_SPATIAL, actual nonzero psy
+terms, zero optimizer rate weight, and spatial residual-zero/skip comparisons;
+all336 pictures must reach mode selection. Config automatic CDEF/restoration
+values remain unresolved static sentinels. Quality acceptance is unchanged.

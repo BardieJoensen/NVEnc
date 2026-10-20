@@ -447,3 +447,23 @@ against prior tested policies; reviewer independently constrains the next test.
   full336 rate10.25718343Mbps, both passes370.33577s. All336 application/dav1d/
   libaom/NVDEC frames agree exactly with admitted cadence/color. Runtime
   observation and quality remain pending; no preservation inference yet.
+
+- R8 observation admitted: off/on full336 IVF and recon both exact unmodified.
+  All336 pictures observed; target216 delivers guarded zero-rate optimizer,
+  nonzero spatial/TX psy terms, residual-zero/skip comparisons and HBD/spatial
+  candidate selection. Fast hooks inactive; final partition survival unobserved.
+  Search-event counts do not establish pixel ownership or separate component
+  causality. GPU campaign/full-window quality now running.
+
+- R8 complete, independently reviewed negative. At99.4976%source and370.336s,
+  shirt HF−83.02%/ACFerror.08587 and background HF−42.08%/.11624 fail unchanged
+  gates. Full controls mixed: broad MSE/CAMBI/temporal descriptors improve, but
+  face/edge/quiet and broad ACF errors regress. All336 decoder and240 scored
+  samples admitted; all native crop clips exact. Parent inspected stills/plot,
+  no playback. Accept this failure; no source-rate or codec impossibility claim.
+
+- auto R9: choose byte-neutral final-block and pre-loop/post-loop observation
+  on exact R8. Aggregate search delivery does not prove survival into final
+  partitions. Resolve that boundary before another policy or precision arm.
+  R3 native one-step margins remain a possible later discriminator; their
+  context-dependent sequential costs cannot predict a global optimizer flip.

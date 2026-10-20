@@ -1,6 +1,6 @@
 # Current hypothesis ledger
 
-Updated after admitted Round7 and Round8 source review. No candidate qualifies; no technical blocker or
+Updated after admitted Round8 quality. No candidate qualifies; no technical blocker or
 playback observation exists. Practical ceiling remains original video payload
 rate; all texture, clean-region, detail, banding and temporal gates are unchanged.
 
@@ -10,6 +10,7 @@ rate; all texture, clean-region, detail, banding and temporal gates are unchange
 | Finer actual quantization can restore meaningful texture | R7 delivers shirtq32/backgroundq32–36 and substantially improves texture/detail | At4.01686×source it still fails shirt and background texture screens | Other precision/decision policies; no general quantization impossibility | Stop global qmax repeats; identify a distinct decision policy before another real arm |
 | Later coefficient processing is independently important | R7 optimizer-only shirt stratum HF.544→.214; dropout is absent there | Initial quantization and skips also lose texture; mixed intra path remains unseparated | Native decision costs and whether a fixed alternative policy retains useful candidates at source budget | Existing policy source audit; otherwise one R3 native decision-margin capture |
 | Selected skip/transform decisions constrain reconstruction | R7 removes reduced64 shirt support and raises exercised fraction46.88→67.84% |32.16% still unexercised; fixed raw mosaic itself misses whole-shirt amplitude | Whether available residual candidates lose mainly on rate/distortion cost or are already inadequate | Inspect coefficient, TU-skip and coding-block decision margins together; no final-only bypass |
+| A bundled texture-sensitive policy preserves texture at source rate | R8 proves zero optimizer rate weight and nonzero spatial psy terms execute in search | Matched9.6279Mbps result still fails both texture screens, face/edge/quiet errors regress | Which observed candidates survive final partitioning, and whether loss is already in final pre-loop reconstruction | Byte-neutral final-block and filter-boundary capture on exact R8 output |
 | Legal grain can distinguish clean and textured areas at comparable inputs | Prior conditional inputs show a local quiet/texture conflict | Only specific white-model probes tested; no global nonrepresentability proof | Other legal model inputs/AR support/base reconstructions | Revisit representability only if a stronger measured base warrants it; never relax quiet protection |
 
 R7 is an unconstrained end-to-end diagnostic, not a matched-rate causal isolation.
@@ -28,5 +29,8 @@ zero-rate coefficient optimization and AC-energy distortion reaching actual
 zero/skip and full mode comparisons. Runtime delivery and preservation remain
 unknown. The cheapest next discriminator is one fixed bundled source-budget
 arm with observational counters, specified in `ROUND8_POLICY_CONTRACT.md`.
-The unmodified private build is complete; no quality inference follows from
-source reachability or successful compilation.
+The unmodified private build and byte-neutral off/on runtime observation are
+complete. All336 decoder frames and240 scored planes are admitted. The fixed
+bundle fails both texture gates at99.4976%source,370.336s for336frames. Source
+reachability and aggregate execution do not establish final-pixel delivery.
+Do not repeat strengths/presets; observe final coding and filter boundaries.

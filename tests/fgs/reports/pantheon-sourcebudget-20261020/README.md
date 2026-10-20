@@ -69,6 +69,12 @@ Prior source-budget ROI failure is accepted; it does not prove source-budget
 preservation impossible. All previous archives remain unchanged. Production,
 Tdarr, torrents and library changes remain unauthorized.
 
+The [fixed PSYEX policy](PSYEX.md) also fails at 9.62790 Mbps, 99.4976% of source,
+with 370.336 s across both passes. Neutral observation proves the texture policy
+executes in search, but shirt/background texture and face/edge/quiet controls
+remain inadequate. The next discriminator observes final coding decisions and
+the filter boundary; no settings sweep or production change is authorized.
+
 A reviewed [fixed-input grain diagnostic](GRAIN_FIXED_INPUT.md) on the improved
 preset0 base preserves a local quiet/texture input conflict. It rejects the
 measured white16 probe, not all legal grain models or other bases. No estimator
