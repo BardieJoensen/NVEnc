@@ -1,7 +1,7 @@
 # R16: temporal filtering disabled at the original packet budget
 
-Status: initial calibration completed; reviewed midpoint refinement running.
-No R16 quality conclusion.
+Status: matched midpoint selected; native observation and quality analysis in
+progress. No R16 quality conclusion.
 
 The [contract](ROUND16_TF0_BUDGET_CONTRACT.md) tests the admitted R8 policy with
 only temporal filtering disabled and the bitrate request calibrated to
@@ -41,6 +41,15 @@ and replay of the selected refinement's own pass-two command and statistics.
 Four valid synthetic states and five corrupted states behaved as prescribed;
 these are software controls, not measured encodes. The first real midpoint
 request is 10042. No quality gate was changed.
+
+That request produced **9.6698472 Mbps**, 99.9310% of source and 0.4356% above
+R8's measured rate. Its 240 scored packets contain 12,087,309 bytes. The full
+336-frame rate is 10.001128 Mbps. Passes took 65.073485 and 307.180646 seconds,
+totaling **372.254131 seconds**. Independent review confirms the exact bracket,
+outer command, fresh statistics and packet sum. Calibration stops at this
+eligible arm; see the [selected calibration](psyex-tf0/selected-calibration/manifest.json).
+Decoder agreement and bitstream mapping have passed, while coefficient
+observation and quality acceptance remain separate.
 
 The [preflight manifest](psyex-tf0/preflight/manifest.json) preserves the exact
 runner, provenance, packet records, commands, reviews and prepared validation

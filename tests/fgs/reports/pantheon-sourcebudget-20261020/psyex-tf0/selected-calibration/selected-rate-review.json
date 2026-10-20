@@ -1,0 +1,116 @@
+{
+  "status": "selected_rate_validated",
+  "scope": "Calibration lineage, outer execution, packet rate, matched/source-cap eligibility and encoder timing only; native admission and quality are pending and no quality/playback inference is made.",
+  "inputs": {
+    "command": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/command.json",
+      "sha256": "00bb9243453fb55f1c878842e2ecfd3760f8403144e1e5b507530477a03ef497",
+      "size": 67624
+    },
+    "outer_execution": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/encode-attempt1-execution.json",
+      "sha256": "e82ff2212660e0453797c5e2383ce910a27099f80252e9c79dc3d5f93517d7d2",
+      "size": 3182
+    },
+    "runner": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/encode_refine.py",
+      "sha256": "5804a1a5985d0676975abe28fba2d8c7a8d6af71c2f70d39dab11436bf2941e4",
+      "size": 28105
+    },
+    "packet_window": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/packet-window.json",
+      "sha256": "c7c0c12b7e1e0f4017252406143117fedd5184f2670db0afee6d1d6e46a1578b",
+      "size": 89117
+    }
+  },
+  "calibration": {
+    "phase": "midpoint-refinement",
+    "attempt": 1,
+    "request_kbps": 10042,
+    "formula": "floor((low.request_kbps + high.request_kbps)/2)",
+    "bracket": {
+      "low": {
+        "phase": "old",
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10014/command.json",
+        "sha256": "02bc209310beb0c88d72c9ca40deb621ce07b2694dfd52bc9ddc5db5219deadd",
+        "request_kbps": 10014,
+        "actual_mbps": 9.3933528
+      },
+      "high": {
+        "phase": "old",
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/runs/e05-1440/r16-tf0-tbr10070/command.json",
+        "sha256": "690beb605f882ddb9748f4e23f4aabc604cca1027f019b5ad09004b9b31b442a",
+        "request_kbps": 10070,
+        "actual_mbps": 9.70136
+      }
+    },
+    "validated_dependency_count": 35,
+    "validator_public_api": "validate_chain"
+  },
+  "packet_rate": {
+    "selected_positions": [
+      96,
+      336
+    ],
+    "selected_packets": 240,
+    "selected_mkv_bytes": 12087309,
+    "actual_mbps": 9.6698472,
+    "source_mbps": 9.6765224,
+    "accepted_interval_mbps": [
+      9.579757176,
+      9.6765224
+    ],
+    "source_ratio": 0.9993101653957831,
+    "source_headroom_mbps": 0.006675200000000103,
+    "within_source_ceiling": true,
+    "matched_rate_comparable": true,
+    "calibration_response_within_bracket": true,
+    "vs_R8_ratio": 1.0043563372167952
+  },
+  "runtime": {
+    "passes": {
+      "pass1": {
+        "seconds": 65.07348483300302,
+        "returncode": 0,
+        "log": {
+          "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/pass1.log",
+          "sha256": "63dd5c027b8a53474d7834692eb7eb79ab331e57b02b0facf8860d933e829f37",
+          "size": 507
+        }
+      },
+      "pass2": {
+        "seconds": 307.1806458479259,
+        "returncode": 0,
+        "log": {
+          "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/pass2.log",
+          "sha256": "b0e18644a8bae0bf573634f79cf8dadae47e7ec14be3d47730e749e24515ebd5",
+          "size": 1801
+        }
+      }
+    },
+    "two_pass_seconds": 372.25413068092894,
+    "outer_seconds": 402.36826087196823,
+    "outer_returncode": 0,
+    "outer_inputs_unchanged": true
+  },
+  "fresh_stats": {
+    "stats": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/pass.stats",
+      "sha256": "6114f3cd907246cf1aa6fc6654ff63f59e8be72ba5aa4663a4e98b46804b1007",
+      "size": 18872
+    },
+    "snapshot": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/pass1-stats.snapshot",
+      "sha256": "6114f3cd907246cf1aa6fc6654ff63f59e8be72ba5aa4663a4e98b46804b1007",
+      "size": 18872
+    },
+    "identical_sha256": true
+  },
+  "pending": [
+    "all336 decoder admission",
+    "native encoder/decoder join",
+    "single-frame stage/support evidence",
+    "full-window texture/control/campaign evidence",
+    "human playback"
+  ]
+}

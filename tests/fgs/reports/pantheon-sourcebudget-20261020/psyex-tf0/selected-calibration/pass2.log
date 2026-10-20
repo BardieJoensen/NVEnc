@@ -1,0 +1,30 @@
+Svt[info]: -------------------------------------------
+Svt[info]: SVT [version]:	SVT-AV1-PSY Encoder Lib v3.0.2-B-9-g59d1a0256
+Svt[info]: SVT [build]  :	GCC 13.3.0	 64 bit
+Svt[info]: LIB Build date: Oct 20 2026 12:51:08
+Svt[info]: -------------------------------------------
+Svt[warn]: For CRF or 2PASS RC mode, the maximum needed Lookahead distance is 37. Force the look_ahead_distance to be 37
+Svt[info]: Level of Parallelism: 1
+Svt[info]: Number of PPCS 37
+Svt[info]: [asm level on system : up to avx2]
+Svt[info]: [asm level selected : up to avx2]
+Svt[info]: -------------------------------------------
+Svt[info]: SVT [config]: main profile	tier (auto)	level (auto)
+Svt[info]: SVT [config]: width / height / fps numerator / fps denominator 		: 1920 / 1080 / 24 / 1
+Svt[info]: SVT [config]: bit-depth / color format 					: 10 / YUV420
+Svt[info]: SVT [config]: preset / tune / pred struct 					: 4 / VQ / random access
+Svt[info]: SVT [config]: gop size / mini-gop size / key-frame type 			: 240 / 16 / key frame
+Svt[info]: SVT [config]: BRC mode / target bitrate (kbps)				: VBR / 10042 
+Svt[info]: SVT [config]: AQ mode / Variance Boost strength / octile / curve 		: 2 / 2 / 5 / 0
+Svt[info]: SVT [config]: sharpness / luminance-based QP bias 				: 1 / 0
+Svt[info]: SVT [config]: QP scale compress strength 					: 1.00
+Svt[info]: SVT [config]: Noise Normalization Strength 					: 1
+Svt[info]: SVT [config]: PSY-RD Strength 						: 1.00
+Svt[info]: SVT [config]: spy-rd 							: non
+Svt[info]: SVT [config]: noise adaptive filtering 					: off
+Svt[info]: -------------------------------------------
+Encoding          
+SUMMARY --------------------------------- Channel 1  --------------------------------
+Total Frames		Frame Rate		Byte Count		Bitrate
+         336		24.00 fps		  17502646		10001.51 kbps
+

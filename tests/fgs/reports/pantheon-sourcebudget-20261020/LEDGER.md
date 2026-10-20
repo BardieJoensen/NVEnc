@@ -587,3 +587,8 @@ against prior tested policies; reviewer independently constrains the next test.
   preview and four-positive/five-negative synthetic controls. Start10042 with
   unchanged TFoff policy and fresh two-pass stats. Frozen refinement-preflight
   package contains scripts, reviews and controls; no quality conclusion yet.
+- R16 midpoint10042 reaches9.6698472Mbps (99.9310%source,+0.4356%vsR8),
+  372.254131s across two passes. Independent packet sum12,087,309bytes,
+  bracket/outer identities/freshstats pass. Stop calibration and select this
+  arm for complete observation/quality. All336 independent decoders and syntax
+  mapping pass; no texture conclusion is inferred before remaining admission.
