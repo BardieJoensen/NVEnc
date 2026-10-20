@@ -42,3 +42,11 @@ Two invalid drafts were rejected before encoding. V3 is observational and its
 complete stream equality demonstrates neutrality for this run. It is not a
 repair, a fixed-predictor quantization experiment, or a whole-encoder TF ablation.
 No motion playback was observed.
+
+
+A subsequent [complete source audit](aom-full-source-audit.json) corrects the
+initial1294-file provenance subset: all1344 upstream regular paths are now
+accounted for. R4 pristine matches the patched archive exactly; traced differs
+only in the intended two code/build-list files and its noncompiled scratch
+README. The44 omitted build-support files match both trees. No encoding or
+scoring rerun is required for this provenance completion.

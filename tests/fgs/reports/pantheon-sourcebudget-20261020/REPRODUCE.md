@@ -201,8 +201,12 @@ system development libraries were absent. Encoding-byte equality, not a claim
 that those flags never matter, binds this private build to the installed arm.
 The fresh source reconstruction and patch logs are preserved in
 `worker/aom-source-verify-v3-20261020T100425Z/`. Its final
-`source-domain-receipt.json` explicitly compares the 1,294 upstream source files;
-Debian packaging and scratch metadata are listed separately. Earlier receipts
+`source-domain-receipt.json` compares an initial 1,294-file subset. The later
+`reviewer/round4-full-source-audit/` reconstruction covers all 1,344 official
+regular paths, including upstream `build/cmake` and README files; see
+[aom-full-source-audit.json](aom-full-source-audit.json). Never rebuild from the
+1,294-file subset. Extract the complete archive as shown above. Debian packaging
+and generated scratch/build output are additional files. Earlier receipts
 and aggregate hashes are retained as historical attempts, not admitted proof.
 
 Using the preserved reviewed private libraries and build receipt:

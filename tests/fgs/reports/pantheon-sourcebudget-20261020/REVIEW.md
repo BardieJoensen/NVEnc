@@ -154,9 +154,10 @@ Parent also replaced ambiguous active build fields with a clean manifest and
 preserved the stale receipt separately. Original configure, patch-application
 and pristine-build stdout had not been retained; the report labels reconstructed
 commands honestly. A fresh extraction plus all seven Ubuntu patches, with new
-execution logs, independently reconstructs the source tree. It matches all
-1,294 upstream source-domain files in pristine; traced differences are exactly
-`encoder.c` and `av1.cmake`. This verifies source provenance without pretending
+execution logs, independently reconstructs the source tree. It matches the initially selected
+1,294-file source subset in pristine; within that subset traced differences are
+`encoder.c` and `av1.cmake`. The complete-domain correction below supersedes
+any implication that this subset includes every upstream file. This verifies source provenance without pretending
 the missing historical logs exist. The reviewer caught an older aggregate hash
 file predating the final source-domain receipt; admission binds the final receipt,
 actual manifests and patch logs directly and excludes the stale aggregate.
@@ -180,3 +181,22 @@ reference or border effects; the trace records visible samples, not coordinates,
 signed changes or frequency structure. Nor does it prove every change was caused
 by TF. Parent retains these limits and selects the recommended all-event source
 neutralization. Independent result files are `reviewer/round4-outcome-review.*`.
+
+
+### Complete source-domain correction
+
+Round5 configure exposed an overbroad manifest exclusion: upstream `build/cmake`
+files had been omitted along with generated build output. Parent required a
+separate independent archive reconstruction over all1344 official regular paths.
+All1344 patched-source files exactly match R4 pristine. Of50 previously omitted
+files, all44 build-support files and five vendored README files match both trees.
+R4 traced differs in the intended two code/build-list files and the root README,
+which was replaced by scratch documentation. This noncompiled README difference
+is now explicit. Historical R4 receipts and trees were not rewritten.
+
+[Supplemental receipt](aom-full-source-audit.json) binds the complete manifests,
+path-level50-file audit, seven patch logs, commands, source archives and tools.
+Parent checked every bound artifact and manifest identity. The measured stream
+neutrality and source-boundary observations are unaffected; source provenance
+and reproduction instructions are now complete. R5 uses all1344 archive paths
+and build output outside its source tree.

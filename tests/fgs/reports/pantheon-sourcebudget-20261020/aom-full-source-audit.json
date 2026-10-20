@@ -1,0 +1,254 @@
+{
+  "archive_member_counts": {
+    "debian_total": 32,
+    "upstream_regular": 1344,
+    "upstream_total": 1418
+  },
+  "archives": {
+    "debian": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/aom-tune-source-v382/aom_3.8.2-2ubuntu0.2.debian.tar.xz",
+      "sha256": "d1fb459395296901e6aed6348828c6a5a29e2364d5b0c809a5ba1def73d599e7",
+      "size": 25164
+    },
+    "upstream": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/aom-tune-source-v382/aom-v3.8.2.tar.gz",
+      "sha256": "63238bcefc514e3e454e7ebab8470174c9a237a578e3e4ee3e9872e9bfc70078",
+      "size": 5520443
+    }
+  },
+  "artifacts": {
+    "01-source-extract.log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/01-source-extract.log",
+      "sha256": "1e462a3613a5e1961a2a4d2b2451dcafd6e463e53d12abd23dd1aedc4a87bcb8",
+      "size": 347
+    },
+    "02-debian-extract.log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/02-debian-extract.log",
+      "sha256": "5e6cf0eaef75203fbf220257cfdc9eb80fc72fa36d94286766e12bd588a398c8",
+      "size": 388
+    },
+    "README.md": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/README.md",
+      "sha256": "44b6204ead40a483ef5a295cc514640ec47334a061c93b3fdeeecb5c836f8c0c",
+      "size": 2028
+    },
+    "archive-source-manifest.json": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/archive-source-manifest.json",
+      "sha256": "30cdbd05f65e591d82cd9abc512298caa052cdeb060e7b79d04641c92f89b476",
+      "size": 139584
+    },
+    "audit.py": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/audit.py",
+      "sha256": "61b6436995a8b826e21f377847ee4d54ef0737692ae0678f6e4ea039bd226d72",
+      "size": 9842
+    },
+    "full-source-comparison.json": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/full-source-comparison.json",
+      "sha256": "3cbfaab6a7495a96c7c971f53e1fe47fdaee9f10adef4490f627989f4205d5b4",
+      "size": 1315
+    },
+    "omitted-50-audit.json": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/omitted-50-audit.json",
+      "sha256": "bd791e5b5fb6689e253f8ffe36ca11d3836feb2da44127447f4949d8dd088d6f",
+      "size": 29595
+    },
+    "patch-01-0001-doc-Use-libjs-mathjax-rather-than-cloudflare-copy.patch.log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-01-0001-doc-Use-libjs-mathjax-rather-than-cloudflare-copy.patch.log",
+      "sha256": "96e1301c9ca15f9d98f5184dc25d4332fd89409f3daea43104350bc8150c0ff3",
+      "size": 184
+    },
+    "patch-02-0002-use-system-libyuv.patch.log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-02-0002-use-system-libyuv.patch.log",
+      "sha256": "8017ea7aae97cdadfe8a3a6e4a90da2e32130f0e989764d6d9fa98e29de1bf2a",
+      "size": 272
+    },
+    "patch-03-0003-use-system-libwebm.patch.log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-03-0003-use-system-libwebm.patch.log",
+      "sha256": "e284c3b3aefc3aa55209e06957d0322e9ef2f033b7577e78c2e11d391945b524",
+      "size": 274
+    },
+    "patch-04-CVE-2024-5171-1.patch.log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-04-CVE-2024-5171-1.patch.log",
+      "sha256": "83b616e2d80dd3768ad3468230f056f1e4de3e860e2373daf61d16234fa8f828",
+      "size": 222
+    },
+    "patch-05-CVE-2024-5171-2.patch.log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-05-CVE-2024-5171-2.patch.log",
+      "sha256": "c59f7b925349307cd30c814839edf79eeac5fa0be9c48fdd3c74f52c6085c800",
+      "size": 252
+    },
+    "patch-06-CVE-2026-56208.patch.log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-06-CVE-2026-56208.patch.log",
+      "sha256": "4d11e160faac214990aa14b4c38b226602b0062ab770e70889ef8f9c28798ecc",
+      "size": 306
+    },
+    "patch-07-CVE-2026-56209_56210_56211.patch.log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-07-CVE-2026-56209_56210_56211.patch.log",
+      "sha256": "f5d0a196beab0c640706015f37c19bb089f3c6414351e589dd4ea31b5b4515b6",
+      "size": 248
+    },
+    "patched-source-manifest.json": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/patched-source-manifest.json",
+      "sha256": "ed7593689b268e743e5d81847d261146c527cd8466654d4cca86939eb8ac4583",
+      "size": 139584
+    },
+    "r4-pristine-full-source-manifest.json": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/r4-pristine-full-source-manifest.json",
+      "sha256": "ed7593689b268e743e5d81847d261146c527cd8466654d4cca86939eb8ac4583",
+      "size": 139584
+    },
+    "r4-traced-full-source-manifest.json": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/r4-traced-full-source-manifest.json",
+      "sha256": "f68069982a298665372dc9b620fc26072f8404afc01c5b4402fc608ea216598d",
+      "size": 139584
+    }
+  },
+  "commands": {
+    "debian_extract": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/02-debian-extract.log",
+      "sha256": "5e6cf0eaef75203fbf220257cfdc9eb80fc72fa36d94286766e12bd588a398c8",
+      "size": 388
+    },
+    "source_extract": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/01-source-extract.log",
+      "sha256": "1e462a3613a5e1961a2a4d2b2451dcafd6e463e53d12abd23dd1aedc4a87bcb8",
+      "size": 347
+    }
+  },
+  "conclusions": {
+    "all_44_omitted_build_support_files_exact": true,
+    "five_vendored_readmes_exact_both_trees": true,
+    "official_regular_file_count": 1344,
+    "patched_r4_pristine_exact": true,
+    "r4_trace_code_differences": [
+      "av1/av1.cmake",
+      "av1/encoder/encoder.c"
+    ],
+    "r4_trace_readme_substitution": "README.md"
+  },
+  "generated_utc": "2026-10-20T10:36:43.005459+00:00",
+  "patches": [
+    {
+      "index": 1,
+      "log": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-01-0001-doc-Use-libjs-mathjax-rather-than-cloudflare-copy.patch.log",
+        "sha256": "96e1301c9ca15f9d98f5184dc25d4332fd89409f3daea43104350bc8150c0ff3",
+        "size": 184
+      },
+      "name": "0001-doc-Use-libjs-mathjax-rather-than-cloudflare-copy.patch",
+      "patch": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/debian/patches/0001-doc-Use-libjs-mathjax-rather-than-cloudflare-copy.patch",
+        "sha256": "51853c5118a553332e5b098b8910132a559e6b3a11d2e084f492ec74ce99c7d7",
+        "size": 839
+      }
+    },
+    {
+      "index": 2,
+      "log": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-02-0002-use-system-libyuv.patch.log",
+        "sha256": "8017ea7aae97cdadfe8a3a6e4a90da2e32130f0e989764d6d9fa98e29de1bf2a",
+        "size": 272
+      },
+      "name": "0002-use-system-libyuv.patch",
+      "patch": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/debian/patches/0002-use-system-libyuv.patch",
+        "sha256": "eff54f4cb6c33705110fa19ff52e6a046050a2c3258d40267f9730be36ba1f60",
+        "size": 2917
+      }
+    },
+    {
+      "index": 3,
+      "log": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-03-0003-use-system-libwebm.patch.log",
+        "sha256": "e284c3b3aefc3aa55209e06957d0322e9ef2f033b7577e78c2e11d391945b524",
+        "size": 274
+      },
+      "name": "0003-use-system-libwebm.patch",
+      "patch": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/debian/patches/0003-use-system-libwebm.patch",
+        "sha256": "1bbbf359bd4ea1bf9e15595385184e3f483f8700b0b2f40c10f209a67b958402",
+        "size": 3562
+      }
+    },
+    {
+      "index": 4,
+      "log": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-04-CVE-2024-5171-1.patch.log",
+        "sha256": "83b616e2d80dd3768ad3468230f056f1e4de3e860e2373daf61d16234fa8f828",
+        "size": 222
+      },
+      "name": "CVE-2024-5171-1.patch",
+      "patch": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/debian/patches/CVE-2024-5171-1.patch",
+        "sha256": "e1eafbdb728ed4ff987abdded65e63f51e68e79a284aa7375e2c1b9031227bcc",
+        "size": 4572
+      }
+    },
+    {
+      "index": 5,
+      "log": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-05-CVE-2024-5171-2.patch.log",
+        "sha256": "c59f7b925349307cd30c814839edf79eeac5fa0be9c48fdd3c74f52c6085c800",
+        "size": 252
+      },
+      "name": "CVE-2024-5171-2.patch",
+      "patch": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/debian/patches/CVE-2024-5171-2.patch",
+        "sha256": "c2c483bcc9a51a6758f3011f3ce820e410addff10a06c139c54f529d6c13c556",
+        "size": 7582
+      }
+    },
+    {
+      "index": 6,
+      "log": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-06-CVE-2026-56208.patch.log",
+        "sha256": "4d11e160faac214990aa14b4c38b226602b0062ab770e70889ef8f9c28798ecc",
+        "size": 306
+      },
+      "name": "CVE-2026-56208.patch",
+      "patch": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/debian/patches/CVE-2026-56208.patch",
+        "sha256": "1bdb1a8f33b76f1674f9cfc765b022f4269a3ea73f81dadad61ca5854f552304",
+        "size": 5148
+      }
+    },
+    {
+      "index": 7,
+      "log": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/logs/patch-07-CVE-2026-56209_56210_56211.patch.log",
+        "sha256": "f5d0a196beab0c640706015f37c19bb089f3c6414351e589dd4ea31b5b4515b6",
+        "size": 248
+      },
+      "name": "CVE-2026-56209_56210_56211.patch",
+      "patch": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/debian/patches/CVE-2026-56209_56210_56211.patch",
+        "sha256": "0e356c12198f621bfb90467f08c181b057e81c48d266ab74edab8f24369c62a9",
+        "size": 4416
+      }
+    }
+  ],
+  "scope": "Complete 1344-regular-file official libaom v3.8.2 source domain after seven Ubuntu patches; no build performed.",
+  "source_trees": {
+    "r4_pristine": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-trace-preflight-pristine2",
+    "r4_traced": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-source-trace-preflight",
+    "reconstruction": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round4-full-source-audit/source"
+  },
+  "status": "verified",
+  "tools": {
+    "patch": {
+      "path": "/usr/bin/patch",
+      "sha256": "a7ae8b838a75711c06f86a2a8293dcad85a20b564670a120717e704c436e6f3a",
+      "size": 186896
+    },
+    "python3": {
+      "path": "/usr/bin/python3.12",
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+      "size": 8020928
+    },
+    "tar": {
+      "path": "/usr/bin/tar",
+      "sha256": "3ee2c3c0b4dd9aacebfd2f0fbae44bad36348203acff78a44888dd58c05f811c",
+      "size": 440264
+    }
+  }
+}
