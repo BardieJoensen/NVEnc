@@ -316,3 +316,26 @@ ef69c7ad0954f09c30f36893cd4aadecdb408e1057503a677fcfa22143b325e9.
 Pinned FFmpeg/libaom sources prove explicit qmin0 preserves the effective R3
 minimum. Runner approval does not admit realized TU delivery, decoded quality
 or a repair. Those remain separate dynamic evidence gates.
+
+### Round7 measured outcome
+
+[The admitted R7 outcome](AOM_QMAX.md) passes actual precision delivery and fails
+preservation/practicality. Independent outcome review SHA256
+f2a926f4dd58faa2e327836fdfb0261b21346a461dbc01a21121a05cd5c880ae
+accepts the full-window comparison, unchanged gates, observed costs and scope.
+The 11.071% background amplitude deficit remains a failure. There is no basis
+for source-budget redistribution of this arm or a claim of AV1 impossibility.
+
+Three worker decoder drafts were rejected before execution. The first placed
+input decoder options after `-i`, selecting output encoders. Later summaries
+claimed absent before/after equality and cadence checks; literal inspection
+caught these omissions plus incorrect framemd5 header syntax. Parent froze the
+drafts, required an audit, and implemented the reviewed validator bb2e0256.
+All336/all-plane identities then passed. A symlink spelling mismatch in the
+binder failed closed; path canonicalization retained exact content/size checks.
+
+A worker next-experiment audit initially missed the inter-path `!use_optimize_b`
+condition and proposed another capture for attribution. Parent required the
+branch correction and used existing flags7 evidence to isolate optimizer-only
+stage changes. Reviewer agrees that another mixed-path snapshot needs a concrete
+decision it would change. This correction avoids repeating unchanged encodes.

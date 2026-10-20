@@ -410,3 +410,22 @@ No new encode was needed to resolve this.
   that proposed study. A real encode also supplies actual packet cost. If delivered
   finer quantization still fails, choose the next discriminator from its observed
   stage/decision changes. A failure at q32 rejects that point, not all precision.
+
+## Round7 completed: actual precision delivered, preservation rejected
+
+Question: does demonstrably finer actual quantization preserve texture before
+attempting budget redistribution? The reviewed qmax8 arm delivers shirtq32 and
+backgroundq32/36, changes skips/transforms, and costs38.8692416Mbps/441.295s for
+336frames. Both private replays match installed output; all336 three-decoder and
+all240 score identities pass. Five-frame shirt HF−47.989%/ACFerror.141765 and
+background HF−11.071%/ACFerror.037634 fail unchanged gates. Broad GPU/quiet/detail
+means improve, but local quiet/texture regressions remain. No playback or repair.
+
+Existing flags7 isolate optimizer-only stage loss (shirtHF.544→.214) without a
+new encode. Mixed intra optimizer/dropout shares remain unknown; recapturing them
+would not yet select a different action. Accepted negative result, not failure
+of all finer precision or a codec limit. See AOM_QMAX.md and bound machine data.
+
+Auto decision: do not redistribute a non-preserving arm or repeat qmax blindly.
+Inventory a genuinely different texture-sensitive decision policy, source-first,
+against prior tested policies; reviewer independently constrains the next test.

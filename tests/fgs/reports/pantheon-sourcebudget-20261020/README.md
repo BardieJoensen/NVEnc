@@ -55,10 +55,13 @@ transforms reconstruct source texture closely before quantization. Initial FP
 quantization at actual shirt qindex65 removes most of that texture, and later
 optimizer/dropout removes more. Over half the shirt uses no-transform skips;
 its selected64-pixel transform also loses texture before quantization. These
-local mosaics are diagnostics, not repair candidates. The next real contrast
-will request substantially finer quantization, prove actual delivery and measure
-rate without constraining it first. A practical repair still requires the
-original ceiling. [Current hypotheses](HYPOTHESES.md) and [ledger](LEDGER.md)
+local mosaics are diagnostics, not repair candidates. The subsequent
+[actual-precision contrast](AOM_QMAX.md) delivers shirt qindex32 and background
+qindex32–36, but still fails texture preservation at38.86924Mbps (4.01686×source).
+It takes441.295s for336frames across both passes. Existing trace flags isolate
+substantial optimizer-only loss even at this finer precision. Broader quality
+improves but quiet/local regressions remain. No playback occurred; no candidate
+qualifies. [Current hypotheses](HYPOTHESES.md) and [ledger](LEDGER.md)
 record evidence, scope and unchanged acceptance criteria.
 
 Prior evidence: [causal and measured preservation report](../pantheon-rd-20261019/README.md).

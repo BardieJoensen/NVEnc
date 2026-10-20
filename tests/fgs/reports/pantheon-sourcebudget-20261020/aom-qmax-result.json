@@ -1,0 +1,470 @@
+{
+  "case": "e05-1440",
+  "tags": [
+    "aom-psnr-1x2",
+    "aom-qmax-qmax8-r3-1"
+  ],
+  "actual_mbps": [
+    9.639088,
+    38.8692416
+  ],
+  "source_mbps": 9.6765224,
+  "qmax_over_baseline_rate": 4.032460498337603,
+  "requested_kbps": [
+    11671,
+    11671
+  ],
+  "runtime": {
+    "baseline_both_passes_seconds": 391.65247607801575,
+    "qmax_both_passes_seconds": 441.29543893103255,
+    "relative_observed_wall_time": 1.1267525826726246,
+    "scope": "Measured336-frame two-pass times; host load uncontrolled, not full-episode throughput."
+  },
+  "precision_delivery": {
+    "shirt": {
+      "xywh": [
+        1200,
+        650,
+        200,
+        100
+      ],
+      "full_ROI_pixels": 20000,
+      "exercised_pixels": 13568,
+      "prior_exercised_pixels": 9376,
+      "previously_exercised_now_skipped": 3008,
+      "previously_skipped_now_exercised": 7200,
+      "status_pixels": {
+        "1": 13568,
+        "2": 1968,
+        "4": 4464
+      },
+      "exercised_qindex_pixel_counts": {
+        "32": 13568
+      },
+      "exercised_mean_qindex": 32.0,
+      "exercised_fraction_at_most48": 1.0,
+      "exercised_pixels_above32": 0,
+      "exercised_pixels_above48": 0,
+      "prior_exercised_qindex_pixel_counts": {
+        "65": 9376
+      },
+      "prior_exercised_mean_qindex": 65.0,
+      "prior_exercised_fraction_at_most48": 0.0,
+      "prior_exercised_pixels_above32": 9376,
+      "prior_exercised_pixels_above48": 9376,
+      "same_pixel_exercised_in_both": 6368,
+      "same_pixel_mean_qindex_change": -33.0,
+      "transform_pixel_counts": {
+        "8x8": 1360,
+        "16x16": 12208
+      },
+      "scope": "Exercised pixels only; skips have no actual quantization observation.",
+      "delivered": true
+    },
+    "background": {
+      "xywh": [
+        950,
+        50,
+        250,
+        180
+      ],
+      "full_ROI_pixels": 45000,
+      "exercised_pixels": 41840,
+      "prior_exercised_pixels": 32444,
+      "previously_exercised_now_skipped": 1928,
+      "previously_skipped_now_exercised": 11324,
+      "status_pixels": {
+        "1": 41840,
+        "2": 1224,
+        "4": 1936
+      },
+      "exercised_qindex_pixel_counts": {
+        "32": 4668,
+        "36": 37172
+      },
+      "exercised_mean_qindex": 35.553728489483746,
+      "exercised_fraction_at_most48": 1.0,
+      "exercised_pixels_above32": 37172,
+      "exercised_pixels_above48": 0,
+      "prior_exercised_qindex_pixel_counts": {
+        "69": 2848,
+        "73": 29596
+      },
+      "prior_exercised_mean_qindex": 72.64887190235483,
+      "prior_exercised_fraction_at_most48": 0.0,
+      "prior_exercised_pixels_above32": 32444,
+      "prior_exercised_pixels_above48": 32444,
+      "same_pixel_exercised_in_both": 30516,
+      "same_pixel_mean_qindex_change": -37.0,
+      "transform_pixel_counts": {
+        "4x4": 360,
+        "4x8": 112,
+        "8x4": 32,
+        "8x8": 30028,
+        "16x16": 11308
+      },
+      "scope": "Exercised pixels only; skips have no actual quantization observation.",
+      "delivered": true
+    }
+  },
+  "texture": {
+    "shirt": {
+      "source": {
+        "mean": 56.08208999633789,
+        "hf_sigma": 0.6193531235760741,
+        "acf1": -0.2277546852827072,
+        "acf2": -0.06953714489936828,
+        "acf3": 0.04813776984810829,
+        "acf4": -0.002938830014318228,
+        "acf8": -0.003220860939472914,
+        "temporal_hf_corr": 0.11855470202863216
+      },
+      "baseline_psnr": {
+        "mean": 56.11540069580078,
+        "hf_sigma": 0.09860370405699147,
+        "acf1": -0.11466104462742806,
+        "acf2": 0.0381684759631753,
+        "acf3": 0.017495841905474662,
+        "acf4": 0.025348803494125605,
+        "acf8": 0.02276767659932375,
+        "temporal_hf_corr": 0.1112724693492055,
+        "screen": {
+          "hf_relative_error": -0.8407956619518362,
+          "acf1_abs_error": 0.11309364065527915,
+          "source_hf_correlation": 0.08904289733618498,
+          "provisional_hf_acf_pass": false
+        }
+      },
+      "qmax8": {
+        "mean": 56.095254516601564,
+        "hf_sigma": 0.322130923718725,
+        "acf1": -0.08598963753320277,
+        "acf2": -0.06663493663072587,
+        "acf3": 0.030447398126125336,
+        "acf4": 0.022539922688156366,
+        "acf8": 0.009655381366610528,
+        "temporal_hf_corr": 0.1338380329310894,
+        "screen": {
+          "hf_relative_error": -0.47989133911398096,
+          "acf1_abs_error": 0.14176504774950444,
+          "source_hf_correlation": 0.4705230951309204,
+          "provisional_hf_acf_pass": false
+        }
+      }
+    },
+    "background": {
+      "source": {
+        "mean": 107.2617691040039,
+        "hf_sigma": 1.778494865408037,
+        "acf1": -0.1923621267080307,
+        "acf2": -0.08033106252551078,
+        "acf3": 0.0472561776638031,
+        "acf4": -0.006290369434282184,
+        "acf8": -0.0001615575863979757,
+        "temporal_hf_corr": 0.017108448687940835
+      },
+      "baseline_psnr": {
+        "mean": 107.2641098022461,
+        "hf_sigma": 0.9093565982590771,
+        "acf1": -0.08619581386446953,
+        "acf2": -0.046843457221984866,
+        "acf3": 0.0226345494389534,
+        "acf4": 0.00609224340878427,
+        "acf8": 0.004882208775961771,
+        "temporal_hf_corr": 0.010129546467214822,
+        "screen": {
+          "hf_relative_error": -0.48869315512449063,
+          "acf1_abs_error": 0.10616631284356118,
+          "source_hf_correlation": 0.5008854925632477,
+          "provisional_hf_acf_pass": false
+        }
+      },
+      "qmax8": {
+        "mean": 107.27320404052735,
+        "hf_sigma": 1.5815894182201053,
+        "acf1": -0.1547282412648201,
+        "acf2": -0.092415252327919,
+        "acf3": 0.043218716979026794,
+        "acf4": 0.0016085550363641233,
+        "acf8": 0.00012806744780391455,
+        "temporal_hf_corr": 0.013429329451173543,
+        "screen": {
+          "hf_relative_error": -0.11071465598117203,
+          "acf1_abs_error": 0.03763388544321061,
+          "source_hf_correlation": 0.8775364637374878,
+          "provisional_hf_acf_pass": false
+        }
+      }
+    }
+  },
+  "metrics": {
+    "baseline_psnr": {
+      "actual_mbps": 9.639088,
+      "vmaf": 94.0,
+      "vmaf_neg": 92.5,
+      "vmaf_p1_excluding_frame0": 82.23088793999999,
+      "ssimu2": 54.81,
+      "ssimu2_p5": 26.85,
+      "butter_max_p95": 7.76,
+      "psnr_y": 40.7,
+      "ssim": 0.9903,
+      "cambi_fr_mean": 0.381026,
+      "cambi_fr_max": 2.309536
+    },
+    "qmax8": {
+      "actual_mbps": 38.8692416,
+      "vmaf": 98.36,
+      "vmaf_neg": 97.45,
+      "vmaf_p1_excluding_frame0": 93.55029212000001,
+      "ssimu2": 84.28,
+      "ssimu2_p5": 82.07,
+      "butter_max_p95": 3.03,
+      "psnr_y": 47.41,
+      "ssim": 0.9989,
+      "cambi_fr_mean": 0.000391,
+      "cambi_fr_max": 0.035044
+    }
+  },
+  "controls": {
+    "all": {
+      "tiles": 12870,
+      "baseline_psnr": {
+        "mse_mean": 6.4634005459872155,
+        "hf_abs_error": 0.7014134415653479,
+        "acf1_abs_error": 0.16887817164865512,
+        "mse_p95": 21.44884338378906,
+        "hf_signed_delta_p95": -0.14656425426767952
+      },
+      "qmax8": {
+        "mse_mean": 1.2232506527489437,
+        "hf_abs_error": 0.19662633934252,
+        "acf1_abs_error": 0.08464017053140686,
+        "mse_p95": 1.95458984375,
+        "hf_signed_delta_p95": -0.03542675724072077
+      },
+      "mse_worse_count": 1,
+      "hf_error_worse_count": 232
+    },
+    "quiet": {
+      "tiles": 51,
+      "baseline_psnr": {
+        "mse_mean": 0.22990028530943626,
+        "hf_abs_error": 0.09037762055514423,
+        "acf1_abs_error": 0.14537502371858108,
+        "mse_p95": 0.404632568359375,
+        "hf_signed_delta_p95": -0.041896340344094896
+      },
+      "qmax8": {
+        "mse_mean": 0.14050771675857843,
+        "hf_abs_error": 0.07831675498652017,
+        "acf1_abs_error": 0.12294868368442304,
+        "mse_p95": 0.20166015625,
+        "hf_signed_delta_p95": -0.03680244650002929
+      },
+      "mse_worse_count": 1,
+      "hf_error_worse_count": 9
+    },
+    "edge": {
+      "tiles": 2198,
+      "baseline_psnr": {
+        "mse_mean": 6.440625899699301,
+        "hf_abs_error": 0.4578339645498738,
+        "acf1_abs_error": 0.1316964077909186,
+        "mse_p95": 15.039181518554688,
+        "hf_signed_delta_p95": -0.06504681382419975
+      },
+      "qmax8": {
+        "mse_mean": 1.276801070264516,
+        "hf_abs_error": 0.11755371138025686,
+        "acf1_abs_error": 0.040040406024010655,
+        "mse_p95": 1.98665771484375,
+        "hf_signed_delta_p95": -0.010475498142303417
+      },
+      "mse_worse_count": 0,
+      "hf_error_worse_count": 78
+    },
+    "flat_texture": {
+      "tiles": 4285,
+      "baseline_psnr": {
+        "mse_mean": 3.3662832253455,
+        "hf_abs_error": 0.6589537048245182,
+        "acf1_abs_error": 0.1746078422832758,
+        "mse_p95": 8.51997070312499,
+        "hf_signed_delta_p95": -0.20973539671034475
+      },
+      "qmax8": {
+        "mse_mean": 1.0626431085682249,
+        "hf_abs_error": 0.24398959841172752,
+        "acf1_abs_error": 0.1313620481522261,
+        "mse_p95": 1.7842529296874992,
+        "hf_signed_delta_p95": -0.09594565423462031
+      },
+      "mse_worse_count": 0,
+      "hf_error_worse_count": 65
+    },
+    "other": {
+      "tiles": 6336,
+      "baseline_psnr": {
+        "mse_mean": 8.616038630707095,
+        "hf_abs_error": 0.8195464102026565,
+        "acf1_abs_error": 0.17808910836388997,
+        "mse_p95": 27.503021240234375,
+        "hf_signed_delta_p95": -0.18814573266002538
+      },
+      "qmax8": {
+        "mse_mean": 1.322006871001889,
+        "hf_abs_error": 0.19297795865307177,
+        "acf1_abs_error": 0.06821207885280767,
+        "mse_p95": 1.9863128662109375,
+        "hf_signed_delta_p95": -0.05036212220472691
+      },
+      "mse_worse_count": 0,
+      "hf_error_worse_count": 80
+    }
+  },
+  "quiet_signed_hf_tails": {
+    "baseline_psnr": {
+      "count": 51,
+      "min": -0.143606386763631,
+      "p95": -0.041896340344094896,
+      "max": 0.01801148467636451,
+      "positive_count": 1
+    },
+    "qmax8": {
+      "count": 51,
+      "min": -0.12949564113387876,
+      "p95": -0.03680244650002929,
+      "max": 0.02766989466889338,
+      "positive_count": 1
+    }
+  },
+  "face": {
+    "baseline_psnr": {
+      "mse": 5.874192447916666,
+      "edge_gradient_mae": 4.012884500623881,
+      "edge_gradient_ratio": 0.8938849847136322
+    },
+    "qmax8": {
+      "mse": 1.4264283854166666,
+      "edge_gradient_mae": 1.5440243042369663,
+      "edge_gradient_ratio": 0.976122365852174
+    }
+  },
+  "provenance": {
+    "baseline_psnr": {
+      "run": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/command.json",
+        "sha256": "fc1fbfc56dd660ce46e99cc2ccf98ee8633dd09aff7976031dd8a1c036265bbb"
+      },
+      "assessment": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/assessment.json",
+        "sha256": "21c8a279b40ecc3d16022d9a955fb8d06ecba454566165db9b4533519456644a"
+      },
+      "controls": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/controls.json",
+        "sha256": "8642e2eefdc7dfd00835ba5fb2d602416dfd4e1ba3446d5dbd6603e2dab912ef"
+      },
+      "decoder_validation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/decoder-validation.json",
+        "sha256": "f2238e801f6fdd72f7b425870669fe4c1ee9bf789d15332e328552bc7fa09e85"
+      },
+      "texture": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-psnr-1x2-texture.json",
+        "sha256": "b86486fcd73af9ef250e3d137bf4f00f0c8a26b9cf0a8b27c155e42547e609c3"
+      },
+      "metrics": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-psnr-1x2-result.json",
+        "sha256": "bd11641da33771b64acde26519ac969a10c3406ca7a00d52dd3c35568a91093f"
+      },
+      "decode_identity": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-psnr-1x2-decoded.decode-identity.json",
+        "sha256": "0d843237ab9485d4c9f3130ed2be65e65316838cbeb2ad1527d9178b671a344f"
+      },
+      "score_identity": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-psnr-1x2-score-identity.json",
+        "sha256": "e76cdcafe7dc9a8856ba0ab922a369a09d479f2e769be21c010b1c15923a4baf"
+      },
+      "packet_window": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/runs/e05-1440/aom-psnr-1x2/packet-window.json",
+        "sha256": "e80201ce7728379b95f38dc574767dd3f3ba1a591b346c9e2b59d4bf51840b8a"
+      },
+      "metrics-cuda": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/metrics-cuda-aom-psnr-1x2.json",
+        "sha256": "3993b954fdce46d2b30437ac53f84dea589f2dd30b98f5eaffe89eb19934292c"
+      },
+      "ssimu2": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/ssimu2-aom-psnr-1x2.json",
+        "sha256": "df32c560d437dc28c771414f963903edcb393046c65a4376c0bc926abfbee272"
+      },
+      "butter": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/butter-aom-psnr-1x2.json",
+        "sha256": "948c99446261ee1a02e734c3451ed5ed716d599c809df92e409869e7f83fe70a"
+      }
+    },
+    "qmax8": {
+      "run": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-qmax-r7/runs/e05-1440/qmax-qmax8-r3-1/command.json",
+        "sha256": "7df965d84e0d4ecedb7c94df6743a4cedaf113948f50afa4ae34eb59321e12a8"
+      },
+      "assessment": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-qmax-r7/runs/e05-1440/qmax-qmax8-r3-1/assessment.json",
+        "sha256": "2937614037410b7c51421dd0a9a4b6efc39073cba13b373024bb10c54d4dc6e7"
+      },
+      "controls": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-qmax-r7/runs/e05-1440/qmax-qmax8-r3-1/controls.json",
+        "sha256": "f474f94ebddb8b0f1513afb7374d8b1cb00c4e343139f7263b5a715db2425f78"
+      },
+      "decoder_validation": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-qmax-r7/runs/e05-1440/qmax-qmax8-r3-1/decoder-validation/decoder-validation.json",
+        "sha256": "48d234db3bf5912bb175f1c62103a3035c10d66311a51f3f5d93b4fac0dd3dc0"
+      },
+      "texture": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-qmax-qmax8-r3-1-texture.json",
+        "sha256": "fdb0de95d374b741214af44e0cbf0e0fb403800c9ef4d655b49a7a2baf4b0946"
+      },
+      "metrics": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-qmax-qmax8-r3-1-result.json",
+        "sha256": "2ebe3b9fd56252db48598add963dbcf82603e7407ef5ad6b91aa1acc9a6382c1"
+      },
+      "decode_identity": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-qmax-qmax8-r3-1-decoded.decode-identity.json",
+        "sha256": "1620c37e76457a917d078899d65cdc92a0f574a7f60e16442ed5297aedeeb8d4"
+      },
+      "score_identity": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/aom-qmax-qmax8-r3-1-score-identity.json",
+        "sha256": "2d172fa789d7802bc7d6183c8edefdeb1fa3915a9dece8197909db02febb3f8d"
+      },
+      "packet_window": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-qmax-r7/runs/e05-1440/qmax-qmax8-r3-1/score-packet-window.json",
+        "sha256": "73b5ab8ccba684fb4fa4546206b9f1383192ed2eb03c595f191511474b84c1ac"
+      },
+      "metrics-cuda": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/metrics-cuda-aom-qmax-qmax8-r3-1.json",
+        "sha256": "05e823e1230fdf18bdc3cf1df669232d0cffbe627392698787ebfc34f60e27c3"
+      },
+      "ssimu2": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/ssimu2-aom-qmax-qmax8-r3-1.json",
+        "sha256": "87e5d575fc4b16c38dd539c33f7a0acc6e732ca98fa9981d285e036055811554"
+      },
+      "butter": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/scores/e05-1440/butter-aom-qmax-qmax8-r3-1.json",
+        "sha256": "a43cf2540e964a09e897165ed82fc9a41c06513f47a19ee0aa2fc2675492ea6d"
+      }
+    },
+    "admission": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/qmax-observation/admission-trace-1/validation.json",
+      "sha256": "7c4338a84f865f695fa3dfa3a0874edaaab08cefed1d963db468c2baa3104b49"
+    },
+    "delivery_summary": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/aom-qmax-delivery.json",
+      "sha256": "8e8c1f06d6899152d53254648adc0b5151e34dff5a22d9a632008e9b30fe8eae"
+    }
+  },
+  "script": {
+    "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/summarize_aom_qmax.py",
+    "sha256": "2b48db73e1c18a53d11fca2f50c68f2d6a47fbb4ae86613368e8903a7a2331a2"
+  },
+  "playback_observed": false,
+  "practical_rate_eligible": false,
+  "scope": "Unconstrained end-to-end contrast; changed quantization and coding decisions, not isolated quantization or matched-rate feasibility."
+}

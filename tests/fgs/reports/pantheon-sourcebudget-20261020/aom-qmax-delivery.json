@@ -1,0 +1,175 @@
+{
+  "question": "Was finer actual quantization delivered, and at what real packet/time cost?",
+  "scope": "End-to-end known-fixture diagnostic; no fixed-decision causality or quality acceptance.",
+  "script": {
+    "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/summarize_aom_qmax_delivery.py",
+    "sha256": "70c2978fe0f1bf912f6bd1084ce6301be4e42a1a5ab6dd9a7733ee5a1f5318ed",
+    "size": 2958
+  },
+  "provenance": {
+    "run": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-qmax-r7/runs/e05-1440/qmax-qmax8-r3-1/command.json",
+      "sha256": "7df965d84e0d4ecedb7c94df6743a4cedaf113948f50afa4ae34eb59321e12a8",
+      "size": 188252
+    },
+    "admission": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/qmax-observation/admission-trace-1/validation.json",
+      "sha256": "7c4338a84f865f695fa3dfa3a0874edaaab08cefed1d963db468c2baa3104b49",
+      "size": 6568
+    },
+    "binding": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/qmax-observation/binding-1/binding.json",
+      "sha256": "af3a71f99ad3d1a2a29dae0e7f84f103b47795cc50d91c1fe9b209cac7f0bb6c",
+      "size": 308394
+    },
+    "trace": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/qmax-observation/runs/trace-1/command.json",
+      "sha256": "662caa1b19f4eb68f41556c9b9b6216ee0b4db4deeaff6839963977d6b643732",
+      "size": 9277
+    },
+    "off": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/qmax-observation/runs/off-1/command.json",
+      "sha256": "7c51e700d4b09662ed73afc8c972ceb16a368186eb8649cc6a6d1b585507bb08",
+      "size": 8541
+    },
+    "decoder_validation": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/aom-qmax-r7/runs/e05-1440/qmax-qmax8-r3-1/decoder-validation/decoder-validation.json",
+      "sha256": "48d234db3bf5912bb175f1c62103a3035c10d66311a51f3f5d93b4fac0dd3dc0",
+      "size": 96173
+    }
+  },
+  "actual_scored_mbps": 38.8692416,
+  "source_scored_mbps": 9.6765224,
+  "relative_source_rate": 4.016860602730585,
+  "full_window_rates": {
+    "ivf_mbps": 41.23278742857143,
+    "mkv_mbps": 41.23240342857142,
+    "scored_ivf_mbps": 38.8696256,
+    "scored_mkv_mbps": 38.8692416
+  },
+  "two_pass_wall_seconds": 441.29543893103255,
+  "pass_seconds": {
+    "pass1": 15.73943168198457,
+    "pass2": 425.556007249048
+  },
+  "private_off_pass2_seconds": 389.3710840000422,
+  "private_trace_pass2_seconds": 395.5344823480118,
+  "private_runtime_scope": "Instrumentation controls only; not a production speed comparison.",
+  "coded_header_count": 363,
+  "coded_base_qindex_minmax": [
+    16,
+    32
+  ],
+  "coded_base_qindex_counts": {
+    "16": 1,
+    "19": 1,
+    "23": 1,
+    "25": 1,
+    "26": 5,
+    "27": 1,
+    "28": 4,
+    "29": 4,
+    "30": 6,
+    "31": 13,
+    "32": 326
+  },
+  "selected_generation": 236,
+  "attempts": [
+    {
+      "generation": 236,
+      "records": 20381
+    }
+  ],
+  "precision_delivery": {
+    "shirt": {
+      "xywh": [
+        1200,
+        650,
+        200,
+        100
+      ],
+      "full_ROI_pixels": 20000,
+      "exercised_pixels": 13568,
+      "prior_exercised_pixels": 9376,
+      "previously_exercised_now_skipped": 3008,
+      "previously_skipped_now_exercised": 7200,
+      "status_pixels": {
+        "1": 13568,
+        "2": 1968,
+        "4": 4464
+      },
+      "exercised_qindex_pixel_counts": {
+        "32": 13568
+      },
+      "exercised_mean_qindex": 32.0,
+      "exercised_fraction_at_most48": 1.0,
+      "exercised_pixels_above32": 0,
+      "exercised_pixels_above48": 0,
+      "prior_exercised_qindex_pixel_counts": {
+        "65": 9376
+      },
+      "prior_exercised_mean_qindex": 65.0,
+      "prior_exercised_fraction_at_most48": 0.0,
+      "prior_exercised_pixels_above32": 9376,
+      "prior_exercised_pixels_above48": 9376,
+      "same_pixel_exercised_in_both": 6368,
+      "same_pixel_mean_qindex_change": -33.0,
+      "transform_pixel_counts": {
+        "8x8": 1360,
+        "16x16": 12208
+      },
+      "scope": "Exercised pixels only; skips have no actual quantization observation.",
+      "delivered": true
+    },
+    "background": {
+      "xywh": [
+        950,
+        50,
+        250,
+        180
+      ],
+      "full_ROI_pixels": 45000,
+      "exercised_pixels": 41840,
+      "prior_exercised_pixels": 32444,
+      "previously_exercised_now_skipped": 1928,
+      "previously_skipped_now_exercised": 11324,
+      "status_pixels": {
+        "1": 41840,
+        "2": 1224,
+        "4": 1936
+      },
+      "exercised_qindex_pixel_counts": {
+        "32": 4668,
+        "36": 37172
+      },
+      "exercised_mean_qindex": 35.553728489483746,
+      "exercised_fraction_at_most48": 1.0,
+      "exercised_pixels_above32": 37172,
+      "exercised_pixels_above48": 0,
+      "prior_exercised_qindex_pixel_counts": {
+        "69": 2848,
+        "73": 29596
+      },
+      "prior_exercised_mean_qindex": 72.64887190235483,
+      "prior_exercised_fraction_at_most48": 0.0,
+      "prior_exercised_pixels_above32": 32444,
+      "prior_exercised_pixels_above48": 32444,
+      "same_pixel_exercised_in_both": 30516,
+      "same_pixel_mean_qindex_change": -37.0,
+      "transform_pixel_counts": {
+        "4x4": 360,
+        "4x8": 112,
+        "8x4": 32,
+        "8x8": 30028,
+        "16x16": 11308
+      },
+      "scope": "Exercised pixels only; skips have no actual quantization observation.",
+      "delivered": true
+    }
+  },
+  "precision_delivery_pass": true,
+  "all336_three_decoder_all_planes_exact": true,
+  "practical_rate_eligible": false,
+  "quality_assessed_here": false,
+  "playback_observed": false
+}

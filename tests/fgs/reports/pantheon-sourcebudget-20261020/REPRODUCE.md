@@ -366,3 +366,32 @@ mapping, not native code values or full-color display. All three still panels
 were inspected; no playback observation is claimed. The first attempted
 validation command used invalid `taskset -c8-11`; taskset rejected it before
 Python ran. The corrected `-c 8-11` invocation above completed successfully.
+
+## R7 actual precision and full-window diagnosis
+
+Use the same ROOT/PYTHON/REPORT paths above. Commands, versions, source/build
+hashes, timestamps and failures are bound by the scripts and their receipts.
+Order matters; GPU decoding/scoring is serialized. Each output refuses overwrite.
+The existing R6 private build is reused without modification.
+
+```sh
+ROOT="$PANTHEON_SOURCEBUDGET_ROOT"
+"$PYTHON" "$REPORT/encode_aom_qmax.py" e05-1440 qmax8-r3-1
+python3 "$REPORT/replay_aom_qmax_tu.py" off off-1 qmax-qmax8-r3-1
+python3 "$REPORT/replay_aom_qmax_tu.py" trace trace-1 qmax-qmax8-r3-1 --control-tag off-1
+python3 "$REPORT/parse_aom_headers.py" "$ROOT/parent/qmax-observation/runs/off-1/command.json" "$ROOT/parent/qmax-observation/parser-off-1"
+python3 "$REPORT/validate_aom_qmax_decoders.py"
+python3 "$REPORT/bind_aom_qmax_tu.py" "$ROOT/parent/qmax-observation/runs/off-1/command.json" "$ROOT/parent/qmax-observation/parser-off-1/parsed-events.json" "$ROOT/worker/aom-qmax-r7/runs/e05-1440/qmax-qmax8-r3-1/decoder-validation/decoder-validation.json" "$ROOT/parent/qmax-observation/binding-1"
+"$PYTHON" "$REPORT/validate_aom_qmax_tu.py" "$ROOT/parent/qmax-observation/runs/trace-1/command.json" "$ROOT/parent/qmax-observation/binding-1/binding.json" "$ROOT/parent/qmax-observation/admission-trace-1"
+"$PYTHON" "$REPORT/score_aom_qmax.py" qmax-qmax8-r3-1 admission-trace-1
+"$PYTHON" "$REPORT/analyze_aom_qmax_tu.py" "$ROOT/parent/qmax-observation/admission-trace-1/validation.json" "$ROOT/parent/qmax-observation/analysis-trace-1.json"
+"$PYTHON" "$REPORT/plot_aom_qmax_tu.py" "$ROOT/parent/qmax-observation/admission-trace-1/validation.json" "$ROOT/parent/qmax-observation/analysis-trace-1.json" "$ROOT/parent/qmax-observation/plots-trace-1"
+python3 "$REPORT/summarize_aom_qmax_delivery.py"
+"$PYTHON" "$REPORT/summarize_aom_qmax.py"
+"$PYTHON" "$REPORT/analyze_aom_coefficient_paths.py" "$ROOT/parent/qmax-observation/admission-trace-1/validation.json" "$ROOT/parent/qmax-observation/coefficient-paths.json"
+```
+
+Parent analysis/scoring used nice10/CPU8–11; encodes use the runner's bounded
+CPU0–7/four-thread policy. `aom-qmax-result.json` is an exact copy of
+`parent/qmax-observation/quality-summary-v2.json`; the accompanying PNG plots all240
+HF/ACF/correlation/temporal values. Do not rerun unchanged admitted checks.
