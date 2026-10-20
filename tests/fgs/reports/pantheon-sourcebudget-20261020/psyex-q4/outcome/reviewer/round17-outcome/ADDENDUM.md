@@ -1,0 +1,8 @@
+# R17 outcome interpretation and provenance addendum
+
+This addendum narrows two statements in `REVIEW.md` while preserving that review and every execution receipt.
+
+1. The raw reconstruction is an observed prequantization comparator under the fixed predictor/partition/transform path. Its HF amplitude is **not a mathematical ceiling** on all finer scalar quantizers: quantization, clipping and nonlinear descriptor behavior can add or redistribute high-frequency energy. The evidence establishes that tested q4 approaches the observed raw descriptor while a large deficit remains on the 64×64 reduced-support stratum. It makes further fixed-q points low-information relative to a real decision-changing policy; it does not prove that no finer fixed-q point could cross the 90% amplitude line.
+2. The recommended local 64→four-32 diagnostic remains a useful conditional localization test, especially if a real policy retains the problematic 64×64 population. The parent selected a real spatial cap first because R15 already demonstrated preservation with changed encoder decisions, and the next uncertainty is delivered selected-region q, adaptive decisions and actual bit cost. That ordering is methodologically sound.
+
+The initially failed reviewer source was reconstructed exactly from the two-line v1→v2 correction and preserved as `derive-v1-failed.py`, SHA256 `48de104a91a2a707277bbd1333269690f02cf2db5cb93c1a812946e348f204c7`. This exactly matches the script identity and size in failed `derive-execution.json`; it is therefore the actual failed source, not a best-effort surrogate. The successful source remains `derive.py` SHA256 `e54a7befec2a0b313d5de19a6a9ca39cd54746e678599d541a3ad6993eb7519d`.

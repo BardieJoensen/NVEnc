@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+"""R17 fixed-decision native FP q4 diagnostic; preparation for reviewed execution only."""
+from __future__ import annotations
+if not __debug__: raise SystemExit('optimized Python is rejected')
+import argparse,datetime as dt,hashlib,importlib.util,json,sys,time
+from pathlib import Path
+import numpy as np
+ROOT=Path('/tmp/downloads/codex-work/pantheon-sourcebudget-20261020')
+CONTRACT=Path('/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/ROUND17_FIXED_Q4_CONTRACT.md')
+CONTRACT_SHA='c6ce21643dde4213ade5cb666771dcf3259b6934c620d61d57e59aae0a9af619'
+R12=ROOT/'parent/psyex-scalar-r12'; R12_SHA='87eb15f8a7c082bb875f91edb790ed66a8e592db9d64bc5f554943040f705ee2'; LIB_SHA='07fe2554623523d8e6dfe5218d94a89cdb2437bb2221123a86678090af6f2228'; BUILD_SHA='4b56e9cbd1450f68ec42d02a70d6db2e082db065c6314f34ef17443ef6cb7df5'; NATIVE_SHA='8f1cf5b69700e1a1b2d26d8bf29a0cb87cfe2f2e0b2351881be20106731934fc'
+PARSER=ROOT/'parent/psyex-real-r15/parsers.py'; PARSER_SHA='45f11c246037e1a58a2762235a62db9a0bcb71e85fe992cfcc35897fa24983e3'
+PRODUCER_SHA='fd190fae6a20aa3cd2efd06e6d6fc9c32471d602272a214b7168667aab511cbb'
+def sha(p):
+ h=hashlib.sha256();
+ with Path(p).open('rb') as f:
+  for b in iter(lambda:f.read(1<<20),b''):h.update(b)
+ return h.hexdigest()
+def ident(p):
+ p=Path(p).resolve();return {'path':str(p),'sha256':sha(p),'size':p.stat().st_size}
+def exact(row):
+ d=ident(row['path']);assert d==row,d;return Path(row['path'])
+def mod(p,name,h):
+ assert ident(p)['sha256']==h,(p,ident(p),h);sp=importlib.util.spec_from_file_location(name,p);m=importlib.util.module_from_spec(sp);sp.loader.exec_module(m);return m
+def tables(native,q,delta,ptrfn):
+ out=np.zeros((3,8),dtype='<i2'); assert native.lib.rp_fp_tables(q,delta, ptrfn(out,'<i2'))==0
+ return out
+def main():
+ ap=argparse.ArgumentParser();ap.add_argument('admission',type=Path);ap.add_argument('admission_sha');ap.add_argument('out',type=Path);a=ap.parse_args();assert not a.out.exists();a.out.mkdir(parents=True)
+ rec={'status':'prepared','argv':sys.argv,'script':ident(__file__),'started_utc':dt.datetime.now(dt.timezone.utc).isoformat()};rp=a.out/'receipt.json';rp.write_text(json.dumps(rec,indent=2)+'\n');start=time.monotonic()
+ try:
+  assert ident(CONTRACT)['sha256']==CONTRACT_SHA
+  adp=a.admission;assert ident(adp)['sha256']==a.admission_sha;ad=json.loads(adp.read_text());assert ad.get('status')=='admitted' and ad.get('case')=='e05-1440'
+  assert ad.get('script',{}).get('sha256')==PRODUCER_SHA and sha(ad['script']['path'])==PRODUCER_SHA
+  for key in ('actual_committed_owner','all336_exact','all_traced_roi_owners_source_predictor_preloop_exact','all_traced_positive_units_dq_iqm_exact_with_all_traced_eob_q_exact'):assert ad[key] is True
+  for v in ad.values():
+   if isinstance(v,dict) and {'path','sha256','size'}<=v.keys():exact(v)
+  binding=json.loads(exact(ad['artifacts']['syntax_binding']).read_text());coded=int(binding['target_coded_event']['coded_ordinal']);assert coded>=0
+  p=mod(PARSER,'r17_parser',PARSER_SHA);tokens,terminal=p.parse_coeff(exact(ad['trace']),coded);assert terminal==ad['terminal'] and len(tokens)==int(ad['tokens'])
+  joined=json.loads(exact(ad['token_manifest']).read_text());jmap={int(x['token']):x for x in joined};assert len(jmap)==len(joined)==len(tokens) and set(jmap)==set(tokens)
+  r12=mod(R12/'experiment.py','r12_native',R12_SHA);native=r12.Native(exact(R12/'build-2/native.so'));assert ident(R12/'build-2/native.so')['sha256']==LIB_SHA and ident(R12/'build-2/receipt.json')['sha256']==BUILD_SHA
+  invoked={k:t for k,t in tokens.items() if t['stages']};assert len(invoked)>0
+  base={};q4={};raw_inv={};co=po=0;arrays={}
+  for key,t in tokens.items():
+   z=t['begin'];j=jmap[key];assert j['begin']==z
+   if not t['stages']:
+    assert t.get('info') is None and t['end']['eob']==0;continue
+   info=t.get('info');assert isinstance(info,dict) and isinstance(info.get('actual_qindex'),int) and info['depth']==10
+   n=int(z['n']);assert n==len(t['raw'])==len(t['scan'])==len(t['iscan'])<=1024
+   assert z['w']*z['h']<=4096 and t['predictor'].shape==(z['h'],z['w']) and t['raw_inverse'].shape==(z['h'],z['w'])
+   delta=int(info.get('seg_delta',0)); generated=tables(native,int(info['actual_qindex']),delta,r12.ptr);assert np.array_equal(generated,t['tables'][[0,1,6]])
+   b=native.paired(t,0,t['tables']);cap=t['stages'][0];assert cap['stage']=='scalar_fp' and b['eob']==cap['eob']
+   for f in ('q','dq','inverse'):assert np.array_equal(b[f],cap[f]),(key,'baseline',f)
+   rc=native.inverse(t,t['raw'],t['raw_eob'],0);rr=native.inverse(t,t['raw'],t['raw_eob'],1);assert np.array_equal(rc,rr) and np.array_equal(rr,t['raw_inverse']),(key,'raw_inverse')
+   table=t['tables'].copy();table[[0,1,6]]=tables(native,4,delta,r12.ptr);assert np.array_equal(table[[2,3,4,5]],t['tables'][[2,3,4,5]])
+   q=native.paired(t,0,table);base[key]=b;q4[key]=q;raw_inv[key]=rr;co+=n;po+=z['w']*z['h']
+  assert co>0 and po>0
+  np.savez_compressed(a.out/'native-arrays.npz',**{f'baseline_{k}':np.concatenate([v[k] for v in base.values()]) for k in ('q','dq')},**{f'q4_{k}':np.concatenate([v[k] for v in q4.values()]) for k in ('q','dq')})
+  rec.update(status='complete',token_count=len(tokens),invoked=len(invoked),uninvoked=len(tokens)-len(invoked),native_flags=int(native.flags),arrays=ident(a.out/'native-arrays.npz'),scope='fixed-decision invoked-token q4 only; no rate or deployment claim')
+  (a.out/'result.json').write_text(json.dumps(rec,indent=2)+'\n')
+ except BaseException as e:
+  rec.update(status='failed',error=repr(e));raise
+ finally:
+  rec['ended_utc']=dt.datetime.now(dt.timezone.utc).isoformat();rec['seconds']=time.monotonic()-start;rp.write_text(json.dumps(rec,indent=2)+'\n')
+if __name__=='__main__':main()

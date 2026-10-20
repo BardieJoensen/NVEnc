@@ -1,0 +1,44 @@
+{
+  "status": "complete",
+  "argv": [
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/render.py",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/stills-1"
+  ],
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/render.py",
+    "size": 2426,
+    "sha256": "384d1a86b0ae2d27e922237d9456bd703caeda3b147500a7fa7605907a72b32f"
+  },
+  "result": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/result.json",
+    "size": 392333,
+    "sha256": "a04eb728936d62662afb4ab6dbc554db394c25f1ac433c563beff59278b3abdb"
+  },
+  "mosaics": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/mosaics.npz",
+    "sha256": "aba4ec13038906060b0ec59c1bee1ed342835e2a60caf472200a030b950af50c",
+    "size": 3984462
+  },
+  "panels": {
+    "shirt": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/stills-1/shirt-4panel.png",
+      "size": 18789,
+      "sha256": "2e0b32bd406413f79bf7918a2d0e739751ff8ac0ff9b9ca804ed6c164605f747"
+    },
+    "background": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/stills-1/background-4panel.png",
+      "size": 53272,
+      "sha256": "63d2a7923c458d4e72527071a3b4128f16308525893ab9a21512046a4dac159b"
+    },
+    "face": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/stills-1/face-4panel.png",
+      "size": 294308,
+      "sha256": "1b1e2ed53ca34c64ec7f4c10baf8794a386a347ee5ae3415801541b205423ffc"
+    }
+  },
+  "seconds": 0.3899084440199658,
+  "transform": "already8bit-equivalent float -> round/clip uint8 once",
+  "resized": false,
+  "enhancement": "none",
+  "playback": false
+}

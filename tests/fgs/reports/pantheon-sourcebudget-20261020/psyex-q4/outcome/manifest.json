@@ -1,0 +1,749 @@
+{
+  "status": "independently_reviewed_single_frame_negative",
+  "scope": "Fixed-choice native q4; no legal encode, packet rate or playback claim.",
+  "files": {
+    "parent/psyex-q4-r17/README.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/README.md",
+        "size": 2364,
+        "sha256": "e67609e1a7106b5f5599036083671a70fd1b93b515258256a43fb600896914d1"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/README.md",
+        "size": 2364,
+        "sha256": "e67609e1a7106b5f5599036083671a70fd1b93b515258256a43fb600896914d1"
+      }
+    },
+    "parent/psyex-q4-r17/experiment-execution.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/experiment-execution.json",
+        "size": 2653,
+        "sha256": "3efeacef74c8d95ca10816da6bea4c2567d207131a31a42e450afa26da263e93"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/experiment-execution.json",
+        "size": 2653,
+        "sha256": "3efeacef74c8d95ca10816da6bea4c2567d207131a31a42e450afa26da263e93"
+      }
+    },
+    "parent/psyex-q4-r17/experiment-execution.log": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/experiment-execution.log",
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/experiment-execution.log",
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "parent/psyex-q4-r17/experiment.py": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/experiment.py",
+        "size": 18879,
+        "sha256": "cb0e9a59adfde606ec489095ba71874bf476f5775e5d4223a6cb477fb44f19a6"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/experiment.py",
+        "size": 18879,
+        "sha256": "cb0e9a59adfde606ec489095ba71874bf476f5775e5d4223a6cb477fb44f19a6"
+      }
+    },
+    "parent/psyex-q4-r17/freeze_outcome.py": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/freeze_outcome.py",
+        "size": 4338,
+        "sha256": "a1bd337ec963581b8599fbc01350cdb41cbc76358e3a0caabf051c6491d7d62e"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/freeze_outcome.py",
+        "size": 4338,
+        "sha256": "a1bd337ec963581b8599fbc01350cdb41cbc76358e3a0caabf051c6491d7d62e"
+      }
+    },
+    "parent/psyex-q4-r17/preflight-1/receipt.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/preflight-1/receipt.json",
+        "size": 268108,
+        "sha256": "9d6fad834fd3de0e9caeebc4786dd7247977b50f6b641cfce68c85e1f18807fb"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/preflight-1/receipt.json",
+        "size": 268108,
+        "sha256": "9d6fad834fd3de0e9caeebc4786dd7247977b50f6b641cfce68c85e1f18807fb"
+      }
+    },
+    "parent/psyex-q4-r17/preflight-execution.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/preflight-execution.json",
+        "size": 2674,
+        "sha256": "64b92b5cea8593310ef9c9c83dd3adbdd1168b31987e6caf999c73bc6887c427"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/preflight-execution.json",
+        "size": 2674,
+        "sha256": "64b92b5cea8593310ef9c9c83dd3adbdd1168b31987e6caf999c73bc6887c427"
+      }
+    },
+    "parent/psyex-q4-r17/preflight-execution.log": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/preflight-execution.log",
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/preflight-execution.log",
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "parent/psyex-q4-r17/render.py": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/render.py",
+        "size": 2426,
+        "sha256": "384d1a86b0ae2d27e922237d9456bd703caeda3b147500a7fa7605907a72b32f"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/render.py",
+        "size": 2426,
+        "sha256": "384d1a86b0ae2d27e922237d9456bd703caeda3b147500a7fa7605907a72b32f"
+      }
+    },
+    "parent/psyex-q4-r17/result-1/baseline-control.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/baseline-control.json",
+        "size": 5103,
+        "sha256": "62747b190b9facf89e96a626c54a1ee68c523dc7e68b2c5b2e2b3fb4bdbc6cac"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/result-1/baseline-control.json",
+        "size": 5103,
+        "sha256": "62747b190b9facf89e96a626c54a1ee68c523dc7e68b2c5b2e2b3fb4bdbc6cac"
+      }
+    },
+    "parent/psyex-q4-r17/result-1/receipt.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/receipt.json",
+        "size": 268153,
+        "sha256": "4eb2aefae90ff65c2e985cafdfc14f878107c5f8df36d971aad9ad7d6c8728a6"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/result-1/receipt.json",
+        "size": 268153,
+        "sha256": "4eb2aefae90ff65c2e985cafdfc14f878107c5f8df36d971aad9ad7d6c8728a6"
+      }
+    },
+    "parent/psyex-q4-r17/result-1/result.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/result.json",
+        "size": 392333,
+        "sha256": "a04eb728936d62662afb4ab6dbc554db394c25f1ac433c563beff59278b3abdb"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/result-1/result.json",
+        "size": 392333,
+        "sha256": "a04eb728936d62662afb4ab6dbc554db394c25f1ac433c563beff59278b3abdb"
+      }
+    },
+    "parent/psyex-q4-r17/result-1/tokens.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/tokens.json",
+        "size": 874139,
+        "sha256": "899febd238c4baec09fdb389f1140266f4d2d6880db017b280e7fe89f10f85d0"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/result-1/tokens.json",
+        "size": 874139,
+        "sha256": "899febd238c4baec09fdb389f1140266f4d2d6880db017b280e7fe89f10f85d0"
+      }
+    },
+    "parent/psyex-q4-r17/stills-1/background-4panel.png": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/stills-1/background-4panel.png",
+        "size": 53272,
+        "sha256": "63d2a7923c458d4e72527071a3b4128f16308525893ab9a21512046a4dac159b"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/stills-1/background-4panel.png",
+        "size": 53272,
+        "sha256": "63d2a7923c458d4e72527071a3b4128f16308525893ab9a21512046a4dac159b"
+      }
+    },
+    "parent/psyex-q4-r17/stills-1/face-4panel.png": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/stills-1/face-4panel.png",
+        "size": 294308,
+        "sha256": "1b1e2ed53ca34c64ec7f4c10baf8794a386a347ee5ae3415801541b205423ffc"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/stills-1/face-4panel.png",
+        "size": 294308,
+        "sha256": "1b1e2ed53ca34c64ec7f4c10baf8794a386a347ee5ae3415801541b205423ffc"
+      }
+    },
+    "parent/psyex-q4-r17/stills-1/manifest.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/stills-1/manifest.json",
+        "size": 1854,
+        "sha256": "5d1cc6b0e18761177c98dc4db49a53708dbe1ee900938ddf587300e1dfcf8450"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/stills-1/manifest.json",
+        "size": 1854,
+        "sha256": "5d1cc6b0e18761177c98dc4db49a53708dbe1ee900938ddf587300e1dfcf8450"
+      }
+    },
+    "parent/psyex-q4-r17/stills-1/shirt-4panel.png": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/stills-1/shirt-4panel.png",
+        "size": 18789,
+        "sha256": "2e0b32bd406413f79bf7918a2d0e739751ff8ac0ff9b9ca804ed6c164605f747"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/parent/psyex-q4-r17/stills-1/shirt-4panel.png",
+        "size": 18789,
+        "sha256": "2e0b32bd406413f79bf7918a2d0e739751ff8ac0ff9b9ca804ed6c164605f747"
+      }
+    },
+    "reviewer/round17-dc-evidence-review.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-dc-evidence-review.md",
+        "size": 2922,
+        "sha256": "b4b3db909c5b02cf2d4bcefb923bec6dd8c5830ec44d82f682f22e3551aca666"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/reviewer/round17-dc-evidence-review.md",
+        "size": 2922,
+        "sha256": "b4b3db909c5b02cf2d4bcefb923bec6dd8c5830ec44d82f682f22e3551aca666"
+      }
+    },
+    "reviewer/round17-outcome/ADDENDUM.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-outcome/ADDENDUM.md",
+        "size": 1713,
+        "sha256": "57d650006879017c523897ea3b9bd60ab2a2c010be822c97dd6f1cb52edc49ec"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/reviewer/round17-outcome/ADDENDUM.md",
+        "size": 1713,
+        "sha256": "57d650006879017c523897ea3b9bd60ab2a2c010be822c97dd6f1cb52edc49ec"
+      }
+    },
+    "reviewer/round17-outcome/REVIEW.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-outcome/REVIEW.md",
+        "size": 7251,
+        "sha256": "ab1e941a121e27670ba4ae25d461fcd21e6e944917e4146ab8e40b6de56a45bb"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/reviewer/round17-outcome/REVIEW.md",
+        "size": 7251,
+        "sha256": "ab1e941a121e27670ba4ae25d461fcd21e6e944917e4146ab8e40b6de56a45bb"
+      }
+    },
+    "reviewer/round17-outcome/derive-execution-v2.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-outcome/derive-execution-v2.json",
+        "size": 2671,
+        "sha256": "0a1fc84ad0c25fd41d8966ed61760af0812eb974c1aa173c88a835f6c9d277fa"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/reviewer/round17-outcome/derive-execution-v2.json",
+        "size": 2671,
+        "sha256": "0a1fc84ad0c25fd41d8966ed61760af0812eb974c1aa173c88a835f6c9d277fa"
+      }
+    },
+    "reviewer/round17-outcome/derive-execution-v2.log": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-outcome/derive-execution-v2.log",
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/reviewer/round17-outcome/derive-execution-v2.log",
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "reviewer/round17-outcome/derive-execution.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-outcome/derive-execution.json",
+        "size": 2666,
+        "sha256": "a2d3fe45d1b16513670d498a8dfddfab99aed395e69dbf2fd077dc6c64fc7abe"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/reviewer/round17-outcome/derive-execution.json",
+        "size": 2666,
+        "sha256": "a2d3fe45d1b16513670d498a8dfddfab99aed395e69dbf2fd077dc6c64fc7abe"
+      }
+    },
+    "reviewer/round17-outcome/derive-execution.log": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-outcome/derive-execution.log",
+        "size": 463,
+        "sha256": "f35ba86e34673783c14ae49067ab314d21116d0595bfae48d72e04377e322d9f"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/reviewer/round17-outcome/derive-execution.log",
+        "size": 463,
+        "sha256": "f35ba86e34673783c14ae49067ab314d21116d0595bfae48d72e04377e322d9f"
+      }
+    },
+    "reviewer/round17-outcome/derive-v1-failed.py": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-outcome/derive-v1-failed.py",
+        "size": 11784,
+        "sha256": "48de104a91a2a707277bbd1333269690f02cf2db5cb93c1a812946e348f204c7"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/reviewer/round17-outcome/derive-v1-failed.py",
+        "size": 11784,
+        "sha256": "48de104a91a2a707277bbd1333269690f02cf2db5cb93c1a812946e348f204c7"
+      }
+    },
+    "reviewer/round17-outcome/derive.py": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-outcome/derive.py",
+        "size": 11799,
+        "sha256": "e54a7befec2a0b313d5de19a6a9ca39cd54746e678599d541a3ad6993eb7519d"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/reviewer/round17-outcome/derive.py",
+        "size": 11799,
+        "sha256": "e54a7befec2a0b313d5de19a6a9ca39cd54746e678599d541a3ad6993eb7519d"
+      }
+    },
+    "reviewer/round17-outcome/derived-v2.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-outcome/derived-v2.json",
+        "size": 6093,
+        "sha256": "801d9f44c3656ac021702b5b0be86b89442226d3ac8fee4cde3241dd32ca9587"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/reviewer/round17-outcome/derived-v2.json",
+        "size": 6093,
+        "sha256": "801d9f44c3656ac021702b5b0be86b89442226d3ac8fee4cde3241dd32ca9587"
+      }
+    },
+    "reviewer/round17-parent-preflight/REVIEW.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-parent-preflight/REVIEW.md",
+        "size": 3737,
+        "sha256": "c50bc87da3963f966671becc444a5e18f45a75f20206440fbdfcbd3cd8aeafb1"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/reviewer/round17-parent-preflight/REVIEW.md",
+        "size": 3737,
+        "sha256": "c50bc87da3963f966671becc444a5e18f45a75f20206440fbdfcbd3cd8aeafb1"
+      }
+    },
+    "reviewer/round17-preflight/REVIEW.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-preflight/REVIEW.md",
+        "size": 4275,
+        "sha256": "09ff942cc4cf781e4254d649588bea3edc0bee93316840707536c28a3d2566ad"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/reviewer/round17-preflight/REVIEW.md",
+        "size": 4275,
+        "sha256": "09ff942cc4cf781e4254d649588bea3edc0bee93316840707536c28a3d2566ad"
+      }
+    },
+    "reviewer/round17-preflight/V4-NOTE.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-preflight/V4-NOTE.md",
+        "size": 1224,
+        "sha256": "a7c35bbba178b67486da8e94764e4e85f98e4a31db3973b61e7374eeee89b113"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/reviewer/round17-preflight/V4-NOTE.md",
+        "size": 1224,
+        "sha256": "a7c35bbba178b67486da8e94764e4e85f98e4a31db3973b61e7374eeee89b113"
+      }
+    },
+    "worker/psyex-r17-q4/README.1a0903be-rejected.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/README.1a0903be-rejected.md",
+        "size": 2826,
+        "sha256": "0c46d0faf366ef38c7cc88dcfdccec368bd2f2d6f438196e60802fc793075412"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/README.1a0903be-rejected.md",
+        "size": 2826,
+        "sha256": "0c46d0faf366ef38c7cc88dcfdccec368bd2f2d6f438196e60802fc793075412"
+      }
+    },
+    "worker/psyex-r17-q4/README.b7d17fd-rejected.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/README.b7d17fd-rejected.md",
+        "size": 1635,
+        "sha256": "165b8e828f23b2f6b5c00fff7047c47f4f124a1bb888e456dca8a0802debc377"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/README.b7d17fd-rejected.md",
+        "size": 1635,
+        "sha256": "165b8e828f23b2f6b5c00fff7047c47f4f124a1bb888e456dca8a0802debc377"
+      }
+    },
+    "worker/psyex-r17-q4/README.d86290e-rejected.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/README.d86290e-rejected.md",
+        "size": 2225,
+        "sha256": "9ac3c42e07ecb52c7707b20c25a9fc97d005c434d830fbca2d61642a373f2ce8"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/README.d86290e-rejected.md",
+        "size": 2225,
+        "sha256": "9ac3c42e07ecb52c7707b20c25a9fc97d005c434d830fbca2d61642a373f2ce8"
+      }
+    },
+    "worker/psyex-r17-q4/README.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/README.md",
+        "size": 3902,
+        "sha256": "b4292d9948c12108db56d788c3287a4900052fab9609f340781fd118dfe37ee5"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/README.md",
+        "size": 3902,
+        "sha256": "b4292d9948c12108db56d788c3287a4900052fab9609f340781fd118dfe37ee5"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/README.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/README.md",
+        "size": 1801,
+        "sha256": "49dcadab32c4e290ccdd0f06a018826e20eee39129b10b7f1aa30b372471005e"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/README.md",
+        "size": 1801,
+        "sha256": "49dcadab32c4e290ccdd0f06a018826e20eee39129b10b7f1aa30b372471005e"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/execution.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/execution.json",
+        "size": 1257,
+        "sha256": "91f84ec60b5eb971b8431affcfdec5d4a6f9532c9fbb6a71807c6a7000673bd8"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/execution.json",
+        "size": 1257,
+        "sha256": "91f84ec60b5eb971b8431affcfdec5d4a6f9532c9fbb6a71807c6a7000673bd8"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/extract_dc_evidence.py": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/extract_dc_evidence.py",
+        "size": 10502,
+        "sha256": "137ed87e224575fd27a1987c765c88dadbd053d748f1f790b08c54d03d1c64ee"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/extract_dc_evidence.py",
+        "size": 10502,
+        "sha256": "137ed87e224575fd27a1987c765c88dadbd053d748f1f790b08c54d03d1c64ee"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/result.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/result.json",
+        "size": 16821,
+        "sha256": "b32c9491bb0a9ce822026c7a7d2bd92f198e39815f9bded3620dfd05c2dd0b31"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/result.json",
+        "size": 16821,
+        "sha256": "b32c9491bb0a9ce822026c7a7d2bd92f198e39815f9bded3620dfd05c2dd0b31"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/v2/README_v2.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v2/README_v2.md",
+        "size": 1220,
+        "sha256": "30fcd4b20168ffd84bad8469885d2a7586a3f5a400cb8218674434041d301ff8"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/v2/README_v2.md",
+        "size": 1220,
+        "sha256": "30fcd4b20168ffd84bad8469885d2a7586a3f5a400cb8218674434041d301ff8"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/v2/execution_v2.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v2/execution_v2.json",
+        "size": 788,
+        "sha256": "eb22819cf9cbe94fa8d05d58ebbc7e5b400884a65559f5e7d0d21245262be1ab"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/v2/execution_v2.json",
+        "size": 788,
+        "sha256": "eb22819cf9cbe94fa8d05d58ebbc7e5b400884a65559f5e7d0d21245262be1ab"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/v2/extract_dc_evidence_v2.py": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v2/extract_dc_evidence_v2.py",
+        "size": 10837,
+        "sha256": "2c4c7e8514337a9f2717cd6236eff068ec1353c203deba4626b3abfda7262684"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/v2/extract_dc_evidence_v2.py",
+        "size": 10837,
+        "sha256": "2c4c7e8514337a9f2717cd6236eff068ec1353c203deba4626b3abfda7262684"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/v2/result.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v2/result.json",
+        "size": 17042,
+        "sha256": "89f21708fc930250ff64e677ca6459115ba2c688b83c7093243d451995321144"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/v2/result.json",
+        "size": 17042,
+        "sha256": "89f21708fc930250ff64e677ca6459115ba2c688b83c7093243d451995321144"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/v3/README_v3.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v3/README_v3.md",
+        "size": 991,
+        "sha256": "e73f5ebeae0b577c8cf9c940e19e4a56b557ae47251766ef708f416321d13a52"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/v3/README_v3.md",
+        "size": 991,
+        "sha256": "e73f5ebeae0b577c8cf9c940e19e4a56b557ae47251766ef708f416321d13a52"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/v3/execution_v3.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v3/execution_v3.json",
+        "size": 756,
+        "sha256": "3ee2507aea2c8d332f7fb9573d5fc2c5529e107b85136157ed1b5feabfb8e2a4"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/v3/execution_v3.json",
+        "size": 756,
+        "sha256": "3ee2507aea2c8d332f7fb9573d5fc2c5529e107b85136157ed1b5feabfb8e2a4"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/v3/extract_dc_evidence_v3.py": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v3/extract_dc_evidence_v3.py",
+        "size": 10982,
+        "sha256": "5ee3fcc0f26a19e084d98e42385c79624327b5b9b4fb88d10198a2d4d8ec61c9"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/v3/extract_dc_evidence_v3.py",
+        "size": 10982,
+        "sha256": "5ee3fcc0f26a19e084d98e42385c79624327b5b9b4fb88d10198a2d4d8ec61c9"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/v3/result.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v3/result.json",
+        "size": 17042,
+        "sha256": "3bbfa62efddaa78276a5c45875a04ed2c7d2975f79b2c04e04f4ac2786627490"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/v3/result.json",
+        "size": 17042,
+        "sha256": "3bbfa62efddaa78276a5c45875a04ed2c7d2975f79b2c04e04f4ac2786627490"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/v4/README_v4.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v4/README_v4.md",
+        "size": 1322,
+        "sha256": "761b0f0e381380d0d320a5f9bcbfdf1f5ad9d071dacd45cf28248b099254a275"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/v4/README_v4.md",
+        "size": 1322,
+        "sha256": "761b0f0e381380d0d320a5f9bcbfdf1f5ad9d071dacd45cf28248b099254a275"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/v4/execution_v4.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v4/execution_v4.json",
+        "size": 756,
+        "sha256": "eac7cff03af51e340b7f14ce1263830b20d88db93e52bd1f8075ce9ddfa914ca"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/v4/execution_v4.json",
+        "size": 756,
+        "sha256": "eac7cff03af51e340b7f14ce1263830b20d88db93e52bd1f8075ce9ddfa914ca"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/v4/extract_dc_evidence_v4.py": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v4/extract_dc_evidence_v4.py",
+        "size": 11451,
+        "sha256": "e1085f5817b3c7562f12e388d2dfd54a45876c3e7034edddd9c8fa02f6f9b7a8"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/v4/extract_dc_evidence_v4.py",
+        "size": 11451,
+        "sha256": "e1085f5817b3c7562f12e388d2dfd54a45876c3e7034edddd9c8fa02f6f9b7a8"
+      }
+    },
+    "worker/psyex-r17-q4/dc-evidence/v4/result.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v4/result.json",
+        "size": 17232,
+        "sha256": "beca735ea45536e43c6230efd12289d03d5a0c4502b1f23e0a895ec5416785f3"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/dc-evidence/v4/result.json",
+        "size": 17232,
+        "sha256": "beca735ea45536e43c6230efd12289d03d5a0c4502b1f23e0a895ec5416785f3"
+      }
+    },
+    "worker/psyex-r17-q4/experiment.py": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/experiment.py",
+        "size": 13751,
+        "sha256": "8e7bbf5e67d4742a9d2933912fed10b1d396bf3bb50dd5509bbb89a56223d7fb"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/experiment.py",
+        "size": 13751,
+        "sha256": "8e7bbf5e67d4742a9d2933912fed10b1d396bf3bb50dd5509bbb89a56223d7fb"
+      }
+    },
+    "worker/psyex-r17-q4/experiment.py.1879f4-rejected": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/experiment.py.1879f4-rejected",
+        "size": 10334,
+        "sha256": "1879f4caeb62ee825fb678bb9f9d3ac91ccc5261708894917d75753a7e71237b"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/experiment.py.1879f4-rejected",
+        "size": 10334,
+        "sha256": "1879f4caeb62ee825fb678bb9f9d3ac91ccc5261708894917d75753a7e71237b"
+      }
+    },
+    "worker/psyex-r17-q4/experiment.py.b7d17fd-rejected": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/experiment.py.b7d17fd-rejected",
+        "size": 5752,
+        "sha256": "b7d17fd7fac35df3106d947da1856e5f21be69f9893b01fc71a4e3a054f58d82"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/experiment.py.b7d17fd-rejected",
+        "size": 5752,
+        "sha256": "b7d17fd7fac35df3106d947da1856e5f21be69f9893b01fc71a4e3a054f58d82"
+      }
+    },
+    "worker/psyex-r17-q4/preflight-schema-check.json": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/preflight-schema-check.json",
+        "size": 1490,
+        "sha256": "96d7012f1b7736ba4f7f55e960cc292befa2fae31ebcb9a8e7763d8d340320bd"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/preflight-schema-check.json",
+        "size": 1490,
+        "sha256": "96d7012f1b7736ba4f7f55e960cc292befa2fae31ebcb9a8e7763d8d340320bd"
+      }
+    },
+    "worker/psyex-r17-q4/preflight-schema-check.stdout": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/preflight-schema-check.stdout",
+        "size": 1288,
+        "sha256": "26598bb7baf879fceecb83436f384d234fd00f31ea4d76c53a41391a6a6622e9"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/preflight-schema-check.stdout",
+        "size": 1288,
+        "sha256": "26598bb7baf879fceecb83436f384d234fd00f31ea4d76c53a41391a6a6622e9"
+      }
+    },
+    "worker/psyex-r17-q4/preflight_check.py": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/preflight_check.py",
+        "size": 2525,
+        "sha256": "b5d283d9775a1749620f520493fef99906ea963e5326446467882ec88df2d79b"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/preflight_check.py",
+        "size": 2525,
+        "sha256": "b5d283d9775a1749620f520493fef99906ea963e5326446467882ec88df2d79b"
+      }
+    },
+    "worker/psyex-r17-q4/source-audit.1a0903be-rejected.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/source-audit.1a0903be-rejected.md",
+        "size": 2720,
+        "sha256": "ce09c968c773e4e4c39d9b86512ea1a89d45b07cd2c2366fca2b6da29c1e4682"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/source-audit.1a0903be-rejected.md",
+        "size": 2720,
+        "sha256": "ce09c968c773e4e4c39d9b86512ea1a89d45b07cd2c2366fca2b6da29c1e4682"
+      }
+    },
+    "worker/psyex-r17-q4/source-audit.b7d17fd-rejected.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/source-audit.b7d17fd-rejected.md",
+        "size": 1513,
+        "sha256": "c01ead075e50319613337a7d0d2542aaa8e0d3d92ac5dbd91eb24676dd6b4f1f"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/source-audit.b7d17fd-rejected.md",
+        "size": 1513,
+        "sha256": "c01ead075e50319613337a7d0d2542aaa8e0d3d92ac5dbd91eb24676dd6b4f1f"
+      }
+    },
+    "worker/psyex-r17-q4/source-audit.d86290e-rejected.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/source-audit.d86290e-rejected.md",
+        "size": 2166,
+        "sha256": "1cd43dbb407dd63c67ad2ffe265c13387f9e156b7a81da9a4767eb7f3df03b9d"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/source-audit.d86290e-rejected.md",
+        "size": 2166,
+        "sha256": "1cd43dbb407dd63c67ad2ffe265c13387f9e156b7a81da9a4767eb7f3df03b9d"
+      }
+    },
+    "worker/psyex-r17-q4/source-audit.md": {
+      "source": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/source-audit.md",
+        "size": 3312,
+        "sha256": "72af60641bd7d9db6e989cc3ce849f10152484e525cc1198f419b5fde540f887"
+      },
+      "frozen": {
+        "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/psyex-q4/outcome/worker/psyex-r17-q4/source-audit.md",
+        "size": 3312,
+        "sha256": "72af60641bd7d9db6e989cc3ce849f10152484e525cc1198f419b5fde540f887"
+      }
+    }
+  },
+  "external": {
+    "parent/psyex-q4-r17/result-1/mosaics.npz": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/mosaics.npz",
+      "size": 3984462,
+      "sha256": "aba4ec13038906060b0ec59c1bee1ed342835e2a60caf472200a030b950af50c"
+    },
+    "parent/psyex-q4-r17/result-1/native-arrays.npz": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/native-arrays.npz",
+      "size": 1286639,
+      "sha256": "ee8c41ed2188efacd940ebf3a9fbb6dd5821e9bf2e6c56c75ff4e5d3e8a26b23"
+    }
+  },
+  "dependency_closure": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/receipt.json",
+    "size": 268153,
+    "sha256": "4eb2aefae90ff65c2e985cafdfc14f878107c5f8df36d971aad9ad7d6c8728a6"
+  },
+  "missing_rejected_source": {
+    "sha256": "1a0903beb82688631fbf2459b7b4b3dedf2cf139b0e8a6eff847efa11613bda3",
+    "status": "exact worker draft unavailable; audits and README retained, not a source substitute"
+  },
+  "review_interpretation": "Read original review together with ADDENDUM.md; raw HF is not a mathematical ceiling.",
+  "reproduction": "Use preserved absolute scratch paths and pinned R15 execute.py with fresh output directories; do not overwrite receipts. Active dependencies remain in place pending final archival."
+}

@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-outcome/derive.py", line 189, in <module>
+    main()
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round17-outcome/derive.py", line 149, in main
+    assert covered.all() and np.array_equal(frames['predictor'],predictor_ref)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

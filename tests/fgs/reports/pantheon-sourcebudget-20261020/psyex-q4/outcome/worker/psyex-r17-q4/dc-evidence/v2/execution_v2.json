@@ -1,0 +1,20 @@
+{
+  "status": "complete",
+  "argv": [
+    "/usr/bin/python3",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v2/extract_dc_evidence_v2.py"
+  ],
+  "python": "/usr/bin/python3",
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v2/extract_dc_evidence_v2.py",
+    "sha256": "2c4c7e8514337a9f2717cd6236eff068ec1353c203deba4626b3abfda7262684",
+    "size": 10837
+  },
+  "result": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r17-q4/dc-evidence/v2/result.json",
+    "sha256": "89f21708fc930250ff64e677ca6459115ba2c688b83c7093243d451995321144",
+    "size": 17042
+  },
+  "returncode": 0,
+  "generated_utc": "2026-10-20T19:35:02.090133+00:00"
+}

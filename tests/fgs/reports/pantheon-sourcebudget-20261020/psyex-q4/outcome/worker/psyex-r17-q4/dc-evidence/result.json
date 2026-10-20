@@ -1,0 +1,260 @@
+{
+  "framing": {
+    "all_obu_bounds_nonoverlapping_per_packet": true,
+    "all_packet_event_indices_contiguous": true,
+    "all_packets_exactly_one_display_action": true,
+    "coded_non_show_existing": 336,
+    "coded_ordinals_contiguous": true,
+    "display_actions": 336,
+    "events": 502,
+    "hidden_coded": 166,
+    "ivf_packets": 336,
+    "max_frame_headers_per_packet": 5,
+    "packets_with_multiple_frame_headers": 84,
+    "show_existing": 166,
+    "shown_coded": 170
+  },
+  "generated_utc": "2026-10-20T19:32:06.234541+00:00",
+  "inputs": {
+    "binding_result": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/syntax-binding/result.json",
+      "sha256": "b0899657339511987e3753696ee50b0739fec07a8218f7d779b5bff86e7ee754",
+      "size": 18880
+    },
+    "events": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/syntax-binding/events.json",
+      "sha256": "b109f99d7fe625c5ff890d8d7fca1eff0fce54b231cf5d9ae2f1a48e1ec26280",
+      "size": 442582
+    },
+    "r12_build_receipt": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-scalar-r12/build-2/receipt.json",
+      "sha256": "4b56e9cbd1450f68ec42d02a70d6db2e082db065c6314f34ef17443ef6cb7df5",
+      "size": 48047
+    },
+    "syntax_command": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/syntax-binding/command.json",
+      "sha256": "1595523877c3d9e90a258c2b3a7aa29f8ee8b615f37c624bad2fe600645751b6",
+      "size": 1443
+    },
+    "target_obu": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/syntax-binding/target-frame.obu",
+      "sha256": "e68353e010c09239253e1b9de07d481d452547d5c4a9e973b3df3d2dc9353ed3",
+      "size": 51945
+    },
+    "trace_log": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16-refine/r16-refine-tbr10042-observations/syntax-binding/trace_headers.log",
+      "sha256": "af82740d0c84a2a55c72aa9f1ba794e630431b3b2729618d5cf9ffd8fc2f5ee8",
+      "size": 3810119
+    }
+  },
+  "packet_209": [
+    {
+      "event_index": 313,
+      "obu": {
+        "file_offset": 10139064,
+        "packet_end": 50192,
+        "packet_start": 2,
+        "sha256": "f7df631c95ca2c0e8b1c440d4d3ec392d01a3a1b2f58ee800e39f91b00ad657d",
+        "size": 50190,
+        "type": 6
+      },
+      "packet_event_index": 0
+    },
+    {
+      "event_index": 314,
+      "obu": {
+        "file_offset": 10189254,
+        "packet_end": 102137,
+        "packet_start": 50192,
+        "sha256": "e68353e010c09239253e1b9de07d481d452547d5c4a9e973b3df3d2dc9353ed3",
+        "size": 51945,
+        "type": 6
+      },
+      "packet_event_index": 1
+    },
+    {
+      "event_index": 315,
+      "obu": {
+        "file_offset": 10241199,
+        "packet_end": 156941,
+        "packet_start": 102137,
+        "sha256": "92df20b1f17f86f6aa3b114bb130d29446c785c11ff3dd332fd7dc5ddb747b41",
+        "size": 54804,
+        "type": 6
+      },
+      "packet_event_index": 2
+    },
+    {
+      "event_index": 316,
+      "obu": {
+        "file_offset": 10296003,
+        "packet_end": 207142,
+        "packet_start": 156941,
+        "sha256": "e594bfca0537cd80e12de3afcc7ef2f74dc97ae589cb8ce485193bf868f22061",
+        "size": 50201,
+        "type": 6
+      },
+      "packet_event_index": 3
+    },
+    {
+      "event_index": 317,
+      "obu": {
+        "file_offset": 10346204,
+        "packet_end": 244118,
+        "packet_start": 207142,
+        "sha256": "0ee76f3d53c9885c5a62be393c4b11c8d1fe4b91e0c604a4d3a8f505a089f185",
+        "size": 36976,
+        "type": 6
+      },
+      "packet_event_index": 4
+    }
+  ],
+  "r12_receipt_schema": {
+    "all_recorded_identities_verified": true,
+    "commands_type": "list",
+    "identity_locations": [
+      "source_manifest",
+      "inputs_before[]",
+      "inputs_after[]",
+      "commands[].log",
+      "library",
+      "object"
+    ],
+    "input_entries": 275,
+    "inputs_after_receipt_type": "identity_dict",
+    "inputs_before_receipt_type": "identity_dict",
+    "inputs_equal": true,
+    "referenced_input_payload_type": "list",
+    "status": "complete"
+  },
+  "scope": "read-only target frame-header DC evidence; no native/build/encode/GPU",
+  "status": "admitted",
+  "target": {
+    "coded_ordinal": 210,
+    "delta_q_y_dc": {
+      "delta_coded": 0,
+      "effective_delta": 0,
+      "log_line": 22350,
+      "semantics": "trace_headers names the AV1 frame-header syntax flag delta_q_y_dc.delta_coded; the traced 0 = 0 means no luma DC delta is signaled, hence frame-level delta 0.",
+      "text": "[trace_headers @ 0x5d53307a87c0] 98          delta_q_y_dc.delta_coded                                    0 = 0"
+    },
+    "event_index": 314,
+    "frame_header_block_sha256": "cc3d539080b1307157a19aedf24ef7aef38b774599412f0b263eb363aeaa523d",
+    "frame_header_end_exclusive": 22413,
+    "frame_header_first_field_log_line": 22320,
+    "frame_header_line_count": 94,
+    "frame_header_start_line": 22319,
+    "header_text_lines": [
+      "[trace_headers @ 0x5d53307a87c0] Frame Header",
+      "[trace_headers @ 0x5d53307a87c0] 32          show_existing_frame                                         0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 33          frame_type                                                 01 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 35          show_frame                                                  0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 36          showable_frame                                              1 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 37          error_resilient_mode                                        0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 38          disable_cdf_update                                          0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 39          allow_screen_content_tools                                  0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 40          frame_size_override_flag                                    0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 41          order_hint                                            1011000 = 88",
+      "[trace_headers @ 0x5d53307a87c0] 48          primary_ref_frame                                         001 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 51          refresh_frame_flags                                  00010000 = 16",
+      "[trace_headers @ 0x5d53307a87c0] 59          frame_refs_short_signaling                                  0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 60          ref_frame_idx[0]                                          000 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 63          ref_frame_idx[1]                                          011 = 3",
+      "[trace_headers @ 0x5d53307a87c0] 66          ref_frame_idx[2]                                          010 = 2",
+      "[trace_headers @ 0x5d53307a87c0] 69          ref_frame_idx[3]                                          000 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 72          ref_frame_idx[4]                                          001 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 75          ref_frame_idx[5]                                          101 = 5",
+      "[trace_headers @ 0x5d53307a87c0] 78          ref_frame_idx[6]                                          001 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 81          render_and_frame_size_different                             0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 82          allow_high_precision_mv                                     0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 83          is_filter_switchable                                        1 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 84          is_motion_mode_switchable                                   1 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 85          use_ref_frame_mvs                                           1 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 86          disable_frame_end_update_cdf                                0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 87          uniform_tile_spacing_flag                                   1 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 88          tile_cols_log2                                              0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 89          tile_rows_log2                                              0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 90          base_q_idx                                           01011011 = 91",
+      "[trace_headers @ 0x5d53307a87c0] 98          delta_q_y_dc.delta_coded                                    0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 99          diff_uv_delta                                               1 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 100         delta_q_u_dc.delta_coded                                    0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 101         delta_q_u_ac.delta_coded                                    0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 102         delta_q_v_dc.delta_coded                                    0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 103         delta_q_v_ac.delta_coded                                    0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 104         using_qmatrix                                               1 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 105         qm_y                                                     1011 = 11",
+      "[trace_headers @ 0x5d53307a87c0] 109         qm_u                                                     1101 = 13",
+      "[trace_headers @ 0x5d53307a87c0] 113         qm_v                                                     1101 = 13",
+      "[trace_headers @ 0x5d53307a87c0] 117         segmentation_enabled                                        0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 118         delta_q_present                                             1 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 119         delta_q_res                                                10 = 2",
+      "[trace_headers @ 0x5d53307a87c0] 121         delta_lf_present                                            0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 122         loop_filter_level[0]                                   001100 = 12",
+      "[trace_headers @ 0x5d53307a87c0] 128         loop_filter_level[1]                                   001100 = 12",
+      "[trace_headers @ 0x5d53307a87c0] 134         loop_filter_level[2]                                   010000 = 16",
+      "[trace_headers @ 0x5d53307a87c0] 140         loop_filter_level[3]                                   001101 = 13",
+      "[trace_headers @ 0x5d53307a87c0] 146         loop_filter_sharpness                                     001 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 149         loop_filter_delta_enabled                                   0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 150         cdef_damping_minus_3                                       01 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 152         cdef_bits                                                  10 = 2",
+      "[trace_headers @ 0x5d53307a87c0] 154         cdef_y_pri_strength[0]                                   0000 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 158         cdef_y_sec_strength[0]                                     10 = 2",
+      "[trace_headers @ 0x5d53307a87c0] 160         cdef_uv_pri_strength[0]                                  0111 = 7",
+      "[trace_headers @ 0x5d53307a87c0] 164         cdef_uv_sec_strength[0]                                    00 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 166         cdef_y_pri_strength[1]                                   0000 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 170         cdef_y_sec_strength[1]                                     00 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 172         cdef_uv_pri_strength[1]                                  0111 = 7",
+      "[trace_headers @ 0x5d53307a87c0] 176         cdef_uv_sec_strength[1]                                    00 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 178         cdef_y_pri_strength[2]                                   0111 = 7",
+      "[trace_headers @ 0x5d53307a87c0] 182         cdef_y_sec_strength[2]                                     00 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 184         cdef_uv_pri_strength[2]                                  0000 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 188         cdef_uv_sec_strength[2]                                    00 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 190         cdef_y_pri_strength[3]                                   0111 = 7",
+      "[trace_headers @ 0x5d53307a87c0] 194         cdef_y_sec_strength[3]                                     10 = 2",
+      "[trace_headers @ 0x5d53307a87c0] 196         cdef_uv_pri_strength[3]                                  0111 = 7",
+      "[trace_headers @ 0x5d53307a87c0] 200         cdef_uv_sec_strength[3]                                    00 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 202         lr_type[0]                                                 10 = 2",
+      "[trace_headers @ 0x5d53307a87c0] 204         lr_type[1]                                                 00 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 206         lr_type[2]                                                 00 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 208         lr_unit_shift                                              11 = 2",
+      "[trace_headers @ 0x5d53307a87c0] 210         tx_mode                                                     0 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 211         reference_select                                            1 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 212         skip_mode_present                                           1 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 213         allow_warped_motion                                         0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 214         reduced_tx_set                                              0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 215         is_global[1]                                                0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 216         is_global[2]                                                0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 217         is_global[3]                                                0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 218         is_global[4]                                                0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 219         is_global[5]                                                0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 220         is_global[6]                                                0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 221         is_global[7]                                                0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] Frame 88:  size 1920x1080  upscaled 1920  render 1920x1080  subsample 2x2  bitdepth 10  tiles 1x1.",
+      "[trace_headers @ 0x5d53307a87c0] 222         zero_bit                                                    0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 223         zero_bit                                                    0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] Tile Group",
+      "[trace_headers @ 0x5d53307a87c0] OBU header",
+      "[trace_headers @ 0x5d53307a87c0] 0           obu_forbidden_bit                                           0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 1           obu_type                                                 0110 = 6",
+      "[trace_headers @ 0x5d53307a87c0] 5           obu_extension_flag                                          0 = 0",
+      "[trace_headers @ 0x5d53307a87c0] 6           obu_has_size_field                                          1 = 1",
+      "[trace_headers @ 0x5d53307a87c0] 7           obu_reserved_1bit                                           0 = 0"
+    ],
+    "obu": {
+      "file_offset": 10189254,
+      "packet_end": 102137,
+      "packet_start": 50192,
+      "sha256": "e68353e010c09239253e1b9de07d481d452547d5c4a9e973b3df3d2dc9353ed3",
+      "size": 51945,
+      "type": 6
+    },
+    "packet_event_index": 1,
+    "packet_index": 209,
+    "show_existing_consumer": {
+      "event_index": 325,
+      "header_log_line": 23122,
+      "packet_index": 216,
+      "resolved_coded_ordinal": 210
+    }
+  }
+}

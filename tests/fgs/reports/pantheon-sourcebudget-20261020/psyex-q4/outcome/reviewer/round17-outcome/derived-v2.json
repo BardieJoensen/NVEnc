@@ -1,0 +1,175 @@
+{
+  "status": "verified",
+  "inputs": {
+    "outer": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/experiment-execution.json",
+      "sha256": "3efeacef74c8d95ca10816da6bea4c2567d207131a31a42e450afa26da263e93",
+      "size": 2653
+    },
+    "receipt": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/receipt.json",
+      "sha256": "4eb2aefae90ff65c2e985cafdfc14f878107c5f8df36d971aad9ad7d6c8728a6",
+      "size": 268153
+    },
+    "result": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/result.json",
+      "sha256": "a04eb728936d62662afb4ab6dbc554db394c25f1ac433c563beff59278b3abdb",
+      "size": 392333
+    },
+    "arrays": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/native-arrays.npz",
+      "sha256": "ee8c41ed2188efacd940ebf3a9fbb6dd5821e9bf2e6c56c75ff4e5d3e8a26b23",
+      "size": 1286639
+    },
+    "mosaics": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/mosaics.npz",
+      "sha256": "aba4ec13038906060b0ec59c1bee1ed342835e2a60caf472200a030b950af50c",
+      "size": 3984462
+    },
+    "tokens": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/tokens.json",
+      "sha256": "899febd238c4baec09fdb389f1140266f4d2d6880db017b280e7fe89f10f85d0",
+      "size": 874139
+    },
+    "control": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-q4-r17/result-1/baseline-control.json",
+      "sha256": "62747b190b9facf89e96a626c54a1ee68c523dc7e68b2c5b2e2b3fb4bdbc6cac",
+      "size": 5103
+    }
+  },
+  "counts": {
+    "tokens": 2870,
+    "invoked": 2169,
+    "uninvoked": 701,
+    "positive_eob": 2130,
+    "invoked_zero_eob": 39
+  },
+  "input_identity_count": 316,
+  "controls": {
+    "baseline_c_runtime_capture_exact": 2169,
+    "raw_c_runtime_capture_exact": 2169,
+    "q4_c_runtime_exact": 2169,
+    "q4_positive_eob": 2169,
+    "q4_zero_eob": 0,
+    "q4_changed_eob": 2154,
+    "saved_mosaics_exact": true,
+    "reported_metrics_exact": true,
+    "all_inputs_live_and_unchanged": true
+  },
+  "rois": {
+    "shirt": {
+      "invoked_pixels": 20000,
+      "uninvoked_pixels": 0,
+      "stages": {
+        "raw": {
+          "hf_sigma": 0.5258922188408741,
+          "hf_ratio_source": 0.8673516110318651,
+          "acf1": -0.18449377646321977,
+          "acf1_abs_error": 0.03792150725843796,
+          "hf_corr_source": 0.8537758689087533,
+          "mse": 0.193259375
+        },
+        "scalar": {
+          "hf_sigma": 0.12740481117536537,
+          "hf_ratio_source": 0.21012816745934884,
+          "acf1": 0.12546574024641158,
+          "acf1_abs_error": 0.3478810239680693,
+          "hf_corr_source": 0.05472362834423238,
+          "mse": 1.475240625
+        },
+        "final": {
+          "hf_sigma": 0.12740481117536537,
+          "hf_ratio_source": 0.21012816745934884,
+          "acf1": 0.12546574024641158,
+          "acf1_abs_error": 0.3478810239680693,
+          "hf_corr_source": 0.05472362834423238,
+          "mse": 1.475240625
+        },
+        "q4": {
+          "hf_sigma": 0.5219201597985198,
+          "hf_ratio_source": 0.8608005123731072,
+          "acf1": -0.16629047370811637,
+          "acf1_abs_error": 0.05612481001354136,
+          "hf_corr_source": 0.8322766548027303,
+          "mse": 0.21869375
+        }
+      }
+    },
+    "background": {
+      "invoked_pixels": 43960,
+      "uninvoked_pixels": 1040,
+      "stages": {
+        "raw": {
+          "hf_sigma": 1.6646462169501293,
+          "hf_ratio_source": 0.992995721729011,
+          "acf1": -0.17915149529242996,
+          "acf1_abs_error": 0.00015674549154520712,
+          "hf_corr_source": 0.9914298534095072,
+          "mse": 0.1619736111111111
+        },
+        "scalar": {
+          "hf_sigma": 1.3072689398686623,
+          "hf_ratio_source": 0.7798128222206455,
+          "acf1": -0.04030662423560123,
+          "acf1_abs_error": 0.13868812556528354,
+          "hf_corr_source": 0.5462463315544251,
+          "mse": 5.759733333333333
+        },
+        "final": {
+          "hf_sigma": 1.3073655973693217,
+          "hf_ratio_source": 0.779870480408704,
+          "acf1": -0.040308620615726515,
+          "acf1_abs_error": 0.13868612918515824,
+          "hf_corr_source": 0.5462537503692274,
+          "mse": 5.7595833333333335
+        },
+        "q4": {
+          "hf_sigma": 1.6697718120369607,
+          "hf_ratio_source": 0.9960532446673467,
+          "acf1": -0.1740762266704831,
+          "acf1_abs_error": 0.00491852313040167,
+          "hf_corr_source": 0.98810079943801,
+          "mse": 0.19732916666666667
+        }
+      }
+    },
+    "face": {
+      "invoked_pixels": 158528,
+      "uninvoked_pixels": 81472,
+      "stages": {
+        "raw": {
+          "hf_sigma": 2.520497323219124,
+          "hf_ratio_source": 0.9332247603877654,
+          "acf1": 0.08463593524992627,
+          "acf1_abs_error": 0.024332713793415957,
+          "hf_corr_source": 0.9222522525741754,
+          "mse": 4.224636458333333
+        },
+        "scalar": {
+          "hf_sigma": 2.4331430349685568,
+          "hf_ratio_source": 0.9008814668756094,
+          "acf1": 0.12595162405033042,
+          "acf1_abs_error": 0.0656484025938201,
+          "hf_corr_source": 0.7873831596195299,
+          "mse": 8.887643229166667
+        },
+        "final": {
+          "hf_sigma": 2.4330123436301077,
+          "hf_ratio_source": 0.9008330778565514,
+          "acf1": 0.12593414379312223,
+          "acf1_abs_error": 0.06563092233661191,
+          "hf_corr_source": 0.7873701719064983,
+          "mse": 8.887696614583334
+        },
+        "q4": {
+          "hf_sigma": 2.5264514098294453,
+          "hf_ratio_source": 0.9354292860577821,
+          "acf1": 0.08555310833284846,
+          "acf1_abs_error": 0.025249886876338147,
+          "hf_corr_source": 0.9213285253657587,
+          "mse": 4.250321354166666
+        }
+      }
+    }
+  }
+}

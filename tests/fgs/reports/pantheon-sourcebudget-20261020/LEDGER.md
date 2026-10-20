@@ -608,3 +608,18 @@ against prior tested policies; reviewer independently constrains the next test.
   failure cannot reject real low-q decision feedback, already material in R15.
   Initial worker drafts rejected for schema, scaling, scalar/final conflation
   and incomplete artifacts before execution. No R17 outcome yet.
+- R17 completed once under parent runnercb0e9a59 after rejected worker drafts.
+  All2169 baseline/raw/C/runtime and q4 controls exact;701 uninvoked unchanged.
+  ShirtHF86.080%source,ACF.05612 stillmisses; background99.605%,ACF.00492.
+  Shirt64x64 occupies23.12%pixels and86.03%remainingq4SSE; ≤32TX strata approach
+  sourceHF. All316 dependencies and independent array/mosaic/metric reconstruction
+  pass. Diagnostic3.594s, no codedbits/rate/encode/playback. RawHF is not a strict
+  quantized-HF bound; no impossibility inference.
+- auto R18 design: prefer real absolute selected-SB q4 with adaptive decisions
+  and measured packet cost. R15 already proves high-rate legal preservation;
+  another local split cannot measure cap delivery, feedback or cost. Reviewer
+  proposed64→four32 diagnostic remains next if cap retains deficient support.
+  Use28frozenSBs, legaldeltaresolution1, capafterinitial/recode normalization,
+  lambda refresh and actualfinalq/skip/bypass evidence. First-passstatsroute
+  unchanged butfresh; capsecondpassonly. No extra TX/search control or rate
+  calibration before preservation. Design review precedes implementation.

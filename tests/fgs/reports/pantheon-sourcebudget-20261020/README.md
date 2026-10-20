@@ -140,3 +140,9 @@ material SSIMULACRA2 low-tail regressions. Independent derivations, corrections,
 GPU metrics and stills are frozen in the linked outcome package. R17 selects
 one q4 fixed-choice diagnostic on these new captures; no practical candidate,
 playback acceptance or technical blocker exists.
+
+The completed [R17 fixed-choice q4 diagnostic](PSYEX_Q4.md) restores shirt HF
+21.01→86.08%source and background to99.61%, with exact native and independent
+reconstruction controls. Shirt remains deficient, concentrated in64x64 support.
+It supplies no encoded rate or playback result. The next question is whether a
+delivered spatial cap changes real encoder decisions at an affordable packet cost.
