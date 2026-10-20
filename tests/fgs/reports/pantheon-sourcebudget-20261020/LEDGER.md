@@ -489,3 +489,14 @@ against prior tested policies; reviewer independently constrains the next test.
   isolate coding-input→preloop loss. Reviewer requires explicit skip/EOB
   categories, no stale-buffer reads, exact preloop assembly and provenance for
   actual q; unproven q/predictor fields must remain unknown, not inferred.
+
+- R10 completed: reviewed private decoder observation, exact all336 pristine/off/on
+  outputs;502events independentlybound, complete9843luma owners and exactR9preloop/
+  postloop. EOB-positive covers91.84%shirt/94.84%background; absent-syntax dominance
+  rejected. Shirt residual improves MSE without meaningful HF restoration; background
+  residual helps substantially, then filters reduce amplitude. All858controls
+  retained; noquiet atframe120. Parent viewedstillsonly. No repair/forwardq claim.
+  Superres inactive-field guard failure corrected in freshv2, oldfailure preserved.
+- auto R11: choose neutral committed encoder coefficient/producer capture before
+  another settings arm. Actualprequant/initial/final must join decoderfinalowners;
+  MD reuse/bypass requiresproducer lineage, not repeatedcoordinate matching.

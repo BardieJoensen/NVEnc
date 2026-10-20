@@ -1,0 +1,51 @@
+{
+  "status": "complete",
+  "argv": [
+    "nice",
+    "-n",
+    "10",
+    "taskset",
+    "-c",
+    "8-11",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/analysis-venv/bin/python",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/full-roi-supplement-v2/full_roi_supplement-v2.py",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/admitted-1",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/full-roi-supplement-v2/full-roi-supplement-result-v2.json",
+    "--validator-sha",
+    "fde9fa7a79c52de70b0098d38fe291670472e8250f629c4c5f3c648d322b471b"
+  ],
+  "script_before": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/full-roi-supplement-v2/full_roi_supplement-v2.py",
+    "sha256": "d3e90ad7f364d18fb20e0836cc888495d517e4927ef9248659def285e9511a63",
+    "size": 3087
+  },
+  "admission": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/admitted-1/admission.json",
+    "sha256": "4848fa5164df8ffbca7a2204de8f2df03982aed251fc7d2737709d5019e8de79",
+    "size": 6243
+  },
+  "python": {
+    "path": "/usr/bin/python3.12",
+    "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+    "size": 8020928
+  },
+  "validator_sha": "fde9fa7a79c52de70b0098d38fe291670472e8250f629c4c5f3c648d322b471b",
+  "output": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/full-roi-supplement-v2/full-roi-supplement-result-v2.json"
+  },
+  "start_utc": "2026-10-20T15:11:56.311579+00:00",
+  "elapsed_seconds": 0.6946799755096436,
+  "end_utc": "2026-10-20T15:11:57.006258+00:00",
+  "returncode": 0,
+  "script_after": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/full-roi-supplement-v2/full_roi_supplement-v2.py",
+    "sha256": "d3e90ad7f364d18fb20e0836cc888495d517e4927ef9248659def285e9511a63",
+    "size": 3087
+  },
+  "log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/full-roi-supplement-v2/analysis.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "size": 0
+  },
+  "output_exists": true
+}

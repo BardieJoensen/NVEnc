@@ -1,0 +1,24 @@
+{
+  "status": "build_complete",
+  "start_utc": "2026-10-20T14:59:36Z",
+  "end_utc": "2026-10-20T15:00:16Z",
+  "elapsed_seconds": 40,
+  "library": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/build-proposed/libaom.so.3.8.2",
+    "sha256": "6b621938f270dd3b7e5fef167730cf7177191247a1566c4056b22501dac490bd",
+    "size": 8276024
+  },
+  "aomdec": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/build-proposed/aomdec",
+    "sha256": "ce8a2cf182077c7f9f285666ca64a7d56f54bfbc2f0e5e3ee19eb04b0aab7015",
+    "size": 126888
+  },
+  "config": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/build-proposed/config/aom_config.h",
+    "sha256": "b97f78baf39c6d05d105d915f60a3665a204cc1fd4b6d8032f76cf61177f2fec",
+    "size": 2944
+  },
+  "compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "cmake": "cmake version 3.28.3",
+  "ninja": "1.11.1"
+}

@@ -1,0 +1,71 @@
+{
+  "status": "correction_receipt",
+  "purpose": "Bind main R10 result to its recorded inner command; preserve inaccurate outer wrapper receipt without treating its argv/time as independently verified.",
+  "inaccurate_receipt": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/run-1/command-final.json",
+    "sha256": "187278d664beae31b2d0916fb90fbbc9fb019cd8d4c651dbaea91d7103eb52b8",
+    "size": 2251
+  },
+  "main_result": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/result-1.json",
+    "sha256": "04091c7095658710d28bd1a3e5a912ca2a4c2f3b6bed1a728398ada9a6a74222",
+    "size": 14564134
+  },
+  "main_script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/analyze_decoder_units.py",
+    "sha256": "d10bfb16859ad02f59ba876b7890f591fee592b690d4c65a6aa0f043a7ae3cb3",
+    "size": 12329
+  },
+  "admission": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/admitted-1/admission.json",
+    "sha256": "4848fa5164df8ffbca7a2204de8f2df03982aed251fc7d2737709d5019e8de79",
+    "size": 6243
+  },
+  "validator_sha": "fde9fa7a79c52de70b0098d38fe291670472e8250f629c4c5f3c648d322b471b",
+  "inner_result_command": {
+    "argv": [
+      "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/analyze_decoder_units.py",
+      "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/admitted-1",
+      "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/result-1.json",
+      "--validator-sha",
+      "fde9fa7a79c52de70b0098d38fe291670472e8250f629c4c5f3c648d322b471b"
+    ],
+    "python": {
+      "path": "/usr/bin/python3.12",
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+      "size": 8020928
+    }
+  },
+  "inner_result_command_scope": "The result records the actual analysis script argv with admitted-1 directory. It does not independently prove the outer nice/taskset wrapper prefix or wall timing.",
+  "outer_wrapper_fields_unverified": {
+    "executed_argv_from_preserved_receipt": [
+      "nice",
+      "-n",
+      "10",
+      "taskset",
+      "-c",
+      "8-11",
+      "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/analysis-venv/bin/python",
+      "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/analyze_decoder_units.py",
+      "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/admitted-1/admission.json",
+      "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/result-1.json",
+      "--validator-sha",
+      "fde9fa7a79c52de70b0098d38fe291670472e8250f629c4c5f3c648d322b471b"
+    ],
+    "observed_wall_seconds_from_preserved_receipt": 12.488451618,
+    "reason": "The preserved receipt passed admission.json although the script expects the admitted directory and appends admission.json."
+  },
+  "supplement_v2_binding": {
+    "receipt": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/full-roi-supplement-v2/command-final.json",
+      "sha256": "580ac938633a029cbc99e9a88f8f44041c3ecf24747a9fe3507effd18596fcbc",
+      "size": 2332
+    },
+    "result": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/full-roi-supplement-v2/full-roi-supplement-result-v2.json",
+      "sha256": "d8aa311ddb1d40a5d386047049d0a04dfa6b4502cf6cd185d5679db75e33ec80",
+      "size": 15619
+    },
+    "receipt_result_sha256_bound": "d8aa311ddb1d40a5d386047049d0a04dfa6b4502cf6cd185d5679db75e33ec80"
+  }
+}

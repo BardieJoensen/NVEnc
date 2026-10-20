@@ -1,0 +1,41 @@
+{
+  "status": "smoke_complete",
+  "utc": "2026-10-20T15:01:21.301408+00:00",
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/analyze_decoder_units.py",
+    "sha256": "d10bfb16859ad02f59ba876b7890f591fee592b690d4c65a6aa0f043a7ae3cb3",
+    "size": 12329
+  },
+  "helper": {
+    "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/analyze_psyex_boundary.py",
+    "sha256": "1027e9a0ec2a5f3b12a6aa908b97cad185df615fe48852a8acbe4daf5fb22ea3",
+    "size": 9743
+  },
+  "normal": {
+    "argv": [
+      "python",
+      "analyze_decoder_units.py",
+      "--smoke"
+    ],
+    "returncode": 0,
+    "stdout": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/smoke-normal.stdout",
+      "sha256": "aac2580e881e7dee980fb6fa192a5bdbdafbe8a705b0d18b54746e09f0aa0f35",
+      "size": 11
+    }
+  },
+  "optimized": {
+    "argv": [
+      "python",
+      "-O",
+      "analyze_decoder_units.py",
+      "--smoke"
+    ],
+    "returncode": 1,
+    "stdout": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/decoder-r10-analysis/smoke-optimized.stdout",
+      "sha256": "4c50a4a446109f11b622f5baf37b2722c1d4cfd44bbdc2200c7d3a7bce9ead1f",
+      "size": 28
+    }
+  }
+}

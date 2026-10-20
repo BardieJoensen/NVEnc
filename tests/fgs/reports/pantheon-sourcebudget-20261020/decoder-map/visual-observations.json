@@ -1,0 +1,72 @@
+{
+  "shirt": {
+    "xywh": [
+      1200,
+      650,
+      200,
+      100
+    ],
+    "pixels": 20000,
+    "category_pixels": {
+      "1": 224,
+      "2": 1408,
+      "3": 0,
+      "4": 18368
+    },
+    "qindex_histogram": {
+      "71": 20000
+    },
+    "exact_predictor_equals_preloop_fraction": 0.15025
+  },
+  "background": {
+    "xywh": [
+      950,
+      50,
+      250,
+      180
+    ],
+    "pixels": 45000,
+    "category_pixels": {
+      "1": 0,
+      "2": 2320,
+      "3": 0,
+      "4": 42680
+    },
+    "qindex_histogram": {
+      "79": 5132,
+      "83": 31516,
+      "87": 8352
+    },
+    "exact_predictor_equals_preloop_fraction": 0.08324444444444444
+  },
+  "face": {
+    "xywh": [
+      160,
+      600,
+      500,
+      480
+    ],
+    "pixels": 240000,
+    "category_pixels": {
+      "1": 8832,
+      "2": 78144,
+      "3": 384,
+      "4": 152640
+    },
+    "qindex_histogram": {
+      "71": 37984,
+      "75": 4096,
+      "79": 5120,
+      "83": 15904,
+      "87": 7936,
+      "91": 20480,
+      "95": 60928,
+      "99": 22016,
+      "103": 8192,
+      "107": 8192,
+      "111": 28672,
+      "115": 20480
+    },
+    "exact_predictor_equals_preloop_fraction": 0.3889
+  }
+}

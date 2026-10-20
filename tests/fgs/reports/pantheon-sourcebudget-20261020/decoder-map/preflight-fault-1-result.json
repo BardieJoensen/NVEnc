@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "argv": [
+    "/usr/bin/python3",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/replay.py",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/nonexistent-build",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/preflight-fault-1"
+  ],
+  "returncode": 1,
+  "error": "FileNotFoundError(2, 'No such file or directory')",
+  "receipt_sha256": "ddf48de3a675ff3bd42a521feda0671c90e7972152fbee7e1d5c520886cdd12b",
+  "runner_sha256": "6961b25542cb28f84ce2ba2993196bd85239d36380654ab131c615b3db5f1781"
+}

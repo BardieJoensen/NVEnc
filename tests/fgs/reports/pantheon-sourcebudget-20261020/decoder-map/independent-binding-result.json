@@ -1,0 +1,155 @@
+{
+  "status": "bound",
+  "scope": "R8 bitstream syntax/framing and dynamic reference-slot lifecycle only; no encoder source-order assumption.",
+  "input_ivf": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/runs/e05-1440/psyex-1x1/out.ivf",
+    "sha256": "26f51de25b0d1374cfb5bd274d04af13495c94caa4b28b9c4ddd97a5727baeca",
+    "size": 17954807
+  },
+  "ffmpeg": {
+    "path": "/usr/bin/ffmpeg",
+    "sha256": "ed16af623947494a72e284b6eb8ff225f2da22b38b5d5069c2fd4b4ba3384e41",
+    "size": 342488
+  },
+  "command": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round10-r8-binding/run-3/command.json",
+    "sha256": "41799ef778dcd681587a9aea234fdb9b76bd4dbaa187e574e9ddba1fa6bcdc8a",
+    "size": 1059
+  },
+  "trace_log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round10-r8-binding/run-3/trace_headers.log",
+    "sha256": "45871965f7a79e828d7108ba51137af326eb1937cede91b367ba875ef03b86d6",
+    "size": 3826957
+  },
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round10-r8-binding/bind_r8_headers.py",
+    "sha256": "4a4c0f25fe1c3e46b468041259001ec13d3ca1b547aeec13a8f3337768f74dea",
+    "size": 16725
+  },
+  "binding_command": {
+    "argv": [
+      "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round10-r8-binding/bind_r8_headers.py",
+      "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r8/runs/e05-1440/psyex-1x1/out.ivf",
+      "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round10-r8-binding/run-3"
+    ],
+    "python": {
+      "path": "/usr/bin/python3.12",
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+      "size": 8020928
+    },
+    "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  "framing_helper_origin": {
+    "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/aom_tu_binding.py",
+    "sha256": "7d8be210357c70706ca17c8ecad81463b22b809455cc3c36944714c66cfd7935",
+    "size": 9133
+  },
+  "summary": {
+    "ivf_packets": 336,
+    "display_actions": 336,
+    "frame_headers": 502,
+    "coded_non_show_existing": 336,
+    "show_existing": 166,
+    "hidden_coded": 166,
+    "shown_coded": 170,
+    "packets_with_multiple_frame_headers": 84,
+    "max_frame_headers_per_packet": 5,
+    "order_hint_bits_minus_1_values": [
+      6
+    ],
+    "implicit_shown_KEY_refresh_events": [
+      0,
+      359
+    ],
+    "obu_type_counts": {
+      "1": 2,
+      "2": 336,
+      "3": 166,
+      "6": 336
+    },
+    "all_packets_exactly_one_display_action": true
+  },
+  "target_coded_event": {
+    "event_index": 314,
+    "coded_ordinal": 210,
+    "packet_index": 209,
+    "packet_pts": 209,
+    "packet_event_index": 1,
+    "frame_type": 1,
+    "show_frame": 0,
+    "showable_frame": 1,
+    "order_hint": 88,
+    "refresh_frame_flags_normalized": 16,
+    "refreshed_slots": [
+      4
+    ],
+    "obu": {
+      "type": 6,
+      "packet_start": 44824,
+      "packet_end": 93547,
+      "size": 48723,
+      "sha256": "9169308b8f10753bf26caebb191e9d7ea869ae748a0fe64823e7ddd7b3e3543a",
+      "file_offset": 10507088
+    },
+    "hidden": true
+  },
+  "target_frame_obu": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round10-r8-binding/run-3/target-frame.obu",
+    "sha256": "9169308b8f10753bf26caebb191e9d7ea869ae748a0fe64823e7ddd7b3e3543a",
+    "size": 48723
+  },
+  "display_216_event": {
+    "display_action": {
+      "kind": "show_existing",
+      "event_index": 325,
+      "slot": 4,
+      "coded_ordinal": 210,
+      "coded_event_index": 314,
+      "display_index": 216,
+      "packet_index": 216,
+      "packet_pts": 216
+    },
+    "header": {
+      "event_index": 325,
+      "packet_index": 216,
+      "packet_pts": 216,
+      "packet_event_index": 0,
+      "header_log_line": 23271,
+      "show_existing_frame": 1,
+      "frame_to_show_map_idx": 4,
+      "obu": {
+        "type": 3,
+        "packet_start": 2,
+        "packet_end": 5,
+        "size": 3,
+        "sha256": "60595adbda69a8b6b7edbf29c5cfd8b17a96b808b4ac2a4d25feec79fc9ce174",
+        "file_offset": 10828061
+      },
+      "resolved_coded_ordinal": 210,
+      "resolved_event_index": 314
+    }
+  },
+  "target_to_display_link": {
+    "refreshed_slot": 4,
+    "intervening_refreshes_same_slot": [],
+    "coded_event_index": 314,
+    "display_event_index": 325
+  },
+  "independent_then_R9_comparison": {
+    "derived_coded_ordinal": 210,
+    "R9_decode_order": 210,
+    "decode_order_equal": true,
+    "derived_order_hint": 88,
+    "R9_order_hint": 88,
+    "order_hint_equal": true
+  },
+  "limits": [
+    "Header lifecycle identifies the coded event feeding display 216; it does not infer SVT input-picture order.",
+    "Target OBU is the exact frame-bearing OBU, not an assumption that an IVF packet contains one frame."
+  ],
+  "events": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round10-r8-binding/run-3/events.json",
+    "sha256": "680e65c0f406e5ed0e809af7a0d16eb15982eb4cf1d3fa54be984803d0548dde",
+    "size": 437209
+  }
+}

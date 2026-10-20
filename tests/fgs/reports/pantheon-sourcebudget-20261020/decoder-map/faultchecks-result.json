@@ -1,0 +1,121 @@
+{
+  "status": "passed",
+  "scope": "Structural parse rejection only, not a replacement for full command/build/OBU/R9 admission",
+  "cases": [
+    {
+      "name": "missing_footer",
+      "rejected": true,
+      "error": "",
+      "trace": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/faultchecks-1/missing_footer/trace.jsonl",
+        "sha256": "bf2346d7c955c1d282b54b5a539a2419bf7500ae04d9122335976633bc80078f",
+        "size": 7055101
+      }
+    },
+    {
+      "name": "bad_event_order",
+      "rejected": true,
+      "error": "",
+      "trace": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/faultchecks-1/bad_event_order/trace.jsonl",
+        "sha256": "d208bba63246ccc86e1276e503104b9860971a77ccc63051727631979b4df2f8",
+        "size": 7055202
+      }
+    },
+    {
+      "name": "bad_payload_offset",
+      "rejected": true,
+      "error": "(1, 147417, 0, 39287447)",
+      "trace": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/faultchecks-1/bad_payload_offset/trace.jsonl",
+        "sha256": "9667428e324195b2518df2292bddba5dcf411d41c5d0c68d2539ae3e91aa4e14",
+        "size": 7055202
+      }
+    },
+    {
+      "name": "missing_owner",
+      "rejected": true,
+      "error": "",
+      "trace": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/faultchecks-1/missing_owner/trace.jsonl",
+        "sha256": "57eb2e224821da4ec0232dcf08a13437d9a0d772bae9e777df6d91a25eb331ad",
+        "size": 7054855
+      }
+    },
+    {
+      "name": "bad_tu_geometry",
+      "rejected": true,
+      "error": "",
+      "trace": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/faultchecks-1/bad_tu_geometry/trace.jsonl",
+        "sha256": "b957d4f92b68acecb2ddf9411d08b9236b7aee457e47dede075dc0f356a4de5a",
+        "size": 7055204
+      }
+    },
+    {
+      "name": "bad_tu_identity",
+      "rejected": true,
+      "error": "",
+      "trace": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/faultchecks-1/bad_tu_identity/trace.jsonl",
+        "sha256": "210425a4fef4781e8b28964bf3ae9e473f0ce2006448506cfff52b8c4f65caee",
+        "size": 7055207
+      }
+    },
+    {
+      "name": "extra_terminal_bytes",
+      "rejected": true,
+      "error": "",
+      "trace": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/faultchecks-1/extra_terminal_bytes/trace.jsonl",
+        "sha256": "5a6f91afc5dea8a0845799c58f0e9fe3633c0af5c1849404ea9133ce75eade1a",
+        "size": 7055202
+      }
+    },
+    {
+      "name": "bad_qindex",
+      "rejected": true,
+      "error": "",
+      "trace": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/faultchecks-1/bad_qindex/trace.jsonl",
+        "sha256": "03beb8428c90fad13b2435c4bd2d64f97aef6aac09333bc49de359e7a5747405",
+        "size": 7055203
+      }
+    },
+    {
+      "name": "bad_eob_extent",
+      "rejected": true,
+      "error": "",
+      "trace": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/faultchecks-1/bad_eob_extent/trace.jsonl",
+        "sha256": "92928b13dd7f85a857e9edc5b27e4828214c8bd8ef0d48f1795946bb8d29da77",
+        "size": 7055205
+      }
+    }
+  ],
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/faultchecks.py",
+    "sha256": "26470cfe1a8c7096845f6b0b470a6e33147001127b8b06f1819cc7b050ae2663",
+    "size": 2170
+  },
+  "validator": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/validate.py",
+    "sha256": "fde9fa7a79c52de70b0098d38fe291670472e8250f629c4c5f3c648d322b471b",
+    "size": 12290
+  },
+  "nominal_trace": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/runs/on-1/trace.jsonl",
+    "sha256": "4908165fc650b1acf40e8cf83e33145a22248693d5dc2233758cc8b89a0074a3",
+    "size": 6153338
+  },
+  "nominal_payload": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/runs/on-1/payload.bin",
+    "sha256": "46758481818407208b6e47bc819ded2d6c7efea0db545f460b50414ab31f8afc",
+    "size": 39287447
+  },
+  "python": {
+    "path": "/usr/bin/python3.12",
+    "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+    "size": 8020928
+  }
+}

@@ -1,0 +1,9 @@
+# R10 v2 super-resolution guard review
+
+Read-only source review on 2026-10-20. The failed original on-run is correctly non-admitted: it stopped at the first target leaf with `unsupported_leaf`, before target payload existed. The exact off decode remains a valid neutrality control for the frozen old build but cannot admit the failed on arm.
+
+The proposed replacement guard is correct for this exact stream. `setup_superres()` first assigns the decoded unscaled dimensions to `cm->superres_upscaled_width/height` (`decodeframe.c:1878-1879`). When sequence `enable_superres` is zero it returns at `:1882` without initializing the denominator. The old denominator-equals-8 test therefore read an inactive/default field and was invalid. The function then calls `resize_context_buffers(cm,width,height)` (`:1986-1987` or `:2027-2028`/`:2041-2042`), so by leaf reconstruction `cm->width/height` are the coded dimensions while the upscaled fields retain the pre-superres dimensions.
+
+Rejecting `cm->width != cm->superres_upscaled_width || cm->height != cm->superres_upscaled_height` therefore tests actual dimension scaling without relying on the inactive denominator. It agrees with libaom's normative `av1_superres_scaled()` width comparison (`resize.h:103-108`); the extra height equality is a fail-closed consistency/no-resize check. Combined with the existing exact `1920x1080` target dimensions and exact bitstream/header binding (`enable_superres=0`), it neither changes nor weakens the admitted population. Detailed stderr values on a guard failure are useful diagnostics and do not affect decisions.
+
+This approves the guard design. The fresh v2 patch/build/manifest must still establish that this is the only observer semantic change and retain the existing off/on stream and reconstruction neutrality gates.

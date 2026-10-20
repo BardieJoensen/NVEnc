@@ -84,3 +84,9 @@ A reviewed [fixed-input grain diagnostic](GRAIN_FIXED_INPUT.md) on the improved
 preset0 base preserves a local quiet/texture input conflict. It rejects the
 measured white16 probe, not all legal grain models or other bases. No estimator
 was fitted and no source-clean criterion was relaxed.
+
+The [R10 final decoder map](DECODER_MAP.md) rejects predictor-only syntax as the
+dominant target coverage explanation:91.84%shirt/94.84%background has positive
+EOB. Native residuals improve pixel error but barely restore shirt HF. Exact
+all336 output/preloop/OBU bindings pass. Next is committed encoder coefficient
+lineage, not another settings sweep. No repair/playback/blocker is established.
