@@ -1,6 +1,7 @@
 # R16: temporal filtering disabled at the original packet budget
 
-Status: rate calibration in progress; no R16 quality conclusion.
+Status: initial calibration completed; bounded rate refinement in preparation.
+No R16 quality conclusion.
 
 The [contract](ROUND16_TF0_BUDGET_CONTRACT.md) tests the admitted R8 policy with
 only temporal filtering disabled and the bitrate request calibrated to
@@ -13,7 +14,23 @@ The first request, 10313 kbps, produced **9.8804608 Mbps** over scored frames
 96:336, exceeding the ceiling. Its full 336-frame rate was 10.2541509 Mbps.
 Passes took 64.6435 and 311.1749 seconds, totaling **375.8184 seconds**.
 This arm is ineligible for the decisive quality comparison. The prescribed
-proportional correction selects request 10070 with fresh two-pass statistics.
+proportional corrections used fresh two-pass statistics:
+
+| Request kbps | Scored Mbps | Full336 Mbps | Two-pass seconds | Eligibility |
+|---:|---:|---:|---:|---|
+| 10313 | 9.8804608 | 10.2541509 | 375.8184 | Above source |
+| 10070 | 9.7013600 | 10.0236371 | 373.0344 | Above source |
+| 10014 | 9.3933528 | 9.9653091 | 375.4678 | Under cap; outside matched interval |
+
+The last request decrease produced a much larger scored-rate change per kbps
+than the preceding decrease. The [method addendum](ROUND16_RATE_REFINEMENT.md)
+therefore replaces proportional feedback with bounded midpoint refinement
+between the measured 10014/10070 endpoints, starting at 10042. Only bitrate
+request and fresh paths change. The source ceiling and matched-rate interval
+remain fixed. Endpoint-equal rates are allowed as quantizer plateaus; they still
+narrow the request bracket and do not by themselves imply nonmonotonicity.
+The [completed calibration records](psyex-tf0/calibration-initial/manifest.json)
+retain both later attempts and the reviewed method correction.
 
 The [preflight manifest](psyex-tf0/preflight/manifest.json) preserves the exact
 runner, provenance, packet records, commands, reviews and prepared validation
@@ -24,7 +41,7 @@ receipt retains failures even before the inner runner can create its receipt.
 The early inline lineage smoke lacks preserved source; its limited provenance
 is explicitly recorded and is not substituted for review of the actual runner.
 
-The selected arm must still pass all336 decoder identity, independent syntax
+Once a matched arm exists, it must pass all336 decoder identity, independent syntax
 binding, encoder/decoder instrumentation neutrality and native coefficient
 joins before quality interpretation. Unchanged GPU campaign metrics, frozen
 texture/quiet/detail controls, full-window tails, banding and temporal evidence

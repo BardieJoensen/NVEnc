@@ -82,3 +82,10 @@ near-exact. Full controls improve strongly with small regressions retained.
 This does not establish affordable precision or a minimum rate. R16 fills the
 missing normal-allocation TFoff arm at the original packet budget before
 implementing a spatial allocator. See PSYEX_REAL.md and the R16 contract.
+
+R16's initial three requests bracket, but do not hit, the original matched-rate
+interval:9.88046/9.70136/9.39335Mbps. No texture hypothesis changes from these
+rate-only observations. The cheapest next discriminator remains the same policy
+at the original budget; bounded midpoint calibration replaces unstable
+proportional feedback. No unmatched result is substituted. See
+ROUND16_RATE_REFINEMENT.md.

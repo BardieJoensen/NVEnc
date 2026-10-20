@@ -568,3 +568,16 @@ against prior tested policies; reviewer independently constrains the next test.
   cannot select the next mechanism: require sufficient residual support and
   scalar-localized loss for absolutecap; dominantskip/missingsupport selects
   decision tracing. Independent design review accepted that clarification.
+
+- R16 initial rate calibration completed without a quality conclusion:
+  requests10313/10070/10014 produced9.8804608/9.70136/9.3933528Mbps.
+  First two exceed source; third is under-cap but outside the matched interval.
+  All fresh two-pass statistics and packet receipts retained.
+- auto R16 calibration refinement: after the contract's three-request
+  reassessment, use midpoint requests inside measured bracket10014..10070,
+  initially10042, at most three additional requests. Proportional response
+  was not locally stable. No encoder policy or acceptance gate changes.
+  Parent corrected review's strict-rate condition: endpoint equality is a
+  valid quantizer plateau and still narrows the request bracket. Only an
+  out-of-range measured response, exhausted integer bracket or trial limit
+  requires reassessment. See ROUND16_RATE_REFINEMENT.md.
