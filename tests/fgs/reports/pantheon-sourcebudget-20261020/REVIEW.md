@@ -58,3 +58,36 @@ amplitude misses make a repeat45.7-minute preset calibration less informative
 for feasibility. Parent accepted that recommendation while explicitly leaving
 the matched-rate preset effect unresolved. It is not a claim that extra bits
 cannot alter a result or that AV1 has reached a limit.
+
+Round2 preflight found discrepancies between the worker's claimed checks and
+its first runner implementation: requested color was not validated, input was
+not hashed after encoding, pass1 statistics had no preserved snapshot, and
+linked-library identity was inferred from an installed filename. Parent explained
+that requested controls and file existence do not prove the measured path, gave
+focused revisions and then integrated the remaining receipt corrections.
+
+Independent review additionally required a pinned/hashed system ffprobe,
+snapshot-path rather than mutable-source-path provenance, and zero packet origins
+because downstream scoring also uses time-based extraction. These were corrected
+before the measured libaom arm. Failed validation cannot leave an admitted status.
+The runner retains per-pass commands/status/log hashes, exact pass1 statistics,
+full IVF/MKV packet arrays, input before/after hashes and separate encode time.
+
+The libaom scoring review accepted three-decoder equality and the unchanged
+source/control math. Parent added explicit case/tag and decoder-set bindings,
+verified probe and pass-log hashes, and named the raw file `dav1d-decoded.yuv`.
+It is decoder output, not an encoder application reconstruction. The summarizer
+uses a stack-specific decoder flag and exposes this distinction. Neither reviewer
+nor parent inferred all temporal preprocessing absent from requested ARNR0.
+
+The companion fixed-input grain probe received independent outcome review.
+Reviewer rechecked all provenance hashes, all3 qualifying pairs and8 common-code
+rows, max-overlap/max-min-count selection, NPZ constant neighborhoods and mask
+indexing, native all-plane base identity,32 unique fixed seeds, exact equality of
+conditional output/isolated-grain HF, and zero selected endpoint occupancy.
+No material validity defect was found. Parent retained the reviewer's strongest
+limitation: white16 overshoots both source intervals, so zero joint hits alone
+does not reject other scales or AR shapes. Similar ensemble magnitudes under the
+same decoded input support a local conflict; individual responses differ.
+The report states raw code192 means8-bit48, uses frozen texture class without
+claiming stochasticity, and makes no temporal or signaling-cost assertion.

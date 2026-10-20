@@ -138,3 +138,42 @@ the SVT path, not a changed confound. A pass supports practical representability
 by this stack; a failure rejects only the tested configuration. Worker owns the
 new encoder runner and fresh aom run directories; parent owns scoring and Git;
 reviewer remains independent. No production or recursive delegation.
+
+- auto: Round2 first run uses8.319776Mbps,85.979% of source,391.026s total.
+  Before any quality interpretation, calibrate requested TBR10003→11576 using
+  observed packet response to aim99.5%. All settings/input stay fixed and the
+  next run has a fresh tag. This resolves large budget underuse, not a quality
+  failure. Prior run receipts remain intact.
+
+### Companion fixed-input grain discriminator
+
+Reviewer exploratory read-only calculations suggest preset0 E05-1440 changes
+legal-grain input equivalence relative to the old base. Treat stdout numbers as
+unverified until parent codifies and preserves the complete selection. Reuse the
+frozen causal held-out tiles and original representability selection: quiet versus
+flat_texture sourceHF>.4 with baseHF<half source, same frame, base mean distance
+<=.5 and exact10bit histogram overlap>=.5. Keep every pair; choose highest overlap
+with deterministic coordinate tie break. Within it choose the shared constant3x3
+code maximizing the smaller region count, excluding prior2-pixel overlap bands.
+Do not select a code for its source amplitude and do not add a minimum-count gate.
+
+Probe only the existing legal white-AR scale16 model and32 fixed seeds, with
+native preserved dav1d grain tool on unchanged preset0 IVF. Verify native base
+pixels equal the app/dav1d/NVDEC-validated frame, source/selector hashes, exact
+masks/counts and base nonmutation. Preserve per-seed conditional output and
+isolated-grain HF, full-tile ACF, clipping occupancy, crops and complete selector.
+Same-input amplitude differences are a local representability diagnostic, not a
+repair or exhaustive AR/scale/seed search. A material position-dependent response
+or simultaneous interval satisfaction would weaken/falsify this specific conflict.
+A conflict on this new base does not transfer to untested bases or whole-shot
+models. CPU work is bounded to8–11 while encoding occupies0–7; no GPU involved.
+
+Companion result: three pairs, selected frame24/code192 (raw10bit,8bit48),
+64quiet/37texture pixels. Native base matches all planes;32 nonmutation checks
+pass. White16 ensemble conditional HF means .35627/.34820 against source
+.09081/.24429; neither region has an interval hit in32seeds. Selected endpoint
+occupancy is zero. Independent review validates masks, selection and provenance.
+It emphasizes that scale16 overshoots even texture, so zero joint hits alone is
+weak evidence; same-input response coupling is the useful observation. Do not
+call the frozen flat_texture class proven stochastic grain, or infer exhaustive
+legal-model failure. [Bounded result](GRAIN_FIXED_INPUT.md) preserves the limits.

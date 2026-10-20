@@ -38,3 +38,8 @@ Prior evidence: [causal and measured preservation report](../pantheon-rd-2026101
 Prior source-budget ROI failure is accepted; it does not prove source-budget
 preservation impossible. All previous archives remain unchanged. Production,
 Tdarr, torrents and library changes remain unauthorized.
+
+A reviewed [fixed-input grain diagnostic](GRAIN_FIXED_INPUT.md) on the improved
+preset0 base preserves a local quiet/texture input conflict. It rejects the
+measured white16 probe, not all legal grain models or other bases. No estimator
+was fitted and no source-clean criterion was relaxed.
