@@ -1,0 +1,148 @@
+{
+  "purpose": "Pinned source audit for the libaom 3.8.2 PSNR-versus-SSIM tune-policy experiment",
+  "aom_tag": {
+    "refs_url": "https://aomedia.googlesource.com/aom/+refs/tags/v3.8.2?format=JSON",
+    "commit_url": "https://aomedia.googlesource.com/aom/+/refs/tags/v3.8.2?format=JSON",
+    "tag_object": "80708309620c178e2f3a03ea452495ec83617079",
+    "peeled_commit": "615b5f541e4434aebd993036bc97ebc1a77ebc25",
+    "tree": "6c752cdc321eb9ba5b2a9b30fd6047d49a8a1a64"
+  },
+  "downloads": {
+    "aom_archive": {
+      "url": "https://aomedia.googlesource.com/aom/+archive/refs/tags/v3.8.2.tar.gz",
+      "path": "aom-v3.8.2.tar.gz",
+      "sha256": "63238bcefc514e3e454e7ebab8470174c9a237a578e3e4ee3e9872e9bfc70078"
+    },
+    "ubuntu_patch_archive": {
+      "url": "https://security.ubuntu.com/ubuntu/pool/main/a/aom/aom_3.8.2-2ubuntu0.2.debian.tar.xz",
+      "path": "aom_3.8.2-2ubuntu0.2.debian.tar.xz",
+      "sha256": "d1fb459395296901e6aed6348828c6a5a29e2364d5b0c809a5ba1def73d599e7"
+    },
+    "ffmpeg_wrapper": {
+      "url": "https://raw.githubusercontent.com/FFmpeg/FFmpeg/n6.1.1/libavcodec/libaomenc.c",
+      "path": "ffmpeg-n6.1.1-libaomenc.c",
+      "sha256": "ba82de949413ba49915e4601303481c68713e4e0dfc0303cc67acdaedc490369"
+    }
+  },
+  "installed": {
+    "libaom_package_version": "3.8.2-2ubuntu0.2",
+    "libaom_path": "/usr/lib/x86_64-linux-gnu/libaom.so.3.8.2",
+    "libaom_sha256": "8237d4144def32f99903834d4a11892f8e133ae8592b6fe3325e541a917e1bbf",
+    "libaom_soname_path": "/lib/x86_64-linux-gnu/libaom.so.3",
+    "ffmpeg_package_version": "7:6.1.1-3ubuntu5",
+    "ffmpeg_path": "/usr/bin/ffmpeg",
+    "ffmpeg_sha256": "ed16af623947494a72e284b6eb8ff225f2da22b38b5d5069c2fd4b4ba3384e41"
+  },
+  "inspected_files": {
+    "src/aom/aomcx.h": {
+      "sha256": "c9512974e7be7580eddc45e443ec510ead040b4ebb7b43ba6c621a280af7eb85",
+      "lines": [
+        "277-282: public AOME_SET_TUNING control and PSNR default",
+        "1622-1644: PSNR/SSIM enums and across-block versus in-block distinction"
+      ]
+    },
+    "src/av1/av1_cx_iface.c": {
+      "sha256": "d080059eb52aedcce1ea474939329d606d379b882656821b6f68d89fb004b92b",
+      "lines": [
+        "1296-1307: tune configuration assignment, separate distortion metric",
+        "1725-1729: AOME_SET_TUNING changes only extra_cfg.tuning"
+      ]
+    },
+    "src/av1/encoder/encoder_utils.c": {
+      "sha256": "8ecd8cdded3d8abcb90ace7eea19a21ec63dce6437c793cc7ae75fe93a275a0c",
+      "lines": [
+        "1316-1382: source-luma variance curve and frame geometric-mean normalization"
+      ]
+    },
+    "src/av1/encoder/encodeframe_utils.c": {
+      "sha256": "95e7d36b32cc0a20d0772027d22ddfcbab0e78bb98af81cd609c69e0251dfa93",
+      "lines": [
+        "20-63: SSIM spatial factor multiplication into block RDMULT"
+      ]
+    },
+    "src/av1/encoder/partition_search.c": {
+      "sha256": "036858c180395256cf034e9df8c09e42f289fe57f7f975b9b20be350943dfbee",
+      "lines": [
+        "590-615: AQ/delta-Q RDMULT setup followed by SSIM multiplier"
+      ]
+    },
+    "src/av1/encoder/encoder.c": {
+      "sha256": "d9377bf488befd79f760aae5228ee5b2d19437e933f2344ffd8c96cb44276dbb",
+      "lines": [
+        "3732-3734: per-frame SSIM factor construction"
+      ]
+    },
+    "src/av1/encoder/firstpass.c": {
+      "sha256": "1338acf84b122edd209ca5c41b64ccfddef9cef34ccff10ccaf0f510c2aca2ba",
+      "lines": [
+        "complete-file search: no tuning, AOM_TUNE_SSIM, AOM_TUNE_PSNR, or ssim_rdmult reference"
+      ]
+    },
+    "src/av1/encoder/pass2_strategy.c": {
+      "sha256": "084083a83c6c97e8fba217c2096cc0f9ce0b7226c7c753d4ff1b51c1ef759158",
+      "lines": [
+        "4192-4193: only matching tune condition is for VMAF modes"
+      ]
+    },
+    "ffmpeg-n6.1.1-libaomenc.c": {
+      "sha256": "ba82de949413ba49915e4601303481c68713e4e0dfc0303cc67acdaedc490369",
+      "lines": [
+        "947-951: FFmpeg sends AOME_SET_TUNING",
+        "1499-1501: public psnr and ssim option mapping"
+      ]
+    }
+  },
+  "ubuntu_patch_scope": [
+    {
+      "patch": "0001-doc-Use-libjs-mathjax-rather-than-cloudflare-copy.patch",
+      "scope": "documentation template"
+    },
+    {
+      "patch": "0002-use-system-libyuv.patch",
+      "scope": "build integration and app/system libyuv use"
+    },
+    {
+      "patch": "0003-use-system-libwebm.patch",
+      "scope": "build integration and app/system libwebm use"
+    },
+    {
+      "patch": "CVE-2024-5171-1.patch",
+      "scope": "aom_image allocation validation"
+    },
+    {
+      "patch": "CVE-2024-5171-2.patch",
+      "scope": "aom_image allocation validation and API documentation"
+    },
+    {
+      "patch": "CVE-2026-56208.patch",
+      "scope": "LAP-mode first-pass stats buffer sizing/window movement and region frame-count bounds; no tune branch"
+    },
+    {
+      "patch": "CVE-2026-56209_56210_56211.patch",
+      "scope": "SVC spatial/temporal layer ID bounds checks"
+    }
+  ],
+  "interpretation": {
+    "direct_change": "SSIM adds normalized source-variance-dependent block RDMULT scaling; PSNR omits it while the separate in-block distortion metric remains unchanged",
+    "not_directly_switched": [
+      "ARNR",
+      "alt-reference construction",
+      "loop filtering",
+      "CDEF",
+      "restoration",
+      "prediction tools",
+      "reference settings"
+    ],
+    "indirectly_may_change": [
+      "partitions",
+      "modes",
+      "transforms",
+      "coefficients",
+      "reconstructed references",
+      "later prediction",
+      "selected filter parameters"
+    ],
+    "required_runtime_check": "Byte-identical pass-1 statistics between the SSIM and PSNR arms",
+    "claim_scope": "Rate-calibrated source-variance RDMULT allocation / whole decision-policy contrast; not a pure distortion-metric, quantizer, or fixed-structure experiment"
+  }
+}
