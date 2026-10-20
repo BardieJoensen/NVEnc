@@ -1,0 +1,167 @@
+{
+  "status": "complete",
+  "frame": 216,
+  "scored_frame": 120,
+  "dimensions": [
+    1920,
+    1080
+  ],
+  "pix_fmt": "yuv420p10le",
+  "rounding": "uint16 LE luma divided by 4 once, rounded/clipped to uint8",
+  "resized": false,
+  "playback_observed": false,
+  "inputs": {
+    "original": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/admitted-1/original.yuv",
+      "sha256": "c2798d9c00f53bdbe7041575249b353a478a8f5557bc4dd5b61d9ae03f13ea12",
+      "size": 6220800
+    },
+    "r8_final": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-boundary-r9/admitted-1/postloop.yuv",
+      "sha256": "8e540b11034f78a76c6a7b7732c2386eee2b3647137dffab9ab5f1930fcd1985",
+      "size": 6220800
+    },
+    "r15_final": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/admitted-1/postloop.yuv",
+      "sha256": "711fc12f37beba0babfddfa92fba6715f92f679e49517cee5651503418f5a82f",
+      "size": 6220800
+    }
+  },
+  "rois": {
+    "shirt": {
+      "xywh": [
+        1200,
+        650,
+        200,
+        100
+      ],
+      "panel": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-stills/result/shirt-3panel.png",
+        "sha256": "dfa14787624c3dd5df7bc055ecf9286e871a41f969a2080366ee2843ec22940b",
+        "size": 15599
+      },
+      "entries": [
+        {
+          "stage": "original",
+          "xywh": [
+            18,
+            42,
+            200,
+            100
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "r8_final",
+          "xywh": [
+            236,
+            42,
+            200,
+            100
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "r15_final",
+          "xywh": [
+            454,
+            42,
+            200,
+            100
+          ],
+          "pixels_native": true
+        }
+      ]
+    },
+    "background": {
+      "xywh": [
+        950,
+        50,
+        250,
+        180
+      ],
+      "panel": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-stills/result/background-3panel.png",
+        "sha256": "de2962e9be78807822e15484885871590b3fb5ad222e9cd8f6df292337609e2d",
+        "size": 54820
+      },
+      "entries": [
+        {
+          "stage": "original",
+          "xywh": [
+            18,
+            42,
+            250,
+            180
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "r8_final",
+          "xywh": [
+            286,
+            42,
+            250,
+            180
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "r15_final",
+          "xywh": [
+            554,
+            42,
+            250,
+            180
+          ],
+          "pixels_native": true
+        }
+      ]
+    },
+    "face": {
+      "xywh": [
+        160,
+        600,
+        500,
+        480
+      ],
+      "panel": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-stills/result/face-3panel.png",
+        "sha256": "3ef018bde1ca9c19f0e1d630bddf7a4c3daa8ff85690c3bf013a50e81aaa962b",
+        "size": 292796
+      },
+      "entries": [
+        {
+          "stage": "original",
+          "xywh": [
+            18,
+            42,
+            500,
+            480
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "r8_final",
+          "xywh": [
+            536,
+            42,
+            500,
+            480
+          ],
+          "pixels_native": true
+        },
+        {
+          "stage": "r15_final",
+          "xywh": [
+            1054,
+            42,
+            500,
+            480
+          ],
+          "pixels_native": true
+        }
+      ]
+    }
+  }
+}

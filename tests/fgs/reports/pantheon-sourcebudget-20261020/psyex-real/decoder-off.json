@@ -1,0 +1,215 @@
+{
+  "status": "decoded",
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/replay_decoder.py",
+    "sha256": "99ccb7993dcf720f9f0f8835d3f0e41750db6bd27acd638299717f6b52efaf7b",
+    "size": 5463
+  },
+  "argv": [
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/replay_decoder.py",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/command.json",
+    "8234fcf3c6c8d69522646d6e4b34973639dcdbce30696f4bb0474b583630996a",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round15-binding/run-1/result.json",
+    "f4767eb474745c2722d16099d519db9b787b65b5d013dff713956ccad66e05ea",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/decoder-off-1"
+  ],
+  "started_utc": "2026-10-20T17:33:57.794696+00:00",
+  "trace": false,
+  "encode_receipt": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/command.json",
+    "sha256": "8234fcf3c6c8d69522646d6e4b34973639dcdbce30696f4bb0474b583630996a",
+    "size": 60969
+  },
+  "binding": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round15-binding/run-1/result.json",
+    "sha256": "f4767eb474745c2722d16099d519db9b787b65b5d013dff713956ccad66e05ea",
+    "size": 5287
+  },
+  "build_pins": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/completed-build-pins.json",
+    "sha256": "4c221ef0112291bcdd541b87a80c21f74ebef39e5b0ff507921d014b091f1af5",
+    "size": 4852
+  },
+  "app": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/build-proposed/aomdec",
+    "sha256": "ce8a2cf182077c7f9f285666ca64a7d56f54bfbc2f0e5e3ee19eb04b0aab7015",
+    "size": 126888
+  },
+  "library": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/build-proposed/libaom.so.3.8.2",
+    "sha256": "6b621938f270dd3b7e5fef167730cf7177191247a1566c4056b22501dac490bd",
+    "size": 8276024
+  },
+  "input": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/out.ivf",
+    "sha256": "ead59135c2cb0f12f2f864633768d3b69d4082240e7be5897d11b6b9f24d268f",
+    "size": 357064970
+  },
+  "expected_recon": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/recon.yuv",
+    "sha256": "af1056c358e320e81412628f1eebc3a4e8766c16547040f078537b1177aa436e",
+    "size": 2090188800
+  },
+  "command": [
+    "/usr/bin/nice",
+    "-n",
+    "10",
+    "/usr/bin/taskset",
+    "-c",
+    "8-11",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/build-proposed/aomdec",
+    "--i420",
+    "--rawvideo",
+    "--output-bit-depth=10",
+    "--threads=1",
+    "--row-mt=0",
+    "--summary",
+    "-o",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/decoder-off-1/recon.yuv",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/out.ivf"
+  ],
+  "environment": {},
+  "inputs_before": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/command.json",
+      "sha256": "8234fcf3c6c8d69522646d6e4b34973639dcdbce30696f4bb0474b583630996a",
+      "size": 60969
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round15-binding/run-1/result.json",
+      "sha256": "f4767eb474745c2722d16099d519db9b787b65b5d013dff713956ccad66e05ea",
+      "size": 5287
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/completed-build-pins.json",
+      "sha256": "4c221ef0112291bcdd541b87a80c21f74ebef39e5b0ff507921d014b091f1af5",
+      "size": 4852
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/build-proposed/aomdec",
+      "sha256": "ce8a2cf182077c7f9f285666ca64a7d56f54bfbc2f0e5e3ee19eb04b0aab7015",
+      "size": 126888
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/build-proposed/libaom.so.3.8.2",
+      "sha256": "6b621938f270dd3b7e5fef167730cf7177191247a1566c4056b22501dac490bd",
+      "size": 8276024
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/replay_decoder.py",
+      "sha256": "99ccb7993dcf720f9f0f8835d3f0e41750db6bd27acd638299717f6b52efaf7b",
+      "size": 5463
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/out.ivf",
+      "sha256": "ead59135c2cb0f12f2f864633768d3b69d4082240e7be5897d11b6b9f24d268f",
+      "size": 357064970
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/recon.yuv",
+      "sha256": "af1056c358e320e81412628f1eebc3a4e8766c16547040f078537b1177aa436e",
+      "size": 2090188800
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round15-binding/bind_r15_headers.py",
+      "sha256": "34689de8b365801e762fd80a83ec9a349d88bb944c667e96da7bab9edce9323d",
+      "size": 18554
+    },
+    {
+      "path": "/usr/bin/nice",
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d",
+      "size": 35336
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b",
+      "size": 31104
+    },
+    {
+      "path": "/usr/bin/ldd",
+      "sha256": "752803b8baa217b821bd4566c4fbdaec50c01cb32d2796ec056d22d190d4290f",
+      "size": 5382
+    }
+  ],
+  "ldd": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/decoder-off-1/ldd.txt",
+    "sha256": "19d7c1bdaff49610f88947f160fb2accb774260442505bab5c3163997dee4f89",
+    "size": 369
+  },
+  "returncode": 0,
+  "seconds": 41.58891529799439,
+  "log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/decoder-off-1/decode.log",
+    "sha256": "ca50acb77cccb8e0515ec2deeaa87ee56743198a773c2d1ffd1c486c06ad1d74",
+    "size": 64
+  },
+  "recon": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/decoder-off-1/recon.yuv",
+    "sha256": "af1056c358e320e81412628f1eebc3a4e8766c16547040f078537b1177aa436e",
+    "size": 2090188800
+  },
+  "all336_allplanes_exact": true,
+  "inputs_after": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/command.json",
+      "sha256": "8234fcf3c6c8d69522646d6e4b34973639dcdbce30696f4bb0474b583630996a",
+      "size": 60969
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round15-binding/run-1/result.json",
+      "sha256": "f4767eb474745c2722d16099d519db9b787b65b5d013dff713956ccad66e05ea",
+      "size": 5287
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/completed-build-pins.json",
+      "sha256": "4c221ef0112291bcdd541b87a80c21f74ebef39e5b0ff507921d014b091f1af5",
+      "size": 4852
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/build-proposed/aomdec",
+      "sha256": "ce8a2cf182077c7f9f285666ca64a7d56f54bfbc2f0e5e3ee19eb04b0aab7015",
+      "size": 126888
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/build-proposed/libaom.so.3.8.2",
+      "sha256": "6b621938f270dd3b7e5fef167730cf7177191247a1566c4056b22501dac490bd",
+      "size": 8276024
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/replay_decoder.py",
+      "sha256": "99ccb7993dcf720f9f0f8835d3f0e41750db6bd27acd638299717f6b52efaf7b",
+      "size": 5463
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/out.ivf",
+      "sha256": "ead59135c2cb0f12f2f864633768d3b69d4082240e7be5897d11b6b9f24d268f",
+      "size": 357064970
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/recon.yuv",
+      "sha256": "af1056c358e320e81412628f1eebc3a4e8766c16547040f078537b1177aa436e",
+      "size": 2090188800
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round15-binding/bind_r15_headers.py",
+      "sha256": "34689de8b365801e762fd80a83ec9a349d88bb944c667e96da7bab9edce9323d",
+      "size": 18554
+    },
+    {
+      "path": "/usr/bin/nice",
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d",
+      "size": 35336
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b",
+      "size": 31104
+    },
+    {
+      "path": "/usr/bin/ldd",
+      "sha256": "752803b8baa217b821bd4566c4fbdaec50c01cb32d2796ec056d22d190d4290f",
+      "size": 5382
+    }
+  ],
+  "ended_utc": "2026-10-20T17:34:45.851199+00:00"
+}

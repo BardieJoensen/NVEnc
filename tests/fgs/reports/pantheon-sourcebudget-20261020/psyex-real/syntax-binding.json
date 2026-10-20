@@ -1,0 +1,153 @@
+{
+  "status": "bound",
+  "scope": "R15 bitstream syntax/framing and dynamic reference-slot lifecycle; no old event/order/source-order assumption.",
+  "encode_receipt": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/command.json",
+    "sha256": "8234fcf3c6c8d69522646d6e4b34973639dcdbce30696f4bb0474b583630996a",
+    "size": 60969
+  },
+  "input_ivf": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/out.ivf",
+    "sha256": "ead59135c2cb0f12f2f864633768d3b69d4082240e7be5897d11b6b9f24d268f",
+    "size": 357064970
+  },
+  "ffmpeg": {
+    "path": "/usr/bin/ffmpeg",
+    "sha256": "ed16af623947494a72e284b6eb8ff225f2da22b38b5d5069c2fd4b4ba3384e41",
+    "size": 342488
+  },
+  "command": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round15-binding/run-1/command.json",
+    "sha256": "68b7c730dbad33d620a6c45b0e48fc62f6cdca90c713f138c334450fea30002d",
+    "size": 1351
+  },
+  "trace_log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round15-binding/run-1/trace_headers.log",
+    "sha256": "0bbbc759863636d712543d222a43f712e9a6cea09c8e4b0b9a9f45f7c9d9c189",
+    "size": 3607825
+  },
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round15-binding/bind_r15_headers.py",
+    "sha256": "34689de8b365801e762fd80a83ec9a349d88bb944c667e96da7bab9edce9323d",
+    "size": 18554
+  },
+  "binding_command": {
+    "argv": [
+      "reviewer/round15-binding/bind_r15_headers.py",
+      "worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/command.json",
+      "reviewer/round15-binding/run-1"
+    ],
+    "python": {
+      "path": "/usr/bin/python3.12",
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+      "size": 8020928
+    },
+    "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]"
+  },
+  "framing_helper_origin": {
+    "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/aom_tu_binding.py",
+    "sha256": "7d8be210357c70706ca17c8ecad81463b22b809455cc3c36944714c66cfd7935",
+    "size": 9133
+  },
+  "summary": {
+    "ivf_packets": 336,
+    "display_actions": 336,
+    "frame_headers": 502,
+    "coded_non_show_existing": 336,
+    "show_existing": 166,
+    "hidden_coded": 166,
+    "shown_coded": 170,
+    "packets_with_multiple_frame_headers": 84,
+    "max_frame_headers_per_packet": 5,
+    "order_hint_bits_minus_1_values": [
+      6
+    ],
+    "implicit_shown_KEY_refresh_events": [
+      0,
+      359
+    ],
+    "obu_type_counts": {
+      "1": 2,
+      "2": 336,
+      "3": 166,
+      "6": 336
+    },
+    "all_packets_exactly_one_display_action": true
+  },
+  "target_coded_event": {
+    "event_index": 314,
+    "coded_ordinal": 210,
+    "packet_index": 209,
+    "packet_pts": 209,
+    "packet_event_index": 1,
+    "frame_type": 1,
+    "show_frame": 0,
+    "showable_frame": 1,
+    "order_hint": 88,
+    "refresh_frame_flags_normalized": 16,
+    "refreshed_slots": [
+      4
+    ],
+    "obu": {
+      "type": 6,
+      "packet_start": 1115666,
+      "packet_end": 2160858,
+      "size": 1045192,
+      "sha256": "b23d36fa4f00c81ff8d581ddbaf0ee8613f258cdadd1c6472bef1c7a0c169ea2",
+      "file_offset": 225117553
+    }
+  },
+  "target_frame_obu": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round15-binding/run-1/target-frame.obu",
+    "sha256": "b23d36fa4f00c81ff8d581ddbaf0ee8613f258cdadd1c6472bef1c7a0c169ea2",
+    "size": 1045192
+  },
+  "display_216_event": {
+    "display_action": {
+      "kind": "show_existing",
+      "event_index": 325,
+      "slot": 4,
+      "coded_ordinal": 210,
+      "coded_event_index": 314,
+      "display_index": 216,
+      "packet_index": 216,
+      "packet_pts": 216
+    },
+    "header": {
+      "event_index": 325,
+      "packet_index": 216,
+      "packet_pts": 216,
+      "packet_event_index": 0,
+      "header_log_line": 21956,
+      "show_existing_frame": 1,
+      "frame_to_show_map_idx": 4,
+      "obu": {
+        "type": 3,
+        "packet_start": 2,
+        "packet_end": 5,
+        "size": 3,
+        "sha256": "60595adbda69a8b6b7edbf29c5cfd8b17a96b808b4ac2a4d25feec79fc9ce174",
+        "file_offset": 233106272
+      },
+      "resolved_coded_ordinal": 210,
+      "resolved_event_index": 314
+    }
+  },
+  "target_to_display_link": {
+    "kind": "show_existing",
+    "refreshed_slot": 4,
+    "intervening_refreshes_same_slot": [],
+    "coded_event_index": 314,
+    "display_event_index": 325
+  },
+  "limits": [
+    "Header lifecycle identifies the coded event feeding decoded display index 216; decoder/sample admission must separately bind that display to original fixture frame216.",
+    "Target OBU is exact only because this run uses an OBU_FRAME; split OBU_FRAME_HEADER plus TILE_GROUP input is rejected.",
+    "No R8/R9/R10 event ordinal, order hint, hidden-frame status, or source-picture-order mapping is assumed."
+  ],
+  "events": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round15-binding/run-1/events.json",
+    "sha256": "ba2feb9d560d4a062900645cb4f34fb0f6b19f395d19ba2093399bd97fa72fea",
+    "size": 444699
+  }
+}

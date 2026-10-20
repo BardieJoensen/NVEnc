@@ -549,3 +549,22 @@ against prior tested policies; reviewer independently constrains the next test.
   Observe actual target quantizers; fresh two-pass statistics; new decoder,
   color, packet and GPU/full-window validation. Overshoot is diagnostic only;
   practical ceiling remains original rate. No acceptance criterion changes.
+
+- R15 completed and independently accepted as high-rate numerical feasibility:
+  exact all336 decoders/off/on encoders, dynamic syntax binding and4809finalTU
+  joins pass. All traced pixels use actualq4 and coding input is original.
+  Five-frame shirt/background HF errors−3.622%/−1.427%, ACF.02189/.00542 pass;
+  all12870 controltile MSEs improve, while41HF/612ACF pairs regress. Quiet
+  positiveHF max+.01066; no exhaustive noise or playback acceptance.
+  Actual190.4115432Mbps=19.6777xsource,692.476910s across two passes. The practical
+  rate ceiling fails. No minimum-rate or codec-limit inference.
+  Source/preloop identities and independent raw-surface metrics verified;
+  scorer identity-schema failure corrected before any metrics in run1, valid
+  run2 retained. Report cross-binding and coefficient-change wording corrected.
+- auto R16: choose exact R8 policy with only TFoff at original packet budget,
+  no publicQP bounds. Fresh stats, rate-only calibration to99–100%source, all
+  unchanged decoder/native/GPU/texture/quiet/fullwindow gates. This fills the
+  missing practical comparison before implementing an allocator. Coarseq alone
+  cannot select the next mechanism: require sufficient residual support and
+  scalar-localized loss for absolutecap; dominantskip/missingsupport selects
+  decision tracing. Independent design review accepted that clarification.

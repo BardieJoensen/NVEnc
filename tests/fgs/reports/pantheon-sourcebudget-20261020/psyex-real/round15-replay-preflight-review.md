@@ -1,0 +1,9 @@
+# R15 observer replay preflight
+
+Reviewed `worker/psyex-r15-real/replay_r15.py` SHA256 `230d6e15dfd74431f7d04ace5e6ed6da0ba28f576716bb1bf3228e0c15fad508` before any R15 replay.
+
+The adapter correctly consumes a completed R15 receipt and its caller-pinned SHA, requires request10313 plus TF0/minQP1/maxQP1, verifies the live input/IVF/recon/fresh-stats identities, derives pass 2 by changing only app/stats/output paths, loads the completed private R11 app/library, passes separate append-only boundary and coefficient FDs, and requires exact unmodified IVF and app reconstruction. Off must emit neither trace; on bounds and minimally checks both record envelopes. This is suitable as a replay producer, conditional on the later admission validator pinning the final R15 receipt, this replay script/snapshot, command normalization, loaded library, complete trace schemas/populations, and exact stream/recon hashes.
+
+The `observed_target_source_index=216` check is an observer input-picture assertion, not the coded-event/display binding promised by the contract. Its wording at lines 153–154 (“dynamically selected”) is inaccurate: 216 is hardcoded. Do not use it to infer the coded event. The independent syntax binder must derive display216's shown-coded or show-existing lifecycle and exact frame OBU from the new IVF, then admission must join that result to the observer generation/packed OBU. This wording issue does not change replay bits or block execution if the validator enforces that join.
+
+The receipt SHA is a required runtime argument rather than a compile-time constant. That is appropriate because the real receipt does not exist yet, but the eventual reviewed invocation and validator must make the supplied SHA non-discretionary. No quality or intervention-delivery conclusion follows from the replay's minimal envelope checks alone.

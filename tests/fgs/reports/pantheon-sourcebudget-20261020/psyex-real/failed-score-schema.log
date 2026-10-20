@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/score_r15.py", line 49, in <module>
+    verify_identities(validation)
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/score_r15.py", line 22, in verify_identities
+    for value in obj.values(): verify_identities(value)
+                               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/score_r15.py", line 21, in verify_identities
+    assert x.fingerprint(obj["path"]) == obj, obj.get("path")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/command.json

@@ -1,0 +1,86 @@
+{
+  "status": "complete",
+  "command": [
+    "/usr/bin/nice",
+    "-n",
+    "10",
+    "/usr/bin/taskset",
+    "-c",
+    "8-11",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/analysis-venv/bin/python",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/admit.py",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1",
+    "8234fcf3c6c8d69522646d6e4b34973639dcdbce30696f4bb0474b583630996a",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/reviewer/round15-binding/run-1/result.json",
+    "f4767eb474745c2722d16099d519db9b787b65b5d013dff713956ccad66e05ea",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/replays/off-1",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/replays/on-1",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/decoder-off-1",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/decoder-on-1",
+    "99ccb7993dcf720f9f0f8835d3f0e41750db6bd27acd638299717f6b52efaf7b",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/admitted-1"
+  ],
+  "inputs_before": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/execute.py",
+      "size": 1855,
+      "sha256": "93c0740995afa0b6c1bf91c5c5bacbe620558e9a327493edf71406e8a68f4858"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/admit.py",
+      "size": 18543,
+      "sha256": "7dc554ff79d8b9c8b206e10f5326394dcc4483e5c679cfcb22529340aa7c9da4"
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "size": 8020928,
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+    },
+    {
+      "path": "/usr/bin/nice",
+      "size": 35336,
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d"
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "size": 31104,
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b"
+    }
+  ],
+  "started_utc": "2026-10-20T17:49:48.398714+00:00",
+  "returncode": 0,
+  "seconds": 21.19259356195107,
+  "log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/admission-execution-1.log",
+    "size": 2562,
+    "sha256": "2f0457618585d3ef8862e2843fbdc1f55990f0258c4f7847018038c8d1264c06"
+  },
+  "inputs_after": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/execute.py",
+      "size": 1855,
+      "sha256": "93c0740995afa0b6c1bf91c5c5bacbe620558e9a327493edf71406e8a68f4858"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/admit.py",
+      "size": 18543,
+      "sha256": "7dc554ff79d8b9c8b206e10f5326394dcc4483e5c679cfcb22529340aa7c9da4"
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "size": 8020928,
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+    },
+    {
+      "path": "/usr/bin/nice",
+      "size": 35336,
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d"
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "size": 31104,
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b"
+    }
+  ],
+  "ended_utc": "2026-10-20T17:50:09.596746+00:00"
+}

@@ -1,17 +1,17 @@
 # Current hypothesis ledger
 
-Updated after admitted and independently reviewed Round14 original-source diagnostic. No candidate qualifies; no technical blocker or
+Updated after admitted and independently reviewed Round15 real preservation diagnostic. No practical candidate qualifies; no technical blocker or
 playback observation exists. Practical ceiling remains original video payload
 rate; all texture, clean-region, detail, banding and temporal gates are unchanged.
 
 | Hypothesis | Support | Contradiction or limitation | Unknown | Cheapest next discriminator |
 |---|---|---|---|---|
 | Libaom coding-source sample substitutions dominate loss | R4 finds sparse changes elsewhere and R5 changes reconstruction | Libaom target input is already original; all-event neutralization fails at matched rate | Retained upstream analysis/reference policy | Defer this libaom route; unchanged neutralization reruns add no information |
-| PSYEX upstream sample processing explains texture loss | R14 original samples raise fixed-q1 shirt HF62.79→86.50%source and ACF error.0821→.0413 | Still misses amplitude; background changes little | Preservation with changing references/decisions and its actual cost | One real TF-off plus near-fine requested-QP feasibility arm; observe delivered q |
-| Finer actual quantization can restore meaningful texture | R7 delivers shirtq32/backgroundq32–36 and substantially improves texture/detail | At4.01686×source it still fails shirt and background texture screens | Other precision/decision policies; no general quantization impossibility | Stop global qmax repeats; identify a distinct decision policy before another real arm |
+| PSYEX upstream sample processing explains texture loss | R14 original samples raise fixed-q1 shirt HF62.79→86.50%source; R15 original-input real bundle passes both texture screens | Fixed decisions still miss amplitude; R15 also changes precision/decisions/references | TF-off policy at original rate without QP bounds | R16 exact R8 policy plus TFoff at99–100%source |
+| Finer actual quantization can restore meaningful texture | R15 delivers actualq4 over all traced support and passes five-frame screens | R7q32 failed; R15 costs19.6777xsource and is not quantizer-only isolation | Sufficient precision, affordable redistribution and practical feedback | R16 missing normal-allocation TFoff budget arm; cap only if scalar loss and sufficient support justify it |
 | Later coefficient processing is independently important | Libaom R7 optimizer-only shirt stratum HF.544→.214; dropout is absent there | PSYEX R11 later optimizer changes no shirt units and only six of2151 positives across allROIs; noise changes none | Encoder/policy-specific decision costs; cannot transfer libaom attribution to PSYEX | Defer optimizer bypass on PSYEX; its initial scalar stage is the observed loss boundary |
-| Selected skip/transform decisions constrain reconstruction | R14 original raw misses shirt HF; unchanged6.24% pixels contribute42.73%q1 SSE,64TX covers15.12% | No controlled split/activation result; oracle is not a legal encode | Can actual changing decisions recover the remaining texture? | Real source-off/near-fine arm with final support/TX/q observation; candidate-RD tracing if needed |
-| Native scalar choice/precision accounts for remaining PSYEX texture loss | R11 isolates initial scalar loss; R13 q1 approaches the fixed raw inverse | Same-q B worsens allROIs; even R14 original-source raw misses shirtHF | Legal changing decisions and the bit cost of delivered finer precision | Close local scalar sweep; one real source-off/near-fine feasibility arm |
+| Selected skip/transform decisions constrain reconstruction | R14 original raw misses shirt HF; R15 all-invoked small-transform shirt raw reconstruction is near original | R15 changes precision/source/references together; no isolated split/activation result | Which support/precision changes survive the original budget? | R16 complete support/q/stage observation; decision tracing if missing support dominates |
+| Native scalar choice/precision accounts for remaining PSYEX texture loss | R11 isolates initial scalar loss; R15 near-original raw loses modest HF at actualq4 then passes final screen | Same-q B worsens allROIs; R15 is bundled and extremely costly | Scalar loss versus absent support under source-budget TFoff | No local scalar sweep; inspect R16 actual stages before selecting cap or decision intervention |
 | In-loop filtering alone causes the PSYEX loss | R9 filters further reduce shirt/background/face HF | Pre-loop shirt already loses84.55% of source HF; postloop improves MSE and shirt ACF | Individual filters and feedback on later frames | Do not infer a repair from unfiltered stills or run a filter-only sweep |
 | Legal grain can distinguish clean and textured areas at comparable inputs | Prior conditional inputs show a local quiet/texture conflict | Only specific white-model probes tested; no global nonrepresentability proof | Other legal model inputs/AR support/base reconstructions | Revisit representability only if a stronger measured base warrants it; never relax quiet protection |
 
@@ -74,3 +74,11 @@ processing is material, not sufficient under fixed decisions. The next real
 bundle lets decisions and feedback change while measuring actual precision,
 packets and runtime. It is an unconstrained preservation diagnostic, not an
 original-rate repair or isolated TF experiment. See PSYEX_SOURCE.md.
+
+R15 closes that feasibility gap: a legal encode preserves both predeclared E05
+texture screens at190.41154Mbps,19.6777xsource,692.477s. All4809 traced owners
+are positive-EOB actualq4; input is original and local raw reconstruction is
+near-exact. Full controls improve strongly with small regressions retained.
+This does not establish affordable precision or a minimum rate. R16 fills the
+missing normal-allocation TFoff arm at the original packet budget before
+implementing a spatial allocator. See PSYEX_REAL.md and the R16 contract.

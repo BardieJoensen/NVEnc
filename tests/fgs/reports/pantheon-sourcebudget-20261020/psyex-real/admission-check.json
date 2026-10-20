@@ -1,0 +1,143 @@
+{
+  "status": "complete",
+  "inputs": {
+    "admission": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/admitted-1/admission.json",
+      "sha256": "10e7bc21ae29e3913fc022ae0d472929b829df0ef3cd6393fef46aa08cf66ecf",
+      "size": 10910
+    },
+    "receipt": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r15-real/runs/e05-1440/r15-tf0-publicqp1/command.json",
+      "sha256": "8234fcf3c6c8d69522646d6e4b34973639dcdbce30696f4bb0474b583630996a",
+      "size": 60969
+    },
+    "tokens": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/admitted-1/tokens.json",
+      "sha256": "c9fa53f01c682cd6299530399039f36d19734733d94a6aa8718624fefbff1392",
+      "size": 12154819
+    },
+    "helper": {
+      "path": "/home/bardie/git-repos/NVEnc/tests/fgs/reports/pantheon-sourcebudget-20261020/analyze_psyex_boundary.py",
+      "sha256": "1027e9a0ec2a5f3b12a6aa908b97cad185df615fe48852a8acbe4daf5fb22ea3",
+      "size": 9743
+    }
+  },
+  "rate": {
+    "actual_mbps": 190.41154319999998,
+    "source_mbps": 9.6765224,
+    "ratio": 19.677683296635575,
+    "within_source_ceiling": false,
+    "two_pass_seconds": 692.4769101529382
+  },
+  "population": {
+    "tokens": 4809,
+    "actual_qindex": [
+      4
+    ],
+    "all_eob_positive": true,
+    "all_has_coeff": true,
+    "all_skip_mode_zero": true
+  },
+  "whole_luma": {
+    "original_equals_coding_input": true,
+    "preloop_equals_postloop": true
+  },
+  "rois": {
+    "shirt": {
+      "original": {
+        "mse": 0.0,
+        "hf_sigma": 0.6063195273428202,
+        "acf1": -0.22241528372165772,
+        "hf_corr_source": 1.0
+      },
+      "coding_input": {
+        "mse": 0.0,
+        "hf_sigma": 0.6063195273428202,
+        "acf1": -0.22241528372165772,
+        "hf_corr_source": 1.0
+      },
+      "predictor": {
+        "mse": 2.0091125,
+        "hf_sigma": 0.25419675985463897,
+        "acf1": -0.04864392638758544,
+        "hf_corr_source": 0.08486204194221952
+      },
+      "preloop": {
+        "mse": 0.084015625,
+        "hf_sigma": 0.5773480262212417,
+        "acf1": -0.1934604968502381,
+        "hf_corr_source": 0.9217281093684645
+      },
+      "postloop": {
+        "mse": 0.084015625,
+        "hf_sigma": 0.5773480262212417,
+        "acf1": -0.1934604968502381,
+        "hf_corr_source": 0.9217281093684645
+      }
+    },
+    "background": {
+      "original": {
+        "mse": 0.0,
+        "hf_sigma": 1.6763881057328585,
+        "acf1": -0.17899474980088476,
+        "hf_corr_source": 1.0
+      },
+      "coding_input": {
+        "mse": 0.0,
+        "hf_sigma": 1.6763881057328585,
+        "acf1": -0.17899474980088476,
+        "hf_corr_source": 1.0
+      },
+      "predictor": {
+        "mse": 15.058690277777778,
+        "hf_sigma": 0.8689419613085899,
+        "acf1": -0.02456999716262739,
+        "hf_corr_source": 0.10888125685085852
+      },
+      "preloop": {
+        "mse": 0.09243611111111111,
+        "hf_sigma": 1.6501122989142158,
+        "acf1": -0.1720561589225095,
+        "hf_corr_source": 0.9881179639038099
+      },
+      "postloop": {
+        "mse": 0.09243611111111111,
+        "hf_sigma": 1.6501122989142158,
+        "acf1": -0.1720561589225095,
+        "hf_corr_source": 0.9881179639038099
+      }
+    },
+    "face": {
+      "original": {
+        "mse": 0.0,
+        "hf_sigma": 2.70084703086085,
+        "acf1": 0.06030322145651031,
+        "hf_corr_source": 1.0
+      },
+      "coding_input": {
+        "mse": 0.0,
+        "hf_sigma": 2.70084703086085,
+        "acf1": 0.06030322145651031,
+        "hf_corr_source": 1.0
+      },
+      "predictor": {
+        "mse": 28.77415,
+        "hf_sigma": 2.1709934591865276,
+        "acf1": 0.22627837512559718,
+        "hf_corr_source": 0.5624110370879956
+      },
+      "preloop": {
+        "mse": 0.07465,
+        "hf_sigma": 2.691978412713975,
+        "acf1": 0.06275406701484043,
+        "hf_corr_source": 0.996561001998594
+      },
+      "postloop": {
+        "mse": 0.07465,
+        "hf_sigma": 2.691978412713975,
+        "acf1": 0.06275406701484043,
+        "hf_corr_source": 0.996561001998594
+      }
+    }
+  }
+}

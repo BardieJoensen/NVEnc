@@ -1,0 +1,7 @@
+{
+  "utc": "2026-10-20T17:33:57.740413+00:00",
+  "decision": "auto: expand R15 validation allowance from 10GB to 20GB for two neutral encoder replays, two native decoder reconstructions and trace/scoring outputs",
+  "free_bytes": 660081721344,
+  "retained_staging_floor_bytes": 120000000000,
+  "reason": "Real encode output is 2.45GB including reconstruction; complete neutral and independent-native checks require additional fresh outputs. Bound CPU groups remain separate and GPU work serialized."
+}

@@ -1,0 +1,64 @@
+{
+  "status": "exact_prior_control",
+  "source_parsers": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/validate.py",
+      "sha256": "258db37595666efa153d6fc526d42de371fe0a7f0b21bff7c3334e84238378f3",
+      "size": 17582
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/validate.py",
+      "sha256": "fde9fa7a79c52de70b0098d38fe291670472e8250f629c4c5f3c648d322b471b",
+      "size": 12290
+    }
+  ],
+  "script": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/prepare_parsers.py",
+    "sha256": "8a1f29866cfdecbebfbbac1b9b0df2c5cf6102e65c840634e4d77d4529b00b9d",
+    "size": 4282
+  },
+  "new_parser": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/parsers.py",
+    "sha256": "45f11c246037e1a58a2762235a62db9a0bcb71e85fe992cfcc35897fa24983e3",
+    "size": 13134
+  },
+  "inputs_before": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/runs/on-1/coeff.bin",
+      "sha256": "2fdc5c48a702ce107712fe1bb08b1009b096c8093cce6207f7288f8facc04dd3",
+      "size": 19581687
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/runs/on-1/trace.jsonl",
+      "sha256": "4908165fc650b1acf40e8cf83e33145a22248693d5dc2233758cc8b89a0074a3",
+      "size": 6153338
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/runs/on-1/payload.bin",
+      "sha256": "46758481818407208b6e47bc819ded2d6c7efea0db545f460b50414ab31f8afc",
+      "size": 39287447
+    }
+  ],
+  "inputs_after": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-coeff-r11/runs/on-1/coeff.bin",
+      "sha256": "2fdc5c48a702ce107712fe1bb08b1009b096c8093cce6207f7288f8facc04dd3",
+      "size": 19581687
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/runs/on-1/trace.jsonl",
+      "sha256": "4908165fc650b1acf40e8cf83e33145a22248693d5dc2233758cc8b89a0074a3",
+      "size": 6153338
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/runs/on-1/payload.bin",
+      "sha256": "46758481818407208b6e47bc819ded2d6c7efea0db545f460b50414ab31f8afc",
+      "size": 39287447
+    }
+  ],
+  "coefficient_tokens": 2907,
+  "decoder_units": 9843,
+  "decoder_events": 502,
+  "all_fields_arrays_bytes_exact": true,
+  "scope": "Parameterization control on old admitted evidence; no R15 event/value assumption."
+}

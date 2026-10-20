@@ -120,3 +120,13 @@ Every new native path and independent reconstruction passes. It identifies
 material input-processing loss while retaining decision/support limitations.
 The next discriminator is a real source-off, near-fine precision bundle with
 actual quantizer and packet-cost verification; no practical candidate exists.
+
+The [R15 real bundle](PSYEX_REAL.md) demonstrates numerical preservation:
+five-frame shirt/background HF errors−3.622%/−1.427%, ACFerrors.02189/.00542.
+Actualq4 is independently joined on all4809 traced positive TUs, with original
+coding input and no skipped support in the three frame120 ROIs. All12870 control
+tile MSEs improve, with small local HF/ACF regressions retained. The cost is
+190.41154Mbps,19.6777xoriginal, and692.477s/336frames across two passes. It is
+disqualified as a practical repair and has no playback acceptance.
+The [R16 contract](ROUND16_TF0_BUDGET_CONTRACT.md) selects the missing original-
+budget TF-off policy comparison with normal allocation and no QP bounds.
