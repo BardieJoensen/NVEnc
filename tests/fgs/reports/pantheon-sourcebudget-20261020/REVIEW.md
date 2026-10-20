@@ -297,3 +297,22 @@ Parent chooses the bounded real finer-quantization arm first for the reasons in
 LEDGER.md, retaining the fixed-decision study as a subsequent discriminator.
 No acceptance criterion is weakened; initial real-arm rate may rise only because
 it is explicitly a preservation diagnostic, never a practical candidate.
+
+### Round7 runner preflight
+
+Independent plan review accepts the bounded public qmax8 contrast while retaining
+objective delta-Q and all existing quality gates. Parent and reviewer rejected
+the first runner drafts: inherited matched-rate failure status, insufficient
+R3/binary/receipt bindings, broad path normalization, missing early-failure
+receipts and timestamps, and incomplete loader/trace-environment exclusion.
+Worker corrected each in preserved revisions. Final identity is asserted after
+remux/probe as well as after both passes. No rejected draft encoded video.
+
+Final runner SHA256
+95783f52615f052d27524cacc0296370ca003158d067e4a2064e3706b7eee2ac
+is approved for one encode; review artifact
+`reviewer/round7-runner-review.md` SHA256
+ef69c7ad0954f09c30f36893cd4aadecdb408e1057503a677fcfa22143b325e9.
+Pinned FFmpeg/libaom sources prove explicit qmin0 preserves the effective R3
+minimum. Runner approval does not admit realized TU delivery, decoded quality
+or a repair. Those remain separate dynamic evidence gates.
