@@ -147,7 +147,11 @@ reconstruction controls. Shirt remains deficient, concentrated in64x64 support.
 It supplies no encoded rate or playback result. The next question is whether a
 delivered spatial cap changes real encoder decisions at an affordable packet cost.
 
-The [R18 private cap implementation](PSYEX_CAP.md) has passed independent
-source/harness review, a private build and exact command preview. Runtime
-controls and outcome admission are in progress; this preparation establishes no
-new preservation or rate result.
+The [R18 real spatial cap](PSYEX_CAP.md) demonstrably delivers qindex4 to all
+invoked selected units across336pictures; observer output and all independent
+decoders match exactly. It costs12.6716968Mbps (30.95% above original),214.344583s
+across two passes. Texture and displaced damage have not yet been assessed.
+Both child agents hit a runtime usage limit during the remaining independent
+review/control work. The [specific blocker and restart](R18_RESOURCE_BLOCKER.md)
+separate completed evidence from unfinished checks. No practical repair or
+production proposal is supported.

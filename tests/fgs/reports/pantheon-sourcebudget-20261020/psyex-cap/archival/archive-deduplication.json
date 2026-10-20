@@ -1,0 +1,84 @@
+{
+  "status": "exact_payloads_hardlinked",
+  "rows": [
+    {
+      "canonical": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/cap-1/recon.yuv",
+        "size": 2090188800,
+        "sha256": "eac96957e302c1989b26ff5f5279864b3779bc5dce4cca8c38b7839c52b544bf"
+      },
+      "retained_alias": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/trace-2/recon.yuv",
+        "size": 2090188800,
+        "sha256": "eac96957e302c1989b26ff5f5279864b3779bc5dce4cca8c38b7839c52b544bf"
+      },
+      "bytes_no_longer_duplicated": 2090188800
+    },
+    {
+      "canonical": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/cap-1/recon.yuv",
+        "size": 2090188800,
+        "sha256": "eac96957e302c1989b26ff5f5279864b3779bc5dce4cca8c38b7839c52b544bf"
+      },
+      "retained_alias": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/native-off/recon.yuv",
+        "size": 2090188800,
+        "sha256": "eac96957e302c1989b26ff5f5279864b3779bc5dce4cca8c38b7839c52b544bf"
+      },
+      "bytes_no_longer_duplicated": 2090188800
+    },
+    {
+      "canonical": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/cap-1/recon.yuv",
+        "size": 2090188800,
+        "sha256": "eac96957e302c1989b26ff5f5279864b3779bc5dce4cca8c38b7839c52b544bf"
+      },
+      "retained_alias": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/native-on/recon.yuv",
+        "size": 2090188800,
+        "sha256": "eac96957e302c1989b26ff5f5279864b3779bc5dce4cca8c38b7839c52b544bf"
+      },
+      "bytes_no_longer_duplicated": 2090188800
+    },
+    {
+      "canonical": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/cap-1/out.ivf",
+        "size": 24553381,
+        "sha256": "e141c7ac67476320b76f96c505a809a15cde126721b9a5b45d6f8ecfab6cbd96"
+      },
+      "retained_alias": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/trace-2/out.ivf",
+        "size": 24553381,
+        "sha256": "e141c7ac67476320b76f96c505a809a15cde126721b9a5b45d6f8ecfab6cbd96"
+      },
+      "bytes_no_longer_duplicated": 24553381
+    },
+    {
+      "canonical": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/recon.yuv",
+        "size": 2090188800,
+        "sha256": "84b5280ec372c3003ae448f1cb67c050510df23933aeabdfab978b13eadd1a94"
+      },
+      "retained_alias": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/recon.yuv",
+        "size": 2090188800,
+        "sha256": "84b5280ec372c3003ae448f1cb67c050510df23933aeabdfab978b13eadd1a94"
+      },
+      "bytes_no_longer_duplicated": 2090188800
+    },
+    {
+      "canonical": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-calibration-refine/runs/e05-1440/r16-refine-tbr10042/out.ivf",
+        "size": 17506710,
+        "sha256": "731dc2aae95eab5cc66e641debfc5366ae4bf2a75522b52b35850d50051775e7"
+      },
+      "retained_alias": {
+        "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/baseline-1/out.ivf",
+        "size": 17506710,
+        "sha256": "731dc2aae95eab5cc66e641debfc5366ae4bf2a75522b52b35850d50051775e7"
+      },
+      "bytes_no_longer_duplicated": 17506710
+    }
+  ],
+  "bytes_no_longer_duplicated": 8402815291
+}

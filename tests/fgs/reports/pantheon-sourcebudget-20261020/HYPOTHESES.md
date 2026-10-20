@@ -1,17 +1,18 @@
 # Current hypothesis ledger
 
-Updated after admitted and independently reviewed Round17 fixed-choice q4. No practical candidate qualifies; no technical blocker or
-playback observation exists. Practical ceiling remains original video payload
+Updated after R18 delivered-q and decoder controls. No practical candidate
+qualifies and no playback has been observed. Further independent review is
+blocked by a runtime usage limit; no codec/environment impossibility is claimed. Practical ceiling remains original video payload
 rate; all texture, clean-region, detail, banding and temporal gates are unchanged.
 
 | Hypothesis | Support | Contradiction or limitation | Unknown | Cheapest next discriminator |
 |---|---|---|---|---|
 | Libaom coding-source sample substitutions dominate loss | R4 finds sparse changes elsewhere and R5 changes reconstruction | Libaom target input is already original; all-event neutralization fails at matched rate | Retained upstream analysis/reference policy | Defer this libaom route; unchanged neutralization reruns add no information |
-| PSYEX upstream sample processing explains texture loss | R14 original samples raise fixed-q1 shirt HF62.79→86.50%source; R15 bundle passes both screens | R16 TF-off fails both screens at99.9310%source; original coding input is verified only on observed frame120 | Interaction with precision and adaptive decisions after R17 fixed-q4 failure | Real selected-SB cap on the same TF-off policy |
-| Finer actual quantization can restore meaningful texture | R15 realq4 passes screens; R17 isolatedq4 raises shirt21.01→86.08%sourceHF and background to99.61% | Fixed-choice shirt still misses amplitude/ACF; R15 costs19.6777xsource | Delivered spatial precision with adaptive decisions and affordable bits | Real absolute selected-SB cap with actual q and packet proof |
+| PSYEX upstream sample processing explains texture loss | R14 original samples raise fixed-q1 shirt HF62.79→86.50%source; R15 bundle passes both screens | R16 TF-off fails both screens at99.9310%source; original coding input is verified only on observed frame120 | Interaction with precision and adaptive decisions after R17 fixed-q4 failure | Complete native/source and quality analysis of the existing R18 cap |
+| Finer actual quantization can restore meaningful texture | R15 realq4 passes screens; R17 isolatedq4 raises shirt21.01→86.08%sourceHF and background to99.61%; R18 now delivers actualq4 throughout selected support | Fixed-choice shirt still misses amplitude/ACF; R15 costs19.6777xsource | Preservation under delivered spatial precision, displaced damage and original-budget feasibility | Complete the existing R18 native join and full quality screen; actual q4 delivery and 30.95% overshoot are now measured |
 | Later coefficient processing is independently important | Libaom R7 optimizer-only shirt stratum HF.544→.214; dropout is absent there | PSYEX R11 later optimizer changes no shirt units and only six of2151 positives across allROIs; noise changes none | Encoder/policy-specific decision costs; cannot transfer libaom attribution to PSYEX | Defer optimizer bypass on PSYEX; its initial scalar stage is the observed loss boundary |
-| Selected skip/transform decisions constrain reconstruction | R17 q4≤32TX strata approach source;64TX23.12%shirt contributes86.03%remaining q4SSE; R15 smaller transforms approach original | Source regions differ; no isolated search rejection or split intervention yet | Do real spatial precision and decision feedback remove the retained64 support? | Measure actual cap policy; local64→four32 split if deficient support persists |
-| Native scalar choice/precision accounts for remaining PSYEX texture loss | R17 exact nativeq4 removes most scalar loss with all2169 direct/runtime controls | Fixed-choice shirt still fails; raw itself deficient; face uninvoked dominates remaining SSE | Whether real adaptive precision survives original rate | Close fixed-q diagnostic; actual delivered absolute cap next |
+| Selected skip/transform decisions constrain reconstruction | R17 q4≤32TX strata approach source;64TX23.12%shirt contributes86.03%remaining q4SSE; R18 selected final support is now≤32TX | Source regions differ; no isolated search rejection or split intervention yet | Whether the new support preserves texture and avoids damage elsewhere | R18 selected support is now at most32TX; measure preserved texture and outside damage before another policy |
+| Native scalar choice/precision accounts for remaining PSYEX texture loss | R17 exact nativeq4 removes most scalar loss with all2169 direct/runtime controls | Fixed-choice shirt still fails; raw itself deficient; face uninvoked dominates remaining SSE | Whether real adaptive precision survives original rate | Analyze existing R18 boundaries/quality before any further quantizer setting |
 | In-loop filtering alone causes the PSYEX loss | R9 filters further reduce shirt/background/face HF | Pre-loop shirt already loses84.55% of source HF; postloop improves MSE and shirt ACF | Individual filters and feedback on later frames | Do not infer a repair from unfiltered stills or run a filter-only sweep |
 | Legal grain can distinguish clean and textured areas at comparable inputs | Prior conditional inputs show a local quiet/texture conflict | Only specific white-model probes tested; no global nonrepresentability proof | Other legal model inputs/AR support/base reconstructions | Revisit representability only if a stronger measured base warrants it; never relax quiet protection |
 
@@ -89,3 +90,20 @@ rate-only observations. The cheapest next discriminator remains the same policy
 at the original budget; bounded midpoint calibration replaces unstable
 proportional feedback. No unmatched result is substituted. See
 ROUND16_RATE_REFINEMENT.md.
+
+R18 updates precision feasibility, not preservation: the real spatial cap delivers
+q4 to every invoked selected TU in 336 accepted pictures, with a complete
+38,535,168-pixel denominator and explicit uninvoked support. All selected final
+transforms are at most32 pixels. Observer output is exactly neutral, and all336
+native/dav1d/libaom/NVDEC reconstructions agree. This closes the earlier failure
+to deliver lower quantization. It does not isolate scalar quantization from
+partition/search/predictor/selected TPL feedback or global delta-q signaling.
+
+Actual scored packet rate is12.6716968Mbps (130.9530%source), two-pass214.344583s.
+Quality is unmeasured for this arm. Its selected support may improve while other
+regions lose bits; no claim is justified before full-window controls. The cheapest
+next discriminator is analysis of this existing output: finish native coefficient
+joins and parser controls, then campaign GPU metrics, HF+ACF, clean/edge/tails,
+banding and temporal evidence. Budget redistribution remains conditional on
+preservation. Both child agents hit the runtime usage limit during the unfinished
+review/control tasks; see R18_RESOURCE_BLOCKER.md for a reproducible stopping point.

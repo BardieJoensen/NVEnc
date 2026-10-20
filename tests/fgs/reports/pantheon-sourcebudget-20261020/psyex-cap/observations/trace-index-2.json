@@ -1,0 +1,24 @@
+{
+  "policy_index": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/policy-index-1.json",
+    "size": 2377,
+    "sha256": "10cf5a2006cdaf5660627e79def9da43a947ebe0d7ba967b5a288b20e440d067"
+  },
+  "observer_build_index": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/observer-build-index-2.json",
+    "size": 1044,
+    "sha256": "067f1ef1d7af99f67c7829e13bd135d3b6e840678e034f3a64ca6e17a81b2361"
+  },
+  "trace": {
+    "inner": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/runs/trace-2/command.json",
+      "size": 63341,
+      "sha256": "0968dfe3b2341ef0f514e7f366dc53afc7092a320dd3a720aa102884d42edd24"
+    },
+    "outer": {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/observer2-replay-execution.json",
+      "size": 2603,
+      "sha256": "2f1820fc19e99cdde7d607c8d23b7e2bb4af28888e088580474d782a47d74c10"
+    }
+  }
+}

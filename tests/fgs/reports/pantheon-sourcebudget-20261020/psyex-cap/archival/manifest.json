@@ -1,0 +1,65 @@
+{
+  "files": [
+    {
+      "source": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/resource-limit.json",
+      "frozen": "resource-limit.json",
+      "size": 826,
+      "sha256": "416b0655b428d2ea48fc7a0567d42ad4e37bce2c8e8416a3b011726b26612d37"
+    },
+    {
+      "source": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/archive_deduplicate.py",
+      "frozen": "archive_deduplicate.py",
+      "size": 1814,
+      "sha256": "639c1665df6985e4d978f36ba89c6fa10473a52093b3a4c9ab0616d94005c9de"
+    },
+    {
+      "source": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/archive-deduplication.json",
+      "frozen": "archive-deduplication.json",
+      "size": 3695,
+      "sha256": "249f9c100bafbb8d09262804b6abbb15dc1637769e6b73ffcf66cbf27048c3e6"
+    },
+    {
+      "source": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/archive-deduplication-execution.json",
+      "frozen": "archive-deduplication-execution.json",
+      "size": 2601,
+      "sha256": "1753decbabad8f41893453b77822ee847fe2ca3e995aee234cdc21ca03403ca1"
+    },
+    {
+      "source": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/archive-deduplication-execution.log",
+      "frozen": "archive-deduplication-execution.log",
+      "size": 209,
+      "sha256": "6598c1dd0bd1aed75f46c98aa6f4f7019ea9589292b4d8659b0a21b620b64f4c"
+    },
+    {
+      "source": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/observations-freeze-execution.json",
+      "frozen": "observations-freeze-execution.json",
+      "size": 2600,
+      "sha256": "6c96ccfef5bfb5e07ede2e37cfd42d7a1b39e965b8ec9f75714e4eb7b375c667"
+    },
+    {
+      "source": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/observations-freeze-execution.log",
+      "frozen": "observations-freeze-execution.log",
+      "size": 220,
+      "sha256": "93c28e4b4b79cbe0707241c9be292146e706538d3ad0a298bbdb574af3ec8204"
+    },
+    {
+      "source": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/controls-freeze-execution.json",
+      "frozen": "controls-freeze-execution.json",
+      "size": 2583,
+      "sha256": "12847eebad4711432e4f13b32c88ebce4c8f25b03a25d8725828aedf0855ba2d"
+    },
+    {
+      "source": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-cap-r18/controls-freeze-execution.log",
+      "frozen": "controls-freeze-execution.log",
+      "size": 216,
+      "sha256": "4d5dc544bc7c5bd43d253e16acf0c6615ce5937e89373cbc3f51d88628534360"
+    },
+    {
+      "source": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/CURRENT_STATE.md",
+      "frozen": "CURRENT_STATE.md",
+      "size": 2852,
+      "sha256": "f0a443667a41c4584bd2e3123570117c9bc08c018f008b7dd270eafecf4bba27"
+    }
+  ],
+  "scope": "Resource stop, byte-identical payload deduplication and freeze execution receipts. Final cold archive result recorded separately."
+}

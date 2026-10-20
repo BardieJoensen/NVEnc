@@ -1,8 +1,9 @@
 # R18 absolute local quantizer cap
 
 Status: policy controls, actual packet accounting, all-frame decoder/color
-validation and independent display binding pass. Quantizer-trace and quality
-admission remain in progress. **No preservation or repair result is claimed.**
+validation, independent display binding, observer neutrality and nominal
+all-picture quantizer admission pass. Native coefficient/source joins and quality
+assessment are unfinished. **No preservation or repair result is claimed.**
 
 The [contract](ROUND18_ABSOLUTE_CAP_CONTRACT.md) tests a real qindex cap of4 on28
 fixed64x64 superblocks intersecting the E05 shirt and background regions. The
@@ -86,3 +87,43 @@ Next require all-picture/all-attempt delivered-q, committed geometry and lambda
 evidence; native coefficient joins; and the established full quality, temporal
 and control window. Source-budget redistribution is conditional on preservation.
 No playback has been observed and no production change is proposed.
+
+The [completed observation package](psyex-cap/observations/manifest.json) binds
+the separately reviewed observer build to cap1. The corrected replay is exactly
+identical in IVF, all 336 reconstruction frames and statistics. Its native encode
+portion took 150.506683 s; this is diagnostic observation time, not a replacement
+for cap1's measured runtime. Native decoder observation off and on also reproduce
+all 336 frames exactly and preserve trace/payload artifacts.
+
+The strict reader and reviewed semantic checker admitted 339 attempts, with 336
+accepted pictures and 9,408 selected superblocks. Every accepted selected SB has
+post-cap qindex 4. All 428,862 invoked TUs report actual qindex 4, with explicit
+qinfo and selected-q equality. There are 1,326 uninvoked TUs; stored q on these
+units is not claimed as executed quantization. Complete selected support totals
+38,535,168 pixels: 38,442,912 invoked and 92,256 uninvoked. Only 77 TUs are syntax
+skip-mode; the other 1,249 uninvoked units follow the observed non-skip-mode route.
+Every final selected transform has dimensions at most 32 pixels; the nominal
+checker verifies complete, non-overlapping committed geometry, TU offsets,
+accepted generations and active-lambda population/scaling consistency.
+
+This establishes delivery of the intended precision in the instrumented encoder,
+subject to the pending independent native-coefficient join and adversarial parser
+controls. It does not establish texture preservation. The native code and
+admission implementation were independently reviewed before execution; the
+completed outcome has not received a further independent result audit. These
+scopes must not be conflated.
+
+Both child agents then reported a runtime usage limit. The pending native join
+review did not complete; its draft was not executed. Corruption controls and R18
+GPU/full-window quality were not run. See [resource blocker and restart](R18_RESOURCE_BLOCKER.md).
+The stopping condition is external review capacity, not a codec impossibility,
+scientific dead end or failed texture assessment. No production proposal.
+
+Confidence and scope: packet cost, all-frame decoder identity and observer
+neutrality have strong exact-byte evidence. Delivered q4 is supported by the
+reviewed native observer and complete nominal semantic checks, with independent
+coefficient joins and corruption controls explicitly pending. Attribution among
+quantization, predictor/search, partition/transform feedback and selected TPL
+refresh remains incomplete. No confidence is assigned to R18 preservation or
+source-budget feasibility without the missing measurements; E04 was not tested
+in this round.

@@ -639,3 +639,12 @@ against prior tested policies; reviewer independently constrains the next test.
   trace rejected. Auto correction uses prior committed-block geometry in a fresh
   observer-only build, with exact cap1 output neutrality required. Separate build
   provenance and original control reuse independently reviewed; no gate weakened.
+
+- R18 delivered-q evidence: observer2 replay exactly matches cap1 IVF/all336
+  recon/stats. Nominal strict admission passes339attempts/336accepted,9408SBq4;
+  428862invokedTUs actualq4,1326uninvoked,38535168selectedpixels with fullclosure.
+  Selected finalTX dimensions <=32. Native decoder off/on all336 equality passes.
+  No quality inference or independent completed-result audit yet. Both children
+  then failed with runtime usage-limit messages; native-join review and fault
+  controls remain unfinished. Auto stop at explicit external resource limit;
+  preserve reviewed work, draft boundaries, archive dependencies and save handoff.

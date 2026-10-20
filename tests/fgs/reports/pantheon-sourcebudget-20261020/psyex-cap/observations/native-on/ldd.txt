@@ -1,0 +1,5 @@
+	linux-vdso.so.1 (0x0000777ab01a0000)
+	libaom.so.3 => /tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/aom-decoder-r10-v2/build-proposed/libaom.so.3 (0x0000777aaf800000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x0000777ab007d000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x0000777aaf400000)
+	/lib64/ld-linux-x86-64.so.2 (0x0000777ab01a2000)
