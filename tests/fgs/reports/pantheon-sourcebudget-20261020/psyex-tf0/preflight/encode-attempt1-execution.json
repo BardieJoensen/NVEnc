@@ -1,0 +1,78 @@
+{
+  "status": "complete",
+  "command": [
+    "/usr/bin/nice",
+    "-n",
+    "10",
+    "/usr/bin/taskset",
+    "-c",
+    "8-11",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/analysis-venv/bin/python",
+    "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/encode_r16.py",
+    "r16-tf0-tbr10313",
+    "10313"
+  ],
+  "inputs_before": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/execute.py",
+      "size": 1855,
+      "sha256": "93c0740995afa0b6c1bf91c5c5bacbe620558e9a327493edf71406e8a68f4858"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/encode_r16.py",
+      "size": 22300,
+      "sha256": "2c14604755be12ae1f8fe996cc93ea9486963f629e44bc3a1a7d21d40076469b"
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "size": 8020928,
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+    },
+    {
+      "path": "/usr/bin/nice",
+      "size": 35336,
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d"
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "size": 31104,
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b"
+    }
+  ],
+  "started_utc": "2026-10-20T18:16:05.338022+00:00",
+  "returncode": 0,
+  "seconds": 386.61510981200263,
+  "log": {
+    "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-tf0-r16/encode-attempt1-execution.log",
+    "size": 206,
+    "sha256": "f952860932d246cb3d3a7bebddf99f12b3b0784c6e29167e09d3cb4e8c22402f"
+  },
+  "inputs_after": [
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/parent/psyex-real-r15/execute.py",
+      "size": 1855,
+      "sha256": "93c0740995afa0b6c1bf91c5c5bacbe620558e9a327493edf71406e8a68f4858"
+    },
+    {
+      "path": "/tmp/downloads/codex-work/pantheon-sourcebudget-20261020/worker/psyex-r16-tf0-budget/encode_r16.py",
+      "size": 22300,
+      "sha256": "2c14604755be12ae1f8fe996cc93ea9486963f629e44bc3a1a7d21d40076469b"
+    },
+    {
+      "path": "/usr/bin/python3.12",
+      "size": 8020928,
+      "sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f"
+    },
+    {
+      "path": "/usr/bin/nice",
+      "size": 35336,
+      "sha256": "2f92f24856db2e178fd91b02d28a5dbe0b4678de62738edfde0ece66b0f57c5d"
+    },
+    {
+      "path": "/usr/bin/taskset",
+      "size": 31104,
+      "sha256": "a431738fadddc2e2326c8ab81843e72f4011658379381aef1502a6ddb1c1115b"
+    }
+  ],
+  "ended_utc": "2026-10-20T18:22:31.958152+00:00"
+}

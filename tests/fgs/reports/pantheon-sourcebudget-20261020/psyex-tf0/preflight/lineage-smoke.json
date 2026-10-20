@@ -1,0 +1,7 @@
+{
+  "status": "complete",
+  "positive_attempt1": true,
+  "negative_policy_rejected": true,
+  "negative_cycle_rejected": true,
+  "packet_recompute_mbps": 9.5
+}
