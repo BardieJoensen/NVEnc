@@ -1,5 +1,11 @@
 # Pantheon: measured precision, texture and repair feasibility
 
+**2026-10-20 scope update:** the user requires a practical repair at or below
+original video rate. The4x arms below remain historical preservation diagnostics
+and fail that cost requirement. Active investigation continues in the
+[source-budget follow-up](../pantheon-sourcebudget-20261020/README.md); their
+playback is not a prerequisite for that work. Archived evidence is unchanged.
+
 **A conventional x264 re-encode now passes the unchanged texture screens on both
 E04 and E05 fixtures at approximately four times the original video bitrate. It
 is a provisional numerical candidate, awaiting human playback and a practical
