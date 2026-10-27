@@ -43,6 +43,13 @@
 
 class NVEncFilterDegrain;
 
+
+RGY_ERR run_kfm_ucf_preprocess(RGYFrameInfo *dst, const RGYFrameInfo *src, int srcXOffset, int srcYOffset, int srcYStep, int channels,
+    const int *offsetV, const float *coeffV, const int *offsetH, const float *coeffH, int nmin, int range, cudaStream_t stream);
+RGY_ERR run_kfm_ucf_analyze_fused(RGYKFM::NoiseResult *dst, int offset, const RGYFrameInfo *n0, const RGYFrameInfo *n1, const RGYFrameInfo *n2,
+    const RGYFrameInfo *d0, const RGYFrameInfo *d1, int nw4, int dw4, int dh, int vpad, cudaStream_t stream);
+RGY_ERR run_kfm_ucf_reduce(RGYKFM::NoiseResult *dst, const RGYKFM::NoiseResult *src, int lumaCount, int chromaCount, cudaStream_t stream);
+
 class NVEncFilterParamKfm : public NVEncFilterParam {
 public:
     VppKfm kfm;
@@ -331,6 +338,7 @@ protected:
         RGY_ERR drainTo(int n60end, cudaStream_t stream);
         RGY_ERR ensureRange(int n60begin, int n60end, cudaStream_t stream);
         RGY_ERR feedHot(cudaStream_t stream);
+        RGY_ERR feedIntermediatesOnly(int sourceBegin, int sourceEnd, cudaStream_t stream);
         RGY_ERR cacheFrame(const RGYFrameInfo *frame, cudaStream_t stream, const std::vector<RGYCudaEvent> &wait_events, RGYCudaEvent *event);
         const KfmCachedDeint60 *find(int n60, std::vector<RGYCudaEvent> *wait_events) const;
         void trim(int n60floor, size_t cacheLimit);
@@ -384,7 +392,7 @@ protected:
         cudaStream_t stream, const std::vector<RGYCudaEvent> &wait_events);
     RGY_ERR drainUcfRtgmcBranch(KfmRtgmcLane& lane, cudaStream_t stream);
     RGY_ERR ensureUcfRtgmcRange(KfmUcfLaneType laneType, int n60begin, int n60end, cudaStream_t stream);
-    void captureDeint60Intermediates(int sourceIndex);
+    void captureDeint60Intermediates();
     bool hasDeint60Intermediate(int sourceIndex, uint64_t *generation = nullptr) const;
     bool hasDeint60Intermediates(int sourceBegin, int sourceEnd) const;
     RGY_ERR ensureDeint60IntermediateForSource(int sourceIndex, cudaStream_t stream);
@@ -485,7 +493,7 @@ protected:
     RGY_ERR drainMainRtgmcBranch(const NVEncFilterParamKfm& prm, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
         cudaStream_t stream, RGYCudaEvent *event);
     RGY_ERR emitOutputFrame(RGYFrameInfo *pFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
-        cudaStream_t stream, const RGYCudaEvent &frameEvent, RGYCudaEvent *event);
+        cudaStream_t stream, const RGYCudaEvent &frameEvent, RGYCudaEvent *event, RGYFrameInfo *reservedOutputFrame = nullptr);
     RGY_ERR queueVfrOutputFrame(const RGYFrameInfo *pFrame, cudaStream_t stream, const RGYCudaEvent &frameEvent);
     RGY_ERR emitPendingVfrOutput(RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
         cudaStream_t stream, RGYCudaEvent *event);
@@ -580,6 +588,7 @@ protected:
         };
         int sourceIndex;
         std::unique_ptr<CUMemBufPair> resultBuf;
+        std::unique_ptr<CUMemBufPair> partialBuf;
         std::vector<Segment> segments;
         RGYCudaEvent event;
         RGYKFM::UCFNoiseMeta meta;
@@ -612,8 +621,9 @@ protected:
     struct KfmPendingVfrOutput {
         std::shared_ptr<CUFrameBuf> frame;
         RGYCudaEvent event;
+        int outputFrameIndex;
 
-        KfmPendingVfrOutput() : frame(), event() {};
+        KfmPendingVfrOutput() : frame(), event(), outputFrameIndex(-1) {};
     };
 
     struct KfmCleanSuperCacheKey {
