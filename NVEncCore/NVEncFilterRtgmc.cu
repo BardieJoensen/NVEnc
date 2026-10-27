@@ -91,6 +91,43 @@ static bool rtgmcInputTypeBlendEnabled(const VppRtgmc &rtgmc) {
     return (rtgmc.inputType == 2 || rtgmc.inputType == 3) && rtgmc.progSADMask > 0.0f;
 }
 
+static void eraseRtgmcUnusedSearchLumaFrameData(RGYFrameInfo *frame, const int sourceMatch,
+    const std::array<const NVEncFilter *, 4>& consumers) {
+    // source_match有効時は、別半径の入れ子解析がfallbackで探索画像を読む場合があるため残す。
+    if (!frame || sourceMatch != 0) {
+        return;
+    }
+    const auto result = rgy_degrain_get_analyze_result(frame);
+    if (!result.valid() || !result.hasFrameIdentity()
+        || result.inputFrameId != frame->inputFrameId
+        || result.timestamp != frame->timestamp || result.duration != frame->duration) {
+        return;
+    }
+    // 添付解析のidentityと全consumerのlayoutが互換で、MV/SADをそのまま使える場合だけ外す。
+    // 不一致時のfallbackは元のSearchLumaを読むため残し、判定ではコピーや解析を起動しない。
+    for (const auto *consumer : consumers) {
+        if (!consumer) {
+            continue;
+        }
+        const auto prm = dynamic_cast<const NVEncFilterParamDegrain *>(consumer->GetFilterParam());
+        if (!prm) {
+            return;
+        }
+        auto layout = rgy_degrain_make_block_layout(prm->frameOut, prm->degrain);
+        if (result.layout.temporalDirections < layout.temporalDirections) {
+            return;
+        }
+        layout.temporalDirections = result.layout.temporalDirections;
+        if (!rgy_degrain_layout_equal(result.layout, layout)) {
+            return;
+        }
+    }
+    // Analyze内部cacheと共有データ本体は維持し、EDI/KFM履歴へ渡る独立出力だけから外す。
+    frame->dataList.erase(std::remove_if(frame->dataList.begin(), frame->dataList.end(), [](const std::shared_ptr<RGYFrameData>& data) {
+        return data && data->dataType() == RGY_FRAME_DATA_RTGMC_SEARCH_LUMA;
+    }), frame->dataList.end());
+}
+
 static void eraseRtgmcInternalFrameData(RGYFrameInfo *frame) {
     if (!frame) {
         return;
@@ -337,6 +374,7 @@ NVEncFilterRtgmc::NVEncFilterRtgmc() :
     m_sharedAnalysisMode(false),
     m_sharedData(),
     m_captureIntermediate(false),
+    m_analysisOnly(false),
     m_capturedIntermediates(),
     m_pendingIntermediateInputs(),
     m_debugResetAtFrame(0),
@@ -366,6 +404,10 @@ NVEncFilterRtgmc::RtgmcSharedAnalysisData NVEncFilterRtgmc::getSharedAnalysisDat
 
 void NVEncFilterRtgmc::enableIntermediateCapture(bool enable) {
     m_captureIntermediate = enable;
+}
+
+void NVEncFilterRtgmc::setAnalysisOnly(bool enable) {
+    m_analysisOnly = enable;
 }
 
 const std::vector<NVEncFilterRtgmc::RtgmcCapturedIntermediate>& NVEncFilterRtgmc::getCapturedIntermediates() const {
@@ -2301,6 +2343,31 @@ RGY_ERR NVEncFilterRtgmc::runNestedFilter(size_t filterIdx, RGYFrameInfo *pInput
     return rtgmcRunFilterWithEvents(m_filters[filterIdx].get(), pInputFrame, ppOutputFrames, pOutputFrameNum, stream, wait_events, event);
 }
 
+void NVEncFilterRtgmc::eraseAnalyzeOutputUnusedFrameData(RGYFrameInfo *frame) {
+    // CUDA探索前処理はSourceTwinを生成しないため、SearchLumaだけを判定する。
+    const auto prm = std::dynamic_pointer_cast<NVEncFilterParamRtgmc>(m_param);
+    if (prm) {
+        eraseRtgmcUnusedSearchLumaFrameData(frame, prm->rtgmc.sourceMatch,
+            { m_filters[RTGMC_FILTER_TR1].get(), m_filters[RTGMC_FILTER_TR2].get(),
+              m_retouchCompFilters[0].get(), m_retouchCompFilters[1].get() });
+    }
+}
+
+RGY_ERR NVEncFilterRtgmc::captureIntermediateFrame(const RGYFrameInfo *frame, cudaStream_t stream,
+    const std::vector<RGYCudaEvent>& waitEvents) {
+    if (!m_captureIntermediate || !frame || !frame->ptr[0]) return RGY_ERR_NONE;
+    auto buf = getSharedFrameBuffer(frame);
+    if (!buf) return RGY_ERR_MEMORY_ALLOC;
+    RGYCudaEvent captured;
+    const auto sts = rtgmcCopyFrameWithEvent(&buf->frame, frame, stream, waitEvents, &captured);
+    if (sts != RGY_ERR_NONE) return sts;
+    copyFramePropWithoutRes(&buf->frame, frame);
+    auto info = buf->frame;
+    info.dataList.push_back(std::make_shared<RGYFrameDataRtgmcFrameRef>(buf));
+    m_capturedIntermediates.push_back({ buf, info, captured });
+    return RGY_ERR_NONE;
+}
+
 RGY_ERR NVEncFilterRtgmc::runThrough(size_t filterIdx, RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
     cudaStream_t stream, const std::vector<RGYCudaEvent> &wait_events, RGYCudaEvent *event, bool storePending) {
     if (filterIdx >= m_filters.size()) {
@@ -2354,6 +2421,9 @@ RGY_ERR NVEncFilterRtgmc::runThrough(size_t filterIdx, RGYFrameInfo *pInputFrame
     auto childWaitEvents = rtgmcPropagateWaitEvents(wait_events, childEvent);
     for (int i = 0; i < childOutFrameNum; i++) {
         propagateRtgmcInternalFrameData(childOutFrames[i], pInputFrame);
+        if (filterIdx == RTGMC_FILTER_ANALYZE) {
+            eraseAnalyzeOutputUnusedFrameData(childOutFrames[i]);
+        }
         auto nextWaitEvents = childWaitEvents;
         attachStoredEdiReference(childOutFrames[i], &nextWaitEvents);
         if (filterIdx == RTGMC_FILTER_NOISE) {
@@ -2403,17 +2473,12 @@ RGY_ERR NVEncFilterRtgmc::runThrough(size_t filterIdx, RGYFrameInfo *pInputFrame
             auto smWaitEvents = rtgmcPropagateWaitEvents(nextWaitEvents, smEvent);
             for (int j = 0; j < smOutNum; j++) {
                 enqueueSourceMatchFrameProp(smOutFrames[j]);
-                if (filterIdx == RTGMC_FILTER_INPUTTYPE_BLEND && m_captureIntermediate) {
-                    auto buf = getSharedFrameBuffer(smOutFrames[j]);
-                    if (buf) {
-                        copyFrameAsync(&buf->frame, smOutFrames[j], stream);
-                        copyFramePropWithoutRes(&buf->frame, smOutFrames[j]);
-                        RGYCudaEvent captureEvent;
-                        rtgmcRecordEvent(stream, &captureEvent);
-                        auto frameInfo = buf->frame;
-                        frameInfo.dataList.push_back(std::make_shared<RGYFrameDataRtgmcFrameRef>(buf));
-                        m_capturedIntermediates.push_back({buf, frameInfo, captureEvent});
-                    }
+                if (filterIdx == RTGMC_FILTER_INPUTTYPE_BLEND) {
+                    sts = captureIntermediateFrame(smOutFrames[j], stream, smWaitEvents);
+                    if (sts != RGY_ERR_NONE) return sts;
+                }
+                if (m_analysisOnly && filterIdx == RTGMC_FILTER_INPUTTYPE_BLEND) {
+                    continue; // UCFレーンへの中間データの供給だけで止める。
                 }
                 sts = runThrough(filterIdx + 1, smOutFrames[j], ppOutputFrames, pOutputFrameNum, stream, smWaitEvents, event, storePending);
                 if (sts != RGY_ERR_NONE) {
@@ -2421,17 +2486,12 @@ RGY_ERR NVEncFilterRtgmc::runThrough(size_t filterIdx, RGYFrameInfo *pInputFrame
                 }
             }
         } else {
-            if (filterIdx == RTGMC_FILTER_INPUTTYPE_BLEND && m_captureIntermediate) {
-                auto buf = getSharedFrameBuffer(childOutFrames[i]);
-                if (buf) {
-                    copyFrameAsync(&buf->frame, childOutFrames[i], stream);
-                    copyFramePropWithoutRes(&buf->frame, childOutFrames[i]);
-                    RGYCudaEvent captureEvent;
-                    rtgmcRecordEvent(stream, &captureEvent);
-                    auto frameInfo = buf->frame;
-                    frameInfo.dataList.push_back(std::make_shared<RGYFrameDataRtgmcFrameRef>(buf));
-                    m_capturedIntermediates.push_back({buf, frameInfo, captureEvent});
-                }
+            if (filterIdx == RTGMC_FILTER_INPUTTYPE_BLEND) {
+                sts = captureIntermediateFrame(childOutFrames[i], stream, nextWaitEvents);
+                if (sts != RGY_ERR_NONE) return sts;
+            }
+            if (m_analysisOnly && filterIdx == RTGMC_FILTER_INPUTTYPE_BLEND) {
+                continue; // UCFレーンへの中間データの供給だけで止める。
             }
             sts = runThrough(filterIdx + 1, childOutFrames[i], ppOutputFrames, pOutputFrameNum, stream, nextWaitEvents, event, storePending);
             if (sts != RGY_ERR_NONE) {
@@ -2460,6 +2520,9 @@ RGY_ERR NVEncFilterRtgmc::drainFrom(size_t filterIdx, RGYFrameInfo **ppOutputFra
         auto sts = RGY_ERR_NONE;
         for (int i = 0; i < childOutFrameNum; i++) {
             propagateRtgmcInternalFrameData(childOutFrames[i], drainFrame);
+            if (currentFilterIdx == RTGMC_FILTER_ANALYZE) {
+                eraseAnalyzeOutputUnusedFrameData(childOutFrames[i]);
+            }
             auto nextWaitEvents = childWaitEvents;
             attachStoredEdiReference(childOutFrames[i], &nextWaitEvents);
             if (currentFilterIdx == RTGMC_FILTER_NOISE) {
@@ -2502,12 +2565,22 @@ RGY_ERR NVEncFilterRtgmc::drainFrom(size_t filterIdx, RGYFrameInfo **ppOutputFra
                 auto smWaitEvents = rtgmcPropagateWaitEvents(nextWaitEvents, smEvent);
                 for (int j = 0; j < smOutNum; j++) {
                     enqueueSourceMatchFrameProp(smOutFrames[j]);
+                    if (currentFilterIdx == RTGMC_FILTER_INPUTTYPE_BLEND) {
+                        sts = captureIntermediateFrame(smOutFrames[j], stream, smWaitEvents);
+                        if (sts != RGY_ERR_NONE) return sts;
+                        if (m_analysisOnly) continue;
+                    }
                     sts = runThrough(currentFilterIdx + 1, smOutFrames[j], ppOutputFrames, pOutputFrameNum, stream, smWaitEvents, event, true);
                     if (sts != RGY_ERR_NONE) {
                         return sts;
                     }
                 }
             } else {
+                if (currentFilterIdx == RTGMC_FILTER_INPUTTYPE_BLEND) {
+                    sts = captureIntermediateFrame(childOutFrames[i], stream, nextWaitEvents);
+                    if (sts != RGY_ERR_NONE) return sts;
+                    if (m_analysisOnly) continue;
+                }
                 sts = runThrough(currentFilterIdx + 1, childOutFrames[i], ppOutputFrames, pOutputFrameNum, stream, nextWaitEvents, event, true);
                 if (sts != RGY_ERR_NONE) {
                     return sts;
@@ -2691,16 +2764,34 @@ int NVEncFilterRtgmc::requiredPrimingSourceFrames() const {
         return 8;
     }
     const auto& rtgmc = prm->rtgmc;
-    const int temporalRadius = std::max({
-        std::max(0, rtgmc.searchPrefilter.tr0),
-        std::max(0, rtgmc.analyze.delta),
+    // reset後に連続処理と同等の時間方向の状態を作るため、出力1フィールドが過去方向に依存する
+    // 範囲(bob後のフィールド単位)を段ごとに積み上げて求める。
+    // - 解析段: search prefilter(tr0) の出力を analyze(delta) が参照するので、両者の半径を足す。
+    // - TR1以降: TR1/TR2 degrain と retouch(補償参照)、source match はいずれも解析段の出力
+    //   (中間データ)を並列に参照するので、最大値を取る。
+    // 共有解析モード(kfm UCFのbefore60/after60)は解析段を持たず中間データを受け取るため、TR1以降の分だけでよい。
+    // 以前は max(8, 半径の最大値 + 4) としていたが、kfmのlazy reset/UCF置換のたびに必要以上のprimingが走り、
+    // 1フレームの置換に十数source分のRTGMC処理を払って大きく低速化していた。
+    const int analysisFields = std::max(0, rtgmc.searchPrefilter.tr0) + std::max(0, rtgmc.analyze.delta);
+    const int sourceMatchMargin = std::max(0, rtgmc.sourceMatch) * std::max({ 1, std::max(0, rtgmc.matchTR1), std::max(0, rtgmc.matchTR2) });
+    const int postFields = std::max({
         std::max(0, rtgmc.tr1.delta),
         std::max(0, rtgmc.tr2.delta),
+        std::max(0, rtgmc.retouch.tr1),
+        std::max(0, rtgmc.retouch.tr2),
         std::max(0, rtgmc.matchTR1),
         std::max(0, rtgmc.matchTR2)
-    });
-    const int sourceMatchMargin = std::max(0, rtgmc.sourceMatch) * std::max({ 1, std::max(0, rtgmc.matchTR1), std::max(0, rtgmc.matchTR2) });
-    return std::max(8, temporalRadius + sourceMatchMargin + 4);
+    }) + sourceMatchMargin;
+    const int dependFields = (m_sharedAnalysisMode ? 0 : analysisFields) + postFields;
+    // 1 sourceは2フィールド。境界での丸めの余裕として1 source足す。
+    return (dependFields + 1) / 2 + 1;
+}
+
+int NVEncFilterRtgmc::requiredAnalysisPrimingSourceFrames() const {
+    const auto prm = std::dynamic_pointer_cast<NVEncFilterParamRtgmc>(m_param);
+    if (!prm) return 8;
+    const int analysisFields = std::max(0, prm->rtgmc.searchPrefilter.tr0) + std::max(0, prm->rtgmc.analyze.delta);
+    return (analysisFields + 1) / 2 + 1;
 }
 
 void NVEncFilterRtgmc::resetTemporalState() {

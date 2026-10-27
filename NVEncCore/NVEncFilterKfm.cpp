@@ -493,6 +493,11 @@ RGY_ERR NVEncFilterKfm::KfmRtgmcLane::feed(const RGYFrameInfo *frame, cudaStream
         return sts;
     }
 
+    // 通常投入・解析のみ・drainのいずれでも、遅れて出た中間データを元のsourceへ登録する。
+    if (m_owner && m_rtgmc == m_owner->m_deint60Rtgmc.get()) {
+        m_owner->captureDeint60Intermediates();
+    }
+
     std::vector<RGYCudaEvent> cacheWaitEvents;
     if (rtgmcEvent() != nullptr) {
         cacheWaitEvents.push_back(rtgmcEvent);
@@ -648,14 +653,43 @@ RGY_ERR NVEncFilterKfm::KfmRtgmcLane::ensureRange(int n60begin, int n60end, cuda
         if (sharedDeint60AnalysisLane()) {
             markIntermediateGeneration(source->sourceIndex, intermediateGeneration);
         }
-        if (m_owner && m_rtgmc == m_owner->m_deint60Rtgmc.get()) {
-            m_owner->captureDeint60Intermediates(source->sourceIndex);
-        }
         m_nextFeedSourceIndex++;
         m_nextOutputN60 = m_submittedFrames;
     }
     m_hotUntilSourceIndex = std::max(m_hotUntilSourceIndex, m_nextFeedSourceIndex + HOT_KEEP_SOURCE_FRAMES - 1);
     return RGY_ERR_NONE;
+}
+
+// UCFのbefore60/after60に渡す中間データだけを、deint60で[sourceBegin, sourceEnd)について作る。
+// 解析段のみを実行し(NVEncFilterRtgmc::setAnalysisOnly)、捨てるだけのdeint60の最終段(TR1以降)を省く。
+// 必要なsourceがそろわない場合は何もせずに戻り、呼び出し元の従来経路(ensureDeint60IntermediateForSource)に任せる。
+RGY_ERR NVEncFilterKfm::KfmRtgmcLane::feedIntermediatesOnly(int sourceBegin, int sourceEnd, cudaStream_t stream) {
+    if (!m_rtgmc || !m_owner || sourceBegin >= sourceEnd) {
+        return RGY_ERR_NONE;
+    }
+    const int primeStart = std::max(0, sourceBegin - m_rtgmc->requiredAnalysisPrimingSourceFrames());
+    for (int sourceIndex = primeStart; sourceIndex < sourceEnd; sourceIndex++) {
+        const auto *source = m_owner->findSourceByIndexExact(sourceIndex);
+        if (!source || !source->frame || !source->frame->frame.ptr[0]) {
+            return RGY_ERR_NONE;
+        }
+    }
+    m_rtgmc->resetTemporalState();
+    m_rtgmc->setAnalysisOnly(true);
+    auto sts = RGY_ERR_NONE;
+    for (int sourceIndex = primeStart; sourceIndex < sourceEnd && sts == RGY_ERR_NONE; sourceIndex++) {
+        const auto *source = m_owner->findSourceByIndexExact(sourceIndex);
+        std::vector<RGYCudaEvent> waitEvents;
+        if (source->event() != nullptr) {
+            waitEvents.push_back(source->event);
+        }
+        sts = feed(&source->frame->frame, stream, waitEvents);
+    }
+    m_rtgmc->setAnalysisOnly(false);
+    // TR1以降の時間方向の状態が不連続になったので、次にdeint60の出力が必要になったらcoldから作り直させる。
+    m_nextFeedSourceIndex = -1;
+    m_hotUntilSourceIndex = -1;
+    return sts;
 }
 
 RGY_ERR NVEncFilterKfm::KfmRtgmcLane::feedHot(cudaStream_t stream) {
@@ -688,9 +722,6 @@ RGY_ERR NVEncFilterKfm::KfmRtgmcLane::feedHot(cudaStream_t stream) {
     }
     if (sharedDeint60AnalysisLane()) {
         markIntermediateGeneration(source->sourceIndex, intermediateGeneration);
-    }
-    if (m_owner && m_rtgmc == m_owner->m_deint60Rtgmc.get()) {
-        m_owner->captureDeint60Intermediates(source->sourceIndex);
     }
     m_nextFeedSourceIndex++;
     m_nextOutputN60 = m_submittedFrames;
@@ -1752,7 +1783,16 @@ int NVEncFilterKfm::sourceCacheTrimFloor() const {
             return 0;
         }
         // RFF直通では解析24p番号とsource位置が一致しないため、実際に消費したsource位置を基準にする。
-        trimFloor = std::max(0, (m_nextSwitchN60 >> 1) - KFM_VFR_SOURCE_TRIM_LOOKBEHIND);
+        // UCF置換ではbefore60/after60レーンのprimingに加え、その区間のdeint60中間データを作るための
+        // deint60のprimingも遡って必要になる。VFRと同様にその分を残さないと、必要なsourceが先に破棄され、
+        // ensureUcfRtgmcRangeがMORE_DATAのままreset(trimmed)を繰り返して出力が終端まで止まる。
+        int lazyLookbehind = 0;
+        if (lazyDeint60Enabled(*prm) && m_deint60Rtgmc && prm->kfm.ucf && (m_before60Rtgmc || m_after60Rtgmc)) {
+            lazyLookbehind = m_deint60Rtgmc->requiredPrimingSourceFrames()
+                + std::max(m_before60Lane.requiredPrimingSourceFrames(), m_after60Lane.requiredPrimingSourceFrames())
+                + KFM_UCF_SHARED_ANALYSIS_SOURCE_DELAY + 4;
+        }
+        trimFloor = std::max(0, (m_nextSwitchN60 >> 1) - KFM_VFR_SOURCE_TRIM_LOOKBEHIND - lazyLookbehind);
     } else if (prm->kfm.mode == VppKfmMode::P60) {
         int lookbehind = KFM_VFR_SOURCE_TRIM_LOOKBEHIND;
         if (prm->kfm.ucf && (m_before60Rtgmc || m_after60Rtgmc)) {
@@ -1932,6 +1972,16 @@ RGY_ERR NVEncFilterKfm::ensureUcfRtgmcRange(KfmUcfLaneType laneType, int n60begi
         return RGY_ERR_MORE_DATA;
     }
     for (int sourceIndex = primeStart; sourceIndex < sourceEnd; sourceIndex++) {
+        if (!hasDeint60Intermediate(sourceIndex)) {
+            // 足りない中間データは、まず解析段だけのdeint60でまとめて作る (できなければ下の従来経路)。
+            auto sts = m_deint60Lane.feedIntermediatesOnly(sourceIndex, sourceEnd, stream);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            break;
+        }
+    }
+    for (int sourceIndex = primeStart; sourceIndex < sourceEnd; sourceIndex++) {
         if (hasDeint60Intermediate(sourceIndex)) {
             continue;
         }
@@ -1958,30 +2008,45 @@ RGY_ERR NVEncFilterKfm::ensureUcfRtgmcRange(KfmUcfLaneType laneType, int n60begi
     return RGY_ERR_NONE;
 }
 
-void NVEncFilterKfm::captureDeint60Intermediates(int sourceIndex) {
-    if (!m_deint60Rtgmc || sourceIndex < 0) {
+void NVEncFilterKfm::captureDeint60Intermediates() {
+    if (!m_deint60Rtgmc) {
         return;
     }
-    const auto& captured = m_deint60Rtgmc->getCapturedIntermediates();
-    if (!captured.empty()) {
-        for (auto& group : m_deint60IntermediateQueue) {
-            if (group.sourceIndex == sourceIndex) {
-                group.generation++;
-                group.intermediates = captured;
-                m_before60Lane.rewindIfIntermediateChanged(sourceIndex, group.generation);
-                m_after60Lane.rewindIfIntermediateChanged(sourceIndex, group.generation);
-                m_deint60Rtgmc->clearCapturedIntermediates();
-                return;
-            }
+    // 解析段の遅延があるため、今feedしたsource番号と出力された中間データの番号は一致しない。
+    // bobが保持する入力identityから元のsourceを特定し、別のfeedで出る2フィールドも同じ組へ追加する。
+    for (const auto& captured : m_deint60Rtgmc->getCapturedIntermediates()) {
+        const auto& info = captured.frameInfo;
+        const auto source = std::find_if(m_sourceCache.begin(), m_sourceCache.end(), [&info](const KfmCachedSource& entry) {
+            return (info.inputFrameId < 0 || entry.inputFrameId == info.inputFrameId)
+                && entry.frame && entry.timestamp <= info.timestamp
+                && info.timestamp < entry.timestamp + std::max<int64_t>(1, entry.frame->frame.duration);
+        });
+        if (source == m_sourceCache.end()) {
+            continue;
         }
-        KfmMainIntermediateGroup group;
-        group.sourceIndex = sourceIndex;
-        group.generation = 1;
-        group.intermediates = captured;
-        m_deint60IntermediateQueue.push_back(std::move(group));
-        trimDeint60Intermediates();
+        auto group = std::find_if(m_deint60IntermediateQueue.begin(), m_deint60IntermediateQueue.end(), [&source](const KfmMainIntermediateGroup& entry) {
+            return entry.sourceIndex == source->sourceIndex;
+        });
+        if (group == m_deint60IntermediateQueue.end()) {
+            KfmMainIntermediateGroup entry;
+            entry.sourceIndex = source->sourceIndex;
+            entry.generation = 1;
+            m_deint60IntermediateQueue.push_back(std::move(entry));
+            group = std::prev(m_deint60IntermediateQueue.end());
+        }
+        // 再解析で同じフィールドが出た場合は、既存データと世代を維持して不要な巻き戻しを防ぐ。
+        const auto duplicate = std::find_if(group->intermediates.begin(), group->intermediates.end(), [&info](const NVEncFilterRtgmc::RtgmcCapturedIntermediate& entry) {
+            return entry.frameInfo.inputFrameId == info.inputFrameId && entry.frameInfo.timestamp == info.timestamp;
+        });
+        if (duplicate == group->intermediates.end()) {
+            group->intermediates.push_back(captured);
+            std::sort(group->intermediates.begin(), group->intermediates.end(), [](const NVEncFilterRtgmc::RtgmcCapturedIntermediate& a, const NVEncFilterRtgmc::RtgmcCapturedIntermediate& b) {
+                return a.frameInfo.timestamp < b.frameInfo.timestamp;
+            });
+        }
     }
     m_deint60Rtgmc->clearCapturedIntermediates();
+    trimDeint60Intermediates();
 }
 
 bool NVEncFilterKfm::hasDeint60Intermediate(int sourceIndex, uint64_t *generation) const {
@@ -1992,7 +2057,7 @@ bool NVEncFilterKfm::hasDeint60Intermediate(int sourceIndex, uint64_t *generatio
         return false;
     }
     const auto it = std::find_if(m_deint60IntermediateQueue.begin(), m_deint60IntermediateQueue.end(), [sourceIndex](const KfmMainIntermediateGroup& group) {
-        return group.sourceIndex == sourceIndex && !group.intermediates.empty();
+        return group.sourceIndex == sourceIndex && group.intermediates.size() >= 2;
     });
     if (it == m_deint60IntermediateQueue.end()) {
         return false;
@@ -2532,30 +2597,12 @@ RGY_ERR NVEncFilterKfm::prepareUcfNoiseGaussFrameFromSource(RGYFrameInfo **ppGau
         if (sts != RGY_ERR_NONE) {
             return sts;
         }
-        sts = run_kfm_ucf_field_crop_gaussresize_v_plane(&tmp, &src, srcXOffset, srcYOffset, srcYStep,
-            (const int *)progV.offset->ptr, (const float *)progV.coeff->ptr, progV.filterSize, stream);
+        if (progV.filterSize != 9 || progH.filterSize != 9) return RGY_ERR_UNSUPPORTED;
+        sts = run_kfm_ucf_preprocess(&dst, &src, srcXOffset, srcYOffset, srcYStep, interleavedUVPlane ? 2 : 1,
+            (const int *)progV.offset->ptr, (const float *)progV.coeff->ptr, (const int *)progH.offset->ptr, (const float *)progH.coeff->ptr,
+            KFM_UCF_NOISE_LIMIT_NMIN, KFM_UCF_NOISE_LIMIT_RANGE, stream);
         if (sts != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("error at kernel_kfm_ucf_field_crop_gaussresize_v (plane %d): %s.\n"), iplane, get_err_mes(sts));
-            return sts;
-        }
-        RGYCudaEvent evV;
-        sts = kfmRecordEvent(stream, &evV);
-        if (sts != RGY_ERR_NONE) {
-            return sts;
-        }
-        sts = kfmWaitEvents(stream, { evV });
-        if (sts != RGY_ERR_NONE) {
-            return sts;
-        }
-        if (interleavedUVPlane) {
-            sts = run_kfm_ucf_gaussresize_h_uv_interleaved_plane(&dst, &tmp, dstWidthForGauss,
-                (const int *)progH.offset->ptr, (const float *)progH.coeff->ptr, progH.filterSize, stream);
-        } else {
-            sts = run_kfm_ucf_gaussresize_h_plane(&dst, &tmp,
-                (const int *)progH.offset->ptr, (const float *)progH.coeff->ptr, progH.filterSize, stream);
-        }
-        if (sts != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("error at KFM UCF fused gauss h (plane %d): %s.\n"), iplane, get_err_mes(sts));
             return sts;
         }
         sts = kfmRecordEvent(stream, &prevEvent);
@@ -2632,8 +2679,7 @@ RGY_ERR NVEncFilterKfm::runUcfNoiseLimitStageFromSource(const NVEncFilterParamKf
         if (sts != RGY_ERR_NONE) {
             return sts;
         }
-        sts = run_kfm_ucf_source_crop_noise_limit_plane(&dst, &src, &noise,
-            srcXOffset, srcYOffset, srcYStep, KFM_UCF_NOISE_LIMIT_NMIN, KFM_UCF_NOISE_LIMIT_RANGE, stream);
+        sts = run_kfm_ucf_copy_plane(&dst, &noise, stream);
         if (sts != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("error at kernel_kfm_ucf_source_crop_noise_limit (plane %d): %s.\n"), iplane, get_err_mes(sts));
             return sts;
@@ -5506,9 +5552,12 @@ RGY_ERR NVEncFilterKfm::runNrFilter(RGYFrameInfo *pInputFrame, RGYFrameInfo **pp
 }
 
 RGY_ERR NVEncFilterKfm::emitOutputFrame(RGYFrameInfo *pFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
-    cudaStream_t stream, const RGYCudaEvent &frameEvent, RGYCudaEvent *event) {
+    cudaStream_t stream, const RGYCudaEvent &frameEvent, RGYCudaEvent *event, RGYFrameInfo *reservedOutputFrame) {
     if (!pFrame || !ppOutputFrames || !pOutputFrameNum) {
         return RGY_ERR_INVALID_PARAM;
+    }
+    if (reservedOutputFrame && (m_nrFilter || reservedOutputFrame != pFrame)) {
+        return RGY_ERR_INVALID_CALL;
     }
     RGYFrameInfo *emitFrame = pFrame;
     RGYCudaEvent nrEvent;
@@ -5528,7 +5577,7 @@ RGY_ERR NVEncFilterKfm::emitOutputFrame(RGYFrameInfo *pFrame, RGYFrameInfo **ppO
             return RGY_ERR_NONE;
         }
     }
-    auto outputFrame = nextOutputFrame();
+    auto outputFrame = reservedOutputFrame ? reservedOutputFrame : nextOutputFrame();
     if (!outputFrame || !outputFrame->ptr[0]) {
         return RGY_ERR_INVALID_CALL;
     }
@@ -5575,9 +5624,38 @@ RGY_ERR NVEncFilterKfm::queueVfrOutputFrame(const RGYFrameInfo *pFrame, cudaStre
         return RGY_ERR_INVALID_CALL;
     }
     KfmPendingVfrOutput pending;
-    pending.frame = acquireKfmFrame(*pFrame, _T("VFR delayed output"));
-    if (!pending.frame) {
-        return RGY_ERR_MEMORY_ALLOC;
+    RGYFrameInfo *pendingFrame = nullptr;
+    if (m_nrFilter) {
+        pending.frame = acquireKfmFrame(*pFrame, _T("VFR delayed output"));
+        if (!pending.frame) {
+            return RGY_ERR_MEMORY_ALLOC;
+        }
+        pendingFrame = &pending.frame->frame;
+    } else {
+        pending.outputFrameIndex = m_outputBufferIndex;
+        const auto duplicate = std::find_if(m_pendingVfrOutputs.begin(), m_pendingVfrOutputs.end(), [&pending](const KfmPendingVfrOutput& queued) {
+            return queued.outputFrameIndex == pending.outputFrameIndex;
+        });
+        if (duplicate != m_pendingVfrOutputs.end()) {
+            AddMessage(RGY_LOG_ERROR, _T("KFM VFR出力バッファ枠%dは予約済みです。\n"), pending.outputFrameIndex);
+            return RGY_ERR_INVALID_CALL;
+        }
+        // 完成画像を持つwork枠と予約済みoutput枠の所有権を交換する。
+        // pending中は出力枠に画像を保持し、完了イベントもコピーせず引き継ぐ。
+        const auto work = std::find_if(m_workFrameBuf.begin(), m_workFrameBuf.end(), [pFrame](const auto& frame) {
+            return frame && &frame->frame == pFrame;
+        });
+        if (work != m_workFrameBuf.end()) {
+            std::swap(*work, m_frameBuf[pending.outputFrameIndex]);
+            pendingFrame = nextOutputFrame();
+            pending.event = frameEvent;
+            m_pendingVfrOutputs.push_back(std::move(pending));
+            return RGY_ERR_NONE;
+        }
+        pendingFrame = nextOutputFrame();
+        if (!pendingFrame || !pendingFrame->ptr[0]) {
+            return RGY_ERR_INVALID_CALL;
+        }
     }
     std::vector<RGYCudaEvent> copyWaitEvents;
     if (frameEvent() != nullptr) {
@@ -5587,7 +5665,7 @@ RGY_ERR NVEncFilterKfm::queueVfrOutputFrame(const RGYFrameInfo *pFrame, cudaStre
     if (sts != RGY_ERR_NONE) {
         return sts;
     }
-    sts = copyFrameAsync(&pending.frame->frame, pFrame, stream);
+    sts = copyFrameAsync(pendingFrame, pFrame, stream);
     if (sts != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("failed to copy KFM VFR delayed output frame: %s.\n"), get_err_mes(sts));
         return sts;
@@ -5596,7 +5674,7 @@ RGY_ERR NVEncFilterKfm::queueVfrOutputFrame(const RGYFrameInfo *pFrame, cudaStre
     if (sts != RGY_ERR_NONE) {
         return sts;
     }
-    copyFramePropWithoutRes(&pending.frame->frame, pFrame);
+    copyFramePropWithoutRes(pendingFrame, pFrame);
     m_pendingVfrOutputs.push_back(std::move(pending));
     return RGY_ERR_NONE;
 }
@@ -5608,6 +5686,13 @@ RGY_ERR NVEncFilterKfm::emitPendingVfrOutput(RGYFrameInfo **ppOutputFrames, int 
     }
     auto pending = std::move(m_pendingVfrOutputs.front());
     m_pendingVfrOutputs.pop_front();
+    if (pending.outputFrameIndex >= 0) {
+        if (pending.outputFrameIndex >= (int)m_frameBuf.size() || !m_frameBuf[pending.outputFrameIndex]) {
+            return RGY_ERR_INVALID_CALL;
+        }
+        auto outputFrame = &m_frameBuf[pending.outputFrameIndex]->frame;
+        return emitOutputFrame(outputFrame, ppOutputFrames, pOutputFrameNum, stream, pending.event, event, outputFrame);
+    }
     if (!pending.frame || !pending.frame->frame.ptr[0]) {
         return RGY_ERR_INVALID_CALL;
     }
@@ -5858,6 +5943,49 @@ RGY_ERR NVEncFilterKfm::submitUcfNoiseResult(const KfmCachedUcfNoise& noise0, co
     pending.meta.noiseUVw = noiseUV.ptr[0] ? (kfmCspHasInterleavedUV(noise0.frame->frame.csp) ? (noiseUV.width >> 1) : noiseUV.width) : 0;
     pending.meta.noiseUVh = noiseUV.ptr[0] ? noiseUV.height : 0;
 
+    if (kfmUseFusedUcfPreprocess() && !stageDumpRequested(noise0.fieldIndex)) {
+        const int planes = RGY_CSP_PLANES[noise0.frame->frame.csp];
+        int capacity = 0;
+        for (int i = 0; i < planes; i++) {
+            const auto n = getPlane(&noise0.frame->frame, (RGY_PLANE)i);
+            const auto d = getPlane(&source0.paddedFrame->frame, (RGY_PLANE)i);
+            capacity += divCeil(std::max(n.width, d.width) >> 2, 128) * divCeil(std::max(n.height, d.height), 8);
+        }
+        pending.partialBuf = acquireUcfNoiseResultBuf(sizeof(RGYKFM::NoiseResult) * capacity);
+        pending.resultBuf = acquireUcfNoiseResultBuf(sizeof(RGYKFM::NoiseResult) * 2);
+        if (!pending.partialBuf || !pending.resultBuf) return RGY_ERR_MEMORY_ALLOC;
+        auto sts = kfmWaitEvents(stream, { noise0.event, noise1.event, noise2.event, source0.paddedEvent, source1.paddedEvent });
+        if (sts != RGY_ERR_NONE) return sts;
+        int offset = 0, lumaCount = 0;
+        for (int i = 0; i < planes; i++) {
+            const auto plane = (RGY_PLANE)i;
+            const auto n0 = getPlane(&noise0.frame->frame, plane);
+            const auto n1 = getPlane(&noise1.frame->frame, plane);
+            const auto n2 = getPlane(&noise2.frame->frame, plane);
+            const auto d0 = getPlane(&source0.paddedFrame->frame, plane);
+            const auto d1 = getPlane(&source1.paddedFrame->frame, plane);
+            const int vpad = KFM_SOURCE_VPAD >> ((i != 0 && RGY_CSP_CHROMA_FORMAT[d0.csp] == RGY_CHROMAFMT_YUV420) ? 1 : 0);
+            const int height = d0.height - 2 * vpad;
+            const int nw4 = (n0.width & 3) ? 0 : n0.width >> 2;
+            const int dw4 = (d0.width & 3) ? 0 : d0.width >> 2;
+            if (std::max(nw4, dw4) <= 0 || std::max(n0.height, height) <= 0) continue;
+            sts = run_kfm_ucf_analyze_fused((RGYKFM::NoiseResult *)pending.partialBuf->ptrDevice, offset, &n0, &n1, &n2, &d0, &d1, nw4, dw4, height, vpad, stream);
+            if (sts != RGY_ERR_NONE) return sts;
+            offset += divCeil(std::max(nw4, dw4), 128) * divCeil(std::max(n0.height, height), 8);
+            if (i == 0) lumaCount = offset;
+        }
+        sts = run_kfm_ucf_reduce((RGYKFM::NoiseResult *)pending.resultBuf->ptrDevice, (const RGYKFM::NoiseResult *)pending.partialBuf->ptrDevice, lumaCount, offset - lumaCount, stream);
+        if (sts != RGY_ERR_NONE) return sts;
+        pending.segments.push_back({0, 1, 0});
+        pending.segments.push_back({1, 1, 1});
+        sts = err_to_rgy(cudaMemcpyAsync(pending.resultBuf->ptrHost, pending.resultBuf->ptrDevice, sizeof(RGYKFM::NoiseResult) * 2, cudaMemcpyDeviceToHost, stream));
+        if (sts != RGY_ERR_NONE) return sts;
+        sts = kfmRecordEvent(stream, &pending.event);
+        if (sts != RGY_ERR_NONE) return sts;
+        m_pendingUcfNoiseResults.push_back(std::move(pending));
+        return RGY_ERR_NONE;
+    }
+
     std::vector<RGYCudaEvent> events;
     int partialCount = 0;
     const int localX = 32;
@@ -6045,6 +6173,7 @@ RGY_ERR NVEncFilterKfm::resolveUcfNoiseResult(KfmPendingUcfNoiseResult& pending,
         }
     }
     pushUcfNoiseResultDump(pending.sourceIndex, results, pending.meta);
+    releaseUcfNoiseResultBuf(std::move(pending.partialBuf));
     releaseUcfNoiseResultBuf(std::move(pending.resultBuf));
     return RGY_ERR_NONE;
 }
@@ -6093,7 +6222,7 @@ void NVEncFilterKfm::releaseUcfNoiseResultBuf(std::unique_ptr<CUMemBufPair>&& bu
     if (!buf) {
         return;
     }
-    static constexpr size_t KFM_UCF_NOISE_RESULT_BUF_POOL_MAX = 8;
+    static constexpr size_t KFM_UCF_NOISE_RESULT_BUF_POOL_MAX = 16;
     m_ucfNoiseResultBufPool.push_back(std::move(buf));
     while (m_ucfNoiseResultBufPool.size() > KFM_UCF_NOISE_RESULT_BUF_POOL_MAX) {
         m_ucfNoiseResultBufPool.pop_front();
@@ -6881,8 +7010,10 @@ RGY_ERR NVEncFilterKfm::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo
             : std::min(m_cachedSourceFrames * 2, static_cast<int>(m_analyzerOutputResults.size()) * 10);
         const int vfrTailHold60 = switchSingleFrameDurationEnabled() ? 8 : 4;
         const int availableN60 = drain ? rawAvailableN60 : std::max(0, rawAvailableN60 - vfrTailHold60);
-        const int maxOutputFrames = std::min<int>((int)m_frameBuf.size(), KFM_MAX_OUTPUT_FRAMES);
         const int vfrOutputDelay = switchSingleFrameDurationEnabled() ? 1 : 0;
+        // NR無効時はpendingも出力枠を使う。同じ呼出しで返す画像を周回して上書きしないよう、その分を残す。
+        const int reservedOutputFrames = m_nrFilter ? 0 : vfrOutputDelay;
+        const int maxOutputFrames = std::min<int>((int)m_frameBuf.size() - reservedOutputFrames, KFM_MAX_OUTPUT_FRAMES);
         auto emitReadyPending = [&](int keepFrames) -> RGY_ERR {
             KfmProfileScope profile(m_kfmProfile, m_kfmProfile.emitPending, (int)m_pendingVfrOutputs.size());
             return emitPendingVfrOutputs(ppOutputFrames, pOutputFrameNum, stream, nullptr, keepFrames);
@@ -7678,14 +7809,17 @@ RGY_ERR NVEncFilterKfm::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo
             return sts;
         }
         if (prm->kfm.ucf) {
-            if (m_deint60Rtgmc) {
+            if (!lazyDeint60 && m_deint60Rtgmc) {
                 for (auto &captured : m_deint60Rtgmc->getCapturedIntermediates()) {
                     if (m_before60Rtgmc) m_before60Rtgmc->pushIntermediateInput(captured);
                     if (m_after60Rtgmc) m_after60Rtgmc->pushIntermediateInput(captured);
                 }
                 m_deint60Rtgmc->clearCapturedIntermediates();
             }
-            sts = runUcfRtgmcBranches(pInputFrame, stream, {});
+            // lazy時のレーンへの供給はensureUcfRtgmcRangeに任せ、古いsourceの終端出力を防ぐ。
+            sts = lazyDeint60
+                ? runUcfNoiseAnalysisFromSource(pInputFrame, stream, {})
+                : runUcfRtgmcBranches(pInputFrame, stream, {});
             if (sts != RGY_ERR_NONE) {
                 return sts;
             }
