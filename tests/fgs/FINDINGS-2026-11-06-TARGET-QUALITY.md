@@ -98,3 +98,27 @@ The hard parts:
 - the IDR on every zone change;
 - FGS analyzer continuity;
 - keeping shared `rgy_` code compatible with QSVEnc/VCEEnc (use `ENCODER_NVENC` guards).
+
+## Follow-up: zones without IDR/reset (branch `exp/zones-noidr`, 336f23ae)
+
+`f1327e14` (the production binary's source) was rebuilt with the zone reconfigure set to
+`resetEncoder = 0; forceIDR = 0`. NVENC accepts that and the output decodes.
+
+- The unmodified rebuild matches production: same size and identical decoded frames.
+- Keyframes are back to 31, the same as fixed q30.
+- Zone QVBR changes now take effect sluggishly. Only 29 of 63 Black Doves scenes reach within 15% of
+  the bitrate the IDR run gave each scene.
+
+Results at matched size (worst / p10 / mean over scenes):
+
+| clip | run | MB | grain-aware VMAF | VMAF | SSIMULACRA2 |
+|---|---|---|---|---|---|
+| Black Doves | fixed q30 | 119.0 | 92.35 / 94.50 / 95.80 | 84.26 / 86.39 / 89.89 | 43.65 / 46.27 / 54.89 |
+| Black Doves | zones, no IDR | 118.9 | 92.97 / 94.82 / 95.74 | 84.47 / 86.68 / 89.86 | 43.82 / 47.56 / 54.99 |
+| Kusuriya 54 | fixed q30 | 54.58 | 95.81 / 96.64 / 97.13 | 94.43 / 95.95 / 96.85 | 81.5 / 84.6 / 87.4 |
+| Kusuriya 54 | zones, no IDR (+0.75) | 54.57 | 95.54 / 96.46 / 96.98 | 94.20 / 95.82 / 96.70 | 76.1 / 79.9 / 86.2 |
+
+**Verdict:** the IDR was a minor confound. Without it, zones are within noise on grainy live action
+and still lose on anime, at about 6x runtime. NVENC QVBR already adapts per frame, so per-scene QVBR
+only moves bits around. A native `--target-quality` built on zones is not worth building. Results
+are in `/tmp/downloads/codex-work/target-quality-zones/noidr/`.
