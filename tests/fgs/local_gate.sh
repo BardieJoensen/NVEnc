@@ -266,11 +266,17 @@ make_shim() {  # real binary -> prints shim path
     shim="$SHIM_DIR/$(basename "$(dirname "$real")")-$(basename "$real")"
     mkdir -p "$SHIM_DIR"
     for m in $GATE_MOUNTS "$(dirname "$real")"; do mounts="$mounts -v $m:$m"; done
+    # RLIMIT_FSIZE and an ignored SIGXFSZ (used by test_export.py to force write
+    # failures) do not cross the docker boundary on their own, so forward both.
     cat > "$shim" <<SHIM
 #!/bin/bash
 # real binary: $real (runs inside $BUILD_IMAGE)
-exec docker run --rm -i --gpus all --user $(id -u):$(id -g) -e HOME=/tmp \\
-    $mounts -w "\$PWD" --entrypoint "$real" "$BUILD_IMAGE" "\$@"
+limit=()
+fsize="\$(ulimit -f)"
+[ "\$fsize" = unlimited ] || limit=(--ulimit "fsize=\$((fsize * 1024)):\$((fsize * 1024))")
+exec docker run --rm -i --gpus all --user $(id -u):$(id -g) -e HOME=/tmp "\${limit[@]}" \\
+    $mounts -w "\$PWD" --entrypoint /bin/sh "$BUILD_IMAGE" \\
+    -c 'trap "" XFSZ; exec "\$@"' sh "$real" "\$@"
 SHIM
     chmod +x "$shim"
     echo "$shim"
