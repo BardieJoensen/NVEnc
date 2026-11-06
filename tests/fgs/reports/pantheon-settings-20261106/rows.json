@@ -1,0 +1,5422 @@
+{
+ "p04a/prod_q34": {
+  "window": "p04a",
+  "tag": "prod_q34",
+  "variant": {
+   "q": 34
+  },
+  "encode_seconds": 13.4,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04a/enc/prod_q34.mkv",
+  "mbps": 3.3093,
+  "align_costs": {
+   "-3": 5.239971160888672,
+   "-2": 4.991035461425781,
+   "-1": 4.794069290161133,
+   "0": 4.668797492980957,
+   "1": 4.658473968505859,
+   "2": 4.790524959564209,
+   "3": 4.988401889801025
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 47.59,
+  "ssimu2_p5": 11.03,
+  "butter_2norm": 1.939,
+  "butter_max_p95": 11.5,
+  "vmaf": 84.78,
+  "vmaf_min": 66.49,
+  "vmaf_neg": 83.62,
+  "vmaf_neg_gap": 1.16,
+  "psnr_y": 39.58,
+  "ssim": 0.9849,
+  "ciede2000": 43.16,
+  "vmaf_p1": 68.45,
+  "psnr_cb": 50.19,
+  "psnr_cr": 49.45,
+  "ciede": 43.16,
+  "cambi_enc": 1.569,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99685,
+  "err_Y_s3.0": 0.03851,
+  "amp_Y_s1.5": 0.9932,
+  "err_Y_s1.5": 0.06868,
+  "amp_Cb": 0.98027,
+  "peak_Cb": 0.99412,
+  "err_Cb": 0.19902,
+  "amp_Cr": 0.98877,
+  "peak_Cr": 0.99338,
+  "err_Cr": 0.16256,
+  "align_psnr": {
+   "-2": 36.95,
+   "-1": 40.0,
+   "0": 42.24,
+   "1": 39.91,
+   "2": 36.86
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.1565,
+   "acf1": -0.1067,
+   "acf2": -0.0184,
+   "acf3": -0.0095
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1635,
+    "acf1": -0.0735,
+    "acf2": -0.0423,
+    "acf3": -0.0704
+   },
+   "roi": {
+    "hf": 0.7155,
+    "acf1": 0.2222,
+    "acf2": -0.0737,
+    "acf3": -0.1392
+   }
+  },
+  "_final": true
+ },
+ "p04a/prod_q38": {
+  "window": "p04a",
+  "tag": "prod_q38",
+  "variant": {
+   "q": 38
+  },
+  "encode_seconds": 13.1,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 38 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04a/enc/prod_q38.mkv",
+  "mbps": 2.0416,
+  "align_costs": {
+   "-3": 5.232973098754883,
+   "-2": 4.984208106994629,
+   "-1": 4.787672996520996,
+   "0": 4.66230583190918,
+   "1": 4.652050018310547,
+   "2": 4.783450126647949,
+   "3": 4.980679512023926
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 42.13,
+  "ssimu2_p5": 3.2,
+  "butter_2norm": 2.089,
+  "butter_max_p95": 12.71,
+  "vmaf": 81.4,
+  "vmaf_min": 59.85,
+  "vmaf_neg": 80.17,
+  "vmaf_neg_gap": 1.23,
+  "psnr_y": 39.08,
+  "ssim": 0.9815,
+  "ciede2000": 42.7,
+  "vmaf_p1": 60.3,
+  "psnr_cb": 49.6,
+  "psnr_cr": 48.75,
+  "ciede": 42.7,
+  "cambi_enc": 1.963,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99624,
+  "err_Y_s3.0": 0.04826,
+  "amp_Y_s1.5": 0.99167,
+  "err_Y_s1.5": 0.08491,
+  "amp_Cb": 0.97738,
+  "peak_Cb": 0.99354,
+  "err_Cb": 0.22191,
+  "amp_Cr": 0.98599,
+  "peak_Cr": 0.99273,
+  "err_Cr": 0.18329,
+  "align_psnr": {
+   "-2": 36.96,
+   "-1": 39.99,
+   "0": 42.15,
+   "1": 39.9,
+   "2": 36.86
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 2.9686,
+   "acf1": -0.1213,
+   "acf2": -0.0017,
+   "acf3": 0.0011
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0084,
+    "acf1": -0.1268,
+    "acf2": -0.0088,
+    "acf3": -0.0598
+   },
+   "roi": {
+    "hf": 0.497,
+    "acf1": 0.2268,
+    "acf2": -0.0351,
+    "acf3": -0.1329
+   }
+  },
+  "_final": true
+ },
+ "p04a/prod_q30": {
+  "window": "p04a",
+  "tag": "prod_q30",
+  "variant": {
+   "q": 30
+  },
+  "encode_seconds": 12.8,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04a/enc/prod_q30.mkv",
+  "mbps": 5.3115,
+  "align_costs": {
+   "-3": 5.2437567710876465,
+   "-2": 4.994554042816162,
+   "-1": 4.7974653244018555,
+   "0": 4.671732425689697,
+   "1": 4.661921501159668,
+   "2": 4.794399738311768,
+   "3": 4.9921674728393555
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 52.94,
+  "ssimu2_p5": 21.16,
+  "butter_2norm": 1.785,
+  "butter_max_p95": 9.45,
+  "vmaf": 87.51,
+  "vmaf_min": 71.17,
+  "vmaf_neg": 86.41,
+  "vmaf_neg_gap": 1.1,
+  "psnr_y": 40.14,
+  "ssim": 0.988,
+  "ciede2000": 43.7,
+  "vmaf_p1": 74.18,
+  "psnr_cb": 50.78,
+  "psnr_cr": 50.13,
+  "ciede": 43.7,
+  "cambi_enc": 1.107,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.9973,
+  "err_Y_s3.0": 0.03111,
+  "amp_Y_s1.5": 0.99433,
+  "err_Y_s1.5": 0.0559,
+  "amp_Cb": 0.98444,
+  "peak_Cb": 0.99495,
+  "err_Cb": 0.17907,
+  "amp_Cr": 0.99115,
+  "peak_Cr": 0.99448,
+  "err_Cr": 0.14418,
+  "align_psnr": {
+   "-2": 36.94,
+   "-1": 40.01,
+   "0": 42.33,
+   "1": 39.91,
+   "2": 36.84
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.3477,
+   "acf1": -0.0973,
+   "acf2": -0.0305,
+   "acf3": -0.0153
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.2972,
+    "acf1": -0.0534,
+    "acf2": -0.0644,
+    "acf3": -0.0693
+   },
+   "roi": {
+    "hf": 0.9174,
+    "acf1": 0.1613,
+    "acf2": -0.1036,
+    "acf3": -0.1218
+   }
+  },
+  "_final": true
+ },
+ "p04a/prod_q26": {
+  "window": "p04a",
+  "tag": "prod_q26",
+  "variant": {
+   "q": 26
+  },
+  "encode_seconds": 12.6,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 26 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04a/enc/prod_q26.mkv",
+  "mbps": 8.3529,
+  "align_costs": {
+   "-3": 5.245476245880127,
+   "-2": 4.995851993560791,
+   "-1": 4.798229217529297,
+   "0": 4.671828746795654,
+   "1": 4.6623735427856445,
+   "2": 4.795397758483887,
+   "3": 4.993732452392578
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 58.51,
+  "ssimu2_p5": 31.66,
+  "butter_2norm": 1.621,
+  "butter_max_p95": 8.0,
+  "vmaf": 89.74,
+  "vmaf_min": 76.7,
+  "vmaf_neg": 88.7,
+  "vmaf_neg_gap": 1.04,
+  "psnr_y": 40.8,
+  "ssim": 0.9911,
+  "ciede2000": 44.34,
+  "vmaf_p1": 79.44,
+  "psnr_cb": 51.45,
+  "psnr_cr": 50.88,
+  "ciede": 44.34,
+  "cambi_enc": 0.653,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99749,
+  "err_Y_s3.0": 0.02512,
+  "amp_Y_s1.5": 0.99499,
+  "err_Y_s1.5": 0.04547,
+  "amp_Cb": 0.98729,
+  "peak_Cb": 0.99544,
+  "err_Cb": 0.16032,
+  "amp_Cr": 0.99326,
+  "peak_Cr": 0.9954,
+  "err_Cr": 0.12698,
+  "align_psnr": {
+   "-2": 36.93,
+   "-1": 40.01,
+   "0": 42.43,
+   "1": 39.92,
+   "2": 36.83
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.6056,
+   "acf1": -0.0993,
+   "acf2": -0.0412,
+   "acf3": -0.0156
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.4449,
+    "acf1": -0.0519,
+    "acf2": -0.0866,
+    "acf3": -0.055
+   },
+   "roi": {
+    "hf": 1.12,
+    "acf1": 0.0789,
+    "acf2": -0.129,
+    "acf3": -0.0836
+   }
+  },
+  "_final": true
+ },
+ "p04a/prod_q22": {
+  "window": "p04a",
+  "tag": "prod_q22",
+  "variant": {
+   "q": 22
+  },
+  "encode_seconds": 12.9,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 22 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04a/enc/prod_q22.mkv",
+  "mbps": 12.541,
+  "align_costs": {
+   "-3": 5.245409965515137,
+   "-2": 4.995499134063721,
+   "-1": 4.7975568771362305,
+   "0": 4.670168876647949,
+   "1": 4.661679267883301,
+   "2": 4.7950968742370605,
+   "3": 4.993786811828613
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 63.93,
+  "ssimu2_p5": 40.08,
+  "butter_2norm": 1.459,
+  "butter_max_p95": 7.34,
+  "vmaf": 91.49,
+  "vmaf_min": 81.11,
+  "vmaf_neg": 90.5,
+  "vmaf_neg_gap": 0.99,
+  "psnr_y": 41.56,
+  "ssim": 0.9935,
+  "ciede2000": 45.07,
+  "vmaf_p1": 83.4,
+  "psnr_cb": 52.21,
+  "psnr_cr": 51.71,
+  "ciede": 45.07,
+  "cambi_enc": 0.359,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99767,
+  "err_Y_s3.0": 0.0204,
+  "amp_Y_s1.5": 0.99549,
+  "err_Y_s1.5": 0.03713,
+  "amp_Cb": 0.99053,
+  "peak_Cb": 0.99633,
+  "err_Cb": 0.14104,
+  "amp_Cr": 0.99492,
+  "peak_Cr": 0.99612,
+  "err_Cr": 0.11001,
+  "align_psnr": {
+   "-2": 36.92,
+   "-1": 40.02,
+   "0": 42.56,
+   "1": 39.92,
+   "2": 36.83
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.8743,
+   "acf1": -0.1122,
+   "acf2": -0.0494,
+   "acf3": -0.0109
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.5983,
+    "acf1": -0.0709,
+    "acf2": -0.0977,
+    "acf3": -0.0378
+   },
+   "roi": {
+    "hf": 1.3107,
+    "acf1": 0.0067,
+    "acf2": -0.1388,
+    "acf3": -0.0468
+   }
+  },
+  "_final": true
+ },
+ "p04a/plain_q34": {
+  "window": "p04a",
+  "tag": "plain_q34",
+  "variant": {
+   "q": 34,
+   "fg": false
+  },
+  "encode_seconds": 13.4,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal -o /temp/pantheon-settings-20261106/p04a/enc/plain_q34.mkv",
+  "mbps": 3.5372,
+  "align_costs": {
+   "-3": 5.236323833465576,
+   "-2": 4.984953880310059,
+   "-1": 4.785987377166748,
+   "0": 4.659952163696289,
+   "1": 4.649489402770996,
+   "2": 4.782826900482178,
+   "3": 4.982906341552734
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 49.21,
+  "ssimu2_p5": 12.39,
+  "butter_2norm": 1.824,
+  "butter_max_p95": 11.46,
+  "vmaf": 85.98,
+  "vmaf_min": 68.96,
+  "vmaf_neg": 84.7,
+  "vmaf_neg_gap": 1.28,
+  "psnr_y": 40.6,
+  "ssim": 0.9853,
+  "ciede2000": 44.03,
+  "vmaf_p1": 69.48,
+  "psnr_cb": 50.06,
+  "psnr_cr": 49.29,
+  "ciede": 44.03,
+  "cambi_enc": 2.526,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.9989,
+  "err_Y_s3.0": 0.03807,
+  "amp_Y_s1.5": 0.99667,
+  "err_Y_s1.5": 0.06681,
+  "amp_Cb": 0.97892,
+  "peak_Cb": 0.99321,
+  "err_Cb": 0.20309,
+  "amp_Cr": 0.98738,
+  "peak_Cr": 0.99273,
+  "err_Cr": 0.16636,
+  "align_psnr": {
+   "-2": 36.87,
+   "-1": 39.97,
+   "0": 42.38,
+   "1": 39.85,
+   "2": 36.78
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 1.747,
+   "acf1": 0.2398,
+   "acf2": -0.0332,
+   "acf3": -0.0403
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0168,
+    "acf1": 0.2352,
+    "acf2": -0.1296,
+    "acf3": -0.1428
+   },
+   "roi": {
+    "hf": 0.6519,
+    "acf1": 0.2402,
+    "acf2": -0.0767,
+    "acf3": -0.1332
+   }
+  },
+  "_final": true
+ },
+ "p04a/plain_q30": {
+  "window": "p04a",
+  "tag": "plain_q30",
+  "variant": {
+   "q": 30,
+   "fg": false
+  },
+  "encode_seconds": 14.0,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal -o /temp/pantheon-settings-20261106/p04a/enc/plain_q30.mkv",
+  "mbps": 5.7498,
+  "align_costs": {
+   "-3": 5.243269443511963,
+   "-2": 4.991149425506592,
+   "-1": 4.791411876678467,
+   "0": 4.6644134521484375,
+   "1": 4.6544413566589355,
+   "2": 4.788219928741455,
+   "3": 4.9885687828063965
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 54.74,
+  "ssimu2_p5": 20.9,
+  "butter_2norm": 1.655,
+  "butter_max_p95": 10.16,
+  "vmaf": 88.94,
+  "vmaf_min": 75.09,
+  "vmaf_neg": 87.71,
+  "vmaf_neg_gap": 1.23,
+  "psnr_y": 41.28,
+  "ssim": 0.9885,
+  "ciede2000": 44.66,
+  "vmaf_p1": 75.47,
+  "psnr_cb": 50.61,
+  "psnr_cr": 49.94,
+  "ciede": 44.66,
+  "cambi_enc": 1.836,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.9993,
+  "err_Y_s3.0": 0.03008,
+  "amp_Y_s1.5": 0.99776,
+  "err_Y_s1.5": 0.05312,
+  "amp_Cb": 0.98299,
+  "peak_Cb": 0.99422,
+  "err_Cb": 0.18301,
+  "amp_Cr": 0.99026,
+  "peak_Cr": 0.9939,
+  "err_Cr": 0.14785,
+  "align_psnr": {
+   "-2": 36.81,
+   "-1": 39.91,
+   "0": 42.64,
+   "1": 39.79,
+   "2": 36.71
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 2.1083,
+   "acf1": 0.17,
+   "acf2": -0.0712,
+   "acf3": -0.0404
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1952,
+    "acf1": 0.183,
+    "acf2": -0.1464,
+    "acf3": -0.1161
+   },
+   "roi": {
+    "hf": 0.8793,
+    "acf1": 0.1731,
+    "acf2": -0.0997,
+    "acf3": -0.1299
+   }
+  },
+  "_final": true
+ },
+ "p04a/plain_q26": {
+  "window": "p04a",
+  "tag": "plain_q26",
+  "variant": {
+   "q": 26,
+   "fg": false
+  },
+  "encode_seconds": 13.7,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 26 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal -o /temp/pantheon-settings-20261106/p04a/enc/plain_q26.mkv",
+  "mbps": 9.2736,
+  "align_costs": {
+   "-3": 5.252841949462891,
+   "-2": 5.000665664672852,
+   "-1": 4.8005290031433105,
+   "0": 4.672140598297119,
+   "1": 4.66331148147583,
+   "2": 4.797945499420166,
+   "3": 4.998898983001709
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 60.81,
+  "ssimu2_p5": 31.28,
+  "butter_2norm": 1.463,
+  "butter_max_p95": 8.5,
+  "vmaf": 91.39,
+  "vmaf_min": 79.93,
+  "vmaf_neg": 90.2,
+  "vmaf_neg_gap": 1.19,
+  "psnr_y": 42.18,
+  "ssim": 0.9916,
+  "ciede2000": 45.46,
+  "vmaf_p1": 81.25,
+  "psnr_cb": 51.2,
+  "psnr_cr": 50.61,
+  "ciede": 45.46,
+  "cambi_enc": 0.958,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99959,
+  "err_Y_s3.0": 0.024,
+  "amp_Y_s1.5": 0.99855,
+  "err_Y_s1.5": 0.04233,
+  "amp_Cb": 0.98648,
+  "peak_Cb": 0.99483,
+  "err_Cb": 0.16422,
+  "amp_Cr": 0.99221,
+  "peak_Cr": 0.99468,
+  "err_Cr": 0.13064,
+  "align_psnr": {
+   "-2": 36.66,
+   "-1": 39.73,
+   "0": 43.22,
+   "1": 39.63,
+   "2": 36.6
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 2.5852,
+   "acf1": 0.0894,
+   "acf2": -0.0832,
+   "acf3": -0.0356
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.359,
+    "acf1": 0.1228,
+    "acf2": -0.1548,
+    "acf3": -0.0842
+   },
+   "roi": {
+    "hf": 1.081,
+    "acf1": 0.0906,
+    "acf2": -0.1284,
+    "acf3": -0.0869
+   }
+  },
+  "_final": true
+ },
+ "p04a/ret050_q34": {
+  "window": "p04a",
+  "tag": "ret050_q34",
+  "variant": {
+   "q": 34,
+   "retain": 0.5
+  },
+  "encode_seconds": 12.1,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.5 -o /temp/pantheon-settings-20261106/p04a/enc/ret050_q34.mkv",
+  "mbps": 3.3299,
+  "align_costs": {
+   "-3": 5.237977504730225,
+   "-2": 4.98778772354126,
+   "-1": 4.7898359298706055,
+   "0": 4.664335250854492,
+   "1": 4.653780937194824,
+   "2": 4.786661148071289,
+   "3": 4.985921859741211
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 48.03,
+  "ssimu2_p5": 12.32,
+  "butter_2norm": 1.909,
+  "butter_max_p95": 11.12,
+  "vmaf": 85.27,
+  "vmaf_min": 67.77,
+  "vmaf_neg": 84.08,
+  "vmaf_neg_gap": 1.19,
+  "psnr_y": 39.79,
+  "ssim": 0.985,
+  "ciede2000": 43.34,
+  "vmaf_p1": 69.4,
+  "psnr_cb": 50.14,
+  "psnr_cr": 49.41,
+  "ciede": 43.34,
+  "cambi_enc": 1.59,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99795,
+  "err_Y_s3.0": 0.03788,
+  "amp_Y_s1.5": 0.99491,
+  "err_Y_s1.5": 0.06707,
+  "amp_Cb": 0.9802,
+  "peak_Cb": 0.99403,
+  "err_Cb": 0.20035,
+  "amp_Cr": 0.98874,
+  "peak_Cr": 0.9935,
+  "err_Cr": 0.16303,
+  "align_psnr": {
+   "-2": 36.93,
+   "-1": 40.01,
+   "0": 42.3,
+   "1": 39.91,
+   "2": 36.83
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 2.8975,
+   "acf1": -0.0726,
+   "acf2": -0.0218,
+   "acf3": -0.0155
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1266,
+    "acf1": -0.016,
+    "acf2": -0.0575,
+    "acf3": -0.0847
+   },
+   "roi": {
+    "hf": 0.7006,
+    "acf1": 0.2238,
+    "acf2": -0.0777,
+    "acf3": -0.1329
+   }
+  },
+  "_final": true
+ },
+ "p04a/ret050_q30": {
+  "window": "p04a",
+  "tag": "ret050_q30",
+  "variant": {
+   "q": 30,
+   "retain": 0.5
+  },
+  "encode_seconds": 12.7,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.5 -o /temp/pantheon-settings-20261106/p04a/enc/ret050_q30.mkv",
+  "mbps": 5.4,
+  "align_costs": {
+   "-3": 5.2432332038879395,
+   "-2": 4.992648124694824,
+   "-1": 4.794198513031006,
+   "0": 4.668139457702637,
+   "1": 4.658123016357422,
+   "2": 4.791547775268555,
+   "3": 4.991019248962402
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 53.53,
+  "ssimu2_p5": 20.84,
+  "butter_2norm": 1.75,
+  "butter_max_p95": 9.57,
+  "vmaf": 88.1,
+  "vmaf_min": 72.07,
+  "vmaf_neg": 86.97,
+  "vmaf_neg_gap": 1.13,
+  "psnr_y": 40.39,
+  "ssim": 0.9882,
+  "ciede2000": 43.9,
+  "vmaf_p1": 75.24,
+  "psnr_cb": 50.74,
+  "psnr_cr": 50.09,
+  "ciede": 43.9,
+  "cambi_enc": 1.132,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99832,
+  "err_Y_s3.0": 0.03026,
+  "amp_Y_s1.5": 0.99596,
+  "err_Y_s1.5": 0.05386,
+  "amp_Cb": 0.98386,
+  "peak_Cb": 0.99458,
+  "err_Cb": 0.17981,
+  "amp_Cr": 0.99073,
+  "peak_Cr": 0.99409,
+  "err_Cr": 0.14469,
+  "align_psnr": {
+   "-2": 36.92,
+   "-1": 40.01,
+   "0": 42.42,
+   "1": 39.91,
+   "2": 36.81
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.1194,
+   "acf1": -0.0666,
+   "acf2": -0.0354,
+   "acf3": -0.0206
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.2646,
+    "acf1": -0.0006,
+    "acf2": -0.0806,
+    "acf3": -0.0816
+   },
+   "roi": {
+    "hf": 0.9033,
+    "acf1": 0.155,
+    "acf2": -0.0964,
+    "acf3": -0.1188
+   }
+  },
+  "_final": true
+ },
+ "p04a/ret090_q34": {
+  "window": "p04a",
+  "tag": "ret090_q34",
+  "variant": {
+   "q": 34,
+   "retain": 0.9
+  },
+  "encode_seconds": 12.5,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.9 -o /temp/pantheon-settings-20261106/p04a/enc/ret090_q34.mkv",
+  "mbps": 3.4407,
+  "align_costs": {
+   "-3": 5.235218048095703,
+   "-2": 4.9842047691345215,
+   "-1": 4.785213947296143,
+   "0": 4.659421443939209,
+   "1": 4.6486921310424805,
+   "2": 4.781807899475098,
+   "3": 4.981542110443115
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 48.79,
+  "ssimu2_p5": 12.23,
+  "butter_2norm": 1.838,
+  "butter_max_p95": 11.14,
+  "vmaf": 85.79,
+  "vmaf_min": 68.96,
+  "vmaf_neg": 84.53,
+  "vmaf_neg_gap": 1.26,
+  "psnr_y": 40.34,
+  "ssim": 0.9852,
+  "ciede2000": 43.8,
+  "vmaf_p1": 69.73,
+  "psnr_cb": 50.06,
+  "psnr_cr": 49.3,
+  "ciede": 43.8,
+  "cambi_enc": 1.691,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99865,
+  "err_Y_s3.0": 0.03785,
+  "amp_Y_s1.5": 0.99623,
+  "err_Y_s1.5": 0.06665,
+  "amp_Cb": 0.9795,
+  "peak_Cb": 0.99377,
+  "err_Cb": 0.20265,
+  "amp_Cr": 0.98756,
+  "peak_Cr": 0.99286,
+  "err_Cr": 0.16611,
+  "align_psnr": {
+   "-2": 36.9,
+   "-1": 39.99,
+   "0": 42.34,
+   "1": 39.88,
+   "2": 36.8
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 2.1774,
+   "acf1": 0.0525,
+   "acf2": -0.0356,
+   "acf3": -0.0328
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0592,
+    "acf1": 0.1504,
+    "acf2": -0.1064,
+    "acf3": -0.122
+   },
+   "roi": {
+    "hf": 0.6765,
+    "acf1": 0.2306,
+    "acf2": -0.0795,
+    "acf3": -0.1353
+   }
+  },
+  "_final": true
+ },
+ "p04a/ret090_q30": {
+  "window": "p04a",
+  "tag": "ret090_q30",
+  "variant": {
+   "q": 30,
+   "retain": 0.9
+  },
+  "encode_seconds": 12.6,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.9 -o /temp/pantheon-settings-20261106/p04a/enc/ret090_q30.mkv",
+  "mbps": 5.6902,
+  "align_costs": {
+   "-3": 5.237335681915283,
+   "-2": 4.986033916473389,
+   "-1": 4.786686420440674,
+   "0": 4.6598615646362305,
+   "1": 4.649683952331543,
+   "2": 4.783276557922363,
+   "3": 4.983551979064941
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 54.5,
+  "ssimu2_p5": 21.53,
+  "butter_2norm": 1.67,
+  "butter_max_p95": 10.31,
+  "vmaf": 88.78,
+  "vmaf_min": 74.52,
+  "vmaf_neg": 87.58,
+  "vmaf_neg_gap": 1.2,
+  "psnr_y": 41.02,
+  "ssim": 0.9884,
+  "ciede2000": 44.42,
+  "vmaf_p1": 75.32,
+  "psnr_cb": 50.63,
+  "psnr_cr": 49.97,
+  "ciede": 44.42,
+  "cambi_enc": 1.221,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99912,
+  "err_Y_s3.0": 0.02994,
+  "amp_Y_s1.5": 0.9974,
+  "err_Y_s1.5": 0.053,
+  "amp_Cb": 0.98364,
+  "peak_Cb": 0.99433,
+  "err_Cb": 0.18222,
+  "amp_Cr": 0.99022,
+  "peak_Cr": 0.9937,
+  "err_Cr": 0.14704,
+  "align_psnr": {
+   "-2": 36.84,
+   "-1": 39.95,
+   "0": 42.6,
+   "1": 39.83,
+   "2": 36.74
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 2.468,
+   "acf1": 0.0434,
+   "acf2": -0.0553,
+   "acf3": -0.0347
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.2088,
+    "acf1": 0.1318,
+    "acf2": -0.1271,
+    "acf3": -0.1072
+   },
+   "roi": {
+    "hf": 0.8775,
+    "acf1": 0.1841,
+    "acf2": -0.0963,
+    "acf3": -0.1303
+   }
+  },
+  "_final": true
+ },
+ "p04a/aqs1_q34": {
+  "window": "p04a",
+  "tag": "aqs1_q34",
+  "variant": {
+   "q": 34,
+   "aqs": 1
+  },
+  "encode_seconds": 12.9,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --aq-strength 1 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04a/enc/aqs1_q34.mkv",
+  "mbps": 3.3093,
+  "align_costs": {
+   "-3": 5.239971160888672,
+   "-2": 4.991035461425781,
+   "-1": 4.794069290161133,
+   "0": 4.668797492980957,
+   "1": 4.658473968505859,
+   "2": 4.790524959564209,
+   "3": 4.988401889801025
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 47.59,
+  "ssimu2_p5": 11.03,
+  "butter_2norm": 1.939,
+  "butter_max_p95": 11.5,
+  "vmaf": 84.78,
+  "vmaf_min": 66.49,
+  "vmaf_neg": 83.62,
+  "vmaf_neg_gap": 1.16,
+  "psnr_y": 39.58,
+  "ssim": 0.9849,
+  "ciede2000": 43.16,
+  "vmaf_p1": 68.45,
+  "psnr_cb": 50.19,
+  "psnr_cr": 49.45,
+  "ciede": 43.16,
+  "cambi_enc": 1.569,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99685,
+  "err_Y_s3.0": 0.03851,
+  "amp_Y_s1.5": 0.9932,
+  "err_Y_s1.5": 0.06868,
+  "amp_Cb": 0.98027,
+  "peak_Cb": 0.99412,
+  "err_Cb": 0.19902,
+  "amp_Cr": 0.98877,
+  "peak_Cr": 0.99338,
+  "err_Cr": 0.16256,
+  "align_psnr": {
+   "-2": 36.95,
+   "-1": 40.0,
+   "0": 42.24,
+   "1": 39.91,
+   "2": 36.86
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.1565,
+   "acf1": -0.1067,
+   "acf2": -0.0184,
+   "acf3": -0.0095
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1635,
+    "acf1": -0.0735,
+    "acf2": -0.0423,
+    "acf3": -0.0704
+   },
+   "roi": {
+    "hf": 0.7155,
+    "acf1": 0.2222,
+    "acf2": -0.0737,
+    "acf3": -0.1392
+   }
+  },
+  "_final": true
+ },
+ "p04a/aqs15_q34": {
+  "window": "p04a",
+  "tag": "aqs15_q34",
+  "variant": {
+   "q": 34,
+   "aqs": 15
+  },
+  "encode_seconds": 14.2,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --aq-strength 15 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04a/enc/aqs15_q34.mkv",
+  "mbps": 3.3093,
+  "align_costs": {
+   "-3": 5.239971160888672,
+   "-2": 4.991035461425781,
+   "-1": 4.794069290161133,
+   "0": 4.668797492980957,
+   "1": 4.658473968505859,
+   "2": 4.790524959564209,
+   "3": 4.988401889801025
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 47.59,
+  "ssimu2_p5": 11.03,
+  "butter_2norm": 1.939,
+  "butter_max_p95": 11.5,
+  "vmaf": 84.78,
+  "vmaf_min": 66.49,
+  "vmaf_neg": 83.62,
+  "vmaf_neg_gap": 1.16,
+  "psnr_y": 39.58,
+  "ssim": 0.9849,
+  "ciede2000": 43.16,
+  "vmaf_p1": 68.45,
+  "psnr_cb": 50.19,
+  "psnr_cr": 49.45,
+  "ciede": 43.16,
+  "cambi_enc": 1.569,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99685,
+  "err_Y_s3.0": 0.03851,
+  "amp_Y_s1.5": 0.9932,
+  "err_Y_s1.5": 0.06868,
+  "amp_Cb": 0.98027,
+  "peak_Cb": 0.99412,
+  "err_Cb": 0.19902,
+  "amp_Cr": 0.98877,
+  "peak_Cr": 0.99338,
+  "err_Cr": 0.16256,
+  "align_psnr": {
+   "-2": 36.95,
+   "-1": 40.0,
+   "0": 42.24,
+   "1": 39.91,
+   "2": 36.86
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.1565,
+   "acf1": -0.1067,
+   "acf2": -0.0184,
+   "acf3": -0.0095
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1635,
+    "acf1": -0.0735,
+    "acf2": -0.0423,
+    "acf3": -0.0704
+   },
+   "roi": {
+    "hf": 0.7155,
+    "acf1": 0.2222,
+    "acf2": -0.0737,
+    "acf3": -0.1392
+   }
+  },
+  "_final": true
+ },
+ "p04a/noaq_q34": {
+  "window": "p04a",
+  "tag": "noaq_q34",
+  "variant": {
+   "q": 34,
+   "aq": false
+  },
+  "encode_seconds": 14.1,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04a/enc/noaq_q34.mkv",
+  "mbps": 3.3093,
+  "align_costs": {
+   "-3": 5.239971160888672,
+   "-2": 4.991035461425781,
+   "-1": 4.794069290161133,
+   "0": 4.668797492980957,
+   "1": 4.658473968505859,
+   "2": 4.790524959564209,
+   "3": 4.988401889801025
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 47.59,
+  "ssimu2_p5": 11.03,
+  "butter_2norm": 1.939,
+  "butter_max_p95": 11.5,
+  "vmaf": 84.78,
+  "vmaf_min": 66.49,
+  "vmaf_neg": 83.62,
+  "vmaf_neg_gap": 1.16,
+  "psnr_y": 39.58,
+  "ssim": 0.9849,
+  "ciede2000": 43.16,
+  "vmaf_p1": 68.45,
+  "psnr_cb": 50.19,
+  "psnr_cr": 49.45,
+  "ciede": 43.16,
+  "cambi_enc": 1.569,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99685,
+  "err_Y_s3.0": 0.03851,
+  "amp_Y_s1.5": 0.9932,
+  "err_Y_s1.5": 0.06868,
+  "amp_Cb": 0.98027,
+  "peak_Cb": 0.99412,
+  "err_Cb": 0.19902,
+  "amp_Cr": 0.98877,
+  "peak_Cr": 0.99338,
+  "err_Cr": 0.16256,
+  "align_psnr": {
+   "-2": 36.95,
+   "-1": 40.0,
+   "0": 42.24,
+   "1": 39.91,
+   "2": 36.86
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.1565,
+   "acf1": -0.1067,
+   "acf2": -0.0184,
+   "acf3": -0.0095
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1635,
+    "acf1": -0.0735,
+    "acf2": -0.0423,
+    "acf3": -0.0704
+   },
+   "roi": {
+    "hf": 0.7155,
+    "acf1": 0.2222,
+    "acf2": -0.0737,
+    "acf3": -0.1392
+   }
+  },
+  "_final": true
+ },
+ "p04a/uhq_q34": {
+  "window": "p04a",
+  "tag": "uhq_q34",
+  "variant": {
+   "q": 34,
+   "tune": "uhq"
+  },
+  "encode_seconds": 15.4,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune uhq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04a/enc/uhq_q34.mkv",
+  "mbps": 2.9644,
+  "align_costs": {
+   "-3": 5.220942497253418,
+   "-2": 4.9713053703308105,
+   "-1": 4.7743964195251465,
+   "0": 4.649448394775391,
+   "1": 4.639833927154541,
+   "2": 4.772698402404785,
+   "3": 4.970632553100586
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 46.66,
+  "ssimu2_p5": 13.11,
+  "butter_2norm": 1.969,
+  "butter_max_p95": 11.86,
+  "vmaf": 84.36,
+  "vmaf_min": 65.79,
+  "vmaf_neg": 83.2,
+  "vmaf_neg_gap": 1.16,
+  "psnr_y": 39.47,
+  "ssim": 0.9844,
+  "ciede2000": 43.06,
+  "vmaf_p1": 68.5,
+  "psnr_cb": 50.13,
+  "psnr_cr": 49.38,
+  "ciede": 43.06,
+  "cambi_enc": 1.85,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99724,
+  "err_Y_s3.0": 0.04166,
+  "amp_Y_s1.5": 0.99325,
+  "err_Y_s1.5": 0.07157,
+  "amp_Cb": 0.98048,
+  "peak_Cb": 0.99302,
+  "err_Cb": 0.20075,
+  "amp_Cr": 0.98985,
+  "peak_Cr": 0.99306,
+  "err_Cr": 0.16461,
+  "align_psnr": {
+   "-2": 36.95,
+   "-1": 40.01,
+   "0": 42.24,
+   "1": 39.92,
+   "2": 36.86
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.1898,
+   "acf1": -0.1056,
+   "acf2": -0.0199,
+   "acf3": -0.0106
+  },
+  "tex": {
+   "frame": {
+    "hf": 0.8492,
+    "acf1": -0.1419,
+    "acf2": -0.0122,
+    "acf3": -0.0574
+   },
+   "roi": {
+    "hf": 0.1994,
+    "acf1": 0.2037,
+    "acf2": -0.0151,
+    "acf3": -0.1124
+   }
+  },
+  "_final": true
+ },
+ "p04a/tf4_q34": {
+  "window": "p04a",
+  "tag": "tf4_q34",
+  "variant": {
+   "q": 34,
+   "tf": 4
+  },
+  "encode_seconds": 15.7,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04a/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --tf-level 4 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04a/enc/tf4_q34.mkv",
+  "mbps": 3.1733,
+  "align_costs": {
+   "-3": 5.216669082641602,
+   "-2": 4.967227935791016,
+   "-1": 4.770284175872803,
+   "0": 4.645148277282715,
+   "1": 4.6350603103637695,
+   "2": 4.767775058746338,
+   "3": 4.966217517852783
+  },
+  "aligned_zero": false,
+  "dec_frames": 240,
+  "ssimu2": 47.6,
+  "ssimu2_p5": 15.82,
+  "butter_2norm": 1.943,
+  "butter_max_p95": 10.47,
+  "vmaf": 84.93,
+  "vmaf_min": 67.87,
+  "vmaf_neg": 83.79,
+  "vmaf_neg_gap": 1.14,
+  "psnr_y": 39.56,
+  "ssim": 0.985,
+  "ciede2000": 43.14,
+  "vmaf_p1": 71.88,
+  "psnr_cb": 50.18,
+  "psnr_cr": 49.46,
+  "ciede": 43.14,
+  "cambi_enc": 1.801,
+  "cambi_src": 1.058,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99712,
+  "err_Y_s3.0": 0.04201,
+  "amp_Y_s1.5": 0.99314,
+  "err_Y_s1.5": 0.07084,
+  "amp_Cb": 0.98315,
+  "peak_Cb": 0.99325,
+  "err_Cb": 0.1993,
+  "amp_Cr": 0.99103,
+  "peak_Cr": 0.99372,
+  "err_Cr": 0.16223,
+  "align_psnr": {
+   "-2": 36.95,
+   "-1": 40.01,
+   "0": 42.25,
+   "1": 39.92,
+   "2": 36.86
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.1759,
+   "acf1": -0.0985,
+   "acf2": -0.0179,
+   "acf3": -0.0151
+  },
+  "tex": {
+   "frame": {
+    "hf": 0.9526,
+    "acf1": -0.1598,
+    "acf2": -0.027,
+    "acf3": -0.0417
+   },
+   "roi": {
+    "hf": 0.3696,
+    "acf1": 0.1345,
+    "acf2": -0.0295,
+    "acf3": -0.0872
+   }
+  },
+  "_final": true
+ },
+ "p04b/prod_q38": {
+  "window": "p04b",
+  "tag": "prod_q38",
+  "variant": {
+   "q": 38
+  },
+  "encode_seconds": 13.2,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 38 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04b/enc/prod_q38.mkv",
+  "mbps": 3.0871,
+  "align_costs": {
+   "-3": 14.53250789642334,
+   "-2": 11.217312812805176,
+   "-1": 7.399350643157959,
+   "0": 2.6859920024871826,
+   "1": 5.10951566696167,
+   "2": 7.091094017028809,
+   "3": 8.783304214477539
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 38.66,
+  "ssimu2_p5": 16.66,
+  "butter_2norm": 2.178,
+  "butter_max_p95": 11.67,
+  "vmaf": 93.26,
+  "vmaf_min": 80.23,
+  "vmaf_neg": 91.55,
+  "vmaf_neg_gap": 1.71,
+  "psnr_y": 36.67,
+  "ssim": 0.9847,
+  "ciede2000": 40.06,
+  "vmaf_p1": 82.23,
+  "psnr_cb": 48.31,
+  "psnr_cr": 49.48,
+  "ciede": 40.06,
+  "cambi_enc": 0.368,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00027,
+  "err_Y_s3.0": 0.02559,
+  "amp_Y_s1.5": 0.99953,
+  "err_Y_s1.5": 0.03853,
+  "amp_Cb": 0.97728,
+  "peak_Cb": 0.97421,
+  "err_Cb": 0.19695,
+  "amp_Cr": 0.97021,
+  "peak_Cr": 0.9788,
+  "err_Cr": 0.2197,
+  "align_psnr": {
+   "-2": 27.76,
+   "-1": 30.84,
+   "0": 42.58,
+   "1": 31.76,
+   "2": 29.88
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.432,
+   "acf1": 0.2411,
+   "acf2": -0.036,
+   "acf3": 0.0406
+  },
+  "tex": {
+   "frame": {
+    "hf": 2.5797,
+    "acf1": -0.1592,
+    "acf2": -0.0492,
+    "acf3": 0.0646
+   },
+   "roi": {
+    "hf": 2.3896,
+    "acf1": -0.2197,
+    "acf2": -0.0328,
+    "acf3": 0.0925
+   }
+  },
+  "_final": true
+ },
+ "p04b/prod_q34": {
+  "window": "p04b",
+  "tag": "prod_q34",
+  "variant": {
+   "q": 34
+  },
+  "encode_seconds": 13.2,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04b/enc/prod_q34.mkv",
+  "mbps": 4.8292,
+  "align_costs": {
+   "-3": 14.535362243652344,
+   "-2": 11.219169616699219,
+   "-1": 7.400847434997559,
+   "0": 2.6783790588378906,
+   "1": 5.11017370223999,
+   "2": 7.092582702636719,
+   "3": 8.785273551940918
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 41.95,
+  "ssimu2_p5": 19.05,
+  "butter_2norm": 2.052,
+  "butter_max_p95": 10.22,
+  "vmaf": 94.58,
+  "vmaf_min": 82.09,
+  "vmaf_neg": 92.98,
+  "vmaf_neg_gap": 1.6,
+  "psnr_y": 37.16,
+  "ssim": 0.9863,
+  "ciede2000": 40.51,
+  "vmaf_p1": 84.83,
+  "psnr_cb": 48.7,
+  "psnr_cr": 49.91,
+  "ciede": 40.51,
+  "cambi_enc": 0.272,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00035,
+  "err_Y_s3.0": 0.02163,
+  "amp_Y_s1.5": 0.99978,
+  "err_Y_s1.5": 0.03276,
+  "amp_Cb": 0.98109,
+  "peak_Cb": 0.97716,
+  "err_Cb": 0.18347,
+  "amp_Cr": 0.97592,
+  "peak_Cr": 0.98151,
+  "err_Cr": 0.20262,
+  "align_psnr": {
+   "-2": 27.75,
+   "-1": 30.84,
+   "0": 42.92,
+   "1": 31.76,
+   "2": 29.87
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.8728,
+   "acf1": 0.1839,
+   "acf2": -0.0463,
+   "acf3": 0.0416
+  },
+  "tex": {
+   "frame": {
+    "hf": 2.7629,
+    "acf1": -0.1879,
+    "acf2": -0.0538,
+    "acf3": 0.0571
+   },
+   "roi": {
+    "hf": 2.5512,
+    "acf1": -0.2624,
+    "acf2": -0.0333,
+    "acf3": 0.0718
+   }
+  },
+  "_final": true
+ },
+ "p04b/prod_q30": {
+  "window": "p04b",
+  "tag": "prod_q30",
+  "variant": {
+   "q": 30
+  },
+  "encode_seconds": 12.6,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04b/enc/prod_q30.mkv",
+  "mbps": 7.5769,
+  "align_costs": {
+   "-3": 14.536853790283203,
+   "-2": 11.221369743347168,
+   "-1": 7.4005327224731445,
+   "0": 2.6696512699127197,
+   "1": 5.111265659332275,
+   "2": 7.094249248504639,
+   "3": 8.787581443786621
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 46.51,
+  "ssimu2_p5": 22.4,
+  "butter_2norm": 1.885,
+  "butter_max_p95": 9.3,
+  "vmaf": 95.82,
+  "vmaf_min": 84.99,
+  "vmaf_neg": 94.33,
+  "vmaf_neg_gap": 1.49,
+  "psnr_y": 37.87,
+  "ssim": 0.9885,
+  "ciede2000": 41.14,
+  "vmaf_p1": 88.74,
+  "psnr_cb": 49.11,
+  "psnr_cr": 50.34,
+  "ciede": 41.14,
+  "cambi_enc": 0.179,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00034,
+  "err_Y_s3.0": 0.01807,
+  "amp_Y_s1.5": 0.99995,
+  "err_Y_s1.5": 0.02759,
+  "amp_Cb": 0.98473,
+  "peak_Cb": 0.9803,
+  "err_Cb": 0.17109,
+  "amp_Cr": 0.98097,
+  "peak_Cr": 0.98489,
+  "err_Cr": 0.1891,
+  "align_psnr": {
+   "-2": 27.75,
+   "-1": 30.83,
+   "0": 43.35,
+   "1": 31.76,
+   "2": 29.87
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 6.5299,
+   "acf1": 0.1004,
+   "acf2": -0.0594,
+   "acf3": 0.0422
+  },
+  "tex": {
+   "frame": {
+    "hf": 2.9506,
+    "acf1": -0.2113,
+    "acf2": -0.0556,
+    "acf3": 0.0566
+   },
+   "roi": {
+    "hf": 2.7948,
+    "acf1": -0.2916,
+    "acf2": -0.0379,
+    "acf3": 0.0664
+   }
+  },
+  "_final": true
+ },
+ "p04b/prod_q26": {
+  "window": "p04b",
+  "tag": "prod_q26",
+  "variant": {
+   "q": 26
+  },
+  "encode_seconds": 12.9,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 26 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04b/enc/prod_q26.mkv",
+  "mbps": 11.4824,
+  "align_costs": {
+   "-3": 14.537301063537598,
+   "-2": 11.220769882202148,
+   "-1": 7.399381637573242,
+   "0": 2.6585562229156494,
+   "1": 5.110370635986328,
+   "2": 7.094324111938477,
+   "3": 8.788455963134766
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 52.43,
+  "ssimu2_p5": 27.78,
+  "butter_2norm": 1.681,
+  "butter_max_p95": 8.25,
+  "vmaf": 96.92,
+  "vmaf_min": 87.96,
+  "vmaf_neg": 95.55,
+  "vmaf_neg_gap": 1.37,
+  "psnr_y": 38.84,
+  "ssim": 0.991,
+  "ciede2000": 41.97,
+  "vmaf_p1": 91.55,
+  "psnr_cb": 49.58,
+  "psnr_cr": 50.84,
+  "ciede": 41.97,
+  "cambi_enc": 0.089,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00028,
+  "err_Y_s3.0": 0.0149,
+  "amp_Y_s1.5": 1.00004,
+  "err_Y_s1.5": 0.02285,
+  "amp_Cb": 0.98827,
+  "peak_Cb": 0.98302,
+  "err_Cb": 0.15868,
+  "amp_Cr": 0.98462,
+  "peak_Cr": 0.98732,
+  "err_Cr": 0.17321,
+  "align_psnr": {
+   "-2": 27.73,
+   "-1": 30.82,
+   "0": 44.07,
+   "1": 31.74,
+   "2": 29.86
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 7.4066,
+   "acf1": 0.0259,
+   "acf2": -0.062,
+   "acf3": 0.0463
+  },
+  "tex": {
+   "frame": {
+    "hf": 3.2333,
+    "acf1": -0.2412,
+    "acf2": -0.0522,
+    "acf3": 0.0596
+   },
+   "roi": {
+    "hf": 3.1706,
+    "acf1": -0.3127,
+    "acf2": -0.0383,
+    "acf3": 0.0682
+   }
+  },
+  "_final": true
+ },
+ "p04b/prod_q22": {
+  "window": "p04b",
+  "tag": "prod_q22",
+  "variant": {
+   "q": 22
+  },
+  "encode_seconds": 12.3,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 22 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04b/enc/prod_q22.mkv",
+  "mbps": 16.9569,
+  "align_costs": {
+   "-3": 14.534403800964355,
+   "-2": 11.217916488647461,
+   "-1": 7.395016193389893,
+   "0": 2.644789695739746,
+   "1": 5.1063361167907715,
+   "2": 7.092104434967041,
+   "3": 8.786744117736816
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 60.05,
+  "ssimu2_p5": 38.25,
+  "butter_2norm": 1.436,
+  "butter_max_p95": 7.15,
+  "vmaf": 97.89,
+  "vmaf_min": 92.2,
+  "vmaf_neg": 96.68,
+  "vmaf_neg_gap": 1.21,
+  "psnr_y": 40.15,
+  "ssim": 0.9937,
+  "ciede2000": 43.04,
+  "vmaf_p1": 93.72,
+  "psnr_cb": 50.2,
+  "psnr_cr": 51.49,
+  "ciede": 43.04,
+  "cambi_enc": 0.035,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00022,
+  "err_Y_s3.0": 0.01198,
+  "amp_Y_s1.5": 1.00009,
+  "err_Y_s1.5": 0.01843,
+  "amp_Cb": 0.99098,
+  "peak_Cb": 0.98603,
+  "err_Cb": 0.14478,
+  "amp_Cr": 0.98824,
+  "peak_Cr": 0.98961,
+  "err_Cr": 0.15613,
+  "align_psnr": {
+   "-2": 27.72,
+   "-1": 30.8,
+   "0": 45.12,
+   "1": 31.72,
+   "2": 29.84
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 8.5597,
+   "acf1": -0.0515,
+   "acf2": -0.0589,
+   "acf3": 0.045
+  },
+  "tex": {
+   "frame": {
+    "hf": 3.4696,
+    "acf1": -0.2625,
+    "acf2": -0.0473,
+    "acf3": 0.0593
+   },
+   "roi": {
+    "hf": 3.4109,
+    "acf1": -0.3273,
+    "acf2": -0.0343,
+    "acf3": 0.0677
+   }
+  },
+  "_final": true
+ },
+ "p04b/plain_q34": {
+  "window": "p04b",
+  "tag": "plain_q34",
+  "variant": {
+   "q": 34,
+   "fg": false
+  },
+  "encode_seconds": 13.1,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal -o /temp/pantheon-settings-20261106/p04b/enc/plain_q34.mkv",
+  "mbps": 4.846,
+  "align_costs": {
+   "-3": 14.538582801818848,
+   "-2": 11.223155975341797,
+   "-1": 7.403882026672363,
+   "0": 2.6822752952575684,
+   "1": 5.114014625549316,
+   "2": 7.0956878662109375,
+   "3": 8.78841495513916
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 42.27,
+  "ssimu2_p5": 18.84,
+  "butter_2norm": 2.032,
+  "butter_max_p95": 9.89,
+  "vmaf": 94.7,
+  "vmaf_min": 81.71,
+  "vmaf_neg": 93.07,
+  "vmaf_neg_gap": 1.63,
+  "psnr_y": 37.39,
+  "ssim": 0.9864,
+  "ciede2000": 40.66,
+  "vmaf_p1": 84.4,
+  "psnr_cb": 48.68,
+  "psnr_cr": 49.9,
+  "ciede": 40.66,
+  "cambi_enc": 0.345,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00043,
+  "err_Y_s3.0": 0.02168,
+  "amp_Y_s1.5": 0.99989,
+  "err_Y_s1.5": 0.03276,
+  "amp_Cb": 0.98084,
+  "peak_Cb": 0.97674,
+  "err_Cb": 0.18417,
+  "amp_Cr": 0.97544,
+  "peak_Cr": 0.98178,
+  "err_Cr": 0.20272,
+  "align_psnr": {
+   "-2": 27.75,
+   "-1": 30.84,
+   "0": 42.92,
+   "1": 31.76,
+   "2": 29.87
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.774,
+   "acf1": 0.2108,
+   "acf2": -0.0499,
+   "acf3": 0.0419
+  },
+  "tex": {
+   "frame": {
+    "hf": 2.7618,
+    "acf1": -0.1882,
+    "acf2": -0.0525,
+    "acf3": 0.0568
+   },
+   "roi": {
+    "hf": 2.5488,
+    "acf1": -0.2621,
+    "acf2": -0.0342,
+    "acf3": 0.0713
+   }
+  },
+  "_final": true
+ },
+ "p04b/plain_q30": {
+  "window": "p04b",
+  "tag": "plain_q30",
+  "variant": {
+   "q": 30,
+   "fg": false
+  },
+  "encode_seconds": 12.4,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal -o /temp/pantheon-settings-20261106/p04b/enc/plain_q30.mkv",
+  "mbps": 7.5981,
+  "align_costs": {
+   "-3": 14.53812313079834,
+   "-2": 11.222403526306152,
+   "-1": 7.401954174041748,
+   "0": 2.671156406402588,
+   "1": 5.113162040710449,
+   "2": 7.096363067626953,
+   "3": 8.789617538452148
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 46.96,
+  "ssimu2_p5": 22.39,
+  "butter_2norm": 1.861,
+  "butter_max_p95": 9.4,
+  "vmaf": 95.95,
+  "vmaf_min": 84.98,
+  "vmaf_neg": 94.44,
+  "vmaf_neg_gap": 1.51,
+  "psnr_y": 38.15,
+  "ssim": 0.9885,
+  "ciede2000": 41.32,
+  "vmaf_p1": 88.58,
+  "psnr_cb": 49.09,
+  "psnr_cr": 50.31,
+  "ciede": 41.32,
+  "cambi_enc": 0.231,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00042,
+  "err_Y_s3.0": 0.01805,
+  "amp_Y_s1.5": 1.00005,
+  "err_Y_s1.5": 0.0275,
+  "amp_Cb": 0.9853,
+  "peak_Cb": 0.97979,
+  "err_Cb": 0.17142,
+  "amp_Cr": 0.98056,
+  "peak_Cr": 0.98471,
+  "err_Cr": 0.18887,
+  "align_psnr": {
+   "-2": 27.74,
+   "-1": 30.83,
+   "0": 43.39,
+   "1": 31.76,
+   "2": 29.87
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 6.4736,
+   "acf1": 0.1202,
+   "acf2": -0.0617,
+   "acf3": 0.0426
+  },
+  "tex": {
+   "frame": {
+    "hf": 2.9497,
+    "acf1": -0.2116,
+    "acf2": -0.0552,
+    "acf3": 0.0568
+   },
+   "roi": {
+    "hf": 2.7905,
+    "acf1": -0.2915,
+    "acf2": -0.0375,
+    "acf3": 0.0657
+   }
+  },
+  "_final": true
+ },
+ "p04b/plain_q26": {
+  "window": "p04b",
+  "tag": "plain_q26",
+  "variant": {
+   "q": 26,
+   "fg": false
+  },
+  "encode_seconds": 12.8,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 26 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal -o /temp/pantheon-settings-20261106/p04b/enc/plain_q26.mkv",
+  "mbps": 11.5061,
+  "align_costs": {
+   "-3": 14.541282653808594,
+   "-2": 11.225625038146973,
+   "-1": 7.405165672302246,
+   "0": 2.6648592948913574,
+   "1": 5.115942001342773,
+   "2": 7.099462032318115,
+   "3": 8.792706489562988
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 53.03,
+  "ssimu2_p5": 27.81,
+  "butter_2norm": 1.65,
+  "butter_max_p95": 8.07,
+  "vmaf": 97.07,
+  "vmaf_min": 88.32,
+  "vmaf_neg": 95.67,
+  "vmaf_neg_gap": 1.4,
+  "psnr_y": 39.19,
+  "ssim": 0.9911,
+  "ciede2000": 42.18,
+  "vmaf_p1": 91.53,
+  "psnr_cb": 49.54,
+  "psnr_cr": 50.81,
+  "ciede": 42.18,
+  "cambi_enc": 0.115,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00035,
+  "err_Y_s3.0": 0.01496,
+  "amp_Y_s1.5": 1.00014,
+  "err_Y_s1.5": 0.02286,
+  "amp_Cb": 0.98835,
+  "peak_Cb": 0.98324,
+  "err_Cb": 0.15956,
+  "amp_Cr": 0.98431,
+  "peak_Cr": 0.98715,
+  "err_Cr": 0.1747,
+  "align_psnr": {
+   "-2": 27.73,
+   "-1": 30.81,
+   "0": 44.15,
+   "1": 31.74,
+   "2": 29.85
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 7.3019,
+   "acf1": 0.0456,
+   "acf2": -0.0656,
+   "acf3": 0.0465
+  },
+  "tex": {
+   "frame": {
+    "hf": 3.2156,
+    "acf1": -0.2384,
+    "acf2": -0.0531,
+    "acf3": 0.0597
+   },
+   "roi": {
+    "hf": 3.1501,
+    "acf1": -0.31,
+    "acf2": -0.0401,
+    "acf3": 0.0699
+   }
+  },
+  "_final": true
+ },
+ "p04b/ret050_q34": {
+  "window": "p04b",
+  "tag": "ret050_q34",
+  "variant": {
+   "q": 34,
+   "retain": 0.5
+  },
+  "encode_seconds": 12.5,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.5 -o /temp/pantheon-settings-20261106/p04b/enc/ret050_q34.mkv",
+  "mbps": 4.8409,
+  "align_costs": {
+   "-3": 14.535576820373535,
+   "-2": 11.219640731811523,
+   "-1": 7.400286674499512,
+   "0": 2.6773533821105957,
+   "1": 5.110003471374512,
+   "2": 7.092012882232666,
+   "3": 8.784317970275879
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 42.07,
+  "ssimu2_p5": 18.68,
+  "butter_2norm": 2.046,
+  "butter_max_p95": 9.71,
+  "vmaf": 94.61,
+  "vmaf_min": 82.07,
+  "vmaf_neg": 93.01,
+  "vmaf_neg_gap": 1.6,
+  "psnr_y": 37.22,
+  "ssim": 0.9863,
+  "ciede2000": 40.55,
+  "vmaf_p1": 84.68,
+  "psnr_cb": 48.69,
+  "psnr_cr": 49.91,
+  "ciede": 40.55,
+  "cambi_enc": 0.272,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00029,
+  "err_Y_s3.0": 0.02161,
+  "amp_Y_s1.5": 0.99972,
+  "err_Y_s1.5": 0.03268,
+  "amp_Cb": 0.98052,
+  "peak_Cb": 0.97643,
+  "err_Cb": 0.18395,
+  "amp_Cr": 0.97582,
+  "peak_Cr": 0.98209,
+  "err_Cr": 0.2029,
+  "align_psnr": {
+   "-2": 27.75,
+   "-1": 30.84,
+   "0": 42.92,
+   "1": 31.76,
+   "2": 29.88
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.8416,
+   "acf1": 0.1929,
+   "acf2": -0.0468,
+   "acf3": 0.0422
+  },
+  "tex": {
+   "frame": {
+    "hf": 2.7779,
+    "acf1": -0.1914,
+    "acf2": -0.0526,
+    "acf3": 0.0565
+   },
+   "roi": {
+    "hf": 2.5613,
+    "acf1": -0.2678,
+    "acf2": -0.0315,
+    "acf3": 0.0693
+   }
+  },
+  "_final": true
+ },
+ "p04b/ret050_q30": {
+  "window": "p04b",
+  "tag": "ret050_q30",
+  "variant": {
+   "q": 30,
+   "retain": 0.5
+  },
+  "encode_seconds": 13.6,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.5 -o /temp/pantheon-settings-20261106/p04b/enc/ret050_q30.mkv",
+  "mbps": 7.581,
+  "align_costs": {
+   "-3": 14.537805557250977,
+   "-2": 11.221760749816895,
+   "-1": 7.401130199432373,
+   "0": 2.6693952083587646,
+   "1": 5.109915733337402,
+   "2": 7.0924506187438965,
+   "3": 8.78549575805664
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 46.63,
+  "ssimu2_p5": 22.73,
+  "butter_2norm": 1.879,
+  "butter_max_p95": 9.09,
+  "vmaf": 95.86,
+  "vmaf_min": 85.18,
+  "vmaf_neg": 94.36,
+  "vmaf_neg_gap": 1.5,
+  "psnr_y": 37.94,
+  "ssim": 0.9885,
+  "ciede2000": 41.18,
+  "vmaf_p1": 88.51,
+  "psnr_cb": 49.1,
+  "psnr_cr": 50.34,
+  "ciede": 41.18,
+  "cambi_enc": 0.18,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00039,
+  "err_Y_s3.0": 0.01811,
+  "amp_Y_s1.5": 1.00002,
+  "err_Y_s1.5": 0.02755,
+  "amp_Cb": 0.9845,
+  "peak_Cb": 0.97996,
+  "err_Cb": 0.1714,
+  "amp_Cr": 0.98043,
+  "peak_Cr": 0.9849,
+  "err_Cr": 0.18829,
+  "align_psnr": {
+   "-2": 27.75,
+   "-1": 30.83,
+   "0": 43.36,
+   "1": 31.76,
+   "2": 29.87
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 6.4897,
+   "acf1": 0.108,
+   "acf2": -0.0597,
+   "acf3": 0.0424
+  },
+  "tex": {
+   "frame": {
+    "hf": 2.95,
+    "acf1": -0.2112,
+    "acf2": -0.0554,
+    "acf3": 0.0566
+   },
+   "roi": {
+    "hf": 2.7828,
+    "acf1": -0.2904,
+    "acf2": -0.039,
+    "acf3": 0.0669
+   }
+  },
+  "_final": true
+ },
+ "p04b/ret090_q34": {
+  "window": "p04b",
+  "tag": "ret090_q34",
+  "variant": {
+   "q": 34,
+   "retain": 0.9
+  },
+  "encode_seconds": 12.5,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.9 -o /temp/pantheon-settings-20261106/p04b/enc/ret090_q34.mkv",
+  "mbps": 4.8387,
+  "align_costs": {
+   "-3": 14.536295890808105,
+   "-2": 11.220606803894043,
+   "-1": 7.402163982391357,
+   "0": 2.680469274520874,
+   "1": 5.1128692626953125,
+   "2": 7.094405174255371,
+   "3": 8.786664962768555
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 42.2,
+  "ssimu2_p5": 19.01,
+  "butter_2norm": 2.037,
+  "butter_max_p95": 10.22,
+  "vmaf": 94.64,
+  "vmaf_min": 81.8,
+  "vmaf_neg": 93.03,
+  "vmaf_neg_gap": 1.61,
+  "psnr_y": 37.33,
+  "ssim": 0.9863,
+  "ciede2000": 40.62,
+  "vmaf_p1": 84.84,
+  "psnr_cb": 48.69,
+  "psnr_cr": 49.89,
+  "ciede": 40.62,
+  "cambi_enc": 0.278,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00034,
+  "err_Y_s3.0": 0.02164,
+  "amp_Y_s1.5": 0.99982,
+  "err_Y_s1.5": 0.03277,
+  "amp_Cb": 0.98124,
+  "peak_Cb": 0.9771,
+  "err_Cb": 0.1839,
+  "amp_Cr": 0.97495,
+  "peak_Cr": 0.98126,
+  "err_Cr": 0.20355,
+  "align_psnr": {
+   "-2": 27.75,
+   "-1": 30.84,
+   "0": 42.91,
+   "1": 31.76,
+   "2": 29.87
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.7559,
+   "acf1": 0.211,
+   "acf2": -0.0488,
+   "acf3": 0.0435
+  },
+  "tex": {
+   "frame": {
+    "hf": 2.7614,
+    "acf1": -0.1887,
+    "acf2": -0.0527,
+    "acf3": 0.0568
+   },
+   "roi": {
+    "hf": 2.5559,
+    "acf1": -0.2631,
+    "acf2": -0.034,
+    "acf3": 0.0706
+   }
+  },
+  "_final": true
+ },
+ "p04b/ret090_q30": {
+  "window": "p04b",
+  "tag": "ret090_q30",
+  "variant": {
+   "q": 30,
+   "retain": 0.9
+  },
+  "encode_seconds": 12.6,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.9 -o /temp/pantheon-settings-20261106/p04b/enc/ret090_q30.mkv",
+  "mbps": 7.5853,
+  "align_costs": {
+   "-3": 14.538153648376465,
+   "-2": 11.222667694091797,
+   "-1": 7.401841163635254,
+   "0": 2.6716713905334473,
+   "1": 5.112057685852051,
+   "2": 7.094803333282471,
+   "3": 8.7883882522583
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 46.89,
+  "ssimu2_p5": 22.05,
+  "butter_2norm": 1.865,
+  "butter_max_p95": 9.05,
+  "vmaf": 95.9,
+  "vmaf_min": 84.75,
+  "vmaf_neg": 94.4,
+  "vmaf_neg_gap": 1.5,
+  "psnr_y": 38.08,
+  "ssim": 0.9885,
+  "ciede2000": 41.27,
+  "vmaf_p1": 88.53,
+  "psnr_cb": 49.09,
+  "psnr_cr": 50.31,
+  "ciede": 41.27,
+  "cambi_enc": 0.186,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00039,
+  "err_Y_s3.0": 0.01803,
+  "amp_Y_s1.5": 1.00005,
+  "err_Y_s1.5": 0.02749,
+  "amp_Cb": 0.98478,
+  "peak_Cb": 0.97988,
+  "err_Cb": 0.17172,
+  "amp_Cr": 0.98022,
+  "peak_Cr": 0.98467,
+  "err_Cr": 0.18897,
+  "align_psnr": {
+   "-2": 27.75,
+   "-1": 30.83,
+   "0": 43.38,
+   "1": 31.76,
+   "2": 29.87
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 6.497,
+   "acf1": 0.1135,
+   "acf2": -0.0617,
+   "acf3": 0.042
+  },
+  "tex": {
+   "frame": {
+    "hf": 2.9479,
+    "acf1": -0.2115,
+    "acf2": -0.055,
+    "acf3": 0.0564
+   },
+   "roi": {
+    "hf": 2.7876,
+    "acf1": -0.2917,
+    "acf2": -0.0383,
+    "acf3": 0.0651
+   }
+  },
+  "_final": true
+ },
+ "p04b/aqs1_q34": {
+  "window": "p04b",
+  "tag": "aqs1_q34",
+  "variant": {
+   "q": 34,
+   "aqs": 1
+  },
+  "encode_seconds": 13.0,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --aq-strength 1 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04b/enc/aqs1_q34.mkv",
+  "mbps": 4.8292,
+  "align_costs": {
+   "-3": 14.535362243652344,
+   "-2": 11.219169616699219,
+   "-1": 7.400847434997559,
+   "0": 2.6783790588378906,
+   "1": 5.11017370223999,
+   "2": 7.092582702636719,
+   "3": 8.785273551940918
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 41.95,
+  "ssimu2_p5": 19.05,
+  "butter_2norm": 2.052,
+  "butter_max_p95": 10.22,
+  "vmaf": 94.58,
+  "vmaf_min": 82.09,
+  "vmaf_neg": 92.98,
+  "vmaf_neg_gap": 1.6,
+  "psnr_y": 37.16,
+  "ssim": 0.9863,
+  "ciede2000": 40.51,
+  "vmaf_p1": 84.83,
+  "psnr_cb": 48.7,
+  "psnr_cr": 49.91,
+  "ciede": 40.51,
+  "cambi_enc": 0.272,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00035,
+  "err_Y_s3.0": 0.02163,
+  "amp_Y_s1.5": 0.99978,
+  "err_Y_s1.5": 0.03276,
+  "amp_Cb": 0.98109,
+  "peak_Cb": 0.97716,
+  "err_Cb": 0.18347,
+  "amp_Cr": 0.97592,
+  "peak_Cr": 0.98151,
+  "err_Cr": 0.20262,
+  "align_psnr": {
+   "-2": 27.75,
+   "-1": 30.84,
+   "0": 42.92,
+   "1": 31.76,
+   "2": 29.87
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.8728,
+   "acf1": 0.1839,
+   "acf2": -0.0463,
+   "acf3": 0.0416
+  },
+  "tex": {
+   "frame": {
+    "hf": 2.7629,
+    "acf1": -0.1879,
+    "acf2": -0.0538,
+    "acf3": 0.0571
+   },
+   "roi": {
+    "hf": 2.5512,
+    "acf1": -0.2624,
+    "acf2": -0.0333,
+    "acf3": 0.0718
+   }
+  },
+  "_final": true
+ },
+ "p04b/aqs15_q34": {
+  "window": "p04b",
+  "tag": "aqs15_q34",
+  "variant": {
+   "q": 34,
+   "aqs": 15
+  },
+  "encode_seconds": 12.4,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --aq-strength 15 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04b/enc/aqs15_q34.mkv",
+  "mbps": 4.8292,
+  "align_costs": {
+   "-3": 14.535362243652344,
+   "-2": 11.219169616699219,
+   "-1": 7.400847434997559,
+   "0": 2.6783790588378906,
+   "1": 5.11017370223999,
+   "2": 7.092582702636719,
+   "3": 8.785273551940918
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 41.95,
+  "ssimu2_p5": 19.05,
+  "butter_2norm": 2.052,
+  "butter_max_p95": 10.22,
+  "vmaf": 94.58,
+  "vmaf_min": 82.09,
+  "vmaf_neg": 92.98,
+  "vmaf_neg_gap": 1.6,
+  "psnr_y": 37.16,
+  "ssim": 0.9863,
+  "ciede2000": 40.51,
+  "vmaf_p1": 84.83,
+  "psnr_cb": 48.7,
+  "psnr_cr": 49.91,
+  "ciede": 40.51,
+  "cambi_enc": 0.272,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00035,
+  "err_Y_s3.0": 0.02163,
+  "amp_Y_s1.5": 0.99978,
+  "err_Y_s1.5": 0.03276,
+  "amp_Cb": 0.98109,
+  "peak_Cb": 0.97716,
+  "err_Cb": 0.18347,
+  "amp_Cr": 0.97592,
+  "peak_Cr": 0.98151,
+  "err_Cr": 0.20262,
+  "align_psnr": {
+   "-2": 27.75,
+   "-1": 30.84,
+   "0": 42.92,
+   "1": 31.76,
+   "2": 29.87
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.8728,
+   "acf1": 0.1839,
+   "acf2": -0.0463,
+   "acf3": 0.0416
+  },
+  "tex": {
+   "frame": {
+    "hf": 2.7629,
+    "acf1": -0.1879,
+    "acf2": -0.0538,
+    "acf3": 0.0571
+   },
+   "roi": {
+    "hf": 2.5512,
+    "acf1": -0.2624,
+    "acf2": -0.0333,
+    "acf3": 0.0718
+   }
+  },
+  "_final": true
+ },
+ "p04b/noaq_q34": {
+  "window": "p04b",
+  "tag": "noaq_q34",
+  "variant": {
+   "q": 34,
+   "aq": false
+  },
+  "encode_seconds": 13.8,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04b/enc/noaq_q34.mkv",
+  "mbps": 4.8074,
+  "align_costs": {
+   "-3": 14.537031173706055,
+   "-2": 11.22093391418457,
+   "-1": 7.401663780212402,
+   "0": 2.6785311698913574,
+   "1": 5.111972808837891,
+   "2": 7.094214916229248,
+   "3": 8.787721633911133
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 41.91,
+  "ssimu2_p5": 19.06,
+  "butter_2norm": 2.053,
+  "butter_max_p95": 9.97,
+  "vmaf": 94.57,
+  "vmaf_min": 81.86,
+  "vmaf_neg": 92.96,
+  "vmaf_neg_gap": 1.61,
+  "psnr_y": 37.15,
+  "ssim": 0.9863,
+  "ciede2000": 40.51,
+  "vmaf_p1": 84.74,
+  "psnr_cb": 48.7,
+  "psnr_cr": 49.9,
+  "ciede": 40.51,
+  "cambi_enc": 0.272,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00037,
+  "err_Y_s3.0": 0.02164,
+  "amp_Y_s1.5": 0.99979,
+  "err_Y_s1.5": 0.03279,
+  "amp_Cb": 0.98162,
+  "peak_Cb": 0.97749,
+  "err_Cb": 0.18373,
+  "amp_Cr": 0.97477,
+  "peak_Cr": 0.98131,
+  "err_Cr": 0.20345,
+  "align_psnr": {
+   "-2": 27.75,
+   "-1": 30.84,
+   "0": 42.91,
+   "1": 31.76,
+   "2": 29.88
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.8703,
+   "acf1": 0.1849,
+   "acf2": -0.0458,
+   "acf3": 0.0411
+  },
+  "tex": {
+   "frame": {
+    "hf": 2.7562,
+    "acf1": -0.1868,
+    "acf2": -0.0536,
+    "acf3": 0.0567
+   },
+   "roi": {
+    "hf": 2.5373,
+    "acf1": -0.2567,
+    "acf2": -0.035,
+    "acf3": 0.0714
+   }
+  },
+  "_final": true
+ },
+ "p04b/uhq_q34": {
+  "window": "p04b",
+  "tag": "uhq_q34",
+  "variant": {
+   "q": 34,
+   "tune": "uhq"
+  },
+  "encode_seconds": 16.6,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune uhq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04b/enc/uhq_q34.mkv",
+  "mbps": 4.2073,
+  "align_costs": {
+   "-3": 14.540262222290039,
+   "-2": 11.223814010620117,
+   "-1": 7.405888557434082,
+   "0": 2.6896002292633057,
+   "1": 5.114971160888672,
+   "2": 7.091732501983643,
+   "3": 8.781140327453613
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 41.94,
+  "ssimu2_p5": 19.05,
+  "butter_2norm": 2.054,
+  "butter_max_p95": 10.01,
+  "vmaf": 94.88,
+  "vmaf_min": 81.29,
+  "vmaf_neg": 93.19,
+  "vmaf_neg_gap": 1.69,
+  "psnr_y": 37.06,
+  "ssim": 0.9864,
+  "ciede2000": 40.5,
+  "vmaf_p1": 85.07,
+  "psnr_cb": 48.9,
+  "psnr_cr": 50.15,
+  "ciede": 40.5,
+  "cambi_enc": 0.348,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00121,
+  "err_Y_s3.0": 0.02164,
+  "amp_Y_s1.5": 1.00092,
+  "err_Y_s1.5": 0.0326,
+  "amp_Cb": 0.98466,
+  "peak_Cb": 0.97568,
+  "err_Cb": 0.17905,
+  "amp_Cr": 0.98001,
+  "peak_Cr": 0.98212,
+  "err_Cr": 0.19804,
+  "align_psnr": {
+   "-2": 27.76,
+   "-1": 30.85,
+   "0": 42.95,
+   "1": 31.77,
+   "2": 29.89
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.7844,
+   "acf1": 0.2074,
+   "acf2": -0.0427,
+   "acf3": 0.0519
+  },
+  "tex": {
+   "frame": {
+    "hf": 2.1794,
+    "acf1": -0.0222,
+    "acf2": -0.0879,
+    "acf3": 0.0756
+   },
+   "roi": {
+    "hf": 1.956,
+    "acf1": -0.1203,
+    "acf2": -0.0535,
+    "acf3": 0.093
+   }
+  },
+  "_final": true
+ },
+ "p04b/tf4_q34": {
+  "window": "p04b",
+  "tag": "tf4_q34",
+  "variant": {
+   "q": 34,
+   "tf": 4
+  },
+  "encode_seconds": 16.1,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p04b/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --tf-level 4 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p04b/enc/tf4_q34.mkv",
+  "mbps": 4.2882,
+  "align_costs": {
+   "-3": 14.534598350524902,
+   "-2": 11.216805458068848,
+   "-1": 7.398586750030518,
+   "0": 2.678825616836548,
+   "1": 5.105132102966309,
+   "2": 7.083215236663818,
+   "3": 8.77513313293457
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 42.41,
+  "ssimu2_p5": 19.54,
+  "butter_2norm": 2.039,
+  "butter_max_p95": 9.59,
+  "vmaf": 95.14,
+  "vmaf_min": 82.77,
+  "vmaf_neg": 93.46,
+  "vmaf_neg_gap": 1.68,
+  "psnr_y": 37.1,
+  "ssim": 0.9866,
+  "ciede2000": 40.54,
+  "vmaf_p1": 86.78,
+  "psnr_cb": 48.94,
+  "psnr_cr": 50.2,
+  "ciede": 40.54,
+  "cambi_enc": 0.375,
+  "cambi_src": 0.03,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 1.00118,
+  "err_Y_s3.0": 0.02104,
+  "amp_Y_s1.5": 1.00095,
+  "err_Y_s1.5": 0.03148,
+  "amp_Cb": 0.98486,
+  "peak_Cb": 0.97658,
+  "err_Cb": 0.17965,
+  "amp_Cr": 0.98006,
+  "peak_Cr": 0.98122,
+  "err_Cr": 0.19666,
+  "align_psnr": {
+   "-2": 27.76,
+   "-1": 30.85,
+   "0": 42.95,
+   "1": 31.78,
+   "2": 29.89
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.8218,
+   "acf1": 0.1954,
+   "acf2": -0.0479,
+   "acf3": 0.0506
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.9284,
+    "acf1": 0.0271,
+    "acf2": -0.1098,
+    "acf3": 0.0794
+   },
+   "roi": {
+    "hf": 1.6321,
+    "acf1": -0.0753,
+    "acf2": -0.0838,
+    "acf3": 0.1019
+   }
+  },
+  "_final": true
+ },
+ "p01/prod_q38": {
+  "window": "p01",
+  "tag": "prod_q38",
+  "variant": {
+   "q": 38
+  },
+  "encode_seconds": 13.9,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 38 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p01/enc/prod_q38.mkv",
+  "mbps": 0.4871,
+  "align_costs": {
+   "-3": 10.821640014648438,
+   "-2": 7.774051189422607,
+   "-1": 4.65473747253418,
+   "0": 1.4448201656341553,
+   "1": 4.80527400970459,
+   "2": 8.111467361450195,
+   "3": 8.353997230529785
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 72.8,
+  "ssimu2_p5": 69.04,
+  "butter_2norm": 1.248,
+  "butter_max_p95": 6.76,
+  "vmaf": 91.77,
+  "vmaf_min": 86.5,
+  "vmaf_neg": 90.87,
+  "vmaf_neg_gap": 0.9,
+  "psnr_y": 43.7,
+  "ssim": 0.9964,
+  "ciede2000": 45.32,
+  "vmaf_p1": 86.98,
+  "psnr_cb": 53.72,
+  "psnr_cr": 53.61,
+  "ciede": 45.32,
+  "cambi_enc": 0.675,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99423,
+  "err_Y_s3.0": 0.02892,
+  "amp_Y_s1.5": 0.9911,
+  "err_Y_s1.5": 0.04002,
+  "amp_Cb": 0.98183,
+  "peak_Cb": 0.98409,
+  "err_Cb": 0.19505,
+  "amp_Cr": 0.98627,
+  "peak_Cr": 0.9979,
+  "err_Cr": 0.17277,
+  "align_psnr": {
+   "-2": 30.58,
+   "-1": 37.74,
+   "0": 44.72,
+   "1": 37.61,
+   "2": 30.75
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.4084,
+   "acf1": -0.049,
+   "acf2": -0.0347,
+   "acf3": 0.033
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0439,
+    "acf1": -0.1659,
+    "acf2": -0.0207,
+    "acf3": 0.0335
+   },
+   "roi": {
+    "hf": 1.0033,
+    "acf1": -0.2161,
+    "acf2": -0.0266,
+    "acf3": 0.0261
+   }
+  },
+  "_final": true
+ },
+ "p01/prod_q34": {
+  "window": "p01",
+  "tag": "prod_q34",
+  "variant": {
+   "q": 34
+  },
+  "encode_seconds": 13.8,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p01/enc/prod_q34.mkv",
+  "mbps": 0.8216,
+  "align_costs": {
+   "-3": 10.816389083862305,
+   "-2": 7.767132759094238,
+   "-1": 4.641509056091309,
+   "0": 1.4263145923614502,
+   "1": 4.792368412017822,
+   "2": 8.101798057556152,
+   "3": 8.34526252746582
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 74.12,
+  "ssimu2_p5": 70.73,
+  "butter_2norm": 1.217,
+  "butter_max_p95": 4.87,
+  "vmaf": 92.44,
+  "vmaf_min": 87.67,
+  "vmaf_neg": 91.62,
+  "vmaf_neg_gap": 0.82,
+  "psnr_y": 43.87,
+  "ssim": 0.9967,
+  "ciede2000": 45.6,
+  "vmaf_p1": 88.19,
+  "psnr_cb": 54.32,
+  "psnr_cr": 54.22,
+  "ciede": 45.6,
+  "cambi_enc": 0.629,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99461,
+  "err_Y_s3.0": 0.02484,
+  "amp_Y_s1.5": 0.99171,
+  "err_Y_s1.5": 0.03468,
+  "amp_Cb": 0.98525,
+  "peak_Cb": 0.98622,
+  "err_Cb": 0.17467,
+  "amp_Cr": 0.98942,
+  "peak_Cr": 0.9969,
+  "err_Cr": 0.15315,
+  "align_psnr": {
+   "-2": 30.57,
+   "-1": 37.88,
+   "0": 45.13,
+   "1": 37.79,
+   "2": 30.74
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.4415,
+   "acf1": -0.0525,
+   "acf2": -0.0372,
+   "acf3": 0.0317
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0485,
+    "acf1": -0.1652,
+    "acf2": -0.0217,
+    "acf3": 0.0317
+   },
+   "roi": {
+    "hf": 1.006,
+    "acf1": -0.2152,
+    "acf2": -0.0281,
+    "acf3": 0.0246
+   }
+  },
+  "_final": true
+ },
+ "p01/prod_q30": {
+  "window": "p01",
+  "tag": "prod_q30",
+  "variant": {
+   "q": 30
+  },
+  "encode_seconds": 13.8,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p01/enc/prod_q30.mkv",
+  "mbps": 1.5528,
+  "align_costs": {
+   "-3": 10.8129301071167,
+   "-2": 7.762772560119629,
+   "-1": 4.634261131286621,
+   "0": 1.4128226041793823,
+   "1": 4.784351825714111,
+   "2": 8.096678733825684,
+   "3": 8.341633796691895
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 75.24,
+  "ssimu2_p5": 71.84,
+  "butter_2norm": 1.188,
+  "butter_max_p95": 4.3,
+  "vmaf": 92.91,
+  "vmaf_min": 88.81,
+  "vmaf_neg": 92.15,
+  "vmaf_neg_gap": 0.76,
+  "psnr_y": 44.03,
+  "ssim": 0.9969,
+  "ciede2000": 45.87,
+  "vmaf_p1": 89.15,
+  "psnr_cb": 54.89,
+  "psnr_cr": 54.81,
+  "ciede": 45.87,
+  "cambi_enc": 0.535,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99485,
+  "err_Y_s3.0": 0.02182,
+  "amp_Y_s1.5": 0.99212,
+  "err_Y_s1.5": 0.0307,
+  "amp_Cb": 0.98775,
+  "peak_Cb": 0.98936,
+  "err_Cb": 0.15665,
+  "amp_Cr": 0.99186,
+  "peak_Cr": 0.99817,
+  "err_Cr": 0.13557,
+  "align_psnr": {
+   "-2": 30.55,
+   "-1": 37.92,
+   "0": 45.59,
+   "1": 37.9,
+   "2": 30.72
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.4737,
+   "acf1": -0.0573,
+   "acf2": -0.0405,
+   "acf3": 0.032
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0513,
+    "acf1": -0.1655,
+    "acf2": -0.0223,
+    "acf3": 0.031
+   },
+   "roi": {
+    "hf": 1.0083,
+    "acf1": -0.2155,
+    "acf2": -0.0301,
+    "acf3": 0.0235
+   }
+  },
+  "_final": true
+ },
+ "p01/prod_q26": {
+  "window": "p01",
+  "tag": "prod_q26",
+  "variant": {
+   "q": 26
+  },
+  "encode_seconds": 6.5,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 26 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p01/enc/prod_q26.mkv",
+  "mbps": 2.9083,
+  "align_costs": {
+   "-3": 10.812249183654785,
+   "-2": 7.760704517364502,
+   "-1": 4.628262996673584,
+   "0": 1.4006949663162231,
+   "1": 4.778608322143555,
+   "2": 8.094198226928711,
+   "3": 8.340157508850098
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 76.62,
+  "ssimu2_p5": 72.7,
+  "butter_2norm": 1.15,
+  "butter_max_p95": 3.66,
+  "vmaf": 93.33,
+  "vmaf_min": 89.61,
+  "vmaf_neg": 92.63,
+  "vmaf_neg_gap": 0.7,
+  "psnr_y": 44.25,
+  "ssim": 0.9972,
+  "ciede2000": 46.22,
+  "vmaf_p1": 89.9,
+  "psnr_cb": 55.53,
+  "psnr_cr": 55.45,
+  "ciede": 46.22,
+  "cambi_enc": 0.298,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99498,
+  "err_Y_s3.0": 0.01861,
+  "amp_Y_s1.5": 0.99239,
+  "err_Y_s1.5": 0.02699,
+  "amp_Cb": 0.98912,
+  "peak_Cb": 0.99023,
+  "err_Cb": 0.14053,
+  "amp_Cr": 0.99298,
+  "peak_Cr": 0.99866,
+  "err_Cr": 0.12062,
+  "align_psnr": {
+   "-2": 30.53,
+   "-1": 37.78,
+   "0": 46.37,
+   "1": 37.94,
+   "2": 30.7
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.5127,
+   "acf1": -0.0638,
+   "acf2": -0.0438,
+   "acf3": 0.0336
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0554,
+    "acf1": -0.1657,
+    "acf2": -0.0219,
+    "acf3": 0.0307
+   },
+   "roi": {
+    "hf": 1.0134,
+    "acf1": -0.2154,
+    "acf2": -0.0308,
+    "acf3": 0.0232
+   }
+  },
+  "_final": true
+ },
+ "p01/prod_q22": {
+  "window": "p01",
+  "tag": "prod_q22",
+  "variant": {
+   "q": 22
+  },
+  "encode_seconds": 6.8,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 22 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p01/enc/prod_q22.mkv",
+  "mbps": 4.8841,
+  "align_costs": {
+   "-3": 10.809324264526367,
+   "-2": 7.75743293762207,
+   "-1": 4.623970985412598,
+   "0": 1.390020728111267,
+   "1": 4.77383279800415,
+   "2": 8.091416358947754,
+   "3": 8.33835506439209
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 78.3,
+  "ssimu2_p5": 74.06,
+  "butter_2norm": 1.106,
+  "butter_max_p95": 3.37,
+  "vmaf": 93.67,
+  "vmaf_min": 90.16,
+  "vmaf_neg": 93.03,
+  "vmaf_neg_gap": 0.64,
+  "psnr_y": 44.5,
+  "ssim": 0.9976,
+  "ciede2000": 46.61,
+  "vmaf_p1": 90.35,
+  "psnr_cb": 56.2,
+  "psnr_cr": 56.12,
+  "ciede": 46.61,
+  "cambi_enc": 0.115,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99511,
+  "err_Y_s3.0": 0.01614,
+  "amp_Y_s1.5": 0.99263,
+  "err_Y_s1.5": 0.0242,
+  "amp_Cb": 0.99018,
+  "peak_Cb": 0.99174,
+  "err_Cb": 0.12728,
+  "amp_Cr": 0.99349,
+  "peak_Cr": 0.9988,
+  "err_Cr": 0.10882,
+  "align_psnr": {
+   "-2": 30.52,
+   "-1": 37.76,
+   "0": 47.1,
+   "1": 37.94,
+   "2": 30.68
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.5633,
+   "acf1": -0.0736,
+   "acf2": -0.0456,
+   "acf3": 0.0355
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0577,
+    "acf1": -0.1652,
+    "acf2": -0.0221,
+    "acf3": 0.0306
+   },
+   "roi": {
+    "hf": 1.0165,
+    "acf1": -0.2141,
+    "acf2": -0.031,
+    "acf3": 0.0228
+   }
+  },
+  "_final": true
+ },
+ "p01/plain_q34": {
+  "window": "p01",
+  "tag": "plain_q34",
+  "variant": {
+   "q": 34,
+   "fg": false
+  },
+  "encode_seconds": 6.2,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal -o /temp/pantheon-settings-20261106/p01/enc/plain_q34.mkv",
+  "mbps": 1.0764,
+  "align_costs": {
+   "-3": 10.813780784606934,
+   "-2": 7.764874458312988,
+   "-1": 4.639042854309082,
+   "0": 1.4219502210617065,
+   "1": 4.792547702789307,
+   "2": 8.104538917541504,
+   "3": 8.348090171813965
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 76.22,
+  "ssimu2_p5": 73.06,
+  "butter_2norm": 1.026,
+  "butter_max_p95": 4.93,
+  "vmaf": 94.9,
+  "vmaf_min": 92.19,
+  "vmaf_neg": 93.72,
+  "vmaf_neg_gap": 1.18,
+  "psnr_y": 46.02,
+  "ssim": 0.9973,
+  "ciede2000": 46.96,
+  "vmaf_p1": 92.78,
+  "psnr_cb": 54.24,
+  "psnr_cr": 54.13,
+  "ciede": 46.96,
+  "cambi_enc": 4.083,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99924,
+  "err_Y_s3.0": 0.0226,
+  "amp_Y_s1.5": 0.99873,
+  "err_Y_s1.5": 0.0298,
+  "amp_Cb": 0.98436,
+  "peak_Cb": 0.98602,
+  "err_Cb": 0.17646,
+  "amp_Cr": 0.98821,
+  "peak_Cr": 0.99697,
+  "err_Cr": 0.15536,
+  "align_psnr": {
+   "-2": 30.56,
+   "-1": 37.89,
+   "0": 45.16,
+   "1": 37.79,
+   "2": 30.74
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 1.9933,
+   "acf1": 0.4189,
+   "acf2": -0.0087,
+   "acf3": -0.0104
+  },
+  "tex": {
+   "frame": {
+    "hf": 0.4861,
+    "acf1": 0.4513,
+    "acf2": 0.0168,
+    "acf3": -0.0227
+   },
+   "roi": {
+    "hf": 0.3834,
+    "acf1": 0.486,
+    "acf2": 0.0152,
+    "acf3": -0.0998
+   }
+  },
+  "_final": true
+ },
+ "p01/plain_q30": {
+  "window": "p01",
+  "tag": "plain_q30",
+  "variant": {
+   "q": 30,
+   "fg": false
+  },
+  "encode_seconds": 6.0,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal -o /temp/pantheon-settings-20261106/p01/enc/plain_q30.mkv",
+  "mbps": 2.3157,
+  "align_costs": {
+   "-3": 10.811162948608398,
+   "-2": 7.761007785797119,
+   "-1": 4.63152551651001,
+   "0": 1.4087934494018555,
+   "1": 4.783760070800781,
+   "2": 8.098628044128418,
+   "3": 8.343684196472168
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 77.48,
+  "ssimu2_p5": 74.26,
+  "butter_2norm": 0.978,
+  "butter_max_p95": 4.27,
+  "vmaf": 95.58,
+  "vmaf_min": 93.38,
+  "vmaf_neg": 94.48,
+  "vmaf_neg_gap": 1.1,
+  "psnr_y": 46.41,
+  "ssim": 0.9975,
+  "ciede2000": 47.4,
+  "vmaf_p1": 93.76,
+  "psnr_cb": 54.8,
+  "psnr_cr": 54.71,
+  "ciede": 47.4,
+  "cambi_enc": 3.54,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99956,
+  "err_Y_s3.0": 0.019,
+  "amp_Y_s1.5": 0.99931,
+  "err_Y_s1.5": 0.02461,
+  "amp_Cb": 0.98831,
+  "peak_Cb": 0.9903,
+  "err_Cb": 0.15794,
+  "amp_Cr": 0.99094,
+  "peak_Cr": 0.99703,
+  "err_Cr": 0.13805,
+  "align_psnr": {
+   "-2": 30.54,
+   "-1": 37.93,
+   "0": 45.62,
+   "1": 37.91,
+   "2": 30.72
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 2.087,
+   "acf1": 0.3845,
+   "acf2": -0.023,
+   "acf3": -0.0085
+  },
+  "tex": {
+   "frame": {
+    "hf": 0.5753,
+    "acf1": 0.2647,
+    "acf2": 0.0026,
+    "acf3": -0.0097
+   },
+   "roi": {
+    "hf": 0.4847,
+    "acf1": 0.2532,
+    "acf2": -0.0105,
+    "acf3": -0.06
+   }
+  },
+  "_final": true
+ },
+ "p01/plain_q26": {
+  "window": "p01",
+  "tag": "plain_q26",
+  "variant": {
+   "q": 26,
+   "fg": false
+  },
+  "encode_seconds": 6.2,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 26 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal -o /temp/pantheon-settings-20261106/p01/enc/plain_q26.mkv",
+  "mbps": 4.625,
+  "align_costs": {
+   "-3": 10.810525894165039,
+   "-2": 7.758746147155762,
+   "-1": 4.626444339752197,
+   "0": 1.3987152576446533,
+   "1": 4.778480529785156,
+   "2": 8.095858573913574,
+   "3": 8.341967582702637
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 79.09,
+  "ssimu2_p5": 75.26,
+  "butter_2norm": 0.913,
+  "butter_max_p95": 3.64,
+  "vmaf": 96.12,
+  "vmaf_min": 94.29,
+  "vmaf_neg": 95.09,
+  "vmaf_neg_gap": 1.03,
+  "psnr_y": 46.96,
+  "ssim": 0.9978,
+  "ciede2000": 47.95,
+  "vmaf_p1": 94.66,
+  "psnr_cb": 55.34,
+  "psnr_cr": 55.26,
+  "ciede": 47.95,
+  "cambi_enc": 2.519,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.9998,
+  "err_Y_s3.0": 0.01565,
+  "amp_Y_s1.5": 0.99966,
+  "err_Y_s1.5": 0.02019,
+  "amp_Cb": 0.99071,
+  "peak_Cb": 0.99233,
+  "err_Cb": 0.14382,
+  "amp_Cr": 0.99243,
+  "peak_Cr": 0.99753,
+  "err_Cr": 0.12491,
+  "align_psnr": {
+   "-2": 30.53,
+   "-1": 37.8,
+   "0": 46.36,
+   "1": 37.96,
+   "2": 30.69
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 2.198,
+   "acf1": 0.3464,
+   "acf2": -0.0375,
+   "acf3": -0.0048
+  },
+  "tex": {
+   "frame": {
+    "hf": 0.7128,
+    "acf1": 0.0979,
+    "acf2": -0.0126,
+    "acf3": 0.0035
+   },
+   "roi": {
+    "hf": 0.6592,
+    "acf1": 0.0325,
+    "acf2": -0.029,
+    "acf3": -0.021
+   }
+  },
+  "_final": true
+ },
+ "p01/ret050_q34": {
+  "window": "p01",
+  "tag": "ret050_q34",
+  "variant": {
+   "q": 34,
+   "retain": 0.5
+  },
+  "encode_seconds": 6.7,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.5 -o /temp/pantheon-settings-20261106/p01/enc/ret050_q34.mkv",
+  "mbps": 0.8568,
+  "align_costs": {
+   "-3": 10.816292762756348,
+   "-2": 7.766982078552246,
+   "-1": 4.6408233642578125,
+   "0": 1.4240624904632568,
+   "1": 4.793396472930908,
+   "2": 8.104629516601562,
+   "3": 8.34862995147705
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 74.87,
+  "ssimu2_p5": 71.41,
+  "butter_2norm": 1.16,
+  "butter_max_p95": 4.75,
+  "vmaf": 93.74,
+  "vmaf_min": 90.39,
+  "vmaf_neg": 92.81,
+  "vmaf_neg_gap": 0.93,
+  "psnr_y": 44.37,
+  "ssim": 0.9969,
+  "ciede2000": 45.94,
+  "vmaf_p1": 90.88,
+  "psnr_cb": 54.32,
+  "psnr_cr": 54.22,
+  "ciede": 45.94,
+  "cambi_enc": 0.643,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99702,
+  "err_Y_s3.0": 0.02284,
+  "amp_Y_s1.5": 0.99537,
+  "err_Y_s1.5": 0.03096,
+  "amp_Cb": 0.98532,
+  "peak_Cb": 0.98594,
+  "err_Cb": 0.17442,
+  "amp_Cr": 0.98944,
+  "peak_Cr": 0.9979,
+  "err_Cr": 0.15307,
+  "align_psnr": {
+   "-2": 30.56,
+   "-1": 37.88,
+   "0": 45.13,
+   "1": 37.78,
+   "2": 30.74
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.126,
+   "acf1": -0.0012,
+   "acf2": -0.0344,
+   "acf3": 0.026
+  },
+  "tex": {
+   "frame": {
+    "hf": 0.9342,
+    "acf1": -0.1166,
+    "acf2": -0.0179,
+    "acf3": 0.0268
+   },
+   "roi": {
+    "hf": 0.8888,
+    "acf1": -0.1763,
+    "acf2": -0.0237,
+    "acf3": 0.0171
+   }
+  },
+  "_final": true
+ },
+ "p01/ret050_q30": {
+  "window": "p01",
+  "tag": "ret050_q30",
+  "variant": {
+   "q": 30,
+   "retain": 0.5
+  },
+  "encode_seconds": 6.9,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.5 -o /temp/pantheon-settings-20261106/p01/enc/ret050_q30.mkv",
+  "mbps": 1.6768,
+  "align_costs": {
+   "-3": 10.810381889343262,
+   "-2": 7.760481357574463,
+   "-1": 4.631284236907959,
+   "0": 1.408435583114624,
+   "1": 4.782223701477051,
+   "2": 8.096184730529785,
+   "3": 8.341348648071289
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 76.02,
+  "ssimu2_p5": 72.59,
+  "butter_2norm": 1.127,
+  "butter_max_p95": 4.16,
+  "vmaf": 94.25,
+  "vmaf_min": 91.5,
+  "vmaf_neg": 93.4,
+  "vmaf_neg_gap": 0.85,
+  "psnr_y": 44.57,
+  "ssim": 0.9972,
+  "ciede2000": 46.23,
+  "vmaf_p1": 91.85,
+  "psnr_cb": 54.87,
+  "psnr_cr": 54.79,
+  "ciede": 46.23,
+  "cambi_enc": 0.564,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99724,
+  "err_Y_s3.0": 0.01947,
+  "amp_Y_s1.5": 0.99575,
+  "err_Y_s1.5": 0.02636,
+  "amp_Cb": 0.98741,
+  "peak_Cb": 0.98828,
+  "err_Cb": 0.15747,
+  "amp_Cr": 0.99115,
+  "peak_Cr": 0.99822,
+  "err_Cr": 0.13626,
+  "align_psnr": {
+   "-2": 30.55,
+   "-1": 37.93,
+   "0": 45.61,
+   "1": 37.91,
+   "2": 30.72
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.1616,
+   "acf1": -0.0058,
+   "acf2": -0.0381,
+   "acf3": 0.0265
+  },
+  "tex": {
+   "frame": {
+    "hf": 0.9379,
+    "acf1": -0.1166,
+    "acf2": -0.0175,
+    "acf3": 0.0262
+   },
+   "roi": {
+    "hf": 0.8921,
+    "acf1": -0.1764,
+    "acf2": -0.0261,
+    "acf3": 0.0157
+   }
+  },
+  "_final": true
+ },
+ "p01/ret090_q34": {
+  "window": "p01",
+  "tag": "ret090_q34",
+  "variant": {
+   "q": 34,
+   "retain": 0.9
+  },
+  "encode_seconds": 6.8,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.9 -o /temp/pantheon-settings-20261106/p01/enc/ret090_q34.mkv",
+  "mbps": 1.0656,
+  "align_costs": {
+   "-3": 10.814519882202148,
+   "-2": 7.765291690826416,
+   "-1": 4.64002799987793,
+   "0": 1.4226171970367432,
+   "1": 4.792811393737793,
+   "2": 8.104443550109863,
+   "3": 8.348044395446777
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 75.96,
+  "ssimu2_p5": 72.68,
+  "butter_2norm": 1.045,
+  "butter_max_p95": 5.15,
+  "vmaf": 94.71,
+  "vmaf_min": 92.38,
+  "vmaf_neg": 93.6,
+  "vmaf_neg_gap": 1.11,
+  "psnr_y": 45.54,
+  "ssim": 0.9972,
+  "ciede2000": 46.67,
+  "vmaf_p1": 92.64,
+  "psnr_cb": 54.27,
+  "psnr_cr": 54.17,
+  "ciede": 46.67,
+  "cambi_enc": 0.964,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99893,
+  "err_Y_s3.0": 0.02246,
+  "amp_Y_s1.5": 0.99815,
+  "err_Y_s1.5": 0.02963,
+  "amp_Cb": 0.98315,
+  "peak_Cb": 0.98323,
+  "err_Cb": 0.17611,
+  "amp_Cr": 0.9881,
+  "peak_Cr": 0.99731,
+  "err_Cr": 0.15473,
+  "align_psnr": {
+   "-2": 30.56,
+   "-1": 37.89,
+   "0": 45.16,
+   "1": 37.79,
+   "2": 30.74
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 2.3454,
+   "acf1": 0.215,
+   "acf2": -0.0199,
+   "acf3": 0.0055
+  },
+  "tex": {
+   "frame": {
+    "hf": 0.6356,
+    "acf1": 0.1237,
+    "acf2": 0.0024,
+    "acf3": 0.0029
+   },
+   "roi": {
+    "hf": 0.5626,
+    "acf1": 0.0487,
+    "acf2": -0.0056,
+    "acf3": -0.0286
+   }
+  },
+  "_final": true
+ },
+ "p01/ret090_q30": {
+  "window": "p01",
+  "tag": "ret090_q30",
+  "variant": {
+   "q": 30,
+   "retain": 0.9
+  },
+  "encode_seconds": 7.0,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.9 -o /temp/pantheon-settings-20261106/p01/enc/ret090_q30.mkv",
+  "mbps": 2.1637,
+  "align_costs": {
+   "-3": 10.811097145080566,
+   "-2": 7.760866165161133,
+   "-1": 4.631690502166748,
+   "0": 1.4094607830047607,
+   "1": 4.784038066864014,
+   "2": 8.098295211791992,
+   "3": 8.34333324432373
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 77.16,
+  "ssimu2_p5": 73.9,
+  "butter_2norm": 1.003,
+  "butter_max_p95": 4.21,
+  "vmaf": 95.33,
+  "vmaf_min": 93.33,
+  "vmaf_neg": 94.3,
+  "vmaf_neg_gap": 1.03,
+  "psnr_y": 45.85,
+  "ssim": 0.9974,
+  "ciede2000": 47.05,
+  "vmaf_p1": 93.68,
+  "psnr_cb": 54.79,
+  "psnr_cr": 54.72,
+  "ciede": 47.05,
+  "cambi_enc": 0.831,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99916,
+  "err_Y_s3.0": 0.01896,
+  "amp_Y_s1.5": 0.99865,
+  "err_Y_s1.5": 0.02464,
+  "amp_Cb": 0.98576,
+  "peak_Cb": 0.98581,
+  "err_Cb": 0.15935,
+  "amp_Cr": 0.98955,
+  "peak_Cr": 0.99708,
+  "err_Cr": 0.13821,
+  "align_psnr": {
+   "-2": 30.55,
+   "-1": 37.93,
+   "0": 45.61,
+   "1": 37.91,
+   "2": 30.72
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 2.4154,
+   "acf1": 0.2013,
+   "acf2": -0.0283,
+   "acf3": 0.0066
+  },
+  "tex": {
+   "frame": {
+    "hf": 0.6729,
+    "acf1": 0.0839,
+    "acf2": 0.0005,
+    "acf3": 0.0037
+   },
+   "roi": {
+    "hf": 0.6014,
+    "acf1": 0.0115,
+    "acf2": -0.0077,
+    "acf3": -0.0231
+   }
+  },
+  "_final": true
+ },
+ "p01/aqs1_q34": {
+  "window": "p01",
+  "tag": "aqs1_q34",
+  "variant": {
+   "q": 34,
+   "aqs": 1
+  },
+  "encode_seconds": 11.7,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --aq-strength 1 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p01/enc/aqs1_q34.mkv",
+  "mbps": 0.8404,
+  "align_costs": {
+   "-3": 10.816068649291992,
+   "-2": 7.766612529754639,
+   "-1": 4.640325546264648,
+   "0": 1.4253520965576172,
+   "1": 4.791975021362305,
+   "2": 8.101579666137695,
+   "3": 8.345189094543457
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 74.14,
+  "ssimu2_p5": 70.79,
+  "butter_2norm": 1.217,
+  "butter_max_p95": 4.97,
+  "vmaf": 92.45,
+  "vmaf_min": 87.62,
+  "vmaf_neg": 91.63,
+  "vmaf_neg_gap": 0.82,
+  "psnr_y": 43.87,
+  "ssim": 0.9967,
+  "ciede2000": 45.61,
+  "vmaf_p1": 88.11,
+  "psnr_cb": 54.34,
+  "psnr_cr": 54.24,
+  "ciede": 45.61,
+  "cambi_enc": 0.63,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99456,
+  "err_Y_s3.0": 0.02476,
+  "amp_Y_s1.5": 0.99164,
+  "err_Y_s1.5": 0.03459,
+  "amp_Cb": 0.98539,
+  "peak_Cb": 0.98635,
+  "err_Cb": 0.17415,
+  "amp_Cr": 0.98916,
+  "peak_Cr": 0.9972,
+  "err_Cr": 0.15231,
+  "align_psnr": {
+   "-2": 30.57,
+   "-1": 37.88,
+   "0": 45.14,
+   "1": 37.79,
+   "2": 30.74
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.4415,
+   "acf1": -0.0524,
+   "acf2": -0.0373,
+   "acf3": 0.0317
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0483,
+    "acf1": -0.1656,
+    "acf2": -0.0219,
+    "acf3": 0.0318
+   },
+   "roi": {
+    "hf": 1.0063,
+    "acf1": -0.2153,
+    "acf2": -0.0285,
+    "acf3": 0.0232
+   }
+  },
+  "_final": true
+ },
+ "p01/aqs15_q34": {
+  "window": "p01",
+  "tag": "aqs15_q34",
+  "variant": {
+   "q": 34,
+   "aqs": 15
+  },
+  "encode_seconds": 6.7,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --aq-strength 15 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p01/enc/aqs15_q34.mkv",
+  "mbps": 0.8404,
+  "align_costs": {
+   "-3": 10.816068649291992,
+   "-2": 7.766612529754639,
+   "-1": 4.640325546264648,
+   "0": 1.4253520965576172,
+   "1": 4.791975021362305,
+   "2": 8.101579666137695,
+   "3": 8.345189094543457
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 74.14,
+  "ssimu2_p5": 70.79,
+  "butter_2norm": 1.217,
+  "butter_max_p95": 4.97,
+  "vmaf": 92.45,
+  "vmaf_min": 87.62,
+  "vmaf_neg": 91.63,
+  "vmaf_neg_gap": 0.82,
+  "psnr_y": 43.87,
+  "ssim": 0.9967,
+  "ciede2000": 45.61,
+  "vmaf_p1": 88.11,
+  "psnr_cb": 54.34,
+  "psnr_cr": 54.24,
+  "ciede": 45.61,
+  "cambi_enc": 0.63,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99456,
+  "err_Y_s3.0": 0.02476,
+  "amp_Y_s1.5": 0.99164,
+  "err_Y_s1.5": 0.03459,
+  "amp_Cb": 0.98539,
+  "peak_Cb": 0.98635,
+  "err_Cb": 0.17415,
+  "amp_Cr": 0.98916,
+  "peak_Cr": 0.9972,
+  "err_Cr": 0.15231,
+  "align_psnr": {
+   "-2": 30.57,
+   "-1": 37.88,
+   "0": 45.14,
+   "1": 37.79,
+   "2": 30.74
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.4415,
+   "acf1": -0.0524,
+   "acf2": -0.0373,
+   "acf3": 0.0317
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0483,
+    "acf1": -0.1656,
+    "acf2": -0.0219,
+    "acf3": 0.0318
+   },
+   "roi": {
+    "hf": 1.0063,
+    "acf1": -0.2153,
+    "acf2": -0.0285,
+    "acf3": 0.0232
+   }
+  },
+  "_final": true
+ },
+ "p01/noaq_q34": {
+  "window": "p01",
+  "tag": "noaq_q34",
+  "variant": {
+   "q": 34,
+   "aq": false
+  },
+  "encode_seconds": 8.6,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p01/enc/noaq_q34.mkv",
+  "mbps": 0.8216,
+  "align_costs": {
+   "-3": 10.816389083862305,
+   "-2": 7.767132759094238,
+   "-1": 4.641509056091309,
+   "0": 1.4263145923614502,
+   "1": 4.792368412017822,
+   "2": 8.101798057556152,
+   "3": 8.34526252746582
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 74.12,
+  "ssimu2_p5": 70.73,
+  "butter_2norm": 1.217,
+  "butter_max_p95": 4.87,
+  "vmaf": 92.44,
+  "vmaf_min": 87.67,
+  "vmaf_neg": 91.62,
+  "vmaf_neg_gap": 0.82,
+  "psnr_y": 43.87,
+  "ssim": 0.9967,
+  "ciede2000": 45.6,
+  "vmaf_p1": 88.19,
+  "psnr_cb": 54.32,
+  "psnr_cr": 54.22,
+  "ciede": 45.6,
+  "cambi_enc": 0.629,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99461,
+  "err_Y_s3.0": 0.02484,
+  "amp_Y_s1.5": 0.99171,
+  "err_Y_s1.5": 0.03468,
+  "amp_Cb": 0.98525,
+  "peak_Cb": 0.98622,
+  "err_Cb": 0.17467,
+  "amp_Cr": 0.98942,
+  "peak_Cr": 0.9969,
+  "err_Cr": 0.15315,
+  "align_psnr": {
+   "-2": 30.57,
+   "-1": 37.88,
+   "0": 45.13,
+   "1": 37.79,
+   "2": 30.74
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.4415,
+   "acf1": -0.0525,
+   "acf2": -0.0372,
+   "acf3": 0.0317
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0485,
+    "acf1": -0.1652,
+    "acf2": -0.0217,
+    "acf3": 0.0317
+   },
+   "roi": {
+    "hf": 1.006,
+    "acf1": -0.2152,
+    "acf2": -0.0281,
+    "acf3": 0.0246
+   }
+  },
+  "_final": true
+ },
+ "p01/uhq_q34": {
+  "window": "p01",
+  "tag": "uhq_q34",
+  "variant": {
+   "q": 34,
+   "tune": "uhq"
+  },
+  "encode_seconds": 10.2,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune uhq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p01/enc/uhq_q34.mkv",
+  "mbps": 0.6013,
+  "align_costs": {
+   "-3": 10.799760818481445,
+   "-2": 7.742865085601807,
+   "-1": 4.62183952331543,
+   "0": 1.408156394958496,
+   "1": 4.771284580230713,
+   "2": 8.0804443359375,
+   "3": 8.324586868286133
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 74.1,
+  "ssimu2_p5": 71.18,
+  "butter_2norm": 1.219,
+  "butter_max_p95": 5.37,
+  "vmaf": 92.45,
+  "vmaf_min": 87.21,
+  "vmaf_neg": 91.62,
+  "vmaf_neg_gap": 0.83,
+  "psnr_y": 43.85,
+  "ssim": 0.9967,
+  "ciede2000": 45.63,
+  "vmaf_p1": 88.62,
+  "psnr_cb": 54.38,
+  "psnr_cr": 54.28,
+  "ciede": 45.63,
+  "cambi_enc": 0.677,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99474,
+  "err_Y_s3.0": 0.02688,
+  "amp_Y_s1.5": 0.99193,
+  "err_Y_s1.5": 0.0362,
+  "amp_Cb": 0.98399,
+  "peak_Cb": 0.98451,
+  "err_Cb": 0.17546,
+  "amp_Cr": 0.98851,
+  "peak_Cr": 0.99588,
+  "err_Cr": 0.15491,
+  "align_psnr": {
+   "-2": 30.58,
+   "-1": 37.92,
+   "0": 45.08,
+   "1": 37.77,
+   "2": 30.75
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.3159,
+   "acf1": -0.0445,
+   "acf2": -0.0325,
+   "acf3": 0.0295
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0486,
+    "acf1": -0.1659,
+    "acf2": -0.0145,
+    "acf3": 0.0229
+   },
+   "roi": {
+    "hf": 1.0101,
+    "acf1": -0.2145,
+    "acf2": -0.0216,
+    "acf3": 0.0148
+   }
+  },
+  "_final": true
+ },
+ "p01/tf4_q34": {
+  "window": "p01",
+  "tag": "tf4_q34",
+  "variant": {
+   "q": 34,
+   "tf": 4
+  },
+  "encode_seconds": 10.2,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p01/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --tf-level 4 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p01/enc/tf4_q34.mkv",
+  "mbps": 0.6385,
+  "align_costs": {
+   "-3": 10.793362617492676,
+   "-2": 7.743789196014404,
+   "-1": 4.622716903686523,
+   "0": 1.432621955871582,
+   "1": 4.786598205566406,
+   "2": 8.091936111450195,
+   "3": 8.33433723449707
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 74.13,
+  "ssimu2_p5": 70.91,
+  "butter_2norm": 1.218,
+  "butter_max_p95": 4.89,
+  "vmaf": 92.48,
+  "vmaf_min": 87.22,
+  "vmaf_neg": 91.64,
+  "vmaf_neg_gap": 0.84,
+  "psnr_y": 43.85,
+  "ssim": 0.9967,
+  "ciede2000": 45.63,
+  "vmaf_p1": 88.45,
+  "psnr_cb": 54.36,
+  "psnr_cr": 54.27,
+  "ciede": 45.63,
+  "cambi_enc": 0.683,
+  "cambi_src": 0.028,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99475,
+  "err_Y_s3.0": 0.02639,
+  "amp_Y_s1.5": 0.99197,
+  "err_Y_s1.5": 0.03575,
+  "amp_Cb": 0.98457,
+  "peak_Cb": 0.98397,
+  "err_Cb": 0.17599,
+  "amp_Cr": 0.98904,
+  "peak_Cr": 0.99707,
+  "err_Cr": 0.1546,
+  "align_psnr": {
+   "-2": 30.58,
+   "-1": 37.92,
+   "0": 45.09,
+   "1": 37.77,
+   "2": 30.75
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 3.3215,
+   "acf1": -0.0457,
+   "acf2": -0.0308,
+   "acf3": 0.0289
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.047,
+    "acf1": -0.1632,
+    "acf2": -0.0224,
+    "acf3": 0.0312
+   },
+   "roi": {
+    "hf": 1.0059,
+    "acf1": -0.2134,
+    "acf2": -0.0279,
+    "acf3": 0.024
+   }
+  },
+  "_final": true
+ },
+ "p05/prod_q38": {
+  "window": "p05",
+  "tag": "prod_q38",
+  "variant": {
+   "q": 38
+  },
+  "encode_seconds": 9.1,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 38 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p05/enc/prod_q38.mkv",
+  "mbps": 2.4826,
+  "align_costs": {
+   "-3": 19.144460678100586,
+   "-2": 13.908513069152832,
+   "-1": 7.830138206481934,
+   "0": 1.585732102394104,
+   "1": 7.776034832000732,
+   "2": 14.256861686706543,
+   "3": 20.206817626953125
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 33.47,
+  "ssimu2_p5": 4.6,
+  "butter_2norm": 2.247,
+  "butter_max_p95": 9.63,
+  "vmaf": 88.82,
+  "vmaf_min": 65.98,
+  "vmaf_neg": 87.16,
+  "vmaf_neg_gap": 1.66,
+  "psnr_y": 37.91,
+  "ssim": 0.9797,
+  "ciede2000": 40.84,
+  "vmaf_p1": 68.01,
+  "psnr_cb": 50.91,
+  "psnr_cr": 49.99,
+  "ciede": 40.84,
+  "cambi_enc": 0.95,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99857,
+  "err_Y_s3.0": 0.03499,
+  "amp_Y_s1.5": 0.99736,
+  "err_Y_s1.5": 0.05338,
+  "amp_Cb": 0.96285,
+  "peak_Cb": 0.97021,
+  "err_Cb": 0.28542,
+  "amp_Cr": 0.97024,
+  "peak_Cr": 0.97653,
+  "err_Cr": 0.24499,
+  "align_psnr": {
+   "-2": 23.73,
+   "-1": 26.84,
+   "0": 41.32,
+   "1": 27.28,
+   "2": 24.13
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 4.8784,
+   "acf1": 0.0842,
+   "acf2": -0.1091,
+   "acf3": 0.0027
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1178,
+    "acf1": -0.0004,
+    "acf2": -0.0795,
+    "acf3": -0.0014
+   },
+   "roi": {
+    "hf": 0.9465,
+    "acf1": -0.1754,
+    "acf2": -0.0764,
+    "acf3": -0.002
+   }
+  },
+  "_final": true
+ },
+ "p05/prod_q34": {
+  "window": "p05",
+  "tag": "prod_q34",
+  "variant": {
+   "q": 34
+  },
+  "encode_seconds": 9.2,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p05/enc/prod_q34.mkv",
+  "mbps": 4.0194,
+  "align_costs": {
+   "-3": 19.16431999206543,
+   "-2": 13.927959442138672,
+   "-1": 7.838271141052246,
+   "0": 1.5154870748519897,
+   "1": 7.7787017822265625,
+   "2": 14.269408226013184,
+   "3": 20.220640182495117
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 38.17,
+  "ssimu2_p5": 9.37,
+  "butter_2norm": 2.115,
+  "butter_max_p95": 9.34,
+  "vmaf": 90.55,
+  "vmaf_min": 70.3,
+  "vmaf_neg": 88.97,
+  "vmaf_neg_gap": 1.58,
+  "psnr_y": 38.41,
+  "ssim": 0.9827,
+  "ciede2000": 41.27,
+  "vmaf_p1": 71.29,
+  "psnr_cb": 51.28,
+  "psnr_cr": 50.4,
+  "ciede": 41.27,
+  "cambi_enc": 0.825,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99885,
+  "err_Y_s3.0": 0.02898,
+  "amp_Y_s1.5": 0.99789,
+  "err_Y_s1.5": 0.0448,
+  "amp_Cb": 0.96858,
+  "peak_Cb": 0.97513,
+  "err_Cb": 0.2638,
+  "amp_Cr": 0.97639,
+  "peak_Cr": 0.97946,
+  "err_Cr": 0.22444,
+  "align_psnr": {
+   "-2": 23.72,
+   "-1": 26.82,
+   "0": 41.99,
+   "1": 27.25,
+   "2": 24.11
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.3159,
+   "acf1": 0.0631,
+   "acf2": -0.1139,
+   "acf3": 0.0027
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1676,
+    "acf1": -0.0083,
+    "acf2": -0.0833,
+    "acf3": -0.0019
+   },
+   "roi": {
+    "hf": 0.9902,
+    "acf1": -0.1706,
+    "acf2": -0.0742,
+    "acf3": -0.0064
+   }
+  },
+  "_final": true
+ },
+ "p05/prod_q30": {
+  "window": "p05",
+  "tag": "prod_q30",
+  "variant": {
+   "q": 30
+  },
+  "encode_seconds": 8.5,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p05/enc/prod_q30.mkv",
+  "mbps": 6.2984,
+  "align_costs": {
+   "-3": 19.187602996826172,
+   "-2": 13.949251174926758,
+   "-1": 7.850512504577637,
+   "0": 1.433777928352356,
+   "1": 7.790342330932617,
+   "2": 14.285646438598633,
+   "3": 20.235794067382812
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 44.27,
+  "ssimu2_p5": 16.89,
+  "butter_2norm": 1.941,
+  "butter_max_p95": 8.44,
+  "vmaf": 92.23,
+  "vmaf_min": 73.93,
+  "vmaf_neg": 90.7,
+  "vmaf_neg_gap": 1.53,
+  "psnr_y": 39.11,
+  "ssim": 0.9863,
+  "ciede2000": 41.85,
+  "vmaf_p1": 74.78,
+  "psnr_cb": 51.64,
+  "psnr_cr": 50.8,
+  "ciede": 41.85,
+  "cambi_enc": 0.679,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99909,
+  "err_Y_s3.0": 0.02379,
+  "amp_Y_s1.5": 0.99836,
+  "err_Y_s1.5": 0.03716,
+  "amp_Cb": 0.97441,
+  "peak_Cb": 0.97892,
+  "err_Cb": 0.24356,
+  "amp_Cr": 0.98061,
+  "peak_Cr": 0.98201,
+  "err_Cr": 0.20636,
+  "align_psnr": {
+   "-2": 23.71,
+   "-1": 26.81,
+   "0": 42.67,
+   "1": 27.22,
+   "2": 24.09
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.8104,
+   "acf1": 0.0365,
+   "acf2": -0.1138,
+   "acf3": 0.0052
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.2036,
+    "acf1": -0.0106,
+    "acf2": -0.0877,
+    "acf3": -0.002
+   },
+   "roi": {
+    "hf": 1.0081,
+    "acf1": -0.1627,
+    "acf2": -0.0763,
+    "acf3": -0.0072
+   }
+  },
+  "_final": true
+ },
+ "p05/prod_q26": {
+  "window": "p05",
+  "tag": "prod_q26",
+  "variant": {
+   "q": 26
+  },
+  "encode_seconds": 8.4,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 26 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p05/enc/prod_q26.mkv",
+  "mbps": 9.7009,
+  "align_costs": {
+   "-3": 19.214906692504883,
+   "-2": 13.975811958312988,
+   "-1": 7.867922306060791,
+   "0": 1.3205058574676514,
+   "1": 7.8056321144104,
+   "2": 14.306666374206543,
+   "3": 20.25397300720215
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 52.64,
+  "ssimu2_p5": 32.59,
+  "butter_2norm": 1.704,
+  "butter_max_p95": 7.77,
+  "vmaf": 93.94,
+  "vmaf_min": 79.6,
+  "vmaf_neg": 92.51,
+  "vmaf_neg_gap": 1.43,
+  "psnr_y": 40.09,
+  "ssim": 0.9905,
+  "ciede2000": 42.65,
+  "vmaf_p1": 80.04,
+  "psnr_cb": 52.15,
+  "psnr_cr": 51.33,
+  "ciede": 42.65,
+  "cambi_enc": 0.488,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99929,
+  "err_Y_s3.0": 0.01887,
+  "amp_Y_s1.5": 0.9987,
+  "err_Y_s1.5": 0.02963,
+  "amp_Cb": 0.97862,
+  "peak_Cb": 0.98235,
+  "err_Cb": 0.22058,
+  "amp_Cr": 0.98495,
+  "peak_Cr": 0.98491,
+  "err_Cr": 0.18511,
+  "align_psnr": {
+   "-2": 23.71,
+   "-1": 26.79,
+   "0": 43.5,
+   "1": 27.21,
+   "2": 24.08
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 6.3337,
+   "acf1": 0.0152,
+   "acf2": -0.1136,
+   "acf3": 0.0078
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.2494,
+    "acf1": -0.0238,
+    "acf2": -0.0885,
+    "acf3": -0.0003
+   },
+   "roi": {
+    "hf": 1.0474,
+    "acf1": -0.1576,
+    "acf2": -0.0756,
+    "acf3": -0.0058
+   }
+  },
+  "_final": true
+ },
+ "p05/prod_q22": {
+  "window": "p05",
+  "tag": "prod_q22",
+  "variant": {
+   "q": 22
+  },
+  "encode_seconds": 8.4,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 22 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p05/enc/prod_q22.mkv",
+  "mbps": 14.3172,
+  "align_costs": {
+   "-3": 19.2343807220459,
+   "-2": 13.9940185546875,
+   "-1": 7.882692813873291,
+   "0": 1.2216922044754028,
+   "1": 7.817116737365723,
+   "2": 14.3216552734375,
+   "3": 20.2685546875
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 61.54,
+  "ssimu2_p5": 50.07,
+  "butter_2norm": 1.448,
+  "butter_max_p95": 6.78,
+  "vmaf": 95.38,
+  "vmaf_min": 83.68,
+  "vmaf_neg": 94.08,
+  "vmaf_neg_gap": 1.3,
+  "psnr_y": 41.23,
+  "ssim": 0.994,
+  "ciede2000": 43.62,
+  "vmaf_p1": 84.36,
+  "psnr_cb": 52.79,
+  "psnr_cr": 52.02,
+  "ciede": 43.62,
+  "cambi_enc": 0.287,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99932,
+  "err_Y_s3.0": 0.01476,
+  "amp_Y_s1.5": 0.99885,
+  "err_Y_s1.5": 0.02307,
+  "amp_Cb": 0.98294,
+  "peak_Cb": 0.9859,
+  "err_Cb": 0.19505,
+  "amp_Cr": 0.98882,
+  "peak_Cr": 0.98834,
+  "err_Cr": 0.16361,
+  "align_psnr": {
+   "-2": 23.7,
+   "-1": 26.77,
+   "0": 44.64,
+   "1": 27.18,
+   "2": 24.07
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 6.8599,
+   "acf1": -0.0029,
+   "acf2": -0.1134,
+   "acf3": 0.01
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.2901,
+    "acf1": -0.0382,
+    "acf2": -0.0891,
+    "acf3": 0.0026
+   },
+   "roi": {
+    "hf": 1.0906,
+    "acf1": -0.163,
+    "acf2": -0.0737,
+    "acf3": -0.0013
+   }
+  },
+  "_final": true
+ },
+ "p05/plain_q34": {
+  "window": "p05",
+  "tag": "plain_q34",
+  "variant": {
+   "q": 34,
+   "fg": false
+  },
+  "encode_seconds": 8.0,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal -o /temp/pantheon-settings-20261106/p05/enc/plain_q34.mkv",
+  "mbps": 4.1354,
+  "align_costs": {
+   "-3": 19.17003059387207,
+   "-2": 13.93185806274414,
+   "-1": 7.8414306640625,
+   "0": 1.5161950588226318,
+   "1": 7.7826948165893555,
+   "2": 14.272513389587402,
+   "3": 20.222646713256836
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 39.51,
+  "ssimu2_p5": 9.12,
+  "butter_2norm": 2.06,
+  "butter_max_p95": 9.22,
+  "vmaf": 91.04,
+  "vmaf_min": 71.65,
+  "vmaf_neg": 89.38,
+  "vmaf_neg_gap": 1.66,
+  "psnr_y": 39.04,
+  "ssim": 0.983,
+  "ciede2000": 41.69,
+  "vmaf_p1": 72.95,
+  "psnr_cb": 51.19,
+  "psnr_cr": 50.31,
+  "ciede": 41.69,
+  "cambi_enc": 1.186,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99942,
+  "err_Y_s3.0": 0.0291,
+  "amp_Y_s1.5": 0.99882,
+  "err_Y_s1.5": 0.04475,
+  "amp_Cb": 0.96759,
+  "peak_Cb": 0.97303,
+  "err_Cb": 0.26715,
+  "amp_Cr": 0.97287,
+  "peak_Cr": 0.97804,
+  "err_Cr": 0.22835,
+  "align_psnr": {
+   "-2": 23.72,
+   "-1": 26.81,
+   "0": 42.01,
+   "1": 27.24,
+   "2": 24.11
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 4.7003,
+   "acf1": 0.1721,
+   "acf2": -0.1217,
+   "acf3": -0.0177
+  },
+  "tex": {
+   "frame": {
+    "hf": 0.9535,
+    "acf1": 0.1328,
+    "acf2": -0.1056,
+    "acf3": -0.026
+   },
+   "roi": {
+    "hf": 0.5066,
+    "acf1": 0.0732,
+    "acf2": -0.1107,
+    "acf3": -0.1223
+   }
+  },
+  "_final": true
+ },
+ "p05/plain_q30": {
+  "window": "p05",
+  "tag": "plain_q30",
+  "variant": {
+   "q": 30,
+   "fg": false
+  },
+  "encode_seconds": 8.1,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal -o /temp/pantheon-settings-20261106/p05/enc/plain_q30.mkv",
+  "mbps": 6.4961,
+  "align_costs": {
+   "-3": 19.191925048828125,
+   "-2": 13.95430850982666,
+   "-1": 7.852058410644531,
+   "0": 1.4327058792114258,
+   "1": 7.7935075759887695,
+   "2": 14.292287826538086,
+   "3": 20.242704391479492
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 45.99,
+  "ssimu2_p5": 17.93,
+  "butter_2norm": 1.866,
+  "butter_max_p95": 8.44,
+  "vmaf": 92.81,
+  "vmaf_min": 75.44,
+  "vmaf_neg": 91.21,
+  "vmaf_neg_gap": 1.6,
+  "psnr_y": 39.9,
+  "ssim": 0.9867,
+  "ciede2000": 42.35,
+  "vmaf_p1": 77.18,
+  "psnr_cb": 51.55,
+  "psnr_cr": 50.69,
+  "ciede": 42.35,
+  "cambi_enc": 0.944,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99976,
+  "err_Y_s3.0": 0.02378,
+  "amp_Y_s1.5": 0.99934,
+  "err_Y_s1.5": 0.03693,
+  "amp_Cb": 0.97301,
+  "peak_Cb": 0.97715,
+  "err_Cb": 0.24673,
+  "amp_Cr": 0.97937,
+  "peak_Cr": 0.98115,
+  "err_Cr": 0.21003,
+  "align_psnr": {
+   "-2": 23.71,
+   "-1": 26.8,
+   "0": 42.72,
+   "1": 27.21,
+   "2": 24.09
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.3455,
+   "acf1": 0.113,
+   "acf2": -0.1226,
+   "acf3": -0.0096
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0361,
+    "acf1": 0.0978,
+    "acf2": -0.1068,
+    "acf3": -0.0204
+   },
+   "roi": {
+    "hf": 0.6679,
+    "acf1": 0.0422,
+    "acf2": -0.1046,
+    "acf3": -0.0954
+   }
+  },
+  "_final": true
+ },
+ "p05/plain_q26": {
+  "window": "p05",
+  "tag": "plain_q26",
+  "variant": {
+   "q": 26,
+   "fg": false
+  },
+  "encode_seconds": 7.9,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 26 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal -o /temp/pantheon-settings-20261106/p05/enc/plain_q26.mkv",
+  "mbps": 9.9504,
+  "align_costs": {
+   "-3": 19.2213077545166,
+   "-2": 13.980708122253418,
+   "-1": 7.871267795562744,
+   "0": 1.3191734552383423,
+   "1": 7.8099365234375,
+   "2": 14.313294410705566,
+   "3": 20.26179313659668
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 54.81,
+  "ssimu2_p5": 32.45,
+  "butter_2norm": 1.607,
+  "butter_max_p95": 7.62,
+  "vmaf": 94.59,
+  "vmaf_min": 82.09,
+  "vmaf_neg": 93.08,
+  "vmaf_neg_gap": 1.51,
+  "psnr_y": 41.1,
+  "ssim": 0.9909,
+  "ciede2000": 43.27,
+  "vmaf_p1": 82.31,
+  "psnr_cb": 52.02,
+  "psnr_cr": 51.21,
+  "ciede": 43.27,
+  "cambi_enc": 0.688,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99989,
+  "err_Y_s3.0": 0.01891,
+  "amp_Y_s1.5": 0.99963,
+  "err_Y_s1.5": 0.02956,
+  "amp_Cb": 0.97796,
+  "peak_Cb": 0.98134,
+  "err_Cb": 0.22496,
+  "amp_Cr": 0.98369,
+  "peak_Cr": 0.98402,
+  "err_Cr": 0.18872,
+  "align_psnr": {
+   "-2": 23.7,
+   "-1": 26.78,
+   "0": 43.58,
+   "1": 27.2,
+   "2": 24.08
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.9797,
+   "acf1": 0.0698,
+   "acf2": -0.1218,
+   "acf3": -0.0036
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1174,
+    "acf1": 0.0602,
+    "acf2": -0.1034,
+    "acf3": -0.0171
+   },
+   "roi": {
+    "hf": 0.7537,
+    "acf1": 0.0096,
+    "acf2": -0.0993,
+    "acf3": -0.0746
+   }
+  },
+  "_final": true
+ },
+ "p05/ret050_q34": {
+  "window": "p05",
+  "tag": "ret050_q34",
+  "variant": {
+   "q": 34,
+   "retain": 0.5
+  },
+  "encode_seconds": 8.5,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.5 -o /temp/pantheon-settings-20261106/p05/enc/ret050_q34.mkv",
+  "mbps": 4.0192,
+  "align_costs": {
+   "-3": 19.162324905395508,
+   "-2": 13.925928115844727,
+   "-1": 7.837984085083008,
+   "0": 1.5236907005310059,
+   "1": 7.778143882751465,
+   "2": 14.265933990478516,
+   "3": 20.21515655517578
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 38.5,
+  "ssimu2_p5": 9.72,
+  "butter_2norm": 2.1,
+  "butter_max_p95": 8.96,
+  "vmaf": 90.62,
+  "vmaf_min": 70.38,
+  "vmaf_neg": 89.02,
+  "vmaf_neg_gap": 1.6,
+  "psnr_y": 38.55,
+  "ssim": 0.9827,
+  "ciede2000": 41.36,
+  "vmaf_p1": 71.22,
+  "psnr_cb": 51.26,
+  "psnr_cr": 50.38,
+  "ciede": 41.36,
+  "cambi_enc": 0.839,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99894,
+  "err_Y_s3.0": 0.02908,
+  "amp_Y_s1.5": 0.99809,
+  "err_Y_s1.5": 0.04478,
+  "amp_Cb": 0.96853,
+  "peak_Cb": 0.9744,
+  "err_Cb": 0.26408,
+  "amp_Cr": 0.97601,
+  "peak_Cr": 0.98006,
+  "err_Cr": 0.22482,
+  "align_psnr": {
+   "-2": 23.72,
+   "-1": 26.82,
+   "0": 41.97,
+   "1": 27.25,
+   "2": 24.11
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.187,
+   "acf1": 0.0791,
+   "acf2": -0.1151,
+   "acf3": -0.001
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1129,
+    "acf1": 0.0179,
+    "acf2": -0.087,
+    "acf3": -0.0069
+   },
+   "roi": {
+    "hf": 0.8764,
+    "acf1": -0.1506,
+    "acf2": -0.0782,
+    "acf3": -0.0168
+   }
+  },
+  "_final": true
+ },
+ "p05/ret050_q30": {
+  "window": "p05",
+  "tag": "ret050_q30",
+  "variant": {
+   "q": 30,
+   "retain": 0.5
+  },
+  "encode_seconds": 8.8,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.5 -o /temp/pantheon-settings-20261106/p05/enc/ret050_q30.mkv",
+  "mbps": 6.368,
+  "align_costs": {
+   "-3": 19.188385009765625,
+   "-2": 13.950733184814453,
+   "-1": 7.851715087890625,
+   "0": 1.435261845588684,
+   "1": 7.789157390594482,
+   "2": 14.28445816040039,
+   "3": 20.234277725219727
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 44.9,
+  "ssimu2_p5": 18.08,
+  "butter_2norm": 1.92,
+  "butter_max_p95": 8.83,
+  "vmaf": 92.36,
+  "vmaf_min": 74.2,
+  "vmaf_neg": 90.82,
+  "vmaf_neg_gap": 1.54,
+  "psnr_y": 39.3,
+  "ssim": 0.9864,
+  "ciede2000": 41.96,
+  "vmaf_p1": 75.34,
+  "psnr_cb": 51.63,
+  "psnr_cr": 50.78,
+  "ciede": 41.96,
+  "cambi_enc": 0.697,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99911,
+  "err_Y_s3.0": 0.02383,
+  "amp_Y_s1.5": 0.99849,
+  "err_Y_s1.5": 0.03693,
+  "amp_Cb": 0.97338,
+  "peak_Cb": 0.97839,
+  "err_Cb": 0.2438,
+  "amp_Cr": 0.97961,
+  "peak_Cr": 0.98154,
+  "err_Cr": 0.20635,
+  "align_psnr": {
+   "-2": 23.71,
+   "-1": 26.81,
+   "0": 42.71,
+   "1": 27.22,
+   "2": 24.09
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.6927,
+   "acf1": 0.0492,
+   "acf2": -0.1155,
+   "acf3": 0.0018
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1639,
+    "acf1": 0.0113,
+    "acf2": -0.0911,
+    "acf3": -0.0061
+   },
+   "roi": {
+    "hf": 0.9313,
+    "acf1": -0.1415,
+    "acf2": -0.0784,
+    "acf3": -0.0159
+   }
+  },
+  "_final": true
+ },
+ "p05/ret090_q34": {
+  "window": "p05",
+  "tag": "ret090_q34",
+  "variant": {
+   "q": 34,
+   "retain": 0.9
+  },
+  "encode_seconds": 9.4,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.9 -o /temp/pantheon-settings-20261106/p05/enc/ret090_q34.mkv",
+  "mbps": 4.1521,
+  "align_costs": {
+   "-3": 19.165485382080078,
+   "-2": 13.928427696228027,
+   "-1": 7.8391642570495605,
+   "0": 1.5171527862548828,
+   "1": 7.781667709350586,
+   "2": 14.271873474121094,
+   "3": 20.222700119018555
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 39.3,
+  "ssimu2_p5": 9.28,
+  "butter_2norm": 2.063,
+  "butter_max_p95": 9.07,
+  "vmaf": 90.91,
+  "vmaf_min": 71.06,
+  "vmaf_neg": 89.27,
+  "vmaf_neg_gap": 1.64,
+  "psnr_y": 38.91,
+  "ssim": 0.9829,
+  "ciede2000": 41.6,
+  "vmaf_p1": 72.4,
+  "psnr_cb": 51.2,
+  "psnr_cr": 50.32,
+  "ciede": 41.6,
+  "cambi_enc": 0.869,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99919,
+  "err_Y_s3.0": 0.0291,
+  "amp_Y_s1.5": 0.99853,
+  "err_Y_s1.5": 0.04475,
+  "amp_Cb": 0.96628,
+  "peak_Cb": 0.97302,
+  "err_Cb": 0.26663,
+  "amp_Cr": 0.97378,
+  "peak_Cr": 0.97859,
+  "err_Cr": 0.22796,
+  "align_psnr": {
+   "-2": 23.72,
+   "-1": 26.82,
+   "0": 42.0,
+   "1": 27.24,
+   "2": 24.11
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 4.8578,
+   "acf1": 0.1308,
+   "acf2": -0.12,
+   "acf3": -0.0115
+  },
+  "tex": {
+   "frame": {
+    "hf": 0.9947,
+    "acf1": 0.0948,
+    "acf2": -0.099,
+    "acf3": -0.0192
+   },
+   "roi": {
+    "hf": 0.6097,
+    "acf1": -0.0435,
+    "acf2": -0.0953,
+    "acf3": -0.0692
+   }
+  },
+  "_final": true
+ },
+ "p05/ret090_q30": {
+  "window": "p05",
+  "tag": "ret090_q30",
+  "variant": {
+   "q": 30,
+   "retain": 0.9
+  },
+  "encode_seconds": 8.8,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 30 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral,retain=0.9 -o /temp/pantheon-settings-20261106/p05/enc/ret090_q30.mkv",
+  "mbps": 6.4693,
+  "align_costs": {
+   "-3": 19.192617416381836,
+   "-2": 13.955119132995605,
+   "-1": 7.8545966148376465,
+   "0": 1.43304443359375,
+   "1": 7.793078422546387,
+   "2": 14.291296005249023,
+   "3": 20.241138458251953
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 45.67,
+  "ssimu2_p5": 17.24,
+  "butter_2norm": 1.878,
+  "butter_max_p95": 8.83,
+  "vmaf": 92.65,
+  "vmaf_min": 75.48,
+  "vmaf_neg": 91.06,
+  "vmaf_neg_gap": 1.59,
+  "psnr_y": 39.73,
+  "ssim": 0.9866,
+  "ciede2000": 42.24,
+  "vmaf_p1": 76.09,
+  "psnr_cb": 51.56,
+  "psnr_cr": 50.71,
+  "ciede": 42.24,
+  "cambi_enc": 0.742,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99956,
+  "err_Y_s3.0": 0.02387,
+  "amp_Y_s1.5": 0.99908,
+  "err_Y_s1.5": 0.03705,
+  "amp_Cb": 0.9717,
+  "peak_Cb": 0.97754,
+  "err_Cb": 0.24635,
+  "amp_Cr": 0.97897,
+  "peak_Cr": 0.98126,
+  "err_Cr": 0.20899,
+  "align_psnr": {
+   "-2": 23.71,
+   "-1": 26.8,
+   "0": 42.7,
+   "1": 27.22,
+   "2": 24.09
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.4444,
+   "acf1": 0.0889,
+   "acf2": -0.1196,
+   "acf3": -0.0057
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0685,
+    "acf1": 0.0734,
+    "acf2": -0.1012,
+    "acf3": -0.0172
+   },
+   "roi": {
+    "hf": 0.7357,
+    "acf1": -0.0476,
+    "acf2": -0.0896,
+    "acf3": -0.0636
+   }
+  },
+  "_final": true
+ },
+ "p05/aqs1_q34": {
+  "window": "p05",
+  "tag": "aqs1_q34",
+  "variant": {
+   "q": 34,
+   "aqs": 1
+  },
+  "encode_seconds": 8.5,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --aq-strength 1 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p05/enc/aqs1_q34.mkv",
+  "mbps": 3.9895,
+  "align_costs": {
+   "-3": 19.163267135620117,
+   "-2": 13.927062034606934,
+   "-1": 7.8388190269470215,
+   "0": 1.5186275243759155,
+   "1": 7.778247356414795,
+   "2": 14.266589164733887,
+   "3": 20.217626571655273
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 38.06,
+  "ssimu2_p5": 8.27,
+  "butter_2norm": 2.118,
+  "butter_max_p95": 9.16,
+  "vmaf": 90.53,
+  "vmaf_min": 70.28,
+  "vmaf_neg": 88.94,
+  "vmaf_neg_gap": 1.59,
+  "psnr_y": 38.4,
+  "ssim": 0.9826,
+  "ciede2000": 41.26,
+  "vmaf_p1": 71.43,
+  "psnr_cb": 51.26,
+  "psnr_cr": 50.39,
+  "ciede": 41.26,
+  "cambi_enc": 0.83,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99889,
+  "err_Y_s3.0": 0.02892,
+  "amp_Y_s1.5": 0.99796,
+  "err_Y_s1.5": 0.04481,
+  "amp_Cb": 0.96953,
+  "peak_Cb": 0.97431,
+  "err_Cb": 0.26415,
+  "amp_Cr": 0.97462,
+  "peak_Cr": 0.97931,
+  "err_Cr": 0.22563,
+  "align_psnr": {
+   "-2": 23.72,
+   "-1": 26.82,
+   "0": 41.93,
+   "1": 27.25,
+   "2": 24.11
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.3085,
+   "acf1": 0.0628,
+   "acf2": -0.1136,
+   "acf3": 0.003
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1679,
+    "acf1": -0.0078,
+    "acf2": -0.083,
+    "acf3": -0.0021
+   },
+   "roi": {
+    "hf": 0.9895,
+    "acf1": -0.1698,
+    "acf2": -0.0761,
+    "acf3": -0.0071
+   }
+  },
+  "_final": true
+ },
+ "p05/aqs15_q34": {
+  "window": "p05",
+  "tag": "aqs15_q34",
+  "variant": {
+   "q": 34,
+   "aqs": 15
+  },
+  "encode_seconds": 8.3,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --aq-strength 15 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p05/enc/aqs15_q34.mkv",
+  "mbps": 4.0194,
+  "align_costs": {
+   "-3": 19.162931442260742,
+   "-2": 13.927337646484375,
+   "-1": 7.838022708892822,
+   "0": 1.5157508850097656,
+   "1": 7.778046607971191,
+   "2": 14.268707275390625,
+   "3": 20.220094680786133
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 38.16,
+  "ssimu2_p5": 9.47,
+  "butter_2norm": 2.115,
+  "butter_max_p95": 9.35,
+  "vmaf": 90.55,
+  "vmaf_min": 70.02,
+  "vmaf_neg": 88.97,
+  "vmaf_neg_gap": 1.58,
+  "psnr_y": 38.41,
+  "ssim": 0.9827,
+  "ciede2000": 41.27,
+  "vmaf_p1": 71.2,
+  "psnr_cb": 51.27,
+  "psnr_cr": 50.39,
+  "ciede": 41.27,
+  "cambi_enc": 0.828,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99884,
+  "err_Y_s3.0": 0.02892,
+  "amp_Y_s1.5": 0.99792,
+  "err_Y_s1.5": 0.04473,
+  "amp_Cb": 0.96914,
+  "peak_Cb": 0.97447,
+  "err_Cb": 0.26388,
+  "amp_Cr": 0.97524,
+  "peak_Cr": 0.9795,
+  "err_Cr": 0.22522,
+  "align_psnr": {
+   "-2": 23.72,
+   "-1": 26.82,
+   "0": 41.97,
+   "1": 27.25,
+   "2": 24.11
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.3202,
+   "acf1": 0.0629,
+   "acf2": -0.1143,
+   "acf3": 0.0024
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1664,
+    "acf1": -0.0076,
+    "acf2": -0.0829,
+    "acf3": -0.0021
+   },
+   "roi": {
+    "hf": 0.9888,
+    "acf1": -0.1706,
+    "acf2": -0.0757,
+    "acf3": -0.0062
+   }
+  },
+  "_final": true
+ },
+ "p05/noaq_q34": {
+  "window": "p05",
+  "tag": "noaq_q34",
+  "variant": {
+   "q": 34,
+   "aq": false
+  },
+  "encode_seconds": 8.6,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p05/enc/noaq_q34.mkv",
+  "mbps": 4.0194,
+  "align_costs": {
+   "-3": 19.16431999206543,
+   "-2": 13.927959442138672,
+   "-1": 7.838271141052246,
+   "0": 1.5154870748519897,
+   "1": 7.7787017822265625,
+   "2": 14.269408226013184,
+   "3": 20.220640182495117
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 38.17,
+  "ssimu2_p5": 9.37,
+  "butter_2norm": 2.115,
+  "butter_max_p95": 9.34,
+  "vmaf": 90.55,
+  "vmaf_min": 70.3,
+  "vmaf_neg": 88.97,
+  "vmaf_neg_gap": 1.58,
+  "psnr_y": 38.41,
+  "ssim": 0.9827,
+  "ciede2000": 41.27,
+  "vmaf_p1": 71.29,
+  "psnr_cb": 51.28,
+  "psnr_cr": 50.4,
+  "ciede": 41.27,
+  "cambi_enc": 0.825,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99885,
+  "err_Y_s3.0": 0.02898,
+  "amp_Y_s1.5": 0.99789,
+  "err_Y_s1.5": 0.0448,
+  "amp_Cb": 0.96858,
+  "peak_Cb": 0.97513,
+  "err_Cb": 0.2638,
+  "amp_Cr": 0.97639,
+  "peak_Cr": 0.97946,
+  "err_Cr": 0.22444,
+  "align_psnr": {
+   "-2": 23.72,
+   "-1": 26.82,
+   "0": 41.99,
+   "1": 27.25,
+   "2": 24.11
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.3159,
+   "acf1": 0.0631,
+   "acf2": -0.1139,
+   "acf3": 0.0027
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.1676,
+    "acf1": -0.0083,
+    "acf2": -0.0833,
+    "acf3": -0.0019
+   },
+   "roi": {
+    "hf": 0.9902,
+    "acf1": -0.1706,
+    "acf2": -0.0742,
+    "acf3": -0.0064
+   }
+  },
+  "_final": true
+ },
+ "p05/uhq_q34": {
+  "window": "p05",
+  "tag": "uhq_q34",
+  "variant": {
+   "q": 34,
+   "tune": "uhq"
+  },
+  "encode_seconds": 10.2,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune uhq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p05/enc/uhq_q34.mkv",
+  "mbps": 3.4895,
+  "align_costs": {
+   "-3": 19.1485595703125,
+   "-2": 13.907706260681152,
+   "-1": 7.816960334777832,
+   "0": 1.494356632232666,
+   "1": 7.7542195320129395,
+   "2": 14.242074012756348,
+   "3": 20.19380760192871
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 37.95,
+  "ssimu2_p5": 13.09,
+  "butter_2norm": 2.122,
+  "butter_max_p95": 8.95,
+  "vmaf": 90.49,
+  "vmaf_min": 69.63,
+  "vmaf_neg": 88.88,
+  "vmaf_neg_gap": 1.61,
+  "psnr_y": 38.31,
+  "ssim": 0.9828,
+  "ciede2000": 41.21,
+  "vmaf_p1": 71.62,
+  "psnr_cb": 51.38,
+  "psnr_cr": 50.49,
+  "ciede": 41.21,
+  "cambi_enc": 0.926,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.9991,
+  "err_Y_s3.0": 0.0304,
+  "amp_Y_s1.5": 0.99828,
+  "err_Y_s1.5": 0.04626,
+  "amp_Cb": 0.96635,
+  "peak_Cb": 0.96951,
+  "err_Cb": 0.26129,
+  "amp_Cr": 0.97352,
+  "peak_Cr": 0.97564,
+  "err_Cr": 0.22318,
+  "align_psnr": {
+   "-2": 23.73,
+   "-1": 26.84,
+   "0": 41.72,
+   "1": 27.25,
+   "2": 24.11
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.1035,
+   "acf1": 0.0715,
+   "acf2": -0.1185,
+   "acf3": -0.0019
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0272,
+    "acf1": 0.0294,
+    "acf2": -0.0946,
+    "acf3": -0.001
+   },
+   "roi": {
+    "hf": 0.8556,
+    "acf1": -0.1548,
+    "acf2": -0.0917,
+    "acf3": -0.0057
+   }
+  },
+  "_final": true
+ },
+ "p05/tf4_q34": {
+  "window": "p05",
+  "tag": "tf4_q34",
+  "variant": {
+   "q": 34,
+   "tf": 4
+  },
+  "encode_seconds": 10.3,
+  "cmd": "nvencc -i /temp/pantheon-settings-20261106/p05/preroll.mkv --avsw --codec av1 --output-depth 10 --qvbr 34 --max-bitrate 50000 --preset quality --tune hq --lookahead 32 --lookahead-level 3 --aq --aq-temporal --tf-level 4 --av1-film-grain denoise=auto,chroma=auto,denoiser=bilateral -o /temp/pantheon-settings-20261106/p05/enc/tf4_q34.mkv",
+  "mbps": 3.5813,
+  "align_costs": {
+   "-3": 19.147058486938477,
+   "-2": 13.909172058105469,
+   "-1": 7.819798946380615,
+   "0": 1.492132544517517,
+   "1": 7.758639812469482,
+   "2": 14.250349044799805,
+   "3": 20.20613670349121
+  },
+  "aligned_zero": true,
+  "dec_frames": 240,
+  "ssimu2": 38.31,
+  "ssimu2_p5": 12.29,
+  "butter_2norm": 2.112,
+  "butter_max_p95": 8.94,
+  "vmaf": 90.71,
+  "vmaf_min": 71.43,
+  "vmaf_neg": 89.11,
+  "vmaf_neg_gap": 1.6,
+  "psnr_y": 38.33,
+  "ssim": 0.983,
+  "ciede2000": 41.22,
+  "vmaf_p1": 72.84,
+  "psnr_cb": 51.4,
+  "psnr_cr": 50.52,
+  "ciede": 41.22,
+  "cambi_enc": 0.954,
+  "cambi_src": 0.353,
+  "_cpu": true,
+  "frames_decoded": 240,
+  "amp_Y_s3.0": 0.99935,
+  "err_Y_s3.0": 0.02953,
+  "amp_Y_s1.5": 0.99865,
+  "err_Y_s1.5": 0.04487,
+  "amp_Cb": 0.96809,
+  "peak_Cb": 0.97045,
+  "err_Cb": 0.26018,
+  "amp_Cr": 0.97441,
+  "peak_Cr": 0.97601,
+  "err_Cr": 0.22168,
+  "align_psnr": {
+   "-2": 23.73,
+   "-1": 26.83,
+   "0": 41.87,
+   "1": 27.25,
+   "2": 24.11
+  },
+  "aligned": true,
+  "frame_grain_on": {
+   "hf": 5.1106,
+   "acf1": 0.075,
+   "acf2": -0.1205,
+   "acf3": 0.0017
+  },
+  "tex": {
+   "frame": {
+    "hf": 1.0199,
+    "acf1": 0.0311,
+    "acf2": -0.0998,
+    "acf3": 0.002
+   },
+   "roi": {
+    "hf": 0.8475,
+    "acf1": -0.1567,
+    "acf2": -0.0966,
+    "acf3": -0.0049
+   }
+  },
+  "_final": true
+ }
+}

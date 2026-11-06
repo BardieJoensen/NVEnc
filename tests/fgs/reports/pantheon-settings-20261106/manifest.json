@@ -1,0 +1,214 @@
+{
+ "p04a": {
+  "ok": true,
+  "ep": "E04",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/Pantheon.S02.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb/Pantheon.S02E04.Olivia.&.Farhad.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb.mkv",
+  "nominal_start": 1243.493,
+  "shift": 0,
+  "shift_note": null,
+  "start": 1243.493,
+  "first_ref_pts": 1243.534,
+  "preroll_frames": 336,
+  "ref_frames": 240,
+  "framemd5_exact": true,
+  "lowluma_frac": 0.0,
+  "active": {
+   "raw": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "rect": [
+    0,
+    0,
+    1920,
+    1056
+   ]
+  },
+  "frames": 240,
+  "orig_mbps": 10.0294,
+  "src_hf": null,
+  "src_stats": {
+   "hf": {
+    "hf": 5.3762,
+    "acf1": -0.1642,
+    "acf2": -0.0611,
+    "acf3": 0.0095
+   },
+   "tex": {
+    "frame": {
+     "hf": 2.0603,
+     "acf1": -0.1229,
+     "acf2": -0.1108,
+     "acf3": 0.003
+    },
+    "roi": {
+     "hf": 1.8585,
+     "acf1": -0.1842,
+     "acf2": -0.0954,
+     "acf3": 0.0163
+    }
+   }
+  }
+ },
+ "p04b": {
+  "ok": true,
+  "ep": "E04",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/Pantheon.S02.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb/Pantheon.S02E04.Olivia.&.Farhad.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb.mkv",
+  "nominal_start": 1865.239,
+  "shift": 0,
+  "shift_note": null,
+  "start": 1865.239,
+  "first_ref_pts": 1865.28,
+  "preroll_frames": 336,
+  "ref_frames": 240,
+  "framemd5_exact": true,
+  "lowluma_frac": 0.0,
+  "active": {
+   "raw": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "rect": [
+    0,
+    0,
+    1920,
+    1056
+   ]
+  },
+  "frames": 240,
+  "orig_mbps": 10.7294,
+  "src_hf": null,
+  "src_stats": {
+   "hf": {
+    "hf": 11.5989,
+    "acf1": -0.1822,
+    "acf2": -0.0307,
+    "acf3": 0.0447
+   },
+   "tex": {
+    "frame": {
+     "hf": 3.9101,
+     "acf1": -0.2922,
+     "acf2": -0.0418,
+     "acf3": 0.0629
+    },
+    "roi": {
+     "hf": 3.8979,
+     "acf1": -0.3485,
+     "acf2": -0.0298,
+     "acf3": 0.0699
+    }
+   }
+  }
+ },
+ "p01": {
+  "ok": true,
+  "ep": "E01",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/Pantheon.S02.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb/Pantheon.S02E01.The.Gods.Have.Not.Died.in.Vain.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb.mkv",
+  "nominal_start": 2021.0,
+  "shift": 0,
+  "shift_note": null,
+  "start": 2021.0,
+  "first_ref_pts": 2021.0,
+  "preroll_frames": 336,
+  "ref_frames": 240,
+  "framemd5_exact": true,
+  "lowluma_frac": 0.0,
+  "active": {
+   "raw": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "rect": [
+    0,
+    0,
+    1920,
+    1056
+   ]
+  },
+  "frames": 240,
+  "orig_mbps": 10.4502,
+  "src_hf": null,
+  "src_stats": {
+   "hf": {
+    "hf": 3.5718,
+    "acf1": -0.0659,
+    "acf2": -0.0436,
+    "acf3": 0.0303
+   },
+   "tex": {
+    "frame": {
+     "hf": 0.9804,
+     "acf1": -0.1069,
+     "acf2": -0.0273,
+     "acf3": 0.0256
+    },
+    "roi": {
+     "hf": 0.9388,
+     "acf1": -0.1627,
+     "acf2": -0.0364,
+     "acf3": 0.0149
+    }
+   }
+  }
+ },
+ "p05": {
+  "ok": true,
+  "ep": "E05",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/Pantheon.S02.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb/Pantheon.S02E05.Yair.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb.mkv",
+  "nominal_start": 1440.0,
+  "shift": 0,
+  "shift_note": null,
+  "start": 1440.0,
+  "first_ref_pts": 1440.0,
+  "preroll_frames": 336,
+  "ref_frames": 240,
+  "framemd5_exact": true,
+  "lowluma_frac": 0.0,
+  "active": {
+   "raw": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "rect": [
+    0,
+    0,
+    1920,
+    1056
+   ]
+  },
+  "frames": 240,
+  "orig_mbps": 9.6669,
+  "src_hf": null,
+  "src_stats": {
+   "hf": {
+    "hf": 8.3235,
+    "acf1": -0.0782,
+    "acf2": -0.098,
+    "acf3": 0.0238
+   },
+   "tex": {
+    "frame": {
+     "hf": 1.4166,
+     "acf1": -0.0703,
+     "acf2": -0.083,
+     "acf3": 0.006
+    },
+    "roi": {
+     "hf": 1.2479,
+     "acf1": -0.1854,
+     "acf2": -0.0545,
+     "acf3": 0.0017
+    }
+   }
+  }
+ }
+}
