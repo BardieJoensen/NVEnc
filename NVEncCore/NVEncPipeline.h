@@ -3251,8 +3251,8 @@ protected:
                 NV_ENC_CONFIG encConfig = m_stEncConfig; //エンコード設定
                 NV_ENC_RECONFIGURE_PARAMS reconf_params = { 0 };
                 m_dev->encoder()->setStructVer(reconf_params);
-                reconf_params.resetEncoder = 1;
-                reconf_params.forceIDR = 1;
+                reconf_params.resetEncoder = 0;
+                reconf_params.forceIDR = 0;
                 reconf_params.reInitEncodeParams = m_stCreateEncodeParams;
                 reconf_params.reInitEncodeParams.encodeConfig = &encConfig;
                 if (selectedIdx >= 0) {
