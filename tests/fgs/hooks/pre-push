@@ -34,9 +34,12 @@ git -C "$REPO" archive "$harness_commit" tests/fgs | tar -x -C "$snapshot/harnes
 for commit in "${commits[@]}"; do
     tree="$snapshot/$commit"
     mkdir "$tree"
-    # tools/ holds headers the CPU tests include on the FGS branches; master has none.
+    # tools/ and json/ hold headers the CPU tests include on some FGS branches
+    # (json/json.hpp via NVEncFilmGrainReconConfig.h); master has neither.
     extra=()
-    git -C "$REPO" cat-file -e "$commit:tools" 2>/dev/null && extra=(tools)
+    for dir in tools json; do
+        git -C "$REPO" cat-file -e "$commit:$dir" 2>/dev/null && extra+=("$dir")
+    done
     git -C "$REPO" archive "$commit" tests/fgs "${extra[@]}" NVEncCore NVEncSDK | tar -x -C "$tree"
     printf '\n== pre-push: CPU tests for %s\n' "$commit"
     TMPDIR="$tree" bash "$tree/tests/fgs/run_cpu_tests.sh"
