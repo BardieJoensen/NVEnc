@@ -78,7 +78,11 @@ class GateTests(unittest.TestCase):
         report = self.root / 'reports'
         call = json.loads((report / 'invocation.json').read_text())
         identity = json.loads((report / 'candidate.json').read_text())
-        self.assertEqual(call['NVENCC'], str(candidate))
+        # The tests run the binary through a shim (host lacks FFmpeg 6); the
+        # identity record still names and hashes the real file.
+        self.assertEqual(call['NVENCC'], identity['candidate_run_via'])
+        self.assertIn(str(candidate), Path(call['NVENCC']).read_text())
+        self.assertEqual(identity['candidate_nvencc'], str(candidate))
         self.assertEqual(call['FGS_KAT_DENOISER'], 'bilateral')
         self.assertEqual(identity['denoiser'], 'bilateral')
         self.assertEqual(identity['candidate_sha256'], hashlib.sha256(candidate.read_bytes()).hexdigest())
