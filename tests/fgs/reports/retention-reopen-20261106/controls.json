@@ -1,0 +1,94 @@
+{
+ "bd1": {
+  "self": {
+   "amp_Y_s3.0": 1.0,
+   "err_Y_s3.0": 0.0,
+   "amp_Y_s1.5": 1.0,
+   "err_Y_s1.5": 0.0,
+   "amp_Cb": 1.0,
+   "peak_Cb": 1.0,
+   "err_Cb": 0.0,
+   "amp_Cr": 1.0,
+   "peak_Cr": 1.0,
+   "err_Cr": 0.0
+  },
+  "confound": {
+   "noise_sigma_8bit": 0.817,
+   "base": {
+    "amp_Y_s3.0": 0.99548,
+    "err_Y_s3.0": 0.0202,
+    "amp_Y_s1.5": 0.99306,
+    "err_Y_s1.5": 0.03802
+   },
+   "noisy": {
+    "amp_Y_s3.0": 0.9955,
+    "err_Y_s3.0": 0.02098,
+    "amp_Y_s1.5": 0.99311,
+    "err_Y_s1.5": 0.03935
+   }
+  },
+  "ffvship": {
+   "enc": {
+    "butter_max_p95": 5.896,
+    "butter_2norm": 1.3284,
+    "frames": 316
+   },
+   "grainon": {
+    "butter_max_p95": 5.896,
+    "butter_2norm": 1.3284,
+    "frames": 316
+   },
+   "grainoff": {
+    "butter_max_p95": 5.327,
+    "butter_2norm": 1.1191,
+    "frames": 316
+   }
+  }
+ },
+ "bb1": {
+  "self": {
+   "amp_Y_s3.0": 1.0,
+   "err_Y_s3.0": 0.0,
+   "amp_Y_s1.5": 1.0,
+   "err_Y_s1.5": 0.0,
+   "amp_Cb": 1.0,
+   "peak_Cb": 1.0,
+   "err_Cb": 0.0,
+   "amp_Cr": 1.0,
+   "peak_Cr": 1.0,
+   "err_Cr": 0.0
+  },
+  "confound": {
+   "noise_sigma_8bit": 1.1389,
+   "base": {
+    "amp_Y_s3.0": 0.99674,
+    "err_Y_s3.0": 0.0213,
+    "amp_Y_s1.5": 0.99512,
+    "err_Y_s1.5": 0.0339
+   },
+   "noisy": {
+    "amp_Y_s3.0": 0.99675,
+    "err_Y_s3.0": 0.02206,
+    "amp_Y_s1.5": 0.99516,
+    "err_Y_s1.5": 0.03519
+   }
+  },
+  "ffvship": {
+   "enc": {
+    "butter_max_p95": 9.125,
+    "butter_2norm": 1.4354,
+    "frames": 305
+   },
+   "grainon": {
+    "butter_max_p95": 9.125,
+    "butter_2norm": 1.4354,
+    "frames": 305
+   },
+   "grainoff": {
+    "butter_max_p95": 9.125,
+    "butter_2norm": 1.3793,
+    "frames": 305
+   }
+  }
+ }
+}

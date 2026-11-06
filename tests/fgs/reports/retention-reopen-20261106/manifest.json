@@ -1,0 +1,464 @@
+{
+ "bd1": {
+  "wid": "bd1",
+  "title": "bd",
+  "cls": "WEB fine grain",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/Black.Doves.S02.1080p.NF.WEB-DL.DDP5.1.Atmos.H.264-RAWR/Black.Doves.S02E04.The.Opportunity.to.Become.Savage.1080p.NF.WEB-DL.DDP5.1.Atmos.H.264-RAWR.mkv",
+  "nominal_start": 1040.1,
+  "shift": 60,
+  "seek_target": 1100.1,
+  "actual_start_pts": 1099.042,
+  "frames": 316,
+  "fps": "24/1",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 0.222,
+  "v": 2,
+  "active": {
+   "raw": [
+    0,
+    103,
+    1920,
+    873
+   ],
+   "rect": [
+    0,
+    128,
+    1920,
+    832
+   ]
+  },
+  "shift_note": "+60 s once: 1.000 of frames in the nominal window had active-area mean luma < 32"
+ },
+ "bd2": {
+  "wid": "bd2",
+  "title": "bd",
+  "cls": "WEB fine grain",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/Black.Doves.S02.1080p.NF.WEB-DL.DDP5.1.Atmos.H.264-RAWR/Black.Doves.S02E04.The.Opportunity.to.Become.Savage.1080p.NF.WEB-DL.DDP5.1.Atmos.H.264-RAWR.mkv",
+  "nominal_start": 2253.5,
+  "shift": 60,
+  "seek_target": 2313.5,
+  "actual_start_pts": 2310.417,
+  "frames": 364,
+  "fps": "24/1",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 1.0,
+  "v": 2,
+  "active": {
+   "raw": [
+    0,
+    103,
+    1920,
+    873
+   ],
+   "rect": [
+    0,
+    128,
+    1920,
+    832
+   ]
+  },
+  "shift_note": "+60 s once: 1.000 of frames in the nominal window had active-area mean luma < 32"
+ },
+ "bb1": {
+  "wid": "bb1",
+  "title": "bb",
+  "cls": "moderate 35mm",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Brokeback.Mountain.2005.1080p.BluRay.Remux.AVC.DTS-HD.MA.5.1-CiNEPHiLES/Brokeback.Mountain.2005.1080p.Blu-ray.Remux.AVC.DTS-HD.MA.5.1-CiNEPHiLES.mkv",
+  "nominal_start": 2420.5,
+  "shift": 0,
+  "seek_target": 2420.5,
+  "actual_start_pts": 2419.959,
+  "frames": 305,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "active": {
+   "raw": [
+    0,
+    21,
+    1920,
+    1040
+   ],
+   "rect": [
+    0,
+    32,
+    1920,
+    1024
+   ]
+  },
+  "shift_note": null,
+  "v": 2
+ },
+ "bb2": {
+  "wid": "bb2",
+  "title": "bb",
+  "cls": "moderate 35mm",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Brokeback.Mountain.2005.1080p.BluRay.Remux.AVC.DTS-HD.MA.5.1-CiNEPHiLES/Brokeback.Mountain.2005.1080p.Blu-ray.Remux.AVC.DTS-HD.MA.5.1-CiNEPHiLES.mkv",
+  "nominal_start": 5244.5,
+  "shift": 0,
+  "seek_target": 5244.5,
+  "actual_start_pts": 5244.03,
+  "frames": 303,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "active": {
+   "raw": [
+    0,
+    21,
+    1920,
+    1039
+   ],
+   "rect": [
+    0,
+    32,
+    1920,
+    1024
+   ]
+  },
+  "shift_note": null,
+  "v": 2
+ },
+ "ca1": {
+  "wid": "ca1",
+  "title": "ca",
+  "cls": "moderate 35mm",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Coming.to.America.1988.BluRay.1080p.DTS-HD.MA.5.1.AVC.REMUX-FraMeSToR.mkv",
+  "nominal_start": 2102.7,
+  "shift": 0,
+  "seek_target": 2102.7,
+  "actual_start_pts": 2102.1,
+  "frames": 304,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "active": {
+   "raw": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "rect": [
+    0,
+    0,
+    1920,
+    1056
+   ]
+  },
+  "shift_note": null,
+  "v": 2
+ },
+ "ca2": {
+  "wid": "ca2",
+  "title": "ca",
+  "cls": "moderate 35mm",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Coming.to.America.1988.BluRay.1080p.DTS-HD.MA.5.1.AVC.REMUX-FraMeSToR.mkv",
+  "nominal_start": 4555.9,
+  "shift": 60,
+  "seek_target": 4615.9,
+  "actual_start_pts": 4615.277,
+  "frames": 304,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 1.0,
+  "v": 2,
+  "active": {
+   "raw": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "rect": [
+    0,
+    0,
+    1920,
+    1056
+   ]
+  },
+  "shift_note": "+60 s once: 1.000 of frames in the nominal window had active-area mean luma < 32"
+ },
+ "lob1": {
+  "wid": "lob1",
+  "title": "lob",
+  "cls": "older heavier 35mm",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Life of Brian 1979 BluRay 1080p DTS-HD MA 5 1 AVC REMUX-FraMeSToR/Life of Brian 1979 BluRay 1080p DTS-HD MA 5 1 AVC REMUX-FraMeSToR.mkv",
+  "nominal_start": 1687.1,
+  "shift": 0,
+  "seek_target": 1687.1,
+  "actual_start_pts": 1686.476,
+  "frames": 304,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 0.479,
+  "active": {
+   "raw": [
+    0,
+    20,
+    1920,
+    1040
+   ],
+   "rect": [
+    0,
+    32,
+    1920,
+    1024
+   ]
+  },
+  "shift_note": null,
+  "v": 2
+ },
+ "lob2": {
+  "wid": "lob2",
+  "title": "lob",
+  "cls": "older heavier 35mm",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Life of Brian 1979 BluRay 1080p DTS-HD MA 5 1 AVC REMUX-FraMeSToR/Life of Brian 1979 BluRay 1080p DTS-HD MA 5 1 AVC REMUX-FraMeSToR.mkv",
+  "nominal_start": 3655.3,
+  "shift": 0,
+  "seek_target": 3655.3,
+  "actual_start_pts": 3654.859,
+  "frames": 300,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "active": {
+   "raw": [
+    0,
+    20,
+    1920,
+    1040
+   ],
+   "rect": [
+    0,
+    32,
+    1920,
+    1024
+   ]
+  },
+  "shift_note": null,
+  "v": 2
+ },
+ "bat1": {
+  "wid": "bat1",
+  "title": "bat",
+  "cls": "older heavier 35mm",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Breakfast.at.Tiffanys.1961.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-EPSiLON/Breakfast.at.Tiffanys.1961.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-EPSiLON.mkv",
+  "nominal_start": 2071.8,
+  "shift": 0,
+  "seek_target": 2071.8,
+  "actual_start_pts": 2071.236,
+  "frames": 303,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "v": 2,
+  "active": {
+   "raw": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "rect": [
+    0,
+    0,
+    1920,
+    1056
+   ]
+  },
+  "shift_note": null
+ },
+ "bat2": {
+  "wid": "bat2",
+  "title": "bat",
+  "cls": "older heavier 35mm",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Breakfast.at.Tiffanys.1961.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-EPSiLON/Breakfast.at.Tiffanys.1961.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-EPSiLON.mkv",
+  "nominal_start": 4488.8,
+  "shift": 0,
+  "seek_target": 4488.8,
+  "actual_start_pts": 4488.692,
+  "frames": 312,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "v": 2,
+  "active": {
+   "raw": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "rect": [
+    0,
+    0,
+    1920,
+    1056
+   ]
+  },
+  "shift_note": null
+ },
+ "nc1": {
+  "wid": "nc1",
+  "title": "nc",
+  "cls": "digital clean",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Nightcrawler.2014.1080p.BluRay.Hybrid.REMUX.AVC.Atmos-TRiToN.mkv",
+  "nominal_start": 2124.0,
+  "shift": 0,
+  "seek_target": 2124.0,
+  "actual_start_pts": 2123.705,
+  "frames": 296,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "v": 2,
+  "active": {
+   "raw": [
+    0,
+    140,
+    1920,
+    800
+   ],
+   "rect": [
+    0,
+    160,
+    1920,
+    768
+   ]
+  },
+  "shift_note": null
+ },
+ "nc2": {
+  "wid": "nc2",
+  "title": "nc",
+  "cls": "digital clean",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Nightcrawler.2014.1080p.BluRay.Hybrid.REMUX.AVC.Atmos-TRiToN.mkv",
+  "nominal_start": 4602.1,
+  "shift": 0,
+  "seek_target": 4602.1,
+  "actual_start_pts": 4601.388,
+  "frames": 306,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "v": 2,
+  "active": {
+   "raw": [
+    0,
+    140,
+    1920,
+    800
+   ],
+   "rect": [
+    0,
+    160,
+    1920,
+    768
+   ]
+  },
+  "shift_note": null
+ },
+ "dkr1": {
+  "wid": "dkr1",
+  "title": "dkr",
+  "cls": "animation control",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Batman.The.Dark.Knight.Returns.Part.1.2012.1080p.Blu-ray.Remux.AVC.DTS-HD.MA.5.1-LEGi0N/Batman.The.Dark.Knight.Returns.Part.1.2012.1080p.Blu-ray.Remux.AVC.DTS-HD.MA.5.1-LEGi0N.mkv",
+  "nominal_start": 1374.8,
+  "shift": 60,
+  "seek_target": 1434.8,
+  "actual_start_pts": 1434.642,
+  "frames": 293,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "v": 2,
+  "active": {
+   "raw": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "rect": [
+    0,
+    0,
+    1920,
+    1056
+   ]
+  },
+  "shift_note": "+60 s once: 0.554 of frames in the nominal window had active-area mean luma < 32"
+ },
+ "dkr2": {
+  "wid": "dkr2",
+  "title": "dkr",
+  "cls": "animation control",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Batman.The.Dark.Knight.Returns.Part.1.2012.1080p.Blu-ray.Remux.AVC.DTS-HD.MA.5.1-LEGi0N/Batman.The.Dark.Knight.Returns.Part.1.2012.1080p.Blu-ray.Remux.AVC.DTS-HD.MA.5.1-LEGi0N.mkv",
+  "nominal_start": 2978.7,
+  "shift": 60,
+  "seek_target": 3038.7,
+  "actual_start_pts": 3038.118,
+  "frames": 303,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "decode_errors": "",
+  "lowluma_frac": 0.65,
+  "v": 2,
+  "active": {
+   "raw": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "rect": [
+    0,
+    0,
+    1920,
+    1056
+   ]
+  },
+  "shift_note": "+60 s once: 0.503 of frames in the nominal window had active-area mean luma < 32"
+ }
+}
