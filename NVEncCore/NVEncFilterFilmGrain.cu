@@ -1214,6 +1214,64 @@ static RGY_ERR launch_residual_retain(const RGYFrameInfo& lumaDst, const RGYFram
     return err_to_rgy(cudaGetLastError());
 }
 
+// retain-lp: Gaussian-lowpassed residual retention, separable, clamp-to-edge.
+// Pass 1 writes tmp = horizontal blur of (orig - clean); dst is only read.
+template<typename Type, int shift>
+__global__ void kernel_fgs_retain_lp_h(float *__restrict__ tmp, const uint8_t *__restrict__ dst, const int dstPitch,
+    const uint8_t *__restrict__ src, const int srcPitch, const int width, const int height,
+    const int radius, const float invTwoSigma2) {
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+    if (x >= width || y >= height) return;
+    float sum = 0.0f, wsum = 0.0f;
+    for (int k = -radius; k <= radius; ++k) {
+        const int xx = min(width - 1, max(0, x + k));
+        const float w = __expf(-static_cast<float>(k * k) * invTwoSigma2);
+        sum += w * static_cast<float>(load_code<Type, shift>(src, srcPitch, xx, y) - load_code<Type, shift>(dst, dstPitch, xx, y));
+        wsum += w;
+    }
+    tmp[static_cast<size_t>(y) * width + x] = sum / wsum;
+}
+
+// Pass 2 blurs vertically and writes clean + retain * blur. dst is read only at
+// the thread's own pixel, which the thread then overwrites.
+template<typename Type, int shift>
+__global__ void kernel_fgs_retain_lp_v(uint8_t *__restrict__ dst, const int dstPitch, const float *__restrict__ tmp,
+    const int width, const int height, const int maxVal, const float retain,
+    const int radius, const float invTwoSigma2) {
+    const int x = blockIdx.x * blockDim.x + threadIdx.x;
+    const int y = blockIdx.y * blockDim.y + threadIdx.y;
+    if (x >= width || y >= height) return;
+    float sum = 0.0f, wsum = 0.0f;
+    for (int k = -radius; k <= radius; ++k) {
+        const int yy = min(height - 1, max(0, y + k));
+        const float w = __expf(-static_cast<float>(k * k) * invTwoSigma2);
+        sum += w * tmp[static_cast<size_t>(yy) * width + x];
+        wsum += w;
+    }
+    const float clean = static_cast<float>(load_code<Type, shift>(dst, dstPitch, x, y));
+    const int out = min(maxVal, max(0, __float2int_rn(clean + retain * (sum / wsum))));
+    store_code<Type, shift>(dst, dstPitch, x, y, out);
+}
+
+template<typename Type, int shift>
+static RGY_ERR launch_residual_retain_lp(const RGYFrameInfo& lumaDst, const RGYFrameInfo& lumaSrc,
+    float *scratch, const int bitDepth, const float retain, const float sigma, cudaStream_t stream) {
+    const dim3 block(32, 8);
+    const dim3 grid(divCeil(lumaDst.width, static_cast<int>(block.x)), divCeil(lumaDst.height, static_cast<int>(block.y)));
+    const int radius = static_cast<int>(std::ceil(3.0f * sigma));
+    const float invTwoSigma2 = 1.0f / (2.0f * sigma * sigma);
+    kernel_fgs_retain_lp_h<Type, shift><<<grid, block, 0, stream>>>(scratch,
+        lumaDst.ptr[0], lumaDst.pitch[0], lumaSrc.ptr[0], lumaSrc.pitch[0],
+        lumaDst.width, lumaDst.height, radius, invTwoSigma2);
+    auto err = cudaGetLastError();
+    if (err != cudaSuccess) return err_to_rgy(err);
+    kernel_fgs_retain_lp_v<Type, shift><<<grid, block, 0, stream>>>(
+        lumaDst.ptr[0], lumaDst.pitch[0], scratch, lumaDst.width, lumaDst.height,
+        (1 << bitDepth) - 1, retain, radius, invTwoSigma2);
+    return err_to_rgy(cudaGetLastError());
+}
+
 // Couple post-recovery synthesis strength to the retained source residual on
 // every plane, including both interleaved chroma components of NV12/P010.
 template<typename Type, int shift>
@@ -1375,7 +1433,7 @@ struct NVEncFilterFilmGrain::AnalyzerState {
 
 NVEncFilmGrainAnalyzerConfig::NVEncFilmGrainAnalyzerConfig() :
     enable(true), analyzeChroma(true), clipToRestrictedRange(true),
-    denoiser(FGS_DENOISE_FFT3D), fft3dTemporal(1), motionRefs(2), residualRetain(0.0f), autoRetainMax(0.5f), denoiseLevel(0.0f),
+    denoiser(FGS_DENOISE_FFT3D), fft3dTemporal(1), motionRefs(2), residualRetain(0.0f), autoRetainMax(0.5f), retainLowpassSigma(0.0f), denoiseLevel(0.0f),
     denoisePasses(2), modelWindow(8), minModelFrames(1), minFlatBlocks(8),
     minFlatFraction(0.02f), minNoiseLevel(0.5f), maxNoiseLevel(50.0f) {
 }
@@ -1389,6 +1447,7 @@ bool NVEncFilmGrainAnalyzerConfig::operator==(const NVEncFilmGrainAnalyzerConfig
         && motionRefs == other.motionRefs
         && residualRetain == other.residualRetain
         && autoRetainMax == other.autoRetainMax
+        && retainLowpassSigma == other.retainLowpassSigma
         && denoiseLevel == other.denoiseLevel
         && denoisePasses == other.denoisePasses
         && modelWindow == other.modelWindow
@@ -1400,7 +1459,7 @@ bool NVEncFilmGrainAnalyzerConfig::operator==(const NVEncFilmGrainAnalyzerConfig
 }
 
 tstring NVEncFilmGrainAnalyzerConfig::print() const {
-    return strsprintf(_T("film-grain: denoise=%s%s, denoiser=%s, chroma=%s, window=%d%s%s"),
+    return strsprintf(_T("film-grain: denoise=%s%s, denoiser=%s, chroma=%s, window=%d%s%s%s"),
         denoiseLevel <= 0.0f ? _T("auto") : _T(""),
         denoiseLevel <= 0.0f ? _T("") : strsprintf(_T("%.2f"), denoiseLevel).c_str(),
         denoiser == FGS_DENOISE_FFT3D
@@ -1409,7 +1468,8 @@ tstring NVEncFilmGrainAnalyzerConfig::print() const {
         analyzeChroma ? _T("on") : _T("off"), modelWindow,
         denoiser == FGS_DENOISE_MOTION ? strsprintf(_T(", motion-refs=%d"), motionRefs).c_str() : _T(""),
         residualRetain < 0.0f ? strsprintf(_T(", retain=auto, retain-max=%.2f"), autoRetainMax).c_str()
-            : (residualRetain > 0.0f ? strsprintf(_T(", retain=%.2f"), residualRetain).c_str() : _T("")));
+            : (residualRetain > 0.0f ? strsprintf(_T(", retain=%.2f"), residualRetain).c_str() : _T("")),
+        retainLowpassSigma > 0.0f ? strsprintf(_T(", retain-lp=%.2f"), retainLowpassSigma).c_str() : _T(""));
 }
 
 RGYFrameDataFilmGrain::RGYFrameDataFilmGrain() :
@@ -1454,7 +1514,7 @@ tstring NVEncFilterParamFilmGrain::print() const {
 NVEncFilterFilmGrain::NVEncFilterFilmGrain() :
     m_denoiseWork(), m_detailReference(), m_detailConfidence(), m_detailReferenceValid(false), m_trainingHistory(std::make_unique<FilmGrainTrainingHistory>()), m_fft3d(), m_fft3dParam(), m_fft3dSigma(-1.0f),
     m_motionDegrain(), m_motionDegrainParam(),
-    m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sourceBlendLut(), m_sceneCounts(), m_modelStats(),
+    m_blockMetrics(), m_blockMask(), m_sigmaMap(), m_strengthLut(), m_sourceBlendLut(), m_retainLpScratch(), m_sceneCounts(), m_modelStats(),
     m_tableOutPath(), m_tableTimebase(), m_tableFrameDuration10MHz(0), m_tableEntries(), m_tableWriter(),
     m_state(std::make_unique<AnalyzerState>()), m_blocksX(0), m_blocksY(0) {
     m_name = _T("film-grain");
@@ -1657,6 +1717,10 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     }
     config.residualRetain = config.residualRetain < 0.0f
         ? -1.0f : clamp(config.residualRetain, 0.0f, 0.9f);
+    if (!(config.retainLowpassSigma == 0.0f || (config.retainLowpassSigma >= 0.5f && config.retainLowpassSigma <= 8.0f))) {
+        AddMessage(RGY_LOG_ERROR, _T("Film-grain retain-lp must be 0 or in 0.5 - 8.\n"));
+        return RGY_ERR_INVALID_PARAM;
+    }
 
     auto sts = AllocFrameBuf(prm->frameOut, 2);
     if (sts != RGY_ERR_NONE) return sts;
@@ -1701,6 +1765,14 @@ RGY_ERR NVEncFilterFilmGrain::init(std::shared_ptr<NVEncFilterParam> pParam, std
     m_strengthLut = std::make_unique<CUMemBufPair>(3 * FGS_STRENGTH_LUT_SIZE * sizeof(float));
     m_sourceBlendLut = std::make_unique<CUMemBufPair>(3 * FGS_STRENGTH_LUT_SIZE * sizeof(float));
     m_sceneCounts = std::make_unique<CUMemBufPair>(8 * sizeof(uint32_t));
+    m_retainLpScratch.reset();
+    if (config.retainLowpassSigma > 0.0f) {
+        m_retainLpScratch = std::make_unique<CUMemBuf>(static_cast<size_t>(prm->frameIn.width) * prm->frameIn.height * sizeof(float));
+        if ((sts = m_retainLpScratch->alloc()) != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("Failed to allocate film-grain retain-lp scratch: %s.\n"), get_err_mes(sts));
+            return sts;
+        }
+    }
     m_modelStats = std::make_unique<CUMemBufPair>(sizeof(FilmGrainGpuStats));
     if ((sts = m_blockMetrics->alloc()) != RGY_ERR_NONE
         || (sts = m_blockMask->alloc()) != RGY_ERR_NONE
@@ -2699,6 +2771,10 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         if ((sts = copyFrameAsync(output, source, stream)) != RGY_ERR_NONE) return sts;
     }
     diagnostics.reliable = modelValid;
+    const bool retainLp = prm->filmGrain.retainLowpassSigma > 0.0f && diagnostics.residualRetain > 0.0f;
+    // With retain-lp the retained residual counts as detail, not grain, so the
+    // recovery and source-limited blends treat it as zero retained fraction.
+    const double blendRetained = retainLp ? 0.0 : static_cast<double>(diagnostics.residualRetain);
     if (modelValid && params.applyGrain && diagnostics.residualRetain > 0.0f) {
         // Residual retention: keep retain * (source - clean) in the base luma
         // and shrink the signalled synthesis so total variance is preserved.
@@ -2707,23 +2783,30 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // recording and the level-compensation LUT so both describe what the
         // decoder actually synthesizes on top of the blended base.
         const float retain = diagnostics.residualRetain;
-        const float synthScale = std::sqrt(std::max(0.0f, 1.0f - retain * retain));
+        // retain-lp: the lowpassed residual is structure, not grain, so synthesis
+        // keeps its full strength (the fine grain it replaces is still synthesized).
+        const float synthScale = retainLp ? 1.0f : std::sqrt(std::max(0.0f, 1.0f - retain * retain));
         for (uint32_t i = 0; i < params.numYPoints; ++i) {
             params.pointYScaling[i] = static_cast<uint8_t>(clamp(
                 static_cast<int>(std::lround(params.pointYScaling[i] * synthScale)), 0, 255));
         }
         const auto lumaOut = getPlane(output, RGY_PLANE_Y);
         const auto lumaSrc = getPlane(source, RGY_PLANE_Y);
+        float *const lpScratch = retainLp ? static_cast<float *>(m_retainLpScratch->ptr) : nullptr;
+        const float lpSigma = prm->filmGrain.retainLowpassSigma;
         switch (output->csp) {
         case RGY_CSP_NV12:
         case RGY_CSP_YV12:
-            sts = launch_residual_retain<uint8_t, 0>(lumaOut, lumaSrc, bitDepth, retain, stream);
+            sts = retainLp ? launch_residual_retain_lp<uint8_t, 0>(lumaOut, lumaSrc, lpScratch, bitDepth, retain, lpSigma, stream)
+                           : launch_residual_retain<uint8_t, 0>(lumaOut, lumaSrc, bitDepth, retain, stream);
             break;
         case RGY_CSP_YV12_10:
-            sts = launch_residual_retain<uint16_t, 0>(lumaOut, lumaSrc, bitDepth, retain, stream);
+            sts = retainLp ? launch_residual_retain_lp<uint16_t, 0>(lumaOut, lumaSrc, lpScratch, bitDepth, retain, lpSigma, stream)
+                           : launch_residual_retain<uint16_t, 0>(lumaOut, lumaSrc, bitDepth, retain, stream);
             break;
         case RGY_CSP_P010:
-            sts = launch_residual_retain<uint16_t, 6>(lumaOut, lumaSrc, bitDepth, retain, stream);
+            sts = retainLp ? launch_residual_retain_lp<uint16_t, 6>(lumaOut, lumaSrc, lpScratch, bitDepth, retain, lpSigma, stream)
+                           : launch_residual_retain<uint16_t, 6>(lumaOut, lumaSrc, bitDepth, retain, stream);
             break;
         default:
             sts = RGY_ERR_UNSUPPORTED;
@@ -2750,13 +2833,13 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         switch (output->csp) {
         case RGY_CSP_NV12:
         case RGY_CSP_YV12:
-            sts = launch_recovery_blend<uint8_t, 0>(output, source, bitDepth, recoveryGain, diagnostics.residualRetain, stream);
+            sts = launch_recovery_blend<uint8_t, 0>(output, source, bitDepth, recoveryGain, blendRetained, stream);
             break;
         case RGY_CSP_YV12_10:
-            sts = launch_recovery_blend<uint16_t, 0>(output, source, bitDepth, recoveryGain, diagnostics.residualRetain, stream);
+            sts = launch_recovery_blend<uint16_t, 0>(output, source, bitDepth, recoveryGain, blendRetained, stream);
             break;
         case RGY_CSP_P010:
-            sts = launch_recovery_blend<uint16_t, 6>(output, source, bitDepth, recoveryGain, diagnostics.residualRetain, stream);
+            sts = launch_recovery_blend<uint16_t, 6>(output, source, bitDepth, recoveryGain, blendRetained, stream);
             break;
         default:
             sts = RGY_ERR_UNSUPPORTED;
@@ -2772,7 +2855,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
         // the actual signalled ratio. Couple it to any earlier scalar source
         // retention/recovery; reducing synthesis alone would blur the picture.
         auto scaleLikeOutput = [&](NV_ENC_FILM_GRAIN_PARAMS_AV1& curve) {
-            if (diagnostics.residualRetain > 0.0f) {
+            if (diagnostics.residualRetain > 0.0f && !retainLp) {
                 const float retain = diagnostics.residualRetain;
                 const float synthScale = std::sqrt(std::max(0.0f, 1.0f-retain*retain));
                 for (uint32_t i=0;i<curve.numYPoints;++i)
@@ -2798,7 +2881,7 @@ RGY_ERR NVEncFilterFilmGrain::run_filter(const RGYFrameInfo *pInputFrame, RGYFra
             for (int x=0;x<FGS_STRENGTH_LUT_SIZE;++x) {
                 if (m_state->cleanCaps.gain(plane, x) >= 1.0) limited[x] = sourceLimited[x];
             }
-            const double retained=plane==0 ? diagnostics.residualRetain : 0.0;
+            const double retained=plane==0 ? blendRetained : 0.0;
             const double prior=std::sqrt(std::max(0.0,1.0-recoveryGain*recoveryGain*(1.0-retained*retained)));
             for (int x=0;x<FGS_STRENGTH_LUT_SIZE;++x) {
                 const double gain=original[x]>1e-12f ? clamp(static_cast<double>(limited[x])/original[x],0.0,1.0) : 1.0;
@@ -2918,6 +3001,7 @@ void NVEncFilterFilmGrain::close() {
     m_sigmaMap.reset();
     m_strengthLut.reset();
     m_sourceBlendLut.reset();
+    m_retainLpScratch.reset();
     m_sceneCounts.reset();
     m_modelStats.reset();
     if (m_state) m_state->clear(true);
