@@ -1,0 +1,371 @@
+{
+ "bear1": {
+  "wid": "bear1",
+  "title": "bear",
+  "cls": "WEB 1080p",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/The.Bear.S04.1080p.DSNP.WEB-DL.DDP5.1.H.264-NTb/The.Bear.S04E10.1080p.DSNP.WEB-DL.DDP5.1.H.264-NTb.mkv",
+  "nominal_start": 506.7,
+  "shift": 0,
+  "seek_target": 506.7,
+  "actual_start_pts": 504.504,
+  "cut_first_packet_pts": 0.0,
+  "cut_frames_full": 343,
+  "frames": 343,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "codec": "h264",
+  "color": [
+   "bt709",
+   "bt709",
+   "bt709"
+  ],
+  "decode_errors": "",
+  "lowluma_frac": 0.341,
+  "v": 3,
+  "active": {
+   "raw": [
+    0,
+    21,
+    1920,
+    1038
+   ],
+   "rect": [
+    0,
+    32,
+    1920,
+    1024
+   ]
+  },
+  "shift_note": null
+ },
+ "bear2": {
+  "wid": "bear2",
+  "title": "bear",
+  "cls": "WEB 1080p",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/The.Bear.S04.1080p.DSNP.WEB-DL.DDP5.1.H.264-NTb/The.Bear.S04E10.1080p.DSNP.WEB-DL.DDP5.1.H.264-NTb.mkv",
+  "nominal_start": 1013.5,
+  "shift": 0,
+  "seek_target": 1013.5,
+  "actual_start_pts": 1013.012,
+  "cut_first_packet_pts": 0.0,
+  "cut_frames_full": 302,
+  "frames": 302,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "codec": "h264",
+  "color": [
+   "bt709",
+   "bt709",
+   "bt709"
+  ],
+  "decode_errors": "",
+  "lowluma_frac": 0.348,
+  "v": 3,
+  "active": {
+   "raw": [
+    0,
+    21,
+    1920,
+    1038
+   ],
+   "rect": [
+    0,
+    32,
+    1920,
+    1024
+   ]
+  },
+  "shift_note": null
+ },
+ "bear3": {
+  "wid": "bear3",
+  "title": "bear",
+  "cls": "WEB 1080p",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/The.Bear.S04.1080p.DSNP.WEB-DL.DDP5.1.H.264-NTb/The.Bear.S04E10.1080p.DSNP.WEB-DL.DDP5.1.H.264-NTb.mkv",
+  "nominal_start": 1520.2,
+  "shift": 60,
+  "seek_target": 1580.2,
+  "actual_start_pts": 1577.576,
+  "cut_first_packet_pts": 0.0,
+  "cut_frames_full": 353,
+  "frames": 353,
+  "fps": "24000/1001",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "codec": "h264",
+  "color": [
+   "bt709",
+   "bt709",
+   "bt709"
+  ],
+  "decode_errors": "",
+  "lowluma_frac": 0.674,
+  "v": 3,
+  "active": {
+   "raw": [
+    0,
+    21,
+    1920,
+    1038
+   ],
+   "rect": [
+    0,
+    32,
+    1920,
+    1024
+   ]
+  },
+  "shift_note": "+60 s once: 0.854 of scored frames in the nominal window had active-area mean luma < 32"
+ },
+ "pan1": {
+  "wid": "pan1",
+  "title": "pan",
+  "cls": "WEB 1080p",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/Pantheon.S02.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb/Pantheon.S02E08.Deep.Time.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb.mkv",
+  "nominal_start": 689.2,
+  "shift": 0,
+  "seek_target": 689.2,
+  "actual_start_pts": 688.0,
+  "cut_first_packet_pts": 0.0,
+  "cut_frames_full": 319,
+  "frames": 319,
+  "fps": "24/1",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "codec": "h264",
+  "color": [
+   "bt709",
+   "bt709",
+   "bt709"
+  ],
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "v": 3,
+  "active": {
+   "raw": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "rect": [
+    0,
+    0,
+    1920,
+    1056
+   ]
+  },
+  "shift_note": null
+ },
+ "pan2": {
+  "wid": "pan2",
+  "title": "pan",
+  "cls": "WEB 1080p",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/Pantheon.S02.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb/Pantheon.S02E08.Deep.Time.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb.mkv",
+  "nominal_start": 1378.4,
+  "shift": 60,
+  "seek_target": 1438.4,
+  "actual_start_pts": 1438.0,
+  "cut_first_packet_pts": 0.0,
+  "cut_frames_full": 300,
+  "frames": 300,
+  "fps": "24/1",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "codec": "h264",
+  "color": [
+   "bt709",
+   "bt709",
+   "bt709"
+  ],
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "v": 3,
+  "active": {
+   "raw": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "rect": [
+    0,
+    0,
+    1920,
+    1056
+   ]
+  },
+  "shift_note": "+60 s once: 0.887 of scored frames in the nominal window had active-area mean luma < 32"
+ },
+ "pan3": {
+  "wid": "pan3",
+  "title": "pan",
+  "cls": "WEB 1080p",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/tv-shows/Pantheon.S02.REPACK.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb/Pantheon.S02E08.Deep.Time.1080p.AMZN.WEB-DL.DDP5.1.H.264-NTb.mkv",
+  "nominal_start": 2067.5,
+  "shift": 0,
+  "seek_target": 2067.5,
+  "actual_start_pts": 2066.0,
+  "cut_first_packet_pts": 0.0,
+  "cut_frames_full": 326,
+  "frames": 326,
+  "fps": "24/1",
+  "width": 1920,
+  "height": 1080,
+  "pix_fmt": "yuv420p",
+  "codec": "h264",
+  "color": [
+   "bt709",
+   "bt709",
+   "bt709"
+  ],
+  "decode_errors": "",
+  "lowluma_frac": 0.098,
+  "v": 3,
+  "active": {
+   "raw": [
+    0,
+    0,
+    1920,
+    1080
+   ],
+   "rect": [
+    0,
+    0,
+    1920,
+    1056
+   ]
+  },
+  "shift_note": null
+ },
+ "tf1": {
+  "wid": "tf1",
+  "title": "tf",
+  "cls": "UHD DV remux (BL)",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Transformers.The.Last.Knight.2017.NORDiC.REMUX.2160p.DV.HDR.UHD-BluRay.HEVC.TrueHD.Atmos.7.1-RAPiDCOWS/Transformers.The.Last.Knight.2017.NORDiC.REMUX.2160p.DV.HDR.UHD-BluRay.HEVC.TrueHD.Atmos.7.1-RAPiDCOWS.mkv",
+  "nominal_start": 2783.6,
+  "shift": 0,
+  "seek_target": 2783.6,
+  "actual_start_pts": 2783.28,
+  "cut_first_packet_pts": 0.0,
+  "cut_frames_full": 299,
+  "frames": 149,
+  "fps": "24000/1001",
+  "width": 3840,
+  "height": 2160,
+  "pix_fmt": "yuv420p10le",
+  "codec": "ffv1",
+  "color": [
+   "bt2020nc",
+   "smpte2084",
+   "bt2020"
+  ],
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "v": 3,
+  "active": {
+   "raw": [
+    0,
+    69,
+    3840,
+    2022
+   ],
+   "rect": [
+    0,
+    96,
+    3840,
+    1984
+   ]
+  },
+  "shift_note": null
+ },
+ "tf2": {
+  "wid": "tf2",
+  "title": "tf",
+  "cls": "UHD DV remux (BL)",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Transformers.The.Last.Knight.2017.NORDiC.REMUX.2160p.DV.HDR.UHD-BluRay.HEVC.TrueHD.Atmos.7.1-RAPiDCOWS/Transformers.The.Last.Knight.2017.NORDiC.REMUX.2160p.DV.HDR.UHD-BluRay.HEVC.TrueHD.Atmos.7.1-RAPiDCOWS.mkv",
+  "nominal_start": 5103.3,
+  "shift": 0,
+  "seek_target": 5103.3,
+  "actual_start_pts": 5102.973,
+  "cut_first_packet_pts": 0.0,
+  "cut_frames_full": 299,
+  "frames": 149,
+  "fps": "24000/1001",
+  "width": 3840,
+  "height": 2160,
+  "pix_fmt": "yuv420p10le",
+  "codec": "ffv1",
+  "color": [
+   "bt2020nc",
+   "smpte2084",
+   "bt2020"
+  ],
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "v": 3,
+  "active": {
+   "raw": [
+    0,
+    69,
+    3840,
+    2022
+   ],
+   "rect": [
+    0,
+    96,
+    3840,
+    1984
+   ]
+  },
+  "shift_note": null
+ },
+ "tf3": {
+  "wid": "tf3",
+  "title": "tf",
+  "cls": "UHD DV remux (BL)",
+  "src": "/media/merged-storage/media/downloads/long-term-seeding/movies/Transformers.The.Last.Knight.2017.NORDiC.REMUX.2160p.DV.HDR.UHD-BluRay.HEVC.TrueHD.Atmos.7.1-RAPiDCOWS/Transformers.The.Last.Knight.2017.NORDiC.REMUX.2160p.DV.HDR.UHD-BluRay.HEVC.TrueHD.Atmos.7.1-RAPiDCOWS.mkv",
+  "nominal_start": 7423.0,
+  "shift": 0,
+  "seek_target": 7423.0,
+  "actual_start_pts": 7422.29,
+  "cut_first_packet_pts": 0.0,
+  "cut_frames_full": 308,
+  "frames": 154,
+  "fps": "24000/1001",
+  "width": 3840,
+  "height": 2160,
+  "pix_fmt": "yuv420p10le",
+  "codec": "ffv1",
+  "color": [
+   "bt2020nc",
+   "smpte2084",
+   "bt2020"
+  ],
+  "decode_errors": "",
+  "lowluma_frac": 0.0,
+  "v": 3,
+  "active": {
+   "raw": [
+    0,
+    69,
+    3840,
+    2022
+   ],
+   "rect": [
+    0,
+    96,
+    3840,
+    1984
+   ]
+  },
+  "shift_note": null
+ }
+}
