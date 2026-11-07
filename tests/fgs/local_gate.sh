@@ -254,6 +254,34 @@ extract_binary() {
     verify_sha256 "$output" "$expected" "$image"
 }
 
+# Every nvencc the gate runs (candidate and references) is dynamically linked
+# against FFmpeg 6, which the host no longer has (Ubuntu 26.04). The build image
+# does. make_shim writes a wrapper that runs the real binary in that image with
+# the GPU and with host paths mounted at the same path, so every argument path
+# keeps working. Callers keep hashing and recording the REAL binary.
+SHIM_DIR="$REPORT_DIR/shims"
+GATE_MOUNTS="${FGS_GATE_MOUNTS:-/tmp /home /media /opt}"
+make_shim() {  # real binary -> prints shim path
+    local real="$1" shim mounts="" m
+    shim="$SHIM_DIR/$(basename "$(dirname "$real")")-$(basename "$real")"
+    mkdir -p "$SHIM_DIR"
+    for m in $GATE_MOUNTS "$(dirname "$real")"; do mounts="$mounts -v $m:$m"; done
+    # RLIMIT_FSIZE and an ignored SIGXFSZ (used by test_export.py to force write
+    # failures) do not cross the docker boundary on their own, so forward both.
+    cat > "$shim" <<SHIM
+#!/bin/bash
+# real binary: $real (runs inside $BUILD_IMAGE)
+limit=()
+fsize="\$(ulimit -f)"
+[ "\$fsize" = unlimited ] || limit=(--ulimit "fsize=\$((fsize * 1024)):\$((fsize * 1024))")
+exec docker run --rm -i --gpus all --user $(id -u):$(id -g) -e HOME=/tmp "\${limit[@]}" \\
+    $mounts -w "\$PWD" --entrypoint /bin/sh "$BUILD_IMAGE" \\
+    -c 'trap "" XFSZ; exec "\$@"' sh "$real" "\$@"
+SHIM
+    chmod +x "$shim"
+    echo "$shim"
+}
+
 build_candidate_from_pin() {
     # Robustness backlog item 12: never build from the live tree. Three silent
     # failure modes are handled here:
@@ -321,20 +349,27 @@ if [ "$REFERENCE_CONTROL" = "r4050" ]; then
     CANDIDATE_NVENCC="$R4050"
 fi
 [ -x "$CANDIDATE_NVENCC" ] || die "candidate binary is not executable: $CANDIDATE_NVENCC"
-info "candidate       : $CANDIDATE_NVENCC"
+# From here on the binaries are run through shims; identity uses the real file.
+CANDIDATE_REAL="$CANDIDATE_NVENCC"
+CANDIDATE_NVENCC="$(make_shim "$CANDIDATE_REAL")"
+R4050_REAL="$R4050"; R4047_REAL="$R4047"
+[ ! -x "$R4050_REAL" ] || R4050="$(make_shim "$R4050_REAL")"
+[ ! -x "$R4047_REAL" ] || R4047="$(make_shim "$R4047_REAL")"
+info "candidate       : $CANDIDATE_REAL (run via $CANDIDATE_NVENCC)"
 info "candidate commit: ${CANDIDATE_COMMIT:-external binary; see hash}"
-info "candidate sha256: $(sha256sum "$CANDIDATE_NVENCC" | awk '{print $1}')"
+info "candidate sha256: $(sha256sum "$CANDIDATE_REAL" | awk '{print $1}')"
 info "denoiser        : $DENOISER"
-python3 - "$CANDIDATE_NVENCC" "$CANDIDATE_COMMIT" "$REFERENCE_CONTROL" "$DENOISER" "$REPORT_DIR/candidate.json" <<'PY'
+python3 - "$CANDIDATE_REAL" "$CANDIDATE_NVENCC" "$CANDIDATE_COMMIT" "$REFERENCE_CONTROL" "$DENOISER" "$REPORT_DIR/candidate.json" <<'PY'
 import datetime, hashlib, json, os, pathlib, subprocess, sys
-binary, commit, control, denoiser, output = sys.argv[1:]
+binary, shim, commit, control, denoiser, output = sys.argv[1:]
 path = pathlib.Path(binary).resolve()
-version = subprocess.run([str(path), "--version"], capture_output=True, text=True, check=True)
+version = subprocess.run([shim, "--version"], capture_output=True, text=True, check=True)
 pathlib.Path(output).write_text(json.dumps({
     "started_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     "candidate_commit": commit or None,
     "harness_commit": os.environ.get("FGS_GATE_HARNESS_COMMIT"),
     "candidate_nvencc": str(path),
+    "candidate_run_via": shim,
     "candidate_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
     "candidate_version": version.stdout.strip(),
     "reference_control": control or None,
