@@ -22,6 +22,7 @@ synthesized grain against the injected grain:
   dark_luma      grain clipped at legal black; shadow strength + black level
   retain_luma    retain 60% of original luma grain in the encoded base layer
   retain_10bit   retain_luma at 1080p 10-bit
+  retain_lp_luma retain=0.9,retain-lp=3 keeps fine grain synthetic and unscaled
 
 Sigma values in specs and reports are in 8-bit code values; 10-bit variants
 scale internally.
@@ -227,6 +228,8 @@ def encode(src, out, spec):
     fgs_opts = f"denoise=auto,chroma=auto,denoiser={FGS_DENOISER}"
     if "retain" in spec:
         fgs_opts += f",retain={spec['retain']}"
+    if "retain_lp" in spec:
+        fgs_opts += f",retain-lp={spec['retain_lp']}"
     cmd = [NVENCC, "--codec", "av1", "--cqp", "20",
            "--av1-film-grain", fgs_opts,
            "--log-level", "debug"]
@@ -438,6 +441,11 @@ TESTS = {
                       "chroma_levels": [18, 21, 24, 35, 64, 128, 192, 220, 228, 232, 236, 238]},
     "retain_luma":   {"sigma_y_mode": "const", "sigma_y": 6.0, "retain": 0.6},
     "retain_10bit":  {"sigma_y_mode": "const", "sigma_y": 6.0, "bits": 10, "retain": 0.6},
+    # Low-pass retention returns only G_sigma(orig - clean). On i.i.d. grain over
+    # flat bands that is about 0.9 * 6 / (2 * sqrt(pi) * 3) ~ 0.5 code values,
+    # so the base stays nearly clean and synthesis must stay at full strength.
+    "retain_lp_luma": {"sigma_y_mode": "const", "sigma_y": 6.0, "bits": 10,
+                       "retain": 0.9, "retain_lp": 3},
     # SUBTLE hard cut between two grainy scenes: the post-cut shot differs only
     # moderately (bands rolled 3 + offset), so the cross-cut SAD sits between
     # grain SAD and an obvious scene change -- the regime where a temporal
@@ -573,6 +581,27 @@ def run_test(test, keep):
                     f"ratio {fmt(synth_ratio)}, target {synth_target:.2f}")
         ok &= check("auto retention is temporally stable", len(set(retains)) <= 2,
                     f"values {sorted(set(retains))}")
+    elif "retain_lp" in spec:
+        frames = range(SKIP, nframes)
+        synth_sigma, _ = measure(on, off, frames)
+        retained_sigma = luma_band_sigmas(off, frames)
+        total_sigma = luma_band_sigmas(on, frames)
+        expected_y = np.maximum(expected[0], 1e-9)
+        retained_ratio = retained_sigma / expected_y
+        synth_ratio = synth_sigma[0] / expected_y
+        total_ratio = total_sigma / expected_y
+        lp_lines = [l for l in log.splitlines() if "retain-lp" in l]
+        ok &= check("retain-lp is active", bool(lp_lines),
+                    lp_lines[0].strip()[:120] if lp_lines else "no retain-lp in the filter log")
+        ok &= check("fine grain is not retained in the base",
+                    bool((retained_ratio < 0.25).all()),
+                    f"ratio {fmt(retained_ratio)}, limit 0.25 (plain retain=0.9 would be ~0.9)")
+        ok &= check("synthesis is not variance-compensated",
+                    bool((synth_ratio > 0.60).all() and (synth_ratio < 1.35).all()),
+                    f"ratio {fmt(synth_ratio)}, target 1.00")
+        ok &= check("played-out total grain stays matched",
+                    bool((total_ratio > 0.70).all() and (total_ratio < 1.35).all()),
+                    f"ratio {fmt(total_ratio)}, target 1.00")
     elif "retain" in spec:
         frames = range(SKIP, nframes)
         retain = float(spec["retain"])
