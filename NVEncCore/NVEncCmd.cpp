@@ -325,6 +325,9 @@ tstring encoder_help() {
         _T("                                   to match (0.0 - 0.9, default: 0.0)\n")
         _T("                                  retain-max=0.0-0.5     cap automatic residual blending\n")
         _T("                                   (default: 0.5; does not cap source fallback or file size)\n")
+        _T("                                  retain-lp=0|0.5-8      experimental: retain only the Gaussian-lowpassed\n")
+        _T("                                   (sigma in pixels) residual; the retained part counts as\n")
+        _T("                                   detail, so synthesis is not reduced (default: 0 = off)\n")
         _T("   --film-grain-table <path>    [AV1] read film grain parameters from an AOM filmgrn1 table.\n")
         _T("   --film-grain-table-out <path> write the measured film grain as an AOM filmgrn1 table\n")
         _T("                                  (with --av1-film-grain; also usable with --codec raw to\n")
@@ -1304,6 +1307,20 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                 }
                 continue;
             }
+            if (param_arg == _T("retain-lp")) {
+                try {
+                    size_t parsedChars = 0;
+                    const auto value = std::stof(param_val, &parsedChars);
+                    if (parsedChars != param_val.length() || !(value == 0.0f || (value >= 0.5f && value <= 8.0f))) {
+                        throw std::invalid_argument("range");
+                    }
+                    pParams->av1.filmGrainRetainLp = value;
+                } catch (...) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" retain-lp="), param_val);
+                    return 1;
+                }
+                continue;
+            }
             print_cmd_error_invalid_value(option_name, param);
             return 1;
         }
@@ -1939,7 +1956,7 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
         OPT_OPTBOOL(_T("--disable-seq-hdr"), av1.disableSeqHdr);
         if (pParams->av1.filmGrainAuto) {
             cmd << _T(" --av1-film-grain");
-            if (pParams->av1.filmGrainDenoise > 0.0f || !pParams->av1.filmGrainChroma || pParams->av1.filmGrainDenoiser != 0 || pParams->av1.filmGrainMotionRefs != 2 || pParams->av1.filmGrainRetain != 0.0f || pParams->av1.filmGrainRetainMax != 0.5f) {
+            if (pParams->av1.filmGrainDenoise > 0.0f || !pParams->av1.filmGrainChroma || pParams->av1.filmGrainDenoiser != 0 || pParams->av1.filmGrainMotionRefs != 2 || pParams->av1.filmGrainRetain != 0.0f || pParams->av1.filmGrainRetainMax != 0.5f || pParams->av1.filmGrainRetainLp != 0.0f) {
                 cmd << _T(" ");
                 bool needComma = false;
                 if (pParams->av1.filmGrainDenoise > 0.0f) {
@@ -1973,6 +1990,11 @@ tstring gen_cmd(const InEncodeVideoParam *pParams, bool save_disabled_prm, RGYDi
                 if (pParams->av1.filmGrainRetainMax != 0.5f) {
                     if (needComma) cmd << _T(",");
                     cmd << _T("retain-max=") << pParams->av1.filmGrainRetainMax;
+                    needComma = true;
+                }
+                if (pParams->av1.filmGrainRetainLp != 0.0f) {
+                    if (needComma) cmd << _T(",");
+                    cmd << _T("retain-lp=") << pParams->av1.filmGrainRetainLp;
                 }
             }
         }

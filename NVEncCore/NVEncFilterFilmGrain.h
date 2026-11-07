@@ -63,6 +63,7 @@ struct NVEncFilmGrainAnalyzerConfig {
                                // or -1.0 for content-adaptive auto retention; signalled luma synthesis
                                // is scaled by sqrt(1 - retain^2) so total grain variance is preserved
     float autoRetainMax;       // caps automatic residual blending; source fallback remains independent
+    float retainLowpassSigma;  // 0 = off; otherwise retain only the Gaussian-lowpassed (sigma px) luma residual as detail
     float denoiseLevel;
     int denoisePasses;
     int modelWindow;
@@ -174,6 +175,7 @@ private:
     std::unique_ptr<CUMemBufPair> m_sigmaMap;
     std::unique_ptr<CUMemBufPair> m_strengthLut;
     std::unique_ptr<CUMemBufPair> m_sourceBlendLut;
+    std::unique_ptr<CUMemBuf> m_retainLpScratch; // float luma plane, horizontal-pass result of retain-lp
     std::unique_ptr<CUMemBufPair> m_sceneCounts;
     std::unique_ptr<CUMemBufPair> m_modelStats;
     std::unique_ptr<AnalyzerState> m_state;
